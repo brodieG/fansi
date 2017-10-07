@@ -1,4 +1,4 @@
-#' ANSI-aware String Manipulation Functions
+#' Simple Programmable NSE
 #'
 #' Counterparts to R string manipulation functions that preserve ANSI
 #' CSI escape sequences while treating them as zero width.

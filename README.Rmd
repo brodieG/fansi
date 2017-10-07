@@ -1,0 +1,16 @@
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "##",
+  fig.path = "README-",
+  error = TRUE
+)
+library(oshka)
+```
+
+# fansi - ANSI-aware String Functions
+
+Counterparts to R string manipulation functions that preserve ANSI CSI escape
+sequences while treating them as zero width.               
