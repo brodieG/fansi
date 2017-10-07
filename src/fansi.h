@@ -1,3 +1,20 @@
+/*
+Copyright (C) 2017  Brodie Gaslam
+
+This file is part of "fansi - ANSI-aware String Functions"
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+*/
 
 #include <R.h>
 #include <Rinternals.h>
@@ -9,7 +26,7 @@
  * codes.
  */
 
-struct nsstr_state {
+struct FANSI_state {
   /* bold, italic, etc, should be interpreted as bit mask where with 2^n we
    * have:
    *

@@ -3,7 +3,7 @@
 \docType{package}
 \name{fansi-package}
 \alias{fansi-package}
-\title{ANSI-aware String Manipulation Functions}
+\title{Simple Programmable NSE}
 \description{
 Counterparts to R string manipulation functions that preserve ANSI
 CSI escape sequences while treating them as zero width.

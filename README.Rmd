@@ -13,4 +13,4 @@ library(oshka)
 # fansi - ANSI-aware String Functions
 
 Counterparts to R string manipulation functions that preserve ANSI CSI escape
-sequences while treating them as zero width.               
+sequences while treating them as zero width.

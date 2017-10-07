@@ -1,3 +1,20 @@
+/*
+Copyright (C) 2017  Brodie Gaslam
+
+This file is part of "fansi - ANSI-aware String Functions"
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+*/
 #include "fansi.h"
 
 // note we use long int b/c these numbers are going back to R
@@ -13,13 +30,13 @@ long int safe_add(long int a, long int b) {
  *
  * We rely on strucut initialization to set everything else to zero.
  */
-struct nsstr_state nsstr_state_init() {
-  return (struct nsstr_state) {.color = -1, .bg_color = -1};
+struct FANSI_state FANSI_state_init() {
+  return (struct FANSI_state) {.color = -1, .bg_color = -1};
 }
 /*
  * Reset all the display attributes, but not the position ones
  */
-struct nsstr_state nsstr_reset_state(struct nsstr_state state) {
+struct FANSI_state FANSI_reset_state(struct FANSI_state state) {
   state.style = 0;
   state.color = -1;
   for(int i = 0; i < 4; i++) state.color_extra[i] = 0;
@@ -31,29 +48,29 @@ struct nsstr_state nsstr_reset_state(struct nsstr_state state) {
 
 // Can a byte be interpreted as ASCII number?
 
-int nsstr_is_num(const char * string) {
+int FANSI_is_num(const char * string) {
   return *string >= 48 && *string <= 57;
 }
 // Convert a char value to number by subtracting the zero char; only intended
 // for use with string values in [0-9]
 
-unsigned int nsstr_as_num(const char * string) {
+unsigned int FANSI_as_num(const char * string) {
   if(*string < 0 || *string > 127)
     error("Currently only ASCII-128 characters are supported");
-  if(!nsstr_is_num(string))
+  if(!FANSI_is_num(string))
     error("Internal Error: attempt to convert non-numeric char to int.");
 
   return (unsigned int) (*string - '0');
 }
 // Valid end to a CSI SGR numeric token?
 
-int nsstr_is_tok_end(const char * string) {
+int FANSI_is_tok_end(const char * string) {
   return *string == ';' || *string == 'm';
 }
 
 // Store the result of reading a token
 
-struct nsstr_tok_res {
+struct FANSI_tok_res {
   unsigned int val;         // The actual value of the token
   long int len;               // How many character in the token
   // Whether it was a legal token, 0=no, 1=no, but it only contained numbers so
@@ -64,10 +81,10 @@ struct nsstr_tok_res {
 /*
  * Attempts to read CSI SGR tokens
  *
- * See struct nsstr_tok_res for return value details
+ * See struct FANSI_tok_res for return value details
  */
 
-struct nsstr_tok_res nsstr_parse_token(const char * string) {
+struct FANSI_tok_res FANSI_parse_token(const char * string) {
   unsigned int mult, val;
   long int len, len_prev;
   int success, last;
@@ -75,7 +92,7 @@ struct nsstr_tok_res nsstr_parse_token(const char * string) {
   success = len = val = last = 0;
   mult = 1;
 
-  while(nsstr_is_num(string) && (--limit)) {
+  while(FANSI_is_num(string) && (--limit)) {
     ++string;
     len_prev = len;
     ++len;
@@ -86,7 +103,7 @@ struct nsstr_tok_res nsstr_parse_token(const char * string) {
   }
   // Only succed if number isn't too long and terminates in ';' or 'm'
 
-  if(nsstr_is_tok_end(string)) {
+  if(FANSI_is_tok_end(string)) {
     last = (*string == 'm');
     if(len > 3) {
       success = 1;
@@ -98,10 +115,10 @@ struct nsstr_tok_res nsstr_parse_token(const char * string) {
 
       long int len2 = len;
       while(len2--) {
-        val += nsstr_as_num(--string) * mult;
+        val += FANSI_as_num(--string) * mult;
         mult *= 10;
   } } }
-  return (struct nsstr_tok_res) {
+  return (struct FANSI_tok_res) {
     .val=val, .len=len, .success=success, .last=last
   };
 }
@@ -114,11 +131,11 @@ struct nsstr_tok_res nsstr_parse_token(const char * string) {
  * @param mode is whether we are doing foregrounds (3) or backgrounds (4)
  * @param colors is whether we are doing palette (5), or rgb truecolor (2)
  */
-struct nsstr_state nsstr_parse_colors(struct nsstr_state state, int mode) {
+struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode) {
   if(mode != 3 && mode != 4)
     error("Internal Error: parsing color with invalid mode.");
 
-  struct nsstr_tok_res res;
+  struct FANSI_tok_res res;
   int rgb[4] = {0};
   int col = 8;
   int valid_col = 1;
@@ -126,7 +143,7 @@ struct nsstr_state nsstr_parse_colors(struct nsstr_state state, int mode) {
 
   // First, figure out if we are in true color or palette mode
 
-  res = nsstr_parse_token(&state.string[state.pos_byte]);
+  res = FANSI_parse_token(&state.string[state.pos_byte]);
   state.pos_byte = safe_add(state.pos_byte, safe_add(res.len, 1));
   state.last = res.last;
   if(res.success && ((res.val != 2 && res.val != 5) || res.last)) {
@@ -148,7 +165,7 @@ struct nsstr_state nsstr_parse_colors(struct nsstr_state state, int mode) {
     // Parse through the subsequent tokens
 
     for(int i = 0; i < i_max; ++i) {
-      res = nsstr_parse_token(&state.string[state.pos_byte]);
+      res = FANSI_parse_token(&state.string[state.pos_byte]);
       state.pos_byte = safe_add(state.pos_byte, safe_add(res.len, 1));
       state.last = res.last;
       if(res.success) {
@@ -212,8 +229,8 @@ struct nsstr_state nsstr_parse_colors(struct nsstr_state state, int mode) {
  *   having to reparse the string if we've already retrieved the state at an
  *   earlier position.
  */
-struct nsstr_state nsstr_state_at_raw_position(
-    long int pos, const char * string, struct nsstr_state state
+struct FANSI_state FANSI_state_at_raw_position(
+    long int pos, const char * string, struct FANSI_state state
 ) {
   // Sanity checks, first one is a little strict since we could have an
   // identical copy of the string, but that should not happen in intended use
@@ -255,14 +272,14 @@ struct nsstr_state nsstr_state_at_raw_position(
       // is an invalid SGR
 
       state.pos_byte = safe_add(state.pos_byte, 2);
-      struct nsstr_state state_tmp = state;
-      struct nsstr_tok_res tok_res = {.success = 0};
+      struct FANSI_state state_tmp = state;
+      struct FANSI_tok_res tok_res = {.success = 0};
 
       // Loop through the SGR; each token we process successfully modifies state
       // and advances to the next token
 
       do {
-        tok_res = nsstr_parse_token(&string[state.pos_byte]);
+        tok_res = FANSI_parse_token(&string[state.pos_byte]);
         state.pos_byte = safe_add(state.pos_byte, safe_add(tok_res.len, 1));
         state.last = tok_res.last;
 
@@ -273,7 +290,7 @@ struct nsstr_state nsstr_state_at_raw_position(
           // actually corresponds to anything that should modify state
 
           if(!tok_res.val) {
-            state = nsstr_reset_state(state);
+            state = FANSI_reset_state(state);
           } else if (tok_res.val < 10) {
             // This is a style, so update the bit mask by enabing the style
             state.style |= 1U << tok_res.val;
@@ -312,7 +329,7 @@ struct nsstr_state nsstr_state_at_raw_position(
             // tokens
 
             if(col_code == 8) {
-              state = nsstr_parse_colors(state, foreground ? 3 : 4);
+              state = FANSI_parse_colors(state, foreground ? 3 : 4);
             }
           }
         } else if (tok_res.success == 1) {
@@ -348,7 +365,7 @@ struct nsstr_state nsstr_state_at_raw_position(
 /*
  * We always include the size of the delimiter
  */
-unsigned int nsstr_color_size(int color, int * color_extra) {
+unsigned int FANSI_color_size(int color, int * color_extra) {
   unsigned int size = 0;
   if(color == 8 && color_extra[0] == 2) {
     size = 3 + 2 + 4 * 3;
@@ -366,7 +383,7 @@ unsigned int nsstr_color_size(int color, int * color_extra) {
 /*
  * Compute length in characters for a number
  */
-unsigned int nsstr_num_chr_len(unsigned int num) {
+unsigned int FANSI_num_chr_len(unsigned int num) {
   // + 1.00001 to account for 0
   unsigned int log_len = (unsigned int) ceil(log10(num + 1.00001));
   return log_len;
@@ -382,7 +399,7 @@ unsigned int nsstr_num_chr_len(unsigned int num) {
  * should already be offset.  The return value is the offset from the original
  * position
  */
-unsigned int nsstr_color_write(
+unsigned int FANSI_color_write(
   char * string, int color, int * color_extra, int mode
 ) {
   if(mode != 3 && mode != 4)
@@ -417,15 +434,15 @@ unsigned int nsstr_color_write(
 /*
  * Generate the ANSI tag corresponding to the state
  */
-const char * nsstr_state_as_chr(struct nsstr_state state) {
+const char * FANSI_state_as_chr(struct FANSI_state state) {
   // First pass computes total size of tag; we need to account for the separtor
   // as well
 
   unsigned int tag_len = 0;
   for(unsigned int i = 1; i < 10; i++) tag_len += ((1U << i) & state.style) * 2;
 
-  tag_len += nsstr_color_size(state.color, state.color_extra);
-  tag_len += nsstr_color_size(state.bg_color, state.bg_color_extra);
+  tag_len += FANSI_color_size(state.color, state.color_extra);
+  tag_len += FANSI_color_size(state.bg_color, state.bg_color_extra);
 
   // Now allocate and generate tag
 
@@ -447,10 +464,10 @@ const char * nsstr_state_as_chr(struct nsstr_state state) {
     }
     // colors
 
-    str_pos += nsstr_color_write(
+    str_pos += FANSI_color_write(
       &(tag_tmp[str_pos]), state.color, state.color_extra, 3
     );
-    str_pos += nsstr_color_write(
+    str_pos += FANSI_color_write(
       &(tag_tmp[str_pos]), state.bg_color, state.bg_color_extra, 4
     );
     // Finalize (note, in some cases we slightly overrallocate)
@@ -472,7 +489,7 @@ const char * nsstr_state_as_chr(struct nsstr_state state) {
  *
  * Returns 1 if the are different, 0 if they are equal
  */
-int nsstr_state_comp(struct nsstr_state target, struct nsstr_state current) {
+int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
   return !(
     target.style == current.style &&
     target.color == current.color &&
@@ -488,13 +505,13 @@ int nsstr_state_comp(struct nsstr_state target, struct nsstr_state current) {
   );
 }
 /*
- * R interface for nsstr_state_at_raw_position
+ * R interface for FANSI_state_at_raw_position
  *
  * @param string we're interested in state of
  * @param pos integer positions along the string, one index
  */
 
-SEXP nsstr_state_at_raw_pos_ext(SEXP text, SEXP pos) {
+SEXP FANSI_state_at_raw_pos_ext(SEXP text, SEXP pos) {
   if(TYPEOF(text) != STRSXP && XLENGTH(text) != 1)
     error("Argument `text` must be character(1L)");
   if(TYPEOF(pos) != INTSXP)
@@ -508,8 +525,8 @@ SEXP nsstr_state_at_raw_pos_ext(SEXP text, SEXP pos) {
   }
   SEXP text_chr = asChar(text);
   const char * string = CHAR(text_chr);
-  struct nsstr_state state = nsstr_state_init();
-  struct nsstr_state state_prev = nsstr_state_init();
+  struct FANSI_state state = FANSI_state_init();
+  struct FANSI_state state_prev = FANSI_state_init();
 
   // Allocate result, will be a res_cols x n matrix.  A bit wasteful to record
   // all the color values given we'll rarely use them, but variable width
@@ -553,7 +570,7 @@ SEXP nsstr_state_at_raw_pos_ext(SEXP text, SEXP pos) {
         error("Internal Error: `pos` must be sorted %d %d.", pos_i, pos_prev);
       else pos_prev = pos_i;
 
-      state = nsstr_state_at_raw_position(pos_i, string, state);
+      state = FANSI_state_at_raw_position(pos_i, string, state);
 
       // Record position, but set them back to 1 index
 
@@ -563,8 +580,8 @@ SEXP nsstr_state_at_raw_pos_ext(SEXP text, SEXP pos) {
 
       // Record color tag if state changed
 
-      if(nsstr_state_comp(state, state_prev)) {
-        res_chr = PROTECT(mkChar(nsstr_state_as_chr(state)));
+      if(FANSI_state_comp(state, state_prev)) {
+        res_chr = PROTECT(mkChar(FANSI_state_as_chr(state)));
       } else {
         res_chr = PROTECT(res_chr_prev);
       }
