@@ -19,11 +19,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
 // note we use long int b/c these numbers are going back to R
 
-long int safe_add(long int a, long int b) {
-  long int res = a + b;
-  if(a < 0 | b < 0) error("function does not support negative numbers");
-  if(res < a || res < b) error("`long int` overflow");
-  return res;
+inline int safe_add(int a, int b) {
+  if(a > INT_MAX - b) error("int overflow");
+  return a + b;
 }
 /*
  * Create a state structure with everything set to zero
@@ -72,7 +70,7 @@ int FANSI_is_tok_end(const char * string) {
 
 struct FANSI_tok_res {
   unsigned int val;         // The actual value of the token
-  long int len;               // How many character in the token
+  int len;               // How many character in the token
   // Whether it was a legal token, 0=no, 1=no, but it only contained numbers so
   // it's okay to keep parsing other ones, 2=yes (0-999)
   int success;
@@ -86,7 +84,7 @@ struct FANSI_tok_res {
 
 struct FANSI_tok_res FANSI_parse_token(const char * string) {
   unsigned int mult, val;
-  long int len, len_prev;
+  int len, len_prev;
   int success, last;
   int limit = 5;
   success = len = val = last = 0;
@@ -113,7 +111,7 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
       // Read the string backwards (assume 0 if no string) and turn it into a
       // number
 
-      long int len2 = len;
+      int len2 = len;
       while(len2--) {
         val += FANSI_as_num(--string) * mult;
         mult *= 10;
@@ -230,7 +228,7 @@ struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode) {
  *   earlier position.
  */
 struct FANSI_state FANSI_state_at_raw_position(
-    long int pos, const char * string, struct FANSI_state state
+    int pos, const char * string, struct FANSI_state state
 ) {
   // Sanity checks, first one is a little strict since we could have an
   // identical copy of the string, but that should not happen in intended use
@@ -245,7 +243,7 @@ struct FANSI_state FANSI_state_at_raw_position(
     );
 
   state.string = string;
-  long int pos_byte_prev = 0;
+  int pos_byte_prev = 0;
 
   // Note we use the [state.pos_byte] notation to ensure we don't accidentially
   // frame shift ourselves (i.e. all position shifts are encoded exclusively in

@@ -78,7 +78,7 @@ struct FANSI_state {
   int bg_color_extra[4];
 
   /*
-   * Position markers (all zero index), we use long int because these numbers
+   * Position markers (all zero index), we use int because these numbers
    * need to make it back to R which doesn't have a `size_t` type.
    *
    * - pos_byte: the byte in the string
@@ -87,9 +87,9 @@ struct FANSI_state {
    * - pos_raw: the character position after we strip the handled ANSI tags
    */
 
-  long int pos_ansi;
-  long int pos_raw;
-  long int pos_byte;
+  int pos_ansi;
+  int pos_raw;
+  int pos_byte;
 
   /*
    * The original string the state corresponds to.  This is the pointer to the
