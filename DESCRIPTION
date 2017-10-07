@@ -1,0 +1,26 @@
+Package: fansi
+Title: ANSI-aware String Manipulation Functions
+Description: Counterparts to R string manipulation functions that preserve ANSI
+    CSI escape sequences while treating them as zero width.
+Version: 0.0.0.9000
+Authors@R: c(
+    person("Brodie", "Gaslam", email="brodie.gaslam@yahoo.com",
+    role=c("aut", "cre"))
+    )
+Depends:
+    R (>= 3.3.2)
+License: GPL (>=2)
+LazyData: true
+URL: https://github.com/brodieG/fansi
+BugReports: https://github.com/brodieG/fansi/issues
+VignetteBuilder: knitr
+Imports:
+    utils,
+    datasets
+Suggests:
+    knitr,
+    rmarkdown,
+    unitizer,
+    covr
+RoxygenNote: 6.0.1
+Roxygen: list(markdown = TRUE)
