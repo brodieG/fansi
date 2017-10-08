@@ -29,7 +29,9 @@ inline int safe_add(int a, int b) {
  * We rely on strucut initialization to set everything else to zero.
  */
 struct FANSI_state FANSI_state_init() {
-  return (struct FANSI_state) {.color = -1, .bg_color = -1};
+  return (struct FANSI_state) {
+    .color = -1, .bg_color = -1, .pos_ansi=0, .pos_raw=0, .pos_byte=0
+  };
 }
 /*
  * Reset all the display attributes, but not the position ones
@@ -70,7 +72,7 @@ int FANSI_is_tok_end(const char * string) {
 
 struct FANSI_tok_res {
   unsigned int val;         // The actual value of the token
-  int len;               // How many character in the token
+  int len;                  // How many character in the token
   // Whether it was a legal token, 0=no, 1=no, but it only contained numbers so
   // it's okay to keep parsing other ones, 2=yes (0-999)
   int success;
@@ -253,7 +255,7 @@ struct FANSI_state FANSI_state_at_raw_position(
   // Loosely related, since we don't make any distinction between byte and ansi
   // position for now we ignore `pos_ansi` until the very end
 
-  while(string[state.pos_byte] && state.pos_raw < pos) {
+  while(string[state.pos_byte] && state.pos_raw <= pos) {
     // Reset internal controls
 
     state.fail = state.last = 0;
@@ -348,14 +350,22 @@ struct FANSI_state FANSI_state_at_raw_position(
         state_tmp.pos_byte = state.pos_byte;
         state = state_tmp;
       }
-    } else {
+    } else if (state.pos_raw < pos) {
       // Advance one character
+
+      if(state.pos_byte == INT_MAX)
+        error("Internal Error: counter overflow while reading string.");
 
       ++state.pos_byte;
       ++state.pos_raw;
+    } else {
+      // We allowed entering loop so long as state.pos_raw <= pos, but we
+      // actually don't want to increment counter if at pos; we only entered so
+      // that we could potentially parse a zero length sequence that starts at
+      // pos
+
+      break;
     }
-    if(state.pos_byte < pos_byte_prev)
-      error("Internal Error: counter overflow while reading string.");
   }
   state.pos_ansi = state.pos_byte;
   return state;
@@ -564,7 +574,7 @@ SEXP FANSI_state_at_raw_pos_ext(SEXP text, SEXP pos) {
       for(R_xlen_t j = 0; j < res_cols; j++)
         INTEGER(res_mx)[i * res_cols + j] = NA_INTEGER;
     } else {
-      if(!(pos_i > pos_prev)) 
+      if(!(pos_i > pos_prev))
         error("Internal Error: `pos` must be sorted %d %d.", pos_i, pos_prev);
       else pos_prev = pos_i;
 
