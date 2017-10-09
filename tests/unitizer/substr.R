@@ -23,4 +23,8 @@ unitizer_sect("Simple", {
   ansi_substr2(str02, 10, 20)
   ansi_substr2(str02, 15, 40)
   ansi_substr2(str02, 35, 60)
+
+  str03 <-sprintf("hello %sworld", rgb.und)
+
+  ansi_substr2(str03, 1, 12)
 })
