@@ -1,14 +1,6 @@
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-```{r, echo = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "##",
-  fig.path = "README-",
-  error = TRUE
-)
-library(fansi)
-```
+
 # fansi - ANSI-aware String Functions
 
 [![](https://travis-ci.org/brodieG/fansi.svg?branch=master)](https://travis-ci.org/brodieG/fansi)
