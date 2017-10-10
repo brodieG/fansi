@@ -240,8 +240,8 @@ struct FANSI_state FANSI_state_at_raw_position(
     error("Cannot re-use a state with a different string.");
   if(pos < state.pos_raw)
     error(
-      "Cannot re-use a state for a later position (%zu) than `pos` (%zu).",
-      state.pos_raw, pos
+      "Cannot re-use a state for a later position (%0f) than `pos` (%0f).",
+      (double) state.pos_raw, (double) pos
     );
 
   state.string = string;
