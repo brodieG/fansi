@@ -55,6 +55,12 @@ ansi_substr2 <- function(x, start, stop) {
     e.stop <- stop[elems]
     state <- ansi_state(u, sort(union(e.start, e.stop)))
 
+    # if any positions are greater than max position set them to those
+
+    max.pos <- max(state[[2]][2, ])
+    e.start[e.start > max.pos] <- max.pos
+    e.stop[e.stop > max.pos] <- max.pos
+
     start.ansi.idx <- match(e.start, state[[2]][2, ])
     stop.ansi.idx <- match(e.stop, state[[2]][2, ])
     start.ansi <- state[[2]][3, start.ansi.idx]

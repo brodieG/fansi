@@ -16,8 +16,8 @@ unitizer_sect("Simple", {
   ansi_substr2(str01, 8, 14)
 
   str02 <- sprintf(
-    "%shello world %sit's a %scrazy world%s out there %s isn't it%s right?",
-    grn.bg, red, end, rgb.und, inv, rgb.256
+    "%shello world %sit's a %scrazy world%s out there %sisn't it%s%s right?",
+    grn.bg, red, end, rgb.und, inv, end, rgb.256
   )
   ansi_substr2(str02, 1, 7)
   ansi_substr2(str02, 10, 20)
