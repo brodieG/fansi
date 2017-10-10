@@ -1,3 +1,19 @@
+# Copyright (C) 2017  Brodie Gaslam
+#
+# This file is part of "fansi - ANSI-aware String Functions"
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+
 #' Compute String ANSI State at a Given Position
 #'
 #' @export
@@ -8,7 +24,7 @@ ansi_state <- function(text, pos) {
     is.numeric(pos), min(pos, 0L, na.rm=TRUE) >= 0L
   )
   .Call(
-    "nsstr_state_at_raw_pos_ext", text, as.integer(pos) - 1L,
+    "FANSI_state_at_raw_pos_ext", text, as.integer(pos) - 1L,
     PACKAGE = "fansi"
   )
 }
@@ -38,6 +54,12 @@ ansi_substr2 <- function(x, start, stop) {
     e.start <- start[elems]
     e.stop <- stop[elems]
     state <- ansi_state(u, sort(union(e.start, e.stop)))
+
+    # if any positions are greater than max position set them to those
+
+    max.pos <- max(state[[2]][2, ])
+    e.start[e.start > max.pos] <- max.pos
+    e.stop[e.stop > max.pos] <- max.pos
 
     start.ansi.idx <- match(e.start, state[[2]][2, ])
     stop.ansi.idx <- match(e.stop, state[[2]][2, ])
