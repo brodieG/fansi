@@ -516,7 +516,7 @@ int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
  * R interface for FANSI_state_at_raw_position
  *
  * @param string we're interested in state of
- * @param pos integer positions along the string, one index
+ * @param pos integer positions along the string, one index, sorted
  */
 
 SEXP FANSI_state_at_raw_pos_ext(SEXP text, SEXP pos) {
