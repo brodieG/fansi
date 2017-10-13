@@ -53,7 +53,8 @@ ansi_substr2 <- function(x, start, stop) {
     elems <- which(x == u)
     e.start <- start[elems]
     e.stop <- stop[elems]
-    state <- ansi_state(u, sort(union(e.start, e.stop)))
+    e.sort <- unique.default(sort.int(c(e.start, e.stop), method='shell'))
+    state <- ansi_state(u, e.sort)
 
     # if any positions are greater than max position set them to those
 
