@@ -2,4 +2,5 @@
 
 export(ansi_state)
 export(ansi_substr2)
+export(strip_ansi)
 useDynLib(fansi)
