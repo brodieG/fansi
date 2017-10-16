@@ -50,8 +50,11 @@ SEXP FANSI_strip(SEXP input) {
       error("Illegal size string encountered of size %.0f.", (double) i_len);
       // nocov end
 
-    while(*chr_track) {
-      if(*chr_track != 27 || *(chr_track + 1) != '[') {
+    while((chr_track = strchr(chr_track, 27))) {
+      const char * chr_next = chr_track + 1;
+      if(!*chr_next) {
+        break;
+      } else if(*chr_next != '[') {
         chr_track++;
       } else {
         // We read string and only once we find a complete valid ANSI tag
@@ -86,7 +89,7 @@ SEXP FANSI_strip(SEXP input) {
         chr_last = chr_track + 1;
       }
     }
-    // First time we encountere ANSI in our input vector we need to allocate teh
+    // First time we encountere ANSI in our input vector we need to allocate the
     // result vector
     if(any_ansi && res_fin == input) {
       REPROTECT(res_fin = duplicate(input), ipx);
