@@ -37,17 +37,19 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 struct FANSI_csi_pos FANSI_find_csi(const char * x) {
   int valid = 0;
   const char * x_track = x;
+  const char * x_start = x;
 
   // Note there is a potentially unncessary call to `strchr` here in the case
   // the ESC is the last thing in a string, but handling it explicitly adds a
   // bit of complexity and it should be rare
 
-  while((x_track = strchr(x_track, 27))) {
+  while((x_start = strchr(x_track, 27))) {
     x_track++;
     if(*x_track == '[') {
-      // skip esc and [
 
-      x_track += 2;
+      // skip [
+
+      ++x_track;
 
       // Skip all the valid parameters tokens
 
@@ -60,12 +62,14 @@ struct FANSI_csi_pos FANSI_find_csi(const char * x) {
       // Now there should be a single valid ending byte
 
       if(*x_track) {
-        x_track++;
         valid = *x_track >= 0x40 && *x_track <= 0x7E;
-  } } }
+      }
+      break;
+  } }
+
   struct FANSI_csi_pos res;
-  if(!x_track) {
-    res = (struct FANSI_csi_pos){.start=x_track, .len=0, .valid=0};
+  if(!x_start) {
+    res = (struct FANSI_csi_pos){.start=x_start, .len=0, .valid=0};
   } else {
     if(x_track - x > INT_MAX - 1)
       // nocov start
@@ -76,8 +80,9 @@ struct FANSI_csi_pos FANSI_find_csi(const char * x) {
       );
       // nocov end
 
-    res =
-      (struct FANSI_csi_pos){.start=x_track, .len=(x_track - x + 1), .valid=0};
+    res = (struct FANSI_csi_pos){
+      .start=x_start, .len=(x_track - x_start + 1), .valid=valid
+    };
   }
   return res;
 }

@@ -54,26 +54,37 @@ SEXP FANSI_strip(SEXP input) {
     struct FANSI_csi_pos csi;
 
     while((csi = FANSI_find_csi(chr_track)).start) {
-      if(!has_ansi) {
-        // Overallocate for simplicity, in reality shouldn't need to
-        // allocate for all the ansi tags we're stripping
-        res_start = res_track = (char *) R_alloc(i_len, sizeof(char));
-        res_start[i_len - 1] = 0;
-        has_ansi = any_ansi = 1;
+      if(csi.valid) {
+        if(!has_ansi) {
+          // Overallocate for simplicity, in reality shouldn't need to
+          // allocate for all the ansi tags we're stripping
+          res_start = res_track = (char *) R_alloc(i_len, sizeof(char));
+          res_start[i_len - 1] = 0;
+          has_ansi = any_ansi = 1;
+        }
+        // Is memcpy going to cause problems again by reading past end of
+        // block?  Didn't in first valgrind check.
+
+        if(csi.len) {
+          memcpy(res_track, chr_track, csi.start - chr_track);
+          res_track += csi.start - chr_track;
+        }
+      } else {
+        // Mark vector loc of first invalid ansi (should we warn here)?
+
+        if(!invalid_ansi) {
+          invalid_ansi = i;
+          warning("Invalid CSI len: %d", csi.len);
+        }
       }
-      // Mark vector loc of first invalid ansi (should we warn here)?
-
-      if(!csi.valid && !invalid_ansi) invalid_ansi = i;
-
-      // Is memcpy going to cause problems again by reading past end of
-      // block?  Didn't in first valgrind check.
-
-      if(csi.len) memcpy(res_track, chr_track, csi.start - chr_track);
       chr_track = csi.start + csi.len;
     }
     // First time we encountere ANSI in our input vector we need to allocate the
     // result vector
 
+    if(any_ansi && res_fin == input) {
+      REPROTECT(res_fin = duplicate(input), ipx);
+    }
     if(has_ansi) {
       // Copy final chunk if it exists because above we only memcpy when we
       // encounter the tag
