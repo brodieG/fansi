@@ -26,7 +26,7 @@ inline int safe_add(int a, int b) {
 /*
  * Create a state structure with everything set to zero
  *
- * We rely on strucut initialization to set everything else to zero.
+ * We rely on struct initialization to set everything else to zero.
  */
 struct FANSI_state FANSI_state_init() {
   return (struct FANSI_state) {
