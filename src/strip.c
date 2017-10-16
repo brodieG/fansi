@@ -35,6 +35,7 @@ SEXP FANSI_strip(SEXP input) {
   SEXP res_fin = input;
 
   int any_ansi = 0;
+  R_xlen_t invalid_ansi = 0;
 
   for(i = 0; i < len; ++i) {
     if(!i % 1000) R_CheckUserInterrupt();
@@ -50,52 +51,43 @@ SEXP FANSI_strip(SEXP input) {
       error("Illegal size string encountered of size %.0f.", (double) i_len);
       // nocov end
 
-    while((chr_track = strchr(chr_track, 27))) {
-      const char * chr_next = chr_track + 1;
-      if(!*chr_next) {
-        break;
-      } else if(*chr_next != '[') {
-        chr_track++;
-      } else {
-        // We read string and only once we find a complete valid ANSI tag
-        // do we copy the incremental text up to that tag.  That makes it easier
-        // to avoid any writes if there is no ANSI
+    struct FANSI_csi_pos csi;
 
-        // valid ansi must end in lower case letter (no, @ to ~), although our
-        // terminal doesn't quite seem to agree? Or maybe only the non-movement
-        // ones are that way?
-
-        const char * tag_start = chr_track;
-
-        chr_track += 2;  // skip esc and [
-        while((* chr_track < 'a' || * chr_track > 'z') && * chr_track) {
-          ++chr_track;
-        }
-
-        if(!has_ansi) {
-          // Overallocate for simplicity, in reality shouldn't need to
-          // allocate for all the ansi tags we're stripping
-          res_start = res_track = (char *) R_alloc(i_len, sizeof(char));
-          res_start[i_len - 1] = 0;
-          has_ansi = any_ansi = 1;
-        }
-        // Is memcpy going to cause problems again by reading past end of
-        // block?
-
-        if(tag_start - chr_last > 0) {
-          memcpy(res_track, chr_last, tag_start - chr_last);
-        }
-        res_track += tag_start - chr_last; // +1?
-        chr_last = chr_track + 1;
+    while((csi = FANSI_find_csi(chr_track)).start) {
+      if(!has_ansi) {
+        // Overallocate for simplicity, in reality shouldn't need to
+        // allocate for all the ansi tags we're stripping
+        res_start = res_track = (char *) R_alloc(i_len, sizeof(char));
+        res_start[i_len - 1] = 0;
+        has_ansi = any_ansi = 1;
       }
+      // Mark vector loc of first invalid ansi (should we warn here)?
+
+      if(!csi.valid && !invalid_ansi) invalid_ansi = i;
+
+      // Is memcpy going to cause problems again by reading past end of
+      // block?  Didn't in first valgrind check.
+
+      if(csi.len) memcpy(res_track, chr_track, csi.start - chr_track);
+      chr_track = csi.start + csi.len;
     }
     // First time we encountere ANSI in our input vector we need to allocate the
     // result vector
-    if(any_ansi && res_fin == input) {
-      REPROTECT(res_fin = duplicate(input), ipx);
-    }
+
     if(has_ansi) {
-      // Since we only memcpy when
+      // Copy final chunk if it exists because above we only memcpy when we
+      // encounter the tag
+
+      if(*chr_track) {
+        const char * chr_end = strchr(chr_track, '\0');
+        if(!chr_end) {
+          // nocov start
+          error("Internal Error: failed to find str end, contact maintainer.");
+          // nocov end
+        } else if(chr_end > chr_track) {
+          memcpy(res_track, chr_track, chr_end - chr_track);
+          res_track += chr_end - chr_track;
+      } }
       *res_track = '\0';
       SEXP chr_sexp = PROTECT(mkChar(res_start));
       SET_STRING_ELT(res_fin, i, chr_sexp);

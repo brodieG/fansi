@@ -20,6 +20,19 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #include <Rinternals.h>
 
 /*
+ * Used when computing position and size of ANSI tag with FANSI_loc
+ */
+
+struct FANSI_csi_pos {
+  // Pointer to the first ESC, or NULL, if it is not found
+  const char * start;
+  // how many characters to the end of the sequnce
+  int len;
+  // whether the sequnce is complete or not
+  int valid;
+};
+
+/*
  * Captures the ANSI state at any particular position in a string.  Note this is
  * only designed to capture SGR CSI codes (i.e. those of format "ESC[n;n;n;m")
  * where "n" is a number.  This is a small subset of the possible ANSI escape
@@ -108,3 +121,4 @@ struct FANSI_state {
   int last;
 };
 
+struct FANSI_csi_pos FANSI_find_csi(const char * x);

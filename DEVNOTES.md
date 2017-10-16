@@ -2,6 +2,22 @@
 
 These are internal developer notes.
 
+### What Escape Sequences do we consider?
+
+Seems like the natural thing is to do CSI sequences, and maybe for simplicity
+just focus on the SGR variety.  But even with SGR, there is some question as to
+how we interpret 'cuter' variants.
+
+Some issues to consider:
+
+* What to do with "weird" characters (e.g. symbols) in the middle of a sequence?
+  It appears this is undefined behavior.
+* What about the intermediate bytes?  This is probably the most problematic one
+  as there are no examples for how they are used.
+* What about potentially incorrect usage?  Do we warn?
+
+Seems we should go by the strict defini
+
 ### Interface
 
 * `state_at_pos`
