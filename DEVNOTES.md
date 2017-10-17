@@ -117,12 +117,33 @@ After `csi_pos`:
 +   strip_ansi(strings.all)
 + )
 Unit: microseconds
-                              expr     min       lq      mean   median       uq
-     crayon:::strip_style(strings) 286.885 291.8370 329.50765 301.6245 346.3510
- crayon:::strip_style(strings.raw) 213.307 219.4640 246.00423 233.3255 262.5025
- crayon:::strip_style(strings.all) 822.596 826.6740 932.03747 858.5195 973.6235
-               strip_ansi(strings)  47.714  49.4440  58.25562  53.7460  57.1160
-           strip_ansi(strings.raw)  22.493  24.0035  27.05486  24.6780  28.4120
-           strip_ansi(strings.all) 228.326 243.8355 271.22404 271.2160 278.5870```
+                              expr     min       lq      mean   median
+     crayon:::strip_style(strings) 285.397 290.5625 356.48010 321.1050
+ crayon:::strip_style(strings.raw) 212.972 215.9980 257.45429 225.1195
+ crayon:::strip_style(strings.all) 822.599 827.4575 988.03038 890.1975
+               strip_ansi(strings)  46.927  49.2775  61.26973  52.0475
+           strip_ansi(strings.raw)  22.405  23.9160  29.50136  25.2045
+           strip_ansi(strings.all) 226.428 242.0230 286.31130 253.0315
+```
+
+Before (okay this is crap because it is missing a memcopy):
+
+```
+> microbenchmark::microbenchmark(
++   crayon:::strip_style(strings),
++   crayon:::strip_style(strings.raw),
++   crayon:::strip_style(strings.all),
++   strip_ansi(strings),
++   strip_ansi(strings.raw),
++   strip_ansi(strings.all)
++ )
+Unit: microseconds
+                              expr     min       lq      mean   median
+     crayon:::strip_style(strings) 285.994 290.9575 349.59618 311.4710
+ crayon:::strip_style(strings.raw) 212.777 216.6460 267.51793 237.2910
+ crayon:::strip_style(strings.all) 822.622 830.0660 989.94275 912.3915
+               strip_ansi(strings)  37.094  39.5475  53.41701  44.0385
+           strip_ansi(strings.raw)  21.657  23.0980  28.33613  24.7605
+           strip_ansi(strings.all) 129.120 146.3855 180.03338 160.1875
 ```
 
