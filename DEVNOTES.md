@@ -103,4 +103,26 @@ an as needed basis.
 
 So we will walk the string until we pass all the cut points.
 
+### Benchmarks
+
+After `csi_pos`:
+
+```
+> microbenchmark::microbenchmark(
++   crayon:::strip_style(strings),
++   crayon:::strip_style(strings.raw),
++   crayon:::strip_style(strings.all),
++   strip_ansi(strings),
++   strip_ansi(strings.raw),
++   strip_ansi(strings.all)
++ )
+Unit: microseconds
+                              expr     min       lq      mean   median       uq
+     crayon:::strip_style(strings) 286.885 291.8370 329.50765 301.6245 346.3510
+ crayon:::strip_style(strings.raw) 213.307 219.4640 246.00423 233.3255 262.5025
+ crayon:::strip_style(strings.all) 822.596 826.6740 932.03747 858.5195 973.6235
+               strip_ansi(strings)  47.714  49.4440  58.25562  53.7460  57.1160
+           strip_ansi(strings.raw)  22.493  24.0035  27.05486  24.6780  28.4120
+           strip_ansi(strings.all) 228.326 243.8355 271.22404 271.2160 278.5870```
+```
 
