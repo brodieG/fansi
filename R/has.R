@@ -14,3 +14,13 @@
 #
 # Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
+#' Checks Whether Character Vector Contains ANSI CSI Sequences
+#'
+#' ...CSI definition...
+#'
+#' @export
+#' @param x character
+#' @return logical of same length as `x`; NA values in `x` result in NA values
+#'   in return
+
+has_csi <- function(x) .Call(FANSI_has_csi, x)

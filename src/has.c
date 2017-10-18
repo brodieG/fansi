@@ -18,6 +18,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 /*
  * Check if a CHARSXP contains ANSI esc sequences
  */
+
+#include "fansi.h"
+
 int FANSI_has_int(SEXP x) {
   if(TYPEOF(x) != CHARSXP) error("Argument `x` must be CHRSXP.");
 

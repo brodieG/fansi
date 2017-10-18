@@ -7,6 +7,6 @@
 #'   stripped
 #' @export
 
-strip_ansi <- function(x) .Call("FANSI_strip", x, PACKAGE = "fansi")
+strip_ansi <- function(x) .Call(FANSI_strip_csi, x)
 
 

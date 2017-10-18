@@ -122,3 +122,6 @@ struct FANSI_state {
 };
 
 struct FANSI_csi_pos FANSI_find_csi(const char * x);
+
+SEXP FANSI_has(SEXP x);
+SEXP FANSI_strip(SEXP input);
