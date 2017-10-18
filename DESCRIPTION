@@ -1,5 +1,5 @@
 Package: fansi
-Title: ANSI-aware String Functions
+Title: ANSI CSI-aware String Functions
 Description: Counterparts to R string manipulation functions that preserve ANSI
     CSI escape sequences while treating them as zero width.
 Version: 0.0.1
