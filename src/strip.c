@@ -92,11 +92,10 @@ SEXP FANSI_strip(SEXP input) {
         chr = chr_last = chr_track = CHAR(input_chr);
 
         char * res_track, * res_start;
+        res_start = res_track = chr_buff;
 
         while((csi = FANSI_find_csi(chr_track)).start) {
           if(csi.valid) {
-            res_start = res_track = chr_buff;
-
             // Is memcpy going to cause problems again by reading past end of
             // block?  Didn't in first valgrind check.
 
