@@ -37,7 +37,8 @@ SEXP FANSI_strip(SEXP input) {
   int any_ansi = 0;
   int * which_ansi;            // track which elements contain ansi
   R_len_t mem_req = 0;         // how much memory we need for each ansi
-  R_xlen_t invalid_ansi = 0;
+  int invalid_ansi = 0;
+  R_xlen_t invalid_ansi_idx = 0;
 
   struct FANSI_csi_pos csi;
 
@@ -60,6 +61,14 @@ SEXP FANSI_strip(SEXP input) {
       which_ansi[i] = 1;
       R_len_t chr_len = LENGTH(input_chr);
       if(chr_len > mem_req) mem_req = chr_len;
+    } else if(csi.start) {
+      // Mark vector loc of first invalid ansi (should we warn here)?
+
+      if(!invalid_ansi) {
+        invalid_ansi = 1;
+        invalid_ansi_idx = i;
+        warning("Invalid CSI len: %d at index %.0f", csi.len, (double) i + 1);
+      }
     }
   }
   // Now strip
@@ -103,13 +112,6 @@ SEXP FANSI_strip(SEXP input) {
               memcpy(res_track, chr_track, csi.start - chr_track);
               res_track += csi.start - chr_track;
             }
-          } else {
-            // Mark vector loc of first invalid ansi (should we warn here)?
-
-            if(!invalid_ansi) {
-              invalid_ansi = i;
-              warning("Invalid CSI len: %d", csi.len);
-            }
           }
           chr_track = csi.start + csi.len;
         }
@@ -117,7 +119,7 @@ SEXP FANSI_strip(SEXP input) {
         // encounter the tag
 
         if(*chr_track) {
-          const char * chr_end = chr + LENGTH(input_chr) + 1;
+          const char * chr_end = chr + LENGTH(input_chr);
           if(!chr_end) {
             // nocov start
             error(
