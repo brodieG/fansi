@@ -68,9 +68,7 @@ SEXP FANSI_strip(SEXP input) {
         invalid_ansi = 1;
         invalid_ansi_idx = i;
         warning("Invalid CSI len: %d at index %.0f", csi.len, (double) i + 1);
-      }
-    }
-  }
+  } } }
   // Now strip
 
   if(any_ansi) {
