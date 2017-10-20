@@ -23,10 +23,7 @@ ansi_state <- function(text, pos) {
     is.character(text), length(text) == 1L,
     is.numeric(pos), min(pos, 0L, na.rm=TRUE) >= 0L
   )
-  .Call(
-    "FANSI_state_at_raw_pos_ext", text, as.integer(pos) - 1L,
-    PACKAGE = "fansi"
-  )
+  .Call(FANSI_state_at_raw_pos_ext, text, as.integer(pos) - 1L)
 }
 #' Alternate substr version
 #'

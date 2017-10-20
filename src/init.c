@@ -6,6 +6,7 @@ static const
 R_CallMethodDef callMethods[] = {
   {"has_csi", (DL_FUNC) &FANSI_has, 1},
   {"strip_csi", (DL_FUNC) &FANSI_strip, 1},
+  {"state_at_raw_pos_ext", (DL_FUNC) &FANSI_state_at_raw_pos_ext, 2},
   {NULL, NULL, 0}
 };
 

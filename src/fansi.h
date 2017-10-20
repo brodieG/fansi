@@ -125,3 +125,4 @@ struct FANSI_csi_pos FANSI_find_csi(const char * x);
 
 SEXP FANSI_has(SEXP x);
 SEXP FANSI_strip(SEXP input);
+SEXP FANSI_state_at_raw_pos_ext(SEXP text, SEXP pos);
