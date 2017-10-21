@@ -126,24 +126,50 @@ Unit: microseconds
            strip_ansi(strings.all) 226.428 242.0230 286.31130 253.0315
 ```
 
-Before (okay this is crap because it is missing a memcopy):
+After we switch to two pass, doesn't really seem to help at all, in fact,
+potentially hurts.
 
 ```
-> microbenchmark::microbenchmark(
+> microbenchmark::microbenchmark(times=1000,
 +   crayon:::strip_style(strings),
 +   crayon:::strip_style(strings.raw),
 +   crayon:::strip_style(strings.all),
 +   strip_ansi(strings),
 +   strip_ansi(strings.raw),
-+   strip_ansi(strings.all)
++   strip_ansi(strings.all),
++   has_csi(strings)
 + )
 Unit: microseconds
-                              expr     min       lq      mean   median
-     crayon:::strip_style(strings) 285.994 290.9575 349.59618 311.4710
- crayon:::strip_style(strings.raw) 212.777 216.6460 267.51793 237.2910
- crayon:::strip_style(strings.all) 822.622 830.0660 989.94275 912.3915
-               strip_ansi(strings)  37.094  39.5475  53.41701  44.0385
-           strip_ansi(strings.raw)  21.657  23.0980  28.33613  24.7605
-           strip_ansi(strings.all) 129.120 146.3855 180.03338 160.1875
+                              expr      min        lq       mean    median
+     crayon:::strip_style(strings)  351.474  358.0145  433.34345  382.6325
+ crayon:::strip_style(strings.raw)  228.161  231.9630  284.77289  248.2040
+ crayon:::strip_style(strings.all) 1285.489 1301.6820 1557.43844 1413.1550
+               strip_ansi(strings)   47.150   50.7820   66.48662   57.0415
+           strip_ansi(strings.raw)   14.434   15.1005   18.33791   15.9875
+           strip_ansi(strings.all)  270.206  274.5760  335.49526  296.2285
 ```
 
+Back to single pass:
+
+```
+> microbenchmark::microbenchmark(times=1000,
++   crayon:::strip_style(strings),
++   crayon:::strip_style(strings.raw),
++   crayon:::strip_style(strings.all),
++   strip_ansi(strings),
++   strip_ansi(strings.raw),
++   strip_ansi(strings.all),
++   has_csi(strings)
++ )
+Unit: microseconds
+                              expr      min        lq       mean    median
+     crayon:::strip_style(strings)  352.317  359.2645  449.05838  384.8680
+ crayon:::strip_style(strings.raw)  228.327  235.5820  289.30838  250.6775
+ crayon:::strip_style(strings.all) 1288.614 1303.5800 1587.23839 1434.4435
+               strip_ansi(strings)   47.324   48.8360   61.07693   53.0505
+           strip_ansi(strings.raw)   18.575   19.5350   24.16552   20.7085
+           strip_ansi(strings.all)  254.820  258.8915  320.55084  267.1585
+                  has_csi(strings)   17.205   18.4330   24.54812   20.4120
+```
+
+A little odd that single pass is slower for the raw strings.
