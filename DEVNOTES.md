@@ -103,6 +103,11 @@ an as needed basis.
 
 So we will walk the string until we pass all the cut points.
 
+### substr_csi
+
+* For each cut point
+* Compute all offsets (CSI and UTF-8)
+
 ### Benchmarks
 
 After `csi_pos`:
