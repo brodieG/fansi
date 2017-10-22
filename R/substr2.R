@@ -1,6 +1,6 @@
 # Copyright (C) 2017  Brodie Gaslam
 #
-# This file is part of "fansi - ANSI-aware String Functions"
+# This file is part of "fansi - ANSI CSI-aware String Functions"
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,10 +23,7 @@ ansi_state <- function(text, pos) {
     is.character(text), length(text) == 1L,
     is.numeric(pos), min(pos, 0L, na.rm=TRUE) >= 0L
   )
-  .Call(
-    "FANSI_state_at_raw_pos_ext", text, as.integer(pos) - 1L,
-    PACKAGE = "fansi"
-  )
+  .Call(FANSI_state_at_raw_pos_ext, text, as.integer(pos) - 1L)
 }
 #' Alternate substr version
 #'
@@ -53,7 +50,8 @@ ansi_substr2 <- function(x, start, stop) {
     elems <- which(x == u)
     e.start <- start[elems]
     e.stop <- stop[elems]
-    state <- ansi_state(u, sort(union(e.start, e.stop)))
+    e.sort <- unique.default(sort.int(c(e.start, e.stop), method='shell'))
+    state <- ansi_state(u, e.sort)
 
     # if any positions are greater than max position set them to those
 

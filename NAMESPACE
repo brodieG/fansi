@@ -2,4 +2,6 @@
 
 export(ansi_state)
 export(ansi_substr2)
-useDynLib(fansi)
+export(has_csi)
+export(strip_ansi)
+useDynLib(fansi, .registration=TRUE, .fixes="FANSI_")

@@ -1,7 +1,7 @@
 /*
 Copyright (C) 2017  Brodie Gaslam
 
-This file is part of "fansi - ANSI-aware String Functions"
+This file is part of "fansi - ANSI CSI-aware String Functions"
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@ inline int safe_add(int a, int b) {
 /*
  * Create a state structure with everything set to zero
  *
- * We rely on strucut initialization to set everything else to zero.
+ * We rely on struct initialization to set everything else to zero.
  */
 struct FANSI_state FANSI_state_init() {
   return (struct FANSI_state) {
@@ -240,8 +240,8 @@ struct FANSI_state FANSI_state_at_raw_position(
     error("Cannot re-use a state with a different string.");
   if(pos < state.pos_raw)
     error(
-      "Cannot re-use a state for a later position (%zu) than `pos` (%zu).",
-      state.pos_raw, pos
+      "Cannot re-use a state for a later position (%0f) than `pos` (%0f).",
+      (double) state.pos_raw, (double) pos
     );
 
   state.string = string;
@@ -516,7 +516,7 @@ int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
  * R interface for FANSI_state_at_raw_position
  *
  * @param string we're interested in state of
- * @param pos integer positions along the string, one index
+ * @param pos integer positions along the string, one index, sorted
  */
 
 SEXP FANSI_state_at_raw_pos_ext(SEXP text, SEXP pos) {

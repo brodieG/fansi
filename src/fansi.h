@@ -1,7 +1,7 @@
 /*
 Copyright (C) 2017  Brodie Gaslam
 
-This file is part of "fansi - ANSI-aware String Functions"
+This file is part of "fansi - ANSI CSI-aware String Functions"
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -18,6 +18,19 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
 #include <R.h>
 #include <Rinternals.h>
+
+/*
+ * Used when computing position and size of ANSI tag with FANSI_loc
+ */
+
+struct FANSI_csi_pos {
+  // Pointer to the first ESC, or NULL, if it is not found
+  const char * start;
+  // how many characters to the end of the sequnce
+  int len;
+  // whether the sequnce is complete or not
+  int valid;
+};
 
 /*
  * Captures the ANSI state at any particular position in a string.  Note this is
@@ -108,3 +121,8 @@ struct FANSI_state {
   int last;
 };
 
+struct FANSI_csi_pos FANSI_find_csi(const char * x);
+
+SEXP FANSI_has(SEXP x);
+SEXP FANSI_strip(SEXP input);
+SEXP FANSI_state_at_raw_pos_ext(SEXP text, SEXP pos);
