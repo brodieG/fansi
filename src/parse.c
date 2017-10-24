@@ -206,17 +206,10 @@ struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode) {
   return state;
 }
 /*
- * QUESTION: do we support truecolor codes (i.e. 38;2;...)?  One major issue is
- * that OSX terminal not only doesn't support them, but miss-reads them as a
- * failed 38 followed by a 2 (blur/dim).  It seems here we just can't support
- * the OSX terminal since it actually renders incorrectly.  So for now we'll
- * support the truecolor stuff with the understanding that if truecolor codes
- * show up OSX terminal just won't work right.
+ * Compute the state given a character position (raw position)
  *
- * For reference: https://gist.github.com/XVilka/8346728
- *
- * Other random notes:
- * - negative numbers appear to be interpretable (at least by osx terminal)
+ * Assumption is that any byte > 127 is UTF8 (i.e. input strings must be all
+ * legal ASCII, or must have been translated to UTF8).
  *
  * @param pos the raw position (i.e. treating parseable ansi tags as zero
  *   length) we want the state for
@@ -230,11 +223,12 @@ struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode) {
  *   earlier position.
  */
 struct FANSI_state FANSI_state_at_raw_position(
-    int pos, const char * string, struct FANSI_state state
+    int pos, const char * string, struct FANSI_state state,
 ) {
   // Sanity checks, first one is a little strict since we could have an
   // identical copy of the string, but that should not happen in intended use
-  // case since we'll be uniqueing prior
+  // case since we'll be uniqueing prior; ultimtely we should just make the
+  // string part of the state and get rid of the string arg
 
   if(state.string && state.string != string)
     error("Cannot re-use a state with a different string.");
@@ -247,7 +241,6 @@ struct FANSI_state FANSI_state_at_raw_position(
   state.string = string;
   int pos_byte_prev = 0;
 
-  // Note we use the [state.pos_byte] notation to ensure we don't accidentially
   // frame shift ourselves (i.e. all position shifts are encoded exclusively in
   // that variable).  This is a little less efficient that just moving the
   // pointer along but probably not worth optimizing.
@@ -261,7 +254,8 @@ struct FANSI_state FANSI_state_at_raw_position(
     state.fail = state.last = 0;
     pos_byte_prev = state.pos_byte;
 
-    // Start of a possible CSI ANSI escape sequence
+    // Handle UTF-8, we need to record the byte size of the sequence as well as
+    // the corresponding display width.
 
     if(string[state.pos_byte] < 0 || string[state.pos_byte] > 127)
       error("Currently only ASCII-128 characters are supported");
@@ -564,6 +558,12 @@ SEXP FANSI_state_at_raw_pos_ext(SEXP text, SEXP pos) {
   SEXP res_chr, res_chr_prev = PROTECT(mkChar(""));
 
   int pos_prev = -1;
+  int utf8_loc = FANSI_is_utf8_loc();
+  cetype_t type = getCharCE(text_chr);
+  int translate =
+    !((utf8_loc && type == CE_NATIVE) || type == CE_BYTES || type == CE_UTF8)
+
+  if(translate) string = translateCharUTF8(string);
 
   // Compute state at each `pos` and record result in our results matrix
 

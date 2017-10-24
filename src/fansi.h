@@ -97,11 +97,14 @@ struct FANSI_state {
    * - pos_byte: the byte in the string
    * - pos_ansi: actual character position, note that for the time being this is
    *   actually just the byte position until we add UTF-8 handling
+   * - pos_width: the character postion accounting for double width characters,
+   *   etc.
    * - pos_raw: the character position after we strip the handled ANSI tags
    */
 
   int pos_ansi;
   int pos_raw;
+  int pos_width;
   int pos_byte;
 
   /*

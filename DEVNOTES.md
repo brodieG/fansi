@@ -16,7 +16,20 @@ Some issues to consider:
   as there are no examples for how they are used.
 * What about potentially incorrect usage?  Do we warn?
 
-Seems we should go by the strict defini
+Seems we should go by the strict definition.
+
+QUESTION: do we support truecolor codes (i.e. 38;2;...)?  One major issue is
+that OSX terminal not only doesn't support them, but miss-reads them as a
+failed 38 followed by a 2 (blur/dim).  It seems here we just can't support
+the OSX terminal since it actually renders incorrectly.  So for now we'll
+support the truecolor stuff with the understanding that if truecolor codes
+show up OSX terminal just won't work right.
+
+For reference: https://gist.github.com/XVilka/8346728
+
+Other random notes:
+- negative numbers appear to be interpretable (at least by osx terminal)
+
 
 ### Interface
 
@@ -107,6 +120,11 @@ So we will walk the string until we pass all the cut points.
 
 * For each cut point
 * Compute all offsets (CSI and UTF-8)
+
+* Need:
+    * Byte position
+    * Char length in bytes (use 0 for sub-elements of UTF8 sequences)?
+    * Display width (0 for ANSI, and 0 for sub-elements)
 
 ### Benchmarks
 
