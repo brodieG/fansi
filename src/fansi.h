@@ -40,6 +40,12 @@ struct FANSI_csi_pos {
  */
 
 struct FANSI_state {
+  /*
+   * The original string the state corresponds to.  This is the pointer to the
+   * beginning of the string.
+   */
+  const char * string;
+
   /* bold, italic, etc, should be interpreted as bit mask where with 2^n we
    * have:
    *
@@ -100,18 +106,15 @@ struct FANSI_state {
    * - pos_width: the character postion accounting for double width characters,
    *   etc.
    * - pos_raw: the character position after we strip the handled ANSI tags
+   *
+   * Actually not clear if there is a difference b/w pos_raw and pos_ansi, might
+   * need to remove one
    */
 
   int pos_ansi;
   int pos_raw;
   int pos_width;
   int pos_byte;
-
-  /*
-   * The original string the state corresponds to.  This is the pointer to the
-   * beginning of the string.
-   */
-  const char * string;
 
   /* Internal Flags ------------------------------------------------------------
    *
@@ -129,3 +132,8 @@ struct FANSI_csi_pos FANSI_find_csi(const char * x);
 SEXP FANSI_has(SEXP x);
 SEXP FANSI_strip(SEXP input);
 SEXP FANSI_state_at_raw_pos_ext(SEXP text, SEXP pos);
+
+int FANSI_is_utf8_loc();
+int FANSI_utf8clen(char c);
+
+SEXP FANSI_check_assumptions();

@@ -209,7 +209,9 @@ struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode) {
  * Compute the state given a character position (raw position)
  *
  * Assumption is that any byte > 127 is UTF8 (i.e. input strings must be all
- * legal ASCII, or must have been translated to UTF8).
+ * legal ASCII, or must have been translated to UTF8).  Potential for relaxation
+ * with latin-1 since those are all single byte single width, but right now
+ * that's not implemented.
  *
  * @param pos the raw position (i.e. treating parseable ansi tags as zero
  *   length) we want the state for
@@ -223,7 +225,7 @@ struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode) {
  *   earlier position.
  */
 struct FANSI_state FANSI_state_at_raw_position(
-    int pos, const char * string, struct FANSI_state state,
+    int pos, const char * string, struct FANSI_state state
 ) {
   // Sanity checks, first one is a little strict since we could have an
   // identical copy of the string, but that should not happen in intended use
@@ -257,9 +259,36 @@ struct FANSI_state FANSI_state_at_raw_position(
     // Handle UTF-8, we need to record the byte size of the sequence as well as
     // the corresponding display width.
 
-    if(string[state.pos_byte] < 0 || string[state.pos_byte] > 127)
-      error("Currently only ASCII-128 characters are supported");
-    if(
+    if(string[state.pos_byte] < 0) {
+      int byte_size = FANSI_utf8clen(string[state.pos_byte]);
+
+      // Are there any conditions where we can assume stuff is 1 display char
+      // wide?  Maybe, although the zero width combining characters do
+      // complicate matters a bit.
+      //
+      // Additionally, there will be cases where we don't actually care about
+      // display width, only character width (e.g. substr)
+
+      // In order to compute char display width, we need to create a charsxp
+      // with the sequence in question.  Hopefully not too much overhead since
+      // at least we benefit from the global string hash table
+
+      SEXP str_chr =
+        PROTECT(mkCharLenCE(string + state.pos_byte, byte_size, CE_UTF8));
+      int disp_size = R_nchar(
+        str_chr, Width, FALSE, FALSE, "when computing display width"
+      );
+      UNPROTECT(1);
+
+      // Need to check overflow?  Really only for pos_width?  Maybe that's not
+      // even true because you need at least two bytes to encode a double wide
+      // character, and there is nothing wider than 2?
+
+      state.pos_byte += byte_size;
+      ++state.pos_ansi;
+      ++state.pos_raw;
+      state.pos_width += disp_size;
+    } else if(
       string[state.pos_byte] == 27 && string[state.pos_byte + 1] == '['
     ) {
       // make a copy of the struct so we don't modify state if it turns out this
@@ -338,12 +367,16 @@ struct FANSI_state FANSI_state_at_raw_position(
       // Invalid escape sequences count as normal characters, and at this point
       // the only way to have a valid escape seq is if it ends in 'm'
 
+      int byte_offset = pos_byte_prev - state.pos_byte;
+
       if(state.fail) {
-        state.pos_raw = state.pos_raw + (pos_byte_prev) - state.pos_byte;
+        state.pos_raw += byte_offset;
         state_tmp.pos_raw = state.pos_raw;
         state_tmp.pos_byte = state.pos_byte;
         state = state_tmp;
       }
+      state.pos_width += byte_offset;
+
     } else if (state.pos_raw < pos) {
       // Advance one character
 
@@ -352,6 +385,7 @@ struct FANSI_state FANSI_state_at_raw_position(
 
       ++state.pos_byte;
       ++state.pos_raw;
+      ++state.pos_width;
     } else {
       // We allowed entering loop so long as state.pos_raw <= pos, but we
       // actually don't want to increment counter if at pos; we only entered so
@@ -561,9 +595,9 @@ SEXP FANSI_state_at_raw_pos_ext(SEXP text, SEXP pos) {
   int utf8_loc = FANSI_is_utf8_loc();
   cetype_t type = getCharCE(text_chr);
   int translate =
-    !((utf8_loc && type == CE_NATIVE) || type == CE_BYTES || type == CE_UTF8)
+    !((utf8_loc && type == CE_NATIVE) || type == CE_BYTES || type == CE_UTF8);
 
-  if(translate) string = translateCharUTF8(string);
+  if(translate) string = translateCharUTF8(text_chr);
 
   // Compute state at each `pos` and record result in our results matrix
 

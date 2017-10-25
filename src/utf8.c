@@ -55,7 +55,7 @@ int FANSI_is_utf8_loc() {
     loc_string[loc_len - 2] == '-' &&
     (loc_string[loc_len - 3] == 'F' || loc_string[loc_len - 3] == 'f') &&
     (loc_string[loc_len - 4] == 'T' || loc_string[loc_len - 4] == 't') &&
-    (loc_string[loc_len - 5] == 'U' || loc_string[loc_len - 5] == 'u')
+    (loc_string[loc_len - 5] == 'U' || loc_string[loc_len - 5] == 'u');
 
   UNPROTECT(4);
   return(res);

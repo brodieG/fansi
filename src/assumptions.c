@@ -14,6 +14,9 @@
 // covering this
 SEXP FANSI_check_assumptions() {
   const char * err_base = "Failed system assumption: %s%s";
+
+  // What happens if CHARSXPs are allowed to be greater than R_len_t?
+
   if(sizeof(R_len_t) < sizeof(int))
     warningcall(R_NilValue, err_base, "R_len_t is not gte to int", "");
 

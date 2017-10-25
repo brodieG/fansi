@@ -58,6 +58,24 @@ Other random notes:
 Should position be in bytes?  Probably in characters to use in combination with
 ansi_strsub or whatever that ends up called.
 
+### Emoji and Other Complex Characters
+
+Main problem with emoji is that UTF-8 handling and emoji handling in R seem
+pretty terrible (though maybe not all of this is Rs fault).  Several problems:
+
+* `nchar` typical returns 1 even in width mode; maybe this is okay because in
+  terminal display these are actually displayed as one width and you end up wiht
+  overlapping emoji.  However, this calculation then isn't particularly portable
+* ZWJ width is correctly calculated at zero; however, the total width of a
+  sequence doesn't seem to collapse.  Maybe this is okay because the sequences
+  themselves aren't collapsed by the terminal (and even firefox).
+* Emoji modifiers do appear to be collapsed by the terminal, but
+  `nchar(type='width')` does not recognize this `"\U1F466\U1F3FF"`
+  (dark person).
+* Some combining characters are correctly recognized (e.g. `"A\u30A"`, combining
+  ring), interestingly the combining ring itself is reported as width zero.
+
+
 ### What About Strip and Wrap?
 
 We could:
@@ -196,3 +214,31 @@ Unit: microseconds
 ```
 
 A little odd that single pass is slower for the raw strings.
+
+One major source of slowness in existing implementation is that `gregexpr` is
+really slow:
+
+```
+> strings3 <- paste("hello ", format(1:1e4), "\033[0m world")
+microbenchmark(
++   grep(crayon:::ansi_regex, strings3, perl=T),
++   gregexpr(crayon:::ansi_regex, strings3, perl=T),
++   has_csi(strings3),
++   gsub(crayon:::ansi_regex, "", strings3)
++ )
+Unit: microseconds
+                                              expr       min        lq
+     grep(crayon:::ansi_regex, strings3, perl = T)  2789.884  3314.459
+ gregexpr(crayon:::ansi_regex, strings3, perl = T) 31016.941 46144.304
+                                 has_csi(strings3)   773.735   936.246
+           gsub(crayon:::ansi_regex, "", strings3) 19612.712 23770.707
+      mean    median        uq        max neval
+  3679.146  3518.972  3891.466   6459.200   100
+ 58982.953 51241.905 60528.666 144145.516   100
+  1101.074  1013.913  1135.477   4346.849   100
+ 25907.785 25017.828 27647.528  36121.900   100
+ ```
+
+
+ This pretty is unfortunate as it would allow us to take advantage of the
+ correct character offsets for use with `substr` in a very easy manner.
