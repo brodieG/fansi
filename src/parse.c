@@ -259,7 +259,11 @@ struct FANSI_state FANSI_state_at_raw_position(
     // Handle UTF-8, we need to record the byte size of the sequence as well as
     // the corresponding display width.
 
-    if(string[state.pos_byte] < 0) {
+    // Urgh, don't like the fact that we have two branches with `state.pos_raw <
+    // pos`...  Annoying because we don't apply that condition to the ESC[
+    // sequence since we can start with that as a zero width element...
+
+    if(string[state.pos_byte] < 0 & state.pos_raw < pos) {
       int byte_size = FANSI_utf8clen(string[state.pos_byte]);
 
       // Are there any conditions where we can assume stuff is 1 display char
@@ -279,6 +283,7 @@ struct FANSI_state FANSI_state_at_raw_position(
         str_chr, Width, FALSE, FALSE, "when computing display width"
       );
       UNPROTECT(1);
+      Rprintf("byte: %d width %d\n", byte_size, disp_size);
 
       // Need to check overflow?  Really only for pos_width?  Maybe that's not
       // even true because you need at least two bytes to encode a double wide
