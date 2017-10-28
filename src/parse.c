@@ -30,7 +30,8 @@ inline int safe_add(int a, int b) {
  */
 struct FANSI_state FANSI_state_init() {
   return (struct FANSI_state) {
-    .color = -1, .bg_color = -1, .pos_ansi=0, .pos_raw=0, .pos_byte=0
+    .color = -1, .bg_color = -1, .pos_ansi=0, .pos_raw=0, .pos_byte=0,
+    .pos_width = 0
   };
 }
 /*
@@ -371,7 +372,7 @@ struct FANSI_state FANSI_state_at_raw_position(
       // Invalid escape sequences count as normal characters, and at this point
       // the only way to have a valid escape seq is if it ends in 'm'
 
-      int byte_offset = pos_byte_prev - state.pos_byte;
+      int byte_offset = state.pos_byte - pos_byte_prev;
 
       if(state.fail) {
         state.pos_raw += byte_offset;
