@@ -283,7 +283,6 @@ struct FANSI_state FANSI_state_at_raw_position(
         str_chr, Width, FALSE, FALSE, "when computing display width"
       );
       UNPROTECT(1);
-      Rprintf("byte: %d width %d\n", byte_size, disp_size);
 
       // Need to check overflow?  Really only for pos_width?  Maybe that's not
       // even true because you need at least two bytes to encode a double wide
@@ -381,7 +380,7 @@ struct FANSI_state FANSI_state_at_raw_position(
         state = state_tmp;
       }
       state.pos_width += byte_offset;
-
+      state.pos_ansi += byte_offset;
     } else if (state.pos_raw < pos) {
       // Advance one character
 
@@ -389,6 +388,7 @@ struct FANSI_state FANSI_state_at_raw_position(
         error("Internal Error: counter overflow while reading string.");
 
       ++state.pos_byte;
+      ++state.pos_ansi;
       ++state.pos_raw;
       ++state.pos_width;
     } else {
@@ -400,7 +400,6 @@ struct FANSI_state FANSI_state_at_raw_position(
       break;
     }
   }
-  state.pos_ansi = state.pos_byte;
   return state;
 }
 /*
