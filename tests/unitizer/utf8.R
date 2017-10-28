@@ -25,4 +25,7 @@ unitizer_sect("substr", {
   ends <- starts + 5
   ansi_substr2(rep(lorem.cn.col.2, 5), starts, ends)
 
+  starts <- seq(1, by=12, len=5)
+  ends <- starts + 1
+  ansi_substr2(rep(lorem.cn.col.2, 5), starts, ends, type='width')
 })
