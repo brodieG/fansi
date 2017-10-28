@@ -101,11 +101,13 @@ struct FANSI_state {
    * need to make it back to R which doesn't have a `size_t` type.
    *
    * - pos_byte: the byte in the string
-   * - pos_ansi: actual character position, note that for the time being this is
-   *   actually just the byte position until we add UTF-8 handling
+   * - pos_ansi: actual character position
+   * - pos_raw: the character position after we strip the handled ANSI tags, the
+   *   difference with pos_ansi is that pos_ansi counts the escaped characters
+   *   whereas this one does not.
    * - pos_width: the character postion accounting for double width characters,
-   *   etc.
-   * - pos_raw: the character position after we strip the handled ANSI tags
+   *   etc., note in this case ASCII escape sequences are treated as zero chars.
+   *   Width is computed with R_nchar.
    *
    * Actually not clear if there is a difference b/w pos_raw and pos_ansi, might
    * need to remove one

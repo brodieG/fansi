@@ -65,8 +65,13 @@ ansi_substr2 <- function(x, start, stop) {
     stop.ansi <- state[[2]][3, stop.ansi.idx]
     start.tag <- state[[1]][start.ansi.idx]
 
+    # if there is any ANSI CSI then add a terminating CSI
+
+    end.csi <- character(length(start.tag))
+    end.csi[nzchar(start.tag)] <- '\033[0m'
+
     res[elems] <- paste0(
-      start.tag, substr(x[elems], start.ansi, stop.ansi), '\033[0m'
+      start.tag, substr(x[elems], start.ansi, stop.ansi), end.csi
     )
   }
   res
