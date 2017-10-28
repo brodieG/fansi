@@ -224,9 +224,11 @@ struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode) {
  *   but for a position earlier in the string.  The latter use case avoids us
  *   having to reparse the string if we've already retrieved the state at an
  *   earlier position.
+ * @param int mode whether to use character (0), width (1), or byte (2) when
+ *   computing the position
  */
-struct FANSI_state FANSI_state_at_raw_position(
-    int pos, const char * string, struct FANSI_state state
+struct FANSI_state FANSI_state_at_position(
+    int pos, const char * string, struct FANSI_state state, int mode
 ) {
   // Sanity checks, first one is a little strict since we could have an
   // identical copy of the string, but that should not happen in intended use
@@ -546,13 +548,13 @@ int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
   );
 }
 /*
- * R interface for FANSI_state_at_raw_position
+ * R interface for FANSI_state_at_position
  *
  * @param string we're interested in state of
  * @param pos integer positions along the string, one index, sorted
  */
 
-SEXP FANSI_state_at_raw_pos_ext(SEXP text, SEXP pos) {
+SEXP FANSI_state_at_pos_ext(SEXP text, SEXP pos) {
   if(TYPEOF(text) != STRSXP && XLENGTH(text) != 1)
     error("Argument `text` must be character(1L)");
   if(TYPEOF(pos) != INTSXP)
@@ -617,7 +619,7 @@ SEXP FANSI_state_at_raw_pos_ext(SEXP text, SEXP pos) {
         error("Internal Error: `pos` must be sorted %d %d.", pos_i, pos_prev);
       else pos_prev = pos_i;
 
-      state = FANSI_state_at_raw_position(pos_i, string, state);
+      state = FANSI_state_at_position(pos_i, string, state);
 
       // Record position, but set them back to 1 index
 

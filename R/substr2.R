@@ -18,18 +18,19 @@
 #'
 #' @export
 
-ansi_state <- function(text, pos) {
+ansi_state <- function(text, pos, type='chars') {
   stopifnot(
     is.character(text), length(text) == 1L,
-    is.numeric(pos), min(pos, 0L, na.rm=TRUE) >= 0L
+    is.numeric(pos), min(pos, 0L, na.rm=TRUE) >= 0L,
+    is.character(type), isTRUE(type %in% c('chars', 'width', 'bytes'))
   )
-  .Call(FANSI_state_at_raw_pos_ext, text, as.integer(pos) - 1L)
+  .Call(FANSI_state_at_pos_ext, text, as.integer(pos) - 1L)
 }
 #' Alternate substr version
 #'
 #' @export
 
-ansi_substr2 <- function(x, start, stop) {
+ansi_substr2 <- function(x, start, stop, type='chars') {
   x <- as.character(x)
   x.len <- length(x)
 
@@ -51,7 +52,7 @@ ansi_substr2 <- function(x, start, stop) {
     e.start <- start[elems]
     e.stop <- stop[elems]
     e.sort <- unique.default(sort.int(c(e.start, e.stop), method='shell'))
-    state <- ansi_state(u, e.sort)
+    state <- ansi_state(u, e.sort, type)
 
     # if any positions are greater than max position set them to those
 

@@ -1,8 +1,8 @@
-## Developer Notes
+# Developer Notes
 
 These are internal developer notes.
 
-### What Escape Sequences do we consider?
+## What Escape Sequences do we consider?
 
 Seems like the natural thing is to do CSI sequences, and maybe for simplicity
 just focus on the SGR variety.  But even with SGR, there is some question as to
@@ -31,21 +31,21 @@ Other random notes:
 - negative numbers appear to be interpretable (at least by osx terminal)
 
 
-### Interface
+## Interface
 
 * `state_at_pos`
 * `find_csi`: forward state object to next CSI
 * `parse_csi`: update state object with CSI data
 * `parse_csi_token`: part of the above?
 
-### Functions
+## Functions
 
 * `substr`
 * `strip_ansi`
 * `strwrap`
 * `trim`
 
-### What do we do Next?
+## What do we do Next?
 
 * Spend time figuring out how to integrate character width?
 * All C substr?
@@ -53,12 +53,12 @@ Other random notes:
 * Tab resolution?
 * Generating a table of state vs. position
 
-### State vs. Position
+## State vs. Position
 
 Should position be in bytes?  Probably in characters to use in combination with
 ansi_strsub or whatever that ends up called.
 
-### Emoji and Other Complex Characters
+## Emoji and Other Complex Characters
 
 Main problem with emoji is that UTF-8 handling and emoji handling in R seem
 pretty terrible (though maybe not all of this is Rs fault).  Several problems:
@@ -76,7 +76,7 @@ pretty terrible (though maybe not all of this is Rs fault).  Several problems:
   ring), interestingly the combining ring itself is reported as width zero.
 
 
-### What About Strip and Wrap?
+## What About Strip and Wrap?
 
 We could:
 
@@ -134,7 +134,7 @@ an as needed basis.
 
 So we will walk the string until we pass all the cut points.
 
-### substr_csi
+## substr_csi
 
 * For each cut point
 * Compute all offsets (CSI and UTF-8)
@@ -144,7 +144,9 @@ So we will walk the string until we pass all the cut points.
     * Char length in bytes (use 0 for sub-elements of UTF8 sequences)?
     * Display width (0 for ANSI, and 0 for sub-elements)
 
-### Benchmarks
+## Benchmarks
+
+### Strip
 
 After `csi_pos`:
 
@@ -238,7 +240,24 @@ Unit: microseconds
   1101.074  1013.913  1135.477   4346.849   100
  25907.785 25017.828 27647.528  36121.900   100
  ```
-
-
  This pretty is unfortunate as it would allow us to take advantage of the
  correct character offsets for use with `substr` in a very easy manner.
+
+
+### Wrap
+
+```
+Unit: microseconds
+                                     expr      min       lq      mean    median
+ yy <- ansi_substr2(y.rep, starts, stops)  329.705  342.663  516.4295  579.5910
+       zz <- substr(x.rep, starts, stops)   62.264   62.839   71.8798   67.0075
+     zz <- stri_sub(x.rep, starts, stops)   10.290   14.488  372.0339   15.9330
+             strwrap(x.paste, width = 60) 1076.706 1107.804 1265.9602 1153.7485
+           stri_wrap(x.paste, width = 60)  651.140  672.613 2847.7724  684.6655
+       uq       max neval
+  615.749   786.446    10
+   69.033   117.193    10
+   17.730  3561.330    10
+ 1250.574  1816.338    10
+  748.697 22125.136    10
+  ```
