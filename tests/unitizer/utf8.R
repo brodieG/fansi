@@ -14,6 +14,9 @@ unitizer_sect("substr", {
   ends <- starts + 3
   ansi_substr2(rep(lorem.cn.col.1, 5), starts, ends)
 
+  # These are all six chars wide, but look different due to different width
+  # characters
+
   lorem.cn.col.2 <- paste0(
     red, lorem.cn.pieces[1], "hello", inv, lorem.cn.pieces[2], " there ",
     grn.bg, lorem.cn.pieces[3], rgb.und, lorem.cn.pieces[4], end
