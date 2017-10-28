@@ -224,11 +224,11 @@ struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode) {
  *   but for a position earlier in the string.  The latter use case avoids us
  *   having to reparse the string if we've already retrieved the state at an
  *   earlier position.
- * @param int mode whether to use character (0), width (1), or byte (2) when
+ * @param int type whether to use character (0), width (1), or byte (2) when
  *   computing the position
  */
 struct FANSI_state FANSI_state_at_position(
-    int pos, const char * string, struct FANSI_state state, int mode
+    int pos, const char * string, struct FANSI_state state, int type
 ) {
   // Sanity checks, first one is a little strict since we could have an
   // identical copy of the string, but that should not happen in intended use
@@ -245,6 +245,7 @@ struct FANSI_state FANSI_state_at_position(
 
   state.string = string;
   int pos_byte_prev = 0;
+  int cond = 0;
 
   // frame shift ourselves (i.e. all position shifts are encoded exclusively in
   // that variable).  This is a little less efficient that just moving the
@@ -253,7 +254,17 @@ struct FANSI_state FANSI_state_at_position(
   // Loosely related, since we don't make any distinction between byte and ansi
   // position for now we ignore `pos_ansi` until the very end
 
-  while(string[state.pos_byte] && state.pos_raw <= pos) {
+  while(1) {
+    switch(type) {
+      case 0: cond = string[state.pos_byte] && state.pos_raw <= pos; break;
+      case 1: cond = string[state.pos_byte] && state.pos_width <= pos; break;
+      case 2: cond = string[state.pos_byte] && state.pos_byte <= pos; break;
+      default:
+        // nocov start
+        error("Internal Error: Illegal offset type; contact maintainer.");
+        // nocov end
+    }
+    if(!cond) break;
     // Reset internal controls
 
     state.fail = state.last = 0;
@@ -554,7 +565,7 @@ int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
  * @param pos integer positions along the string, one index, sorted
  */
 
-SEXP FANSI_state_at_pos_ext(SEXP text, SEXP pos) {
+SEXP FANSI_state_at_pos_ext(SEXP text, SEXP pos, SEXP type) {
   if(TYPEOF(text) != STRSXP && XLENGTH(text) != 1)
     error("Argument `text` must be character(1L)");
   if(TYPEOF(pos) != INTSXP)
@@ -570,6 +581,7 @@ SEXP FANSI_state_at_pos_ext(SEXP text, SEXP pos) {
   const char * string = CHAR(text_chr);
   struct FANSI_state state = FANSI_state_init();
   struct FANSI_state state_prev = FANSI_state_init();
+
 
   // Allocate result, will be a res_cols x n matrix.  A bit wasteful to record
   // all the color values given we'll rarely use them, but variable width
@@ -600,10 +612,11 @@ SEXP FANSI_state_at_pos_ext(SEXP text, SEXP pos) {
 
   int pos_prev = -1;
   int utf8_loc = FANSI_is_utf8_loc();
-  cetype_t type = getCharCE(text_chr);
-  int translate =
-    !((utf8_loc && type == CE_NATIVE) || type == CE_BYTES || type == CE_UTF8);
-
+  cetype_t enc_type = getCharCE(text_chr);
+  int translate = !(
+    (utf8_loc && enc_type == CE_NATIVE) || enc_type == CE_BYTES ||
+    enc_type == CE_UTF8
+  );
   if(translate) string = translateCharUTF8(text_chr);
 
   // Compute state at each `pos` and record result in our results matrix
@@ -619,7 +632,7 @@ SEXP FANSI_state_at_pos_ext(SEXP text, SEXP pos) {
         error("Internal Error: `pos` must be sorted %d %d.", pos_i, pos_prev);
       else pos_prev = pos_i;
 
-      state = FANSI_state_at_position(pos_i, string, state);
+      state = FANSI_state_at_position(pos_i, string, state, asInteger(type));
 
       // Record position, but set them back to 1 index
 

@@ -133,7 +133,7 @@ struct FANSI_csi_pos FANSI_find_csi(const char * x);
 
 SEXP FANSI_has(SEXP x);
 SEXP FANSI_strip(SEXP input);
-SEXP FANSI_state_at_pos_ext(SEXP text, SEXP pos);
+SEXP FANSI_state_at_pos_ext(SEXP text, SEXP pos, SEXP type);
 
 int FANSI_is_utf8_loc();
 int FANSI_utf8clen(char c);

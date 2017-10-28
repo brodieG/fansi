@@ -22,9 +22,12 @@ ansi_state <- function(text, pos, type='chars') {
   stopifnot(
     is.character(text), length(text) == 1L,
     is.numeric(pos), min(pos, 0L, na.rm=TRUE) >= 0L,
-    is.character(type), isTRUE(type %in% c('chars', 'width', 'bytes'))
+    is.character(type),
+    !is.na(type.match <- match(type, c('chars', 'width', 'bytes')))
   )
-  .Call(FANSI_state_at_pos_ext, text, as.integer(pos) - 1L)
+  .Call(
+    FANSI_state_at_pos_ext, text, as.integer(pos) - 1L, type.match - 1L
+  )
 }
 #' Alternate substr version
 #'
@@ -65,11 +68,12 @@ ansi_substr2 <- function(x, start, stop, type='chars') {
     start.ansi <- state[[2]][3, start.ansi.idx]
     stop.ansi <- state[[2]][3, stop.ansi.idx]
     start.tag <- state[[1]][start.ansi.idx]
+    stop.tag <- state[[1]][stop.ansi.idx]
 
     # if there is any ANSI CSI then add a terminating CSI
 
     end.csi <- character(length(start.tag))
-    end.csi[nzchar(start.tag)] <- '\033[0m'
+    end.csi[nzchar(start.tag) | nzchar(stop.tag)] <- '\033[0m'
 
     res[elems] <- paste0(
       start.tag, substr(x[elems], start.ansi, stop.ansi), end.csi
