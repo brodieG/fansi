@@ -226,9 +226,12 @@ struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode) {
  *   earlier position.
  * @param int type whether to use character (0), width (1), or byte (2) when
  *   computing the position
+ * @param lag in cases where requested breakpoint is not feasible because of
+ *   multi width characters, whether to include or exclude the character
  */
 struct FANSI_state FANSI_state_at_position(
-    int pos, const char * string, struct FANSI_state state, int type
+    int pos, const char * string, struct FANSI_state state, int type,
+    int lag
 ) {
   // Sanity checks, first one is a little strict since we could have an
   // identical copy of the string, but that should not happen in intended use
@@ -254,6 +257,8 @@ struct FANSI_state FANSI_state_at_position(
   // Loosely related, since we don't make any distinction between byte and ansi
   // position for now we ignore `pos_ansi` until the very end
 
+  struct FANSI_state state_prev = state;
+
   while(1) {
     if(!string[state.pos_byte]) break;
     switch(type) {
@@ -265,10 +270,26 @@ struct FANSI_state FANSI_state_at_position(
         error("Internal Error: Illegal offset type; contact maintainer.");
         // nocov end
     }
-    if(cond < 0) break;
+    if(cond < 0) {
+      // Should only happen with 'type' width, which means we overshot the
+      // breakpoint due to a wide character
 
+      if(type != 1)
+        // nocov start
+        error(
+          "%s%s",
+          "Internal Error: partial width should only happen in type 'width'; ",
+          "contact maintainer."
+        );
+        // nocov end
+
+      if(!lag) state = state_prev;
+      state.pos_width = pos;
+      break;
+    }
     // Reset internal controls
 
+    state_prev = state;
     state.fail = state.last = 0;
     pos_byte_prev = state.pos_byte;
 
@@ -282,16 +303,12 @@ struct FANSI_state FANSI_state_at_position(
     if(string[state.pos_byte] < 0 && cond > 0) {
       int byte_size = FANSI_utf8clen(string[state.pos_byte]);
 
-      // Are there any conditions where we can assume stuff is 1 display char
-      // wide?  Maybe, although the zero width combining characters do
-      // complicate matters a bit.
-      //
-      // Additionally, there will be cases where we don't actually care about
-      // display width, only character width (e.g. substr)
-
       // In order to compute char display width, we need to create a charsxp
       // with the sequence in question.  Hopefully not too much overhead since
       // at least we benefit from the global string hash table
+      //
+      // Note that we should probably not bother with computing this if display
+      // mode is not width as it's probably expensive.
 
       SEXP str_chr =
         PROTECT(mkCharLenCE(string + state.pos_byte, byte_size, CE_UTF8));
@@ -566,11 +583,15 @@ int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
  * @param pos integer positions along the string, one index, sorted
  */
 
-SEXP FANSI_state_at_pos_ext(SEXP text, SEXP pos, SEXP type) {
+SEXP FANSI_state_at_pos_ext(SEXP text, SEXP pos, SEXP type, SEXP lag) {
   if(TYPEOF(text) != STRSXP && XLENGTH(text) != 1)
     error("Argument `text` must be character(1L)");
   if(TYPEOF(pos) != INTSXP)
     error("Argument `pos` must be integer");
+  if(TYPEOF(lag) != LGLSXP)
+    error("Argument `lag` must be logical");
+  if(XLENGTH(pos) != XLENGTH(lag))
+    error("Argument `lag` must be the same length as `pos`");
 
   const int res_cols = 4;
   R_xlen_t len = XLENGTH(pos);
@@ -582,7 +603,6 @@ SEXP FANSI_state_at_pos_ext(SEXP text, SEXP pos, SEXP type) {
   const char * string = CHAR(text_chr);
   struct FANSI_state state = FANSI_state_init();
   struct FANSI_state state_prev = FANSI_state_init();
-
 
   // Allocate result, will be a res_cols x n matrix.  A bit wasteful to record
   // all the color values given we'll rarely use them, but variable width
@@ -624,6 +644,8 @@ SEXP FANSI_state_at_pos_ext(SEXP text, SEXP pos, SEXP type) {
 
   // Compute state at each `pos` and record result in our results matrix
 
+  int type_int = asInteger(type);
+
   for(R_xlen_t i = 0; i < len; i++) {
     R_CheckUserInterrupt();
     int pos_i = INTEGER(pos)[i];
@@ -635,7 +657,9 @@ SEXP FANSI_state_at_pos_ext(SEXP text, SEXP pos, SEXP type) {
         error("Internal Error: `pos` must be sorted %d %d.", pos_i, pos_prev);
       else pos_prev = pos_i;
 
-      state = FANSI_state_at_position(pos_i, string, state, asInteger(type));
+      state = FANSI_state_at_position(
+        pos_i, string, state, type_int, INTEGER(lag)[i]
+      );
 
       // Record position, but set them back to 1 index
 
