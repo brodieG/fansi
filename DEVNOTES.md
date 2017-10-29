@@ -221,13 +221,6 @@ One major source of slowness in existing implementation is that `gregexpr` is
 really slow:
 
 ```
-> strings3 <- paste("hello ", format(1:1e4), "\033[0m world")
-microbenchmark(
-+   grep(crayon:::ansi_regex, strings3, perl=T),
-+   gregexpr(crayon:::ansi_regex, strings3, perl=T),
-+   has_csi(strings3),
-+   gsub(crayon:::ansi_regex, "", strings3)
-+ )
 Unit: microseconds
                                               expr       min        lq
      grep(crayon:::ansi_regex, strings3, perl = T)  2789.884  3314.459
@@ -254,10 +247,4 @@ Unit: microseconds
      zz <- stri_sub(x.rep, starts, stops)   10.290   14.488  372.0339   15.9330
              strwrap(x.paste, width = 60) 1076.706 1107.804 1265.9602 1153.7485
            stri_wrap(x.paste, width = 60)  651.140  672.613 2847.7724  684.6655
-       uq       max neval
-  615.749   786.446    10
-   69.033   117.193    10
-   17.730  3561.330    10
- 1250.574  1816.338    10
-  748.697 22125.136    10
-  ```
+```

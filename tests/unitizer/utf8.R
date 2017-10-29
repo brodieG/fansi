@@ -26,6 +26,18 @@ unitizer_sect("substr", {
   ansi_substr2(rep(lorem.cn.col.2, 5), starts, ends)
 
   starts <- seq(1, by=12, len=5)
-  ends <- starts + 1
+  ends <- starts + 11
   ansi_substr2(rep(lorem.cn.col.2, 5), starts, ends, type='width')
+
+  # All wide characters even number of chars apart
+
+  lorem.cn.col.3 <- paste0(
+    red, lorem.cn.pieces[1], "hellso", inv, lorem.cn.pieces[2], " therre ",
+    grn.bg, lorem.cn.pieces[3], rgb.und, lorem.cn.pieces[4], end
+  )
+
+  starts <- seq(1, by=12, len=5)
+  ends <- starts + 10
+  ends[2] <- 24 # because we end in a single width char on this line
+  ansi_substr2(rep(lorem.cn.col.3, 5), starts, ends, type='width')
 })

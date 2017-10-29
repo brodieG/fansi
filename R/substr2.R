@@ -49,6 +49,7 @@ ansi_substr2 <- function(x, start, stop, type='chars') {
 
   res <- character(length(x))
   x.u <- unique(x)
+  offset <- c(chars=2, bytes=1, width=4)[type]
 
   for(u in x.u) {
     elems <- which(x == u)
@@ -59,12 +60,18 @@ ansi_substr2 <- function(x, start, stop, type='chars') {
 
     # if any positions are greater than max position set them to those
 
-    max.pos <- max(state[[2]][2, ])
+    max.pos <- max(state[[2]][offset, ])
     e.start[e.start > max.pos] <- max.pos
     e.stop[e.stop > max.pos] <- max.pos
 
-    start.ansi.idx <- match(e.start, state[[2]][2, ])
-    stop.ansi.idx <- match(e.stop, state[[2]][2, ])
+    # Find the ansi offset by matching on whatever type of offset we're limiting
+    # to
+
+    start.ansi.idx <- match(e.start, state[[2]][offset, ])
+    stop.ansi.idx <- match(e.stop, state[[2]][offset, ])
+
+    # And use those to substr with
+
     start.ansi <- state[[2]][3, start.ansi.idx]
     stop.ansi <- state[[2]][3, stop.ansi.idx]
     start.tag <- state[[1]][start.ansi.idx]
