@@ -255,16 +255,18 @@ struct FANSI_state FANSI_state_at_position(
   // position for now we ignore `pos_ansi` until the very end
 
   while(1) {
+    if(!string[state.pos_byte]) break;
     switch(type) {
-      case 0: cond = string[state.pos_byte] && state.pos_raw <= pos; break;
-      case 1: cond = string[state.pos_byte] && state.pos_width <= pos; break;
-      case 2: cond = string[state.pos_byte] && state.pos_byte <= pos; break;
+      case 0: cond = pos - state.pos_raw; break;
+      case 1: cond = pos - state.pos_width; break;
+      case 2: cond = pos - state.pos_byte; break;
       default:
         // nocov start
         error("Internal Error: Illegal offset type; contact maintainer.");
         // nocov end
     }
-    if(!cond) break;
+    if(cond < 0) break;
+
     // Reset internal controls
 
     state.fail = state.last = 0;
@@ -277,7 +279,7 @@ struct FANSI_state FANSI_state_at_position(
     // pos`...  Annoying because we don't apply that condition to the ESC[
     // sequence since we can start with that as a zero width element...
 
-    if(string[state.pos_byte] < 0 & state.pos_raw < pos) {
+    if(string[state.pos_byte] < 0 && cond > 0) {
       int byte_size = FANSI_utf8clen(string[state.pos_byte]);
 
       // Are there any conditions where we can assume stuff is 1 display char
@@ -393,9 +395,8 @@ struct FANSI_state FANSI_state_at_position(
         state_tmp.pos_byte = state.pos_byte;
         state = state_tmp;
       }
-      state.pos_width += byte_offset;
       state.pos_ansi += byte_offset;
-    } else if (state.pos_raw < pos) {
+    } else if (cond > 0) {
       // Advance one character
 
       if(state.pos_byte == INT_MAX)
@@ -571,7 +572,7 @@ SEXP FANSI_state_at_pos_ext(SEXP text, SEXP pos, SEXP type) {
   if(TYPEOF(pos) != INTSXP)
     error("Argument `pos` must be integer");
 
-  const int res_cols = 3;
+  const int res_cols = 4;
   R_xlen_t len = XLENGTH(pos);
 
   if(len > R_XLEN_T_MAX / res_cols) {
@@ -588,7 +589,9 @@ SEXP FANSI_state_at_pos_ext(SEXP text, SEXP pos, SEXP type) {
   // structures are likely to be much slower.  We could encode most color values
   // into one int but it would be a little annoying to retrieve them
 
-  const char * rownames[res_cols] = {"pos.byte", "pos.raw", "pos.ansi"};
+  const char * rownames[res_cols] = {
+    "pos.byte", "pos.raw", "pos.ansi", "pos.width"
+  };
   SEXP res_rn = PROTECT(allocVector(STRSXP, res_cols));
   for(int i = 0; i < res_cols; i++)
     SET_STRING_ELT(res_rn, i, mkChar(rownames[i]));
@@ -639,6 +642,7 @@ SEXP FANSI_state_at_pos_ext(SEXP text, SEXP pos, SEXP type) {
       INTEGER(res_mx)[i * res_cols + 0] = safe_add(state.pos_byte, 1);
       INTEGER(res_mx)[i * res_cols + 1] = safe_add(state.pos_raw, 1);
       INTEGER(res_mx)[i * res_cols + 2] = safe_add(state.pos_ansi, 1);
+      INTEGER(res_mx)[i * res_cols + 3] = safe_add(state.pos_width, 1);
 
       // Record color tag if state changed
 
