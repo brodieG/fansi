@@ -72,6 +72,12 @@ pretty terrible (though maybe not all of this is Rs fault).  Several problems:
 * Emoji modifiers do appear to be collapsed by the terminal, but
   `nchar(type='width')` does not recognize this `"\U1F466\U1F3FF"`
   (dark person).
+```
+nchar("\U1F466")                      # man
+nchar("\U1F466", type='width')
+nchar("\U1F466\U1F3FF", type='width') # dark man
+cat("\U1F466\U1F3FF\n")
+```
 * Some combining characters are correctly recognized (e.g. `"A\u30A"`, combining
   ring), interestingly the combining ring itself is reported as width zero.
 
@@ -148,17 +154,20 @@ So we will walk the string until we pass all the cut points.
 
 ### Strip
 
+Testing with the following:
+
+```
+strings.all <- crayon::red(
+  paste("hello ", crayon::green("green"), "world", 1:1000)
+)
+strings <- strings.raw <- strip_ansi(strings.all)
+strings.index <- sample(1:1000, 100)
+strings[strings.index] <- strings.all[strings.index]
+```
+
 After `csi_pos`:
 
 ```
-> microbenchmark::microbenchmark(
-+   crayon:::strip_style(strings),
-+   crayon:::strip_style(strings.raw),
-+   crayon:::strip_style(strings.all),
-+   strip_ansi(strings),
-+   strip_ansi(strings.raw),
-+   strip_ansi(strings.all)
-+ )
 Unit: microseconds
                               expr     min       lq      mean   median
      crayon:::strip_style(strings) 285.397 290.5625 356.48010 321.1050
@@ -173,15 +182,6 @@ After we switch to two pass, doesn't really seem to help at all, in fact,
 potentially hurts.
 
 ```
-> microbenchmark::microbenchmark(times=1000,
-+   crayon:::strip_style(strings),
-+   crayon:::strip_style(strings.raw),
-+   crayon:::strip_style(strings.all),
-+   strip_ansi(strings),
-+   strip_ansi(strings.raw),
-+   strip_ansi(strings.all),
-+   has_csi(strings)
-+ )
 Unit: microseconds
                               expr      min        lq       mean    median
      crayon:::strip_style(strings)  351.474  358.0145  433.34345  382.6325
@@ -195,15 +195,6 @@ Unit: microseconds
 Back to single pass:
 
 ```
-> microbenchmark::microbenchmark(times=1000,
-+   crayon:::strip_style(strings),
-+   crayon:::strip_style(strings.raw),
-+   crayon:::strip_style(strings.all),
-+   strip_ansi(strings),
-+   strip_ansi(strings.raw),
-+   strip_ansi(strings.all),
-+   has_csi(strings)
-+ )
 Unit: microseconds
                               expr      min        lq       mean    median
      crayon:::strip_style(strings)  352.317  359.2645  449.05838  384.8680
@@ -221,6 +212,8 @@ One major source of slowness in existing implementation is that `gregexpr` is
 really slow:
 
 ```
+strings3 <- paste("hello ", format(1:1e4), "\033[0m world")
+
 Unit: microseconds
                                               expr       min        lq
      grep(crayon:::ansi_regex, strings3, perl = T)  2789.884  3314.459
