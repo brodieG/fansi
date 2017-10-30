@@ -163,6 +163,8 @@ struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode) {
       i_max = 1;
     } else error("Internal Error: 1301341"); // nocov
 
+    rgb[0] = colors;
+
     // Parse through the subsequent tokens
 
     for(int i = 0; i < i_max; ++i) {
@@ -170,7 +172,7 @@ struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode) {
       state.pos_byte = safe_add(state.pos_byte, safe_add(res.len, 1));
       state.last = res.last;
       if(res.success) {
-        int early_end = !(res.last && i < (i_max - 1));
+        int early_end = res.last && i < (i_max - 1);
         if(res.success == 2 && res.val < 256 && !early_end) {
           rgb[i + 1] = res.val;
         } else {
