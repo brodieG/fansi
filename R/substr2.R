@@ -18,7 +18,7 @@
 #'
 #' @export
 
-ansi_state <- function(text, pos, type='chars', lag) {
+ansi_state <- function(text, pos, type='chars', lag, ends) {
   stopifnot(
     is.character(text), length(text) == 1L,
     is.numeric(pos), min(pos, 0L, na.rm=TRUE) >= 0L,
@@ -27,14 +27,18 @@ ansi_state <- function(text, pos, type='chars', lag) {
   )
   .Call(
     FANSI_state_at_pos_ext, text, as.integer(pos) - 1L, type.match - 1L,
-    lag
+    lag, ends
   )
 }
 #' Alternate substr version
 #'
 #' @export
 
-ansi_substr2 <- function(x, start, stop, type='chars', round='first') {
+ansi_substr2 <- function(
+  x, start, stop, type='chars', round='first'
+) {
+  stopifnot(isTRUE(round %in% c('first', 'last', 'both', 'neither')))
+
   x <- as.character(x)
   x.len <- length(x)
 
@@ -59,19 +63,21 @@ ansi_substr2 <- function(x, start, stop, type='chars', round='first') {
     # note, for expediency we're currently assuming that there is no overlap
     # between starts and stops
     cat("reminder - remove non-overlap here\n")
+    cat("reminder - convert stuff to UTF8 here and not in C\n")
 
     if(length(intersect(e.start, e.stop)))
       stop("Currently don't support overlapping start and stop points")
 
     e.order <- order(c(e.start, e.stop), method='shell')
 
-    e.round <- c(
-      rep(round %in% c('first', 'both'), length(elems)),
-      rep(round %in% c('last', 'both'), length(elems))
+    e.lag <- c(
+      rep(!round %in% c('first', 'both'), length(start)),
+      rep(round %in% c('last', 'both'), length(stop))
     )[e.order]
-
+    e.ends <- c(rep(FALSE, length(start)), rep(TRUE, length(start)))[e.order]
     e.sort <- c(e.start, e.stop)[e.order]
-    state <- ansi_state(u, e.sort, type, e.round)
+
+    state <- ansi_state(u, e.sort, type, e.lag, e.ends)
 
     # if any positions are greater than max position set them to those
 

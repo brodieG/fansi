@@ -229,11 +229,15 @@ struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode) {
  * @param int type whether to use character (0), width (1), or byte (2) when
  *   computing the position
  * @param lag in cases where requested breakpoint is not feasible because of
- *   multi width characters, whether to include or exclude the character
+ *   multi width characters, whether to return end of prior (0) or the start of
+ *   the next (1)
+ * @param end whether the request is made for the ends of the string (i.e. as
+ *   part of the `stop` parameter) (1), or not (0) (i.e. as part of the start
+ *   parameters).
  */
 struct FANSI_state FANSI_state_at_position(
     int pos, const char * string, struct FANSI_state state, int type,
-    int lag
+    int lag, int end
 ) {
   // Sanity checks, first one is a little strict since we could have an
   // identical copy of the string, but that should not happen in intended use
@@ -265,13 +269,28 @@ struct FANSI_state FANSI_state_at_position(
     if(!string[state.pos_byte]) break;
     switch(type) {
       case 0: cond = pos - state.pos_raw; break;
-      case 1: cond = pos - state.pos_width; break;
+      case 1: {
+        // For wide display characters, it matters whether we are looking for
+        // the end of a character or the beginning.  E.g. in a single two-wide
+        // character that spans positions 0-1, when we request position 0 and
+        // expect the beginning of the string, then we are start at the
+        // boundary, whereas if we request 0 at the end of the string, then we
+        // are in the middle of the two-wide character.
+        cond = pos - state.pos_width + (state.pos_width > 1 && end ? 1 : 0);
+        break;
+      }
       case 2: cond = pos - state.pos_byte; break;
       default:
         // nocov start
         error("Internal Error: Illegal offset type; contact maintainer.");
         // nocov end
     }
+    /*
+    Rprintf(
+      "cond %d lag %d pos %d width %d byte %d type %d end %d\n",
+      cond, lag, pos, state.pos_width, state.pos_byte, type, end
+    );
+    */
     if(cond < 0) {
       // Should only happen with 'type' width, which means we overshot the
       // breakpoint due to a wide character
@@ -286,8 +305,7 @@ struct FANSI_state FANSI_state_at_position(
         // nocov end
 
       if(!lag) state = state_prev;
-      state.pos_width = pos;
-      break;
+      state.pos_width_target = pos;
     }
     // Reset internal controls
 
@@ -303,6 +321,9 @@ struct FANSI_state FANSI_state_at_position(
     // sequence since we can start with that as a zero width element...
 
     if(string[state.pos_byte] < 0 && cond > 0) {
+      // NOTE: need to look ahead for zero width characters?
+      Rprintf("Look ahead for zero width characters\n");
+
       int byte_size = FANSI_utf8clen(string[state.pos_byte]);
 
       // In order to compute char display width, we need to create a charsxp
@@ -326,7 +347,14 @@ struct FANSI_state FANSI_state_at_position(
       state.pos_byte += byte_size;
       ++state.pos_ansi;
       ++state.pos_raw;
+      /*
+      Rprintf(
+        "old width: %d extra: %d new width: %d\n",
+        state.pos_width, disp_size, state.pos_width + disp_size
+      );
+      */
       state.pos_width += disp_size;
+      state.pos_width_target += disp_size;
     } else if(
       string[state.pos_byte] == 27 && string[state.pos_byte + 1] == '['
     ) {
@@ -425,14 +453,26 @@ struct FANSI_state FANSI_state_at_position(
       ++state.pos_ansi;
       ++state.pos_raw;
       ++state.pos_width;
+      ++state.pos_width_target;
     } else {
       // We allowed entering loop so long as state.pos_raw <= pos, but we
       // actually don't want to increment counter if at pos; we only entered so
       // that we could potentially parse a zero length sequence that starts at
       // pos
 
+      if(end && type == 1){
+        // If in end mode and width mode, we need to back off the ansi counter
+        // since we didn't actually advance a character, only width
+        --state.pos_ansi;
+      }
       break;
     }
+  }
+  // Special handling in width mode b/c not guaranteed to get same offset we
+  // requested
+
+  if(type == 1) {
+    if(state.pos_width_target != pos) state.pos_width_target = pos;
   }
   return state;
 }
@@ -585,7 +625,9 @@ int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
  * @param pos integer positions along the string, one index, sorted
  */
 
-SEXP FANSI_state_at_pos_ext(SEXP text, SEXP pos, SEXP type, SEXP lag) {
+SEXP FANSI_state_at_pos_ext(
+  SEXP text, SEXP pos, SEXP type, SEXP lag, SEXP ends
+) {
   if(TYPEOF(text) != STRSXP && XLENGTH(text) != 1)
     error("Argument `text` must be character(1L)");
   if(TYPEOF(pos) != INTSXP)
@@ -594,6 +636,8 @@ SEXP FANSI_state_at_pos_ext(SEXP text, SEXP pos, SEXP type, SEXP lag) {
     error("Argument `lag` must be logical");
   if(XLENGTH(pos) != XLENGTH(lag))
     error("Argument `lag` must be the same length as `pos`");
+  if(XLENGTH(pos) != XLENGTH(ends))
+    error("Argument `ends` must be the same length as `pos`");
 
   const int res_cols = 4;
   R_xlen_t len = XLENGTH(pos);
@@ -660,7 +704,7 @@ SEXP FANSI_state_at_pos_ext(SEXP text, SEXP pos, SEXP type, SEXP lag) {
       else pos_prev = pos_i;
 
       state = FANSI_state_at_position(
-        pos_i, string, state, type_int, INTEGER(lag)[i]
+        pos_i, string, state, type_int, INTEGER(lag)[i], INTEGER(ends)[i]
       );
 
       // Record position, but set them back to 1 index
@@ -668,7 +712,7 @@ SEXP FANSI_state_at_pos_ext(SEXP text, SEXP pos, SEXP type, SEXP lag) {
       INTEGER(res_mx)[i * res_cols + 0] = safe_add(state.pos_byte, 1);
       INTEGER(res_mx)[i * res_cols + 1] = safe_add(state.pos_raw, 1);
       INTEGER(res_mx)[i * res_cols + 2] = safe_add(state.pos_ansi, 1);
-      INTEGER(res_mx)[i * res_cols + 3] = safe_add(state.pos_width, 1);
+      INTEGER(res_mx)[i * res_cols + 3] = safe_add(state.pos_width_target, 1);
 
       // Record color tag if state changed
 

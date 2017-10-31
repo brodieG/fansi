@@ -108,6 +108,9 @@ struct FANSI_state {
    * - pos_width: the character postion accounting for double width characters,
    *   etc., note in this case ASCII escape sequences are treated as zero chars.
    *   Width is computed with R_nchar.
+   * - pos_width_target: pos_width when the requested width cannot be matched
+   *   exactly, pos_width is the exact width, and this one is what was actually
+   *   requested.  Needed so we can match back to request.
    *
    * Actually not clear if there is a difference b/w pos_raw and pos_ansi, might
    * need to remove one
@@ -116,6 +119,7 @@ struct FANSI_state {
   int pos_ansi;
   int pos_raw;
   int pos_width;
+  int pos_width_target;
   int pos_byte;
 
   /* Internal Flags ------------------------------------------------------------
@@ -133,7 +137,9 @@ struct FANSI_csi_pos FANSI_find_csi(const char * x);
 
 SEXP FANSI_has(SEXP x);
 SEXP FANSI_strip(SEXP input);
-SEXP FANSI_state_at_pos_ext(SEXP text, SEXP pos, SEXP type, SEXP lag);
+SEXP FANSI_state_at_pos_ext(
+  SEXP text, SEXP pos, SEXP type, SEXP lag, SEXP ends
+);
 
 int FANSI_is_utf8_loc();
 int FANSI_utf8clen(char c);

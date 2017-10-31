@@ -41,3 +41,30 @@ unitizer_sect("substr", {
   ends[2] <- 24 # because we end in a single width char on this line
   ansi_substr2(rep(lorem.cn.col.3, 5), starts, ends, type='width')
 })
+unitizer_sect("rounding", {
+  # handling of subsetting when we end up in middle of wide display characters
+
+  ansi_substr2(lorem.cn.col.2, 1, 2, type='width')
+  ansi_substr2(lorem.cn.col.2, 1, 3, type='width')
+  ansi_substr2(lorem.cn.col.2, 2, 3, type='width')
+  ansi_substr2(lorem.cn.col.2, 2, 4, type='width')
+  ansi_substr2(lorem.cn.col.2, 3, 4, type='width')
+
+  ansi_substr2(lorem.cn.col.2, 1, 2, type='width', round='last')
+  ansi_substr2(lorem.cn.col.2, 1, 3, type='width', round='last')
+  ansi_substr2(lorem.cn.col.2, 2, 3, type='width', round='last')
+  ansi_substr2(lorem.cn.col.2, 2, 4, type='width', round='last')
+  ansi_substr2(lorem.cn.col.2, 3, 4, type='width', round='last')
+
+  ansi_substr2(lorem.cn.col.2, 1, 2, type='width', round='both')
+  ansi_substr2(lorem.cn.col.2, 1, 3, type='width', round='both')
+  ansi_substr2(lorem.cn.col.2, 2, 3, type='width', round='both')
+  ansi_substr2(lorem.cn.col.2, 2, 4, type='width', round='both')
+  ansi_substr2(lorem.cn.col.2, 3, 4, type='width', round='both')
+
+  ansi_substr2(lorem.cn.col.2, 1, 2, type='width', round='neither')
+  ansi_substr2(lorem.cn.col.2, 1, 3, type='width', round='neither')
+  ansi_substr2(lorem.cn.col.2, 2, 3, type='width', round='neither')
+  ansi_substr2(lorem.cn.col.2, 2, 4, type='width', round='neither')
+  ansi_substr2(lorem.cn.col.2, 3, 4, type='width', round='neither')
+})
