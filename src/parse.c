@@ -256,6 +256,11 @@ struct FANSI_state FANSI_state_at_position(
   int pos_byte_prev = 0;
   int cond = 0;
 
+  // Need to reset pos_width_target since it could be distorted by a previous
+  // middle of wide char event
+
+  state.pos_width_target = state.pos_width;
+
   // frame shift ourselves (i.e. all position shifts are encoded exclusively in
   // that variable).  This is a little less efficient that just moving the
   // pointer along but probably not worth optimizing.
@@ -285,12 +290,10 @@ struct FANSI_state FANSI_state_at_position(
         error("Internal Error: Illegal offset type; contact maintainer.");
         // nocov end
     }
-    /*
     Rprintf(
       "cond %d lag %d pos %d width %d byte %d type %d end %d\n",
       cond, lag, pos, state.pos_width, state.pos_byte, type, end
     );
-    */
     if(cond < 0) {
       // Should only happen with 'type' width, which means we overshot the
       // breakpoint due to a wide character
@@ -322,7 +325,6 @@ struct FANSI_state FANSI_state_at_position(
 
     if(string[state.pos_byte] < 0 && cond > 0) {
       // NOTE: need to look ahead for zero width characters?
-      Rprintf("Look ahead for zero width characters\n");
 
       int byte_size = FANSI_utf8clen(string[state.pos_byte]);
 

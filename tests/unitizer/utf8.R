@@ -68,3 +68,12 @@ unitizer_sect("rounding", {
   ansi_substr2(lorem.cn.col.2, 2, 4, type='width', round='neither')
   ansi_substr2(lorem.cn.col.2, 3, 4, type='width', round='neither')
 })
+unitizer_sect("multi-elem", {
+  # Due to preservation of state issues, need to make sure works well with
+  # more than one value
+
+  lor.cn.2.2 <- rep(lorem.cn.col.2, 2)
+
+  ansi_substr2(lor.cn.2.2, c(1,3), c(2,4), type='width')
+  ansi_substr2(lor.cn.2.2, c(2,4), c(2,4), type='width')
+})
