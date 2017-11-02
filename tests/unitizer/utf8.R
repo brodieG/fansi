@@ -32,14 +32,24 @@ unitizer_sect("substr", {
   # All wide characters even number of chars apart
 
   lorem.cn.col.3 <- paste0(
-    red, lorem.cn.pieces[1], "hellso", inv, lorem.cn.pieces[2], " therre ",
+    red, lorem.cn.pieces[1], "helloo", inv, lorem.cn.pieces[2], " world! ",
     grn.bg, lorem.cn.pieces[3], rgb.und, lorem.cn.pieces[4], end
   )
+  lor.cn.c.3.5 <- rep(lorem.cn.col.3, 5)
 
   starts <- seq(1, by=12, len=5)
   ends <- starts + 10
-  ends[2] <- 24 # because we end in a single width char on this line
-  ansi_substr2(rep(lorem.cn.col.3, 5), starts, ends, type='width')
+  ends[2] <- 24
+
+  # This is a bit of an accidental one, but it should be the case that the
+  # second line has two extra single width characters because all the others are
+  # losing the last character b/c we're ending in the middle, width wise
+
+  ansi_substr2(lor.cn.c.3.5, starts, ends, type='width')
+
+  # and now we grab those missing chars by allowing the round to happen
+
+  ansi_substr2(lor.cn.c.3.5, starts, ends, type='width', round='both')
 })
 unitizer_sect("rounding", {
   # handling of subsetting when we end up in middle of wide display characters

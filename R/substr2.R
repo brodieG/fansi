@@ -71,7 +71,7 @@ ansi_substr2 <- function(
     e.order <- order(c(e.start, e.stop), method='shell')
 
     e.lag <- c(
-      rep(!round %in% c('first', 'both'), length(start)),
+      rep(round %in% c('first', 'both'), length(start)),
       rep(round %in% c('last', 'both'), length(stop))
     )[e.order]
     e.ends <- c(rep(FALSE, length(start)), rep(TRUE, length(start)))[e.order]
