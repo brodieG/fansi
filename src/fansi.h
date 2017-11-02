@@ -136,6 +136,13 @@ struct FANSI_state {
   int fail;
   int last;
 };
+/*
+ * Need to keep track of fallback state, so we need ability to return two states
+ */
+struct FANSI_state_pair {
+  struct FANSI_state cur;
+  struct FANSI_state prev;
+};
 
 struct FANSI_csi_pos FANSI_find_csi(const char * x);
 

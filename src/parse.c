@@ -334,14 +334,15 @@ struct FANSI_state FANSI_parse_sgr(struct FANSI_state state) {
  *   part of the `stop` parameter) (1), or not (0) (i.e. as part of the start
  *   parameters).
  */
-struct FANSI_state FANSI_state_at_position(
-    int pos, struct FANSI_state state, int type, int lag, int end
+struct FANSI_state_pair FANSI_state_at_position(
+    int pos, struct FANSI_state_pair state_pair, int type, int lag, int end
 ) {
   // Sanity checks, first one is a little strict since we could have an
   // identical copy of the string, but that should not happen in intended use
   // case since we'll be uniqueing prior; ultimtely we should just make the
   // string part of the state and get rid of the string arg
 
+  struct FANSI_state state = state_pair.cur;
   if(pos < state.pos_raw)
     error(
       "Cannot re-use a state for a later position (%0f) than `pos` (%0f).",
@@ -354,15 +355,9 @@ struct FANSI_state FANSI_state_at_position(
 
   state.pos_width_target = state.pos_width;
 
-  // frame shift ourselves (i.e. all position shifts are encoded exclusively in
-  // that variable).  This is a little less efficient that just moving the
-  // pointer along but probably not worth optimizing.
-  //
-  // Loosely related, since we don't make any distinction between byte and ansi
-  // position for now we ignore `pos_ansi` until the very end
-
   struct FANSI_state state_res, state_prev, state_prev_buff;
-  state_res = state_prev = state_prev_buff = state;
+  state_prev = state_prev_buff = state_pair.prev;
+
   const char * string = state.string;
 
   while(1) {
@@ -478,11 +473,12 @@ struct FANSI_state FANSI_state_at_position(
     state_res = state_prev;
     if(type == 1) {
       if(!lag) {
-        Rprintf("disp_size %d", disp_size);
         if(end && cond != -1) {
+          Rprintf("End mismatch\n");
           state_res = state_prev_buff;
         } else if (!end && cond != -disp_size) {
           state_res = state;
+          Rprintf("Start mismatch ansi %d\n", state_res.pos_ansi);
         }
       }
       state_res.pos_width_target = pos;
@@ -501,9 +497,9 @@ struct FANSI_state FANSI_state_at_position(
 
   Rprintf(
     "   return pos %2d width %d ansi %2d byte %2d\n",
-    pos, state_prev.pos_width, state_prev.pos_ansi, state_prev.pos_byte
+    pos, state_res.pos_width, state_res.pos_ansi, state_res.pos_byte
   );
-  return state_res;
+  return (struct FANSI_state_pair){.cur=state_res, .prev=state_prev_buff};
 }
 /*
  * We always include the size of the delimiter
@@ -678,6 +674,7 @@ SEXP FANSI_state_at_pos_ext(
   const char * string = CHAR(text_chr);
   struct FANSI_state state = FANSI_state_init();
   struct FANSI_state state_prev = FANSI_state_init();
+  struct FANSI_state_pair state_pair;
 
   // Allocate result, will be a res_cols x n matrix.  A bit wasteful to record
   // all the color values given we'll rarely use them, but variable width
@@ -717,6 +714,8 @@ SEXP FANSI_state_at_pos_ext(
   );
   if(translate) string = translateCharUTF8(text_chr);
   state.string = state_prev.string = string;
+  state_pair.cur = state;
+  state_pair.prev = state_prev;
 
   // Compute state at each `pos` and record result in our results matrix
 
@@ -733,9 +732,11 @@ SEXP FANSI_state_at_pos_ext(
         error("Internal Error: `pos` must be sorted %d %d.", pos_i, pos_prev);
       else pos_prev = pos_i;
 
-      state = FANSI_state_at_position(
-        pos_i, state, type_int, INTEGER(lag)[i], INTEGER(ends)[i]
+      state_pair = FANSI_state_at_position(
+        pos_i, state_pair, type_int, INTEGER(lag)[i], INTEGER(ends)[i]
       );
+      state = state_pair.cur;
+
       // Record position, but set them back to 1 index
 
       INTEGER(res_mx)[i * res_cols + 0] = safe_add(state.pos_byte, 1);
