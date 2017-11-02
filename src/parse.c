@@ -29,7 +29,7 @@ inline int safe_add(int a, int b) {
  * We rely on struct initialization to set everything else to zero.
  */
 struct FANSI_state FANSI_state_init() {
-  return (struct FANSI_state) { .color = -1, .bg_color = -1};
+  return (struct FANSI_state) { .color = -1, .bg_color = -1, .pos_width = -1};
 }
 /*
  * Reset all the display attributes, but not the position ones
@@ -266,9 +266,9 @@ struct FANSI_state FANSI_state_at_position(
   // position for now we ignore `pos_ansi` until the very end
 
   struct FANSI_state state_prev = state;
-  int wide_char = 0;
 
   while(1) {
+    // int wide_char = 0;
     if(!string[state.pos_byte]) break;
     switch(type) {
       case 0: cond = pos - state.pos_raw; break;
@@ -280,8 +280,8 @@ struct FANSI_state FANSI_state_at_position(
         // boundary, whereas if we request 0 at the end of the string, then we
         // are in the middle of the two-wide character.
 
-        wide_char = state.last_char_width > 1;
-        cond = pos - state.pos_width + (wide_char && end ? 1 : 0);
+        // wide_char = state.last_char_width > 1;
+        cond = pos - state.pos_width;
         break;
       }
       case 2: cond = pos - state.pos_byte; break;
@@ -307,7 +307,13 @@ struct FANSI_state FANSI_state_at_position(
         );
         // nocov end
 
-      if(!lag) state = state_prev;
+      if(!lag) {
+        state = state_prev;
+        Rprintf(
+          "State prev!: width %d ansi %d\n", state.pos_width, state.pos_ansi
+        );
+      }
+
       state.pos_width_target = pos;
     }
     // Reset internal controls
@@ -467,11 +473,14 @@ struct FANSI_state FANSI_state_at_position(
       // that we could potentially parse a zero length sequence that starts at
       // pos
 
+      /*
       if(end && wide_char){
         // If in end mode and width mode, we need to back off the ansi counter
         // since we didn't actually advance a character, only width
+        Rprintf("subtrackt\n");
         --state.pos_ansi;
       }
+      */
       break;
     }
   }
