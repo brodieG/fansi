@@ -122,6 +122,10 @@ struct FANSI_state {
   int pos_width_target;
   int pos_byte;
 
+  // Track width of last character
+
+  int last_char_width;
+
   /* Internal Flags ------------------------------------------------------------
    *
    * Used to communicate back from sub-processes that sub-parsing failed, the

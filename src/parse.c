@@ -29,10 +29,7 @@ inline int safe_add(int a, int b) {
  * We rely on struct initialization to set everything else to zero.
  */
 struct FANSI_state FANSI_state_init() {
-  return (struct FANSI_state) {
-    .color = -1, .bg_color = -1, .pos_ansi=0, .pos_raw=0, .pos_byte=0,
-    .pos_width = 0
-  };
+  return (struct FANSI_state) { .color = -1, .bg_color = -1};
 }
 /*
  * Reset all the display attributes, but not the position ones
@@ -269,6 +266,7 @@ struct FANSI_state FANSI_state_at_position(
   // position for now we ignore `pos_ansi` until the very end
 
   struct FANSI_state state_prev = state;
+  int wide_char = 0;
 
   while(1) {
     if(!string[state.pos_byte]) break;
@@ -281,7 +279,9 @@ struct FANSI_state FANSI_state_at_position(
         // expect the beginning of the string, then we are start at the
         // boundary, whereas if we request 0 at the end of the string, then we
         // are in the middle of the two-wide character.
-        cond = pos - state.pos_width + (state.pos_width > 1 && end ? 1 : 0);
+
+        wide_char = state.last_char_width > 1;
+        cond = pos - state.pos_width + (wide_char && end ? 1 : 0);
         break;
       }
       case 2: cond = pos - state.pos_byte; break;
@@ -291,8 +291,8 @@ struct FANSI_state FANSI_state_at_position(
         // nocov end
     }
     Rprintf(
-      "cond %d lag %d pos %d width %d byte %d type %d end %d\n",
-      cond, lag, pos, state.pos_width, state.pos_byte, type, end
+      "cond %d lag %d pos %d width %d byte %d ansi %d type %d end %d\n",
+      cond, lag, pos, state.pos_width, state.pos_byte, state.pos_ansi, type, end
     );
     if(cond < 0) {
       // Should only happen with 'type' width, which means we overshot the
@@ -355,6 +355,7 @@ struct FANSI_state FANSI_state_at_position(
         state.pos_width, disp_size, state.pos_width + disp_size
       );
       */
+      state.last_char_width = disp_size;
       state.pos_width += disp_size;
       state.pos_width_target += disp_size;
     } else if(
@@ -443,6 +444,9 @@ struct FANSI_state FANSI_state_at_position(
         state_tmp.pos_raw = state.pos_raw;
         state_tmp.pos_byte = state.pos_byte;
         state = state_tmp;
+        state.last_char_width = 0;
+      } else {
+        state.last_char_width = 1;
       }
       state.pos_ansi += byte_offset;
     } else if (cond > 0) {
@@ -456,13 +460,14 @@ struct FANSI_state FANSI_state_at_position(
       ++state.pos_raw;
       ++state.pos_width;
       ++state.pos_width_target;
+      state.last_char_width = 1;
     } else {
       // We allowed entering loop so long as state.pos_raw <= pos, but we
       // actually don't want to increment counter if at pos; we only entered so
       // that we could potentially parse a zero length sequence that starts at
       // pos
 
-      if(end && type == 1){
+      if(end && wide_char){
         // If in end mode and width mode, we need to back off the ansi counter
         // since we didn't actually advance a character, only width
         --state.pos_ansi;
