@@ -60,7 +60,6 @@ unitizer_sect("substr", {
   ends <- starts + 8
   ansi_substr2(lor.cn.c.1.5, starts, ends, type='width')
   ansi_substr2(lor.cn.c.1.5, starts, ends, type='width', round='last')
-
 })
 unitizer_sect("rounding", {
   # handling of subsetting when we end up in middle of wide display characters

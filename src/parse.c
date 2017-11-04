@@ -363,7 +363,7 @@ struct FANSI_state_pair FANSI_state_at_position(
   const char * string = state.string;
 
   while(1) {
-    state_prev = state;
+    state_prev = state_res = state;
     state.fail = state.last = 0;
     int disp_size = 0;
 
@@ -445,7 +445,7 @@ struct FANSI_state_pair FANSI_state_at_position(
     }
     /*
     Rprintf(
-      "cond %2d pos %2d lag %d end %d width (%2d %2d) ansi (%2d %2d) byte (%2d %2d)\n",
+      "cnd %2d x %2d lag %d end %d w (%2d %2d) ansi (%2d %2d) bt (%2d %2d)\n",
       cond, pos, lag, end, state.pos_width, state_prev.pos_width,
       state.pos_ansi, state_prev.pos_ansi,
       state.pos_byte, state_prev.pos_byte
@@ -472,7 +472,6 @@ struct FANSI_state_pair FANSI_state_at_position(
      * looking for the overshoot to be the width (? I think) of the character?
      */
 
-    state_res = state_prev;
     if(type == 1) {
       if(!lag) {
         if(end && cond != -1) {
@@ -560,10 +559,11 @@ unsigned int FANSI_color_write(
       int write_chrs = -1;
       if(color_extra[0] == 2) {
         write_chrs = sprintf(
-          string, "2;%d;%d;%d;", color_extra[1], color_extra[2], color_extra[3]
+          string + str_off,
+          "2;%d;%d;%d;", color_extra[1], color_extra[2], color_extra[3]
         );
       } else if (color_extra[0] == 5) {
-        write_chrs = sprintf(string, "5;%d;", color_extra[1]);
+        write_chrs = sprintf(string + str_off, "5;%d;", color_extra[1]);
       } else error("Internal Error: unexpected color code.");
 
       if(write_chrs < 0) error("Internal Error: failed writing color code.");
