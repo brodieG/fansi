@@ -676,7 +676,7 @@ SEXP FANSI_state_at_pos_ext(
   const char * string = CHAR(text_chr);
   struct FANSI_state state = FANSI_state_init();
   struct FANSI_state state_prev = FANSI_state_init();
-  struct FANSI_state_pair state_pair;
+  struct FANSI_state_pair state_pair, state_pair_old;
 
   // Allocate result, will be a res_cols x n matrix.  A bit wasteful to record
   // all the color values given we'll rarely use them, but variable width
@@ -707,7 +707,6 @@ SEXP FANSI_state_at_pos_ext(
   SEXP res_str = PROTECT(allocVector(STRSXP, len));
   SEXP res_chr, res_chr_prev = PROTECT(mkChar(""));
 
-  int pos_prev = -1;
   int utf8_loc = FANSI_is_utf8_loc();
   cetype_t enc_type = getCharCE(text_chr);
   int translate = !(
@@ -722,18 +721,26 @@ SEXP FANSI_state_at_pos_ext(
   // Compute state at each `pos` and record result in our results matrix
 
   int type_int = asInteger(type);
+  int pos_i, pos_prev = -1;
 
   for(R_xlen_t i = 0; i < len; i++) {
     R_CheckUserInterrupt();
-    int pos_i = INTEGER(pos)[i];
+    pos_i = INTEGER(pos)[i];
     if(text_chr == NA_STRING || pos_i == NA_INTEGER) {
       for(R_xlen_t j = 0; j < res_cols; j++)
         INTEGER(res_mx)[i * res_cols + j] = NA_INTEGER;
     } else {
-      if(!(pos_i > pos_prev))
+      if(pos_i < pos_prev)
         error("Internal Error: `pos` must be sorted %d %d.", pos_i, pos_prev);
-      else pos_prev = pos_i;
 
+      // We need to allow the same position multiple times in case it shows up
+      // as starts and ends, etc.
+
+      if(pos_i == pos_prev) {
+        state_pair = state_pair_old;
+      } else {
+        state_pair_old = state_pair;
+      }
       state_pair = FANSI_state_at_position(
         pos_i, state_pair, type_int, INTEGER(lag)[i], INTEGER(ends)[i]
       );
@@ -756,6 +763,7 @@ SEXP FANSI_state_at_pos_ext(
       SET_STRING_ELT(res_str, i, res_chr);
       res_chr_prev = res_chr;
       UNPROTECT(1);  // note res_chr is protected by virtue of being in res_str
+      pos_prev = pos_i;
     }
     state_prev = state;
   }

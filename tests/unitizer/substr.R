@@ -25,4 +25,7 @@ unitizer_sect("Simple", {
 
   ansi_substr2(str04, 5, 7)
   ansi_substr2(str04, 5, 13)
+
+  # single character
 })
+

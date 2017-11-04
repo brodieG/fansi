@@ -32,6 +32,15 @@ unitizer_sect("substr", {
   ends <- starts + 11
   ansi_substr2(lor.cn.c.2.5, starts, ends, type='width')
 
+  # with colors that actually work on an OSX terminal
+
+  lorem.cn.col.4 <- paste0(
+    red, lorem.cn.pieces[1], "hello", inv, lorem.cn.pieces[2], " there ",
+    grn.bg, lorem.cn.pieces[3], rgb.und.256, lorem.cn.pieces[4], end
+  )
+  lor.cn.c.4.5 <- rep(lorem.cn.col.4, 5)
+  ansi_substr2(lor.cn.c.4.5, starts, ends, type='width')
+
   # All wide characters even number of chars apart
 
   lorem.cn.col.3 <- paste0(
@@ -60,6 +69,7 @@ unitizer_sect("substr", {
   ends <- starts + 8
   ansi_substr2(lor.cn.c.1.5, starts, ends, type='width')
   ansi_substr2(lor.cn.c.1.5, starts, ends, type='width', round='last')
+
 })
 unitizer_sect("rounding", {
   # handling of subsetting when we end up in middle of wide display characters

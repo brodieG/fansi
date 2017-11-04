@@ -62,11 +62,7 @@ ansi_substr2 <- function(
     e.stop <- stop[elems]
     # note, for expediency we're currently assuming that there is no overlap
     # between starts and stops
-    cat("reminder - remove non-overlap here\n")
     cat("reminder - convert stuff to UTF8 here and not in C\n")
-
-    if(length(intersect(e.start, e.stop)))
-      stop("Currently don't support overlapping start and stop points")
 
     e.order <- order(c(e.start, e.stop), method='shell')
 
@@ -74,22 +70,17 @@ ansi_substr2 <- function(
       rep(round %in% c('first', 'both'), length(start)),
       rep(round %in% c('last', 'both'), length(stop))
     )[e.order]
+
     e.ends <- c(rep(FALSE, length(start)), rep(TRUE, length(start)))[e.order]
     e.sort <- c(e.start, e.stop)[e.order]
 
     state <- ansi_state(u, e.sort, type, e.lag, e.ends)
 
-    # if any positions are greater than max position set them to those
+    # Recover the matching values for e.sort
 
-    max.pos <- max(state[[2]][offset, ])
-    e.start[e.start > max.pos] <- max.pos
-    e.stop[e.stop > max.pos] <- max.pos
-
-    # Find the ansi offset by matching on whatever type of offset we're limiting
-    # to
-
-    start.ansi.idx <- match(e.start, state[[2]][offset, ])
-    stop.ansi.idx <- match(e.stop, state[[2]][offset, ])
+    e.unsort.idx <- match(seq_along(e.order), e.order)
+    start.ansi.idx <- head(e.unsort.idx, length(e.start))
+    stop.ansi.idx <- tail(e.unsort.idx, length(e.stop))
 
     # And use those to substr with
 
