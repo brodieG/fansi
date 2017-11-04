@@ -29,9 +29,7 @@ inline int safe_add(int a, int b) {
  * We rely on struct initialization to set everything else to zero.
  */
 struct FANSI_state FANSI_state_init() {
-  return (struct FANSI_state) {
-    .color = -1, .bg_color = -1, .pos_ansi=0, .pos_raw=0, .pos_byte=0
-  };
+  return (struct FANSI_state) { .color = -1, .bg_color = -1};
 }
 /*
  * Reset all the display attributes, but not the position ones
@@ -162,6 +160,8 @@ struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode) {
       i_max = 1;
     } else error("Internal Error: 1301341"); // nocov
 
+    rgb[0] = colors;
+
     // Parse through the subsequent tokens
 
     for(int i = 0; i < i_max; ++i) {
@@ -169,7 +169,7 @@ struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode) {
       state.pos_byte = safe_add(state.pos_byte, safe_add(res.len, 1));
       state.last = res.last;
       if(res.success) {
-        int early_end = !(res.last && i < (i_max - 1));
+        int early_end = res.last && i < (i_max - 1);
         if(res.success == 2 && res.val < 256 && !early_end) {
           rgb[i + 1] = res.val;
         } else {
@@ -206,17 +206,114 @@ struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode) {
   return state;
 }
 /*
- * QUESTION: do we support truecolor codes (i.e. 38;2;...)?  One major issue is
- * that OSX terminal not only doesn't support them, but miss-reads them as a
- * failed 38 followed by a 2 (blur/dim).  It seems here we just can't support
- * the OSX terminal since it actually renders incorrectly.  So for now we'll
- * support the truecolor stuff with the understanding that if truecolor codes
- * show up OSX terminal just won't work right.
+ * Parses ANSI CSI SGR sequences
  *
- * For reference: https://gist.github.com/XVilka/8346728
+ * @input state must be set with .pos_byte pointing to the ESC that begins the
+ *   SGR sequence
+ * @return a state updated with the SGR sequence info and with pos_byte and
+ *   other position info moved to the first char after the sequence.  On failure
+ *   advances the ESC[ bit, although in theory as per #4 should probably advance
+ *   all the way for any CSI sequence, not just SGR
+ */
+struct FANSI_state FANSI_parse_sgr(struct FANSI_state state) {
+  // make a copy of the struct so we don't modify state if it turns out
+  // this is an invalid SGR
+
+  int pos_byte_prev = state.pos_byte;
+  state.pos_byte = safe_add(state.pos_byte, 2);
+  struct FANSI_state state_tmp = state;
+  struct FANSI_tok_res tok_res = {.success = 0};
+
+  // Loop through the SGR; each token we process successfully modifies state
+  // and advances to the next token
+
+  do {
+    tok_res = FANSI_parse_token(&state.string[state.pos_byte]);
+    state.pos_byte = safe_add(state.pos_byte, safe_add(tok_res.len, 1));
+    state.last = tok_res.last;
+
+    if(!tok_res.success) {
+      state.fail = 1;
+    } else if(tok_res.success == 2) {
+      // We have a reasonable CSI value, now we need to check whether it
+      // actually corresponds to anything that should modify state
+
+      if(!tok_res.val) {
+        state = FANSI_reset_state(state);
+      } else if (tok_res.val < 10) {
+        // This is a style, so update the bit mask by enabing the style
+        state.style |= 1U << tok_res.val;
+      } else if (
+        tok_res.val == 20 || tok_res.val == 21 || tok_res.val == 26
+      ) {
+        // these are corner case tags that aren't actually closing tags or
+        // could be interpreted as non-closing tags; we need to figure out
+        // what to do with this (just return invalid? but it could change
+        // display).
+
+        warning("Encountered non handled tag");
+      } else if (tok_res.val == 22) {
+        // Turn off bold or faint
+        state.style &= ~(1U << 1U);
+        state.style &= ~(1U << 2U);
+      } else if (tok_res.val == 25) {
+        // Turn off blinking
+        state.style &= ~(1U << 5U);
+        state.style &= ~(1U << 6U);
+      } else if (tok_res.val >= 20 && tok_res.val < 30) {
+        // All other styles are 1:1
+        state.style &= ~(1U << (tok_res.val - 20));
+      } else if (tok_res.val >= 30 && tok_res.val < 50) {
+        // Colors; much shared logic between color and bg_color, so
+        // combining that here
+
+        int foreground = tok_res.val < 40; // true then color, else bg color
+        int col_code = tok_res.val - (foreground ? 30 : 40);
+
+        if(col_code == 9) col_code = -1;
+        if(foreground) state.color = col_code;
+        else state.bg_color = col_code;
+
+        // Handle the special color codes, need to parse some subsequent
+        // tokens
+
+        if(col_code == 8) {
+          state = FANSI_parse_colors(state, foreground ? 3 : 4);
+        }
+      }
+    } else if (tok_res.success == 1) {
+      // "valid" token, but meaningless so just skip and move on to next
+    } else error("Internal Error: 350au834.");
+    // Note that state.last may be different to tok_res.last when we parse
+    // colors of the 38;5;... or 38;2;... variety.
+
+    if(tok_res.last || state.last || state.fail) break;
+  } while(1);
+
+  // Invalid escape sequences count as normal characters, and at this point
+  // the only way to have a valid escape seq is if it ends in 'm'
+
+  int byte_offset = state.pos_byte - pos_byte_prev;
+
+  if(state.fail) {
+    state.pos_raw += byte_offset;
+    state_tmp.pos_raw = state.pos_raw;
+    state_tmp.pos_byte = state.pos_byte;
+    state = state_tmp;
+    state.last_char_width = 0;
+  } else {
+    state.last_char_width = 1;
+  }
+  state.pos_ansi += byte_offset;
+  return state;
+}
+/*
+ * Compute the state given a character position (raw position)
  *
- * Other random notes:
- * - negative numbers appear to be interpretable (at least by osx terminal)
+ * Assumption is that any byte > 127 is UTF8 (i.e. input strings must be all
+ * legal ASCII, or must have been translated to UTF8).  Potential for relaxation
+ * with latin-1 since those are all single byte single width, but right now
+ * that's not implemented.
  *
  * @param pos the raw position (i.e. treating parseable ansi tags as zero
  *   length) we want the state for
@@ -228,147 +325,182 @@ struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode) {
  *   but for a position earlier in the string.  The latter use case avoids us
  *   having to reparse the string if we've already retrieved the state at an
  *   earlier position.
+ * @param int type whether to use character (0), width (1), or byte (2) when
+ *   computing the position
+ * @param lag in cases where requested breakpoint is not feasible because of
+ *   multi width characters, whether to return end of prior (0) or the start of
+ *   the next (1)
+ * @param end whether the request is made for the ends of the string (i.e. as
+ *   part of the `stop` parameter) (1), or not (0) (i.e. as part of the start
+ *   parameters).
  */
-struct FANSI_state FANSI_state_at_raw_position(
-    int pos, const char * string, struct FANSI_state state
+struct FANSI_state_pair FANSI_state_at_position(
+    int pos, struct FANSI_state_pair state_pair, int type, int lag, int end
 ) {
   // Sanity checks, first one is a little strict since we could have an
   // identical copy of the string, but that should not happen in intended use
-  // case since we'll be uniqueing prior
+  // case since we'll be uniqueing prior; ultimtely we should just make the
+  // string part of the state and get rid of the string arg
 
-  if(state.string && state.string != string)
-    error("Cannot re-use a state with a different string.");
+  struct FANSI_state state = state_pair.cur;
   if(pos < state.pos_raw)
     error(
       "Cannot re-use a state for a later position (%0f) than `pos` (%0f).",
       (double) state.pos_raw, (double) pos
     );
+  int cond = 0;
 
-  state.string = string;
-  int pos_byte_prev = 0;
+  // Need to reset pos_width_target since it could be distorted by a previous
+  // middle of wide char event
 
-  // Note we use the [state.pos_byte] notation to ensure we don't accidentially
-  // frame shift ourselves (i.e. all position shifts are encoded exclusively in
-  // that variable).  This is a little less efficient that just moving the
-  // pointer along but probably not worth optimizing.
-  //
-  // Loosely related, since we don't make any distinction between byte and ansi
-  // position for now we ignore `pos_ansi` until the very end
+  state.pos_width_target = state.pos_width;
 
-  while(string[state.pos_byte] && state.pos_raw <= pos) {
-    // Reset internal controls
+  struct FANSI_state state_res, state_prev, state_prev_buff;
 
+  state_prev = state_prev_buff = state_pair.prev;
+  state_res = state;
+
+  const char * string = state.string;
+
+  while(1) {
+    state_prev = state_res = state;
     state.fail = state.last = 0;
-    pos_byte_prev = state.pos_byte;
+    int disp_size = 0;
 
-    // Start of a possible CSI ANSI escape sequence
+    // Handle UTF-8, we need to record the byte size of the sequence as well as
+    // the corresponding display width.
 
-    if(string[state.pos_byte] < 0 || string[state.pos_byte] > 127)
-      error("Currently only ASCII-128 characters are supported");
-    if(
-      string[state.pos_byte] == 27 && string[state.pos_byte + 1] == '['
-    ) {
-      // make a copy of the struct so we don't modify state if it turns out this
-      // is an invalid SGR
+    // Urgh, don't like the fact that we have two branches with `state.pos_raw <
+    // pos`...  Annoying because we don't apply that condition to the ESC[
+    // sequence since we can start with that as a zero width element...
 
-      state.pos_byte = safe_add(state.pos_byte, 2);
-      struct FANSI_state state_tmp = state;
-      struct FANSI_tok_res tok_res = {.success = 0};
+    if(state.pos_byte == INT_MAX - 1)
+      // nocov start
+      // ... a bit tricky here, because we read ahead a few bytes in some
+      // circumstances, but not all, so the furthest pos_byte should be allowed
+      // to get actually varies
+      error("Internal Error: counter overflow while reading string.");
+      // nocov end
 
-      // Loop through the SGR; each token we process successfully modifies state
-      // and advances to the next token
-
-      do {
-        tok_res = FANSI_parse_token(&string[state.pos_byte]);
-        state.pos_byte = safe_add(state.pos_byte, safe_add(tok_res.len, 1));
-        state.last = tok_res.last;
-
-        if(!tok_res.success) {
-          state.fail = 1;
-        } else if(tok_res.success == 2) {
-          // We have a reasonable CSI value, now we need to check whether it
-          // actually corresponds to anything that should modify state
-
-          if(!tok_res.val) {
-            state = FANSI_reset_state(state);
-          } else if (tok_res.val < 10) {
-            // This is a style, so update the bit mask by enabing the style
-            state.style |= 1U << tok_res.val;
-          } else if (
-            tok_res.val == 20 || tok_res.val == 21 || tok_res.val == 26
-          ) {
-            // these are corner case tags that aren't actually closing tags or
-            // could be interpreted as non-closing tags; we need to figure out
-            // what to do with this (just return invalid? but it could change
-            // display).
-
-            warning("Encountered non handled tag");
-          } else if (tok_res.val == 22) {
-            // Turn off bold or faint
-            state.style &= ~(1U << 1U);
-            state.style &= ~(1U << 2U);
-          } else if (tok_res.val == 25) {
-            // Turn off blinking
-            state.style &= ~(1U << 5U);
-            state.style &= ~(1U << 6U);
-          } else if (tok_res.val >= 20 && tok_res.val < 30) {
-            // All other styles are 1:1
-            state.style &= ~(1U << (tok_res.val - 20));
-          } else if (tok_res.val >= 30 && tok_res.val < 50) {
-            // Colors; much shared logic between color and bg_color, so
-            // combining that here
-
-            int foreground = tok_res.val < 40; // true then color, else bg color
-            int col_code = tok_res.val - (foreground ? 30 : 40);
-
-            if(col_code == 9) col_code = -1;
-            if(foreground) state.color = col_code;
-            else state.bg_color = col_code;
-
-            // Handle the special color codes, need to parse some subsequent
-            // tokens
-
-            if(col_code == 8) {
-              state = FANSI_parse_colors(state, foreground ? 3 : 4);
-            }
-          }
-        } else if (tok_res.success == 1) {
-          // "valid" token, but meaningless so just skip and move on to next
-        } else error("Internal Error: 350au834.");
-        // Note that state.last may be different to tok_res.last when we parse
-        // colors of the 38;5;... or 38;2;... variety.
-
-        if(tok_res.last || state.last || state.fail) break;
-      } while(1);
-
-      // Invalid escape sequences count as normal characters, and at this point
-      // the only way to have a valid escape seq is if it ends in 'm'
-
-      if(state.fail) {
-        state.pos_raw = state.pos_raw + (pos_byte_prev) - state.pos_byte;
-        state_tmp.pos_raw = state.pos_raw;
-        state_tmp.pos_byte = state.pos_byte;
-        state = state_tmp;
+    if(string[state.pos_byte] >  0) {
+      // Character is in the 1-127 range
+      if(string[state.pos_byte] != 27) {
+        // Normal ASCII character
+        ++state.pos_byte;
+        ++state.pos_ansi;
+        ++state.pos_raw;
+        ++state.pos_width;
+        ++state.pos_width_target;
+        state.last_char_width = 1;
+      } else if (
+        string[state.pos_byte] == 27 && string[state.pos_byte + 1] == '['
+      ) {
+        state = FANSI_parse_sgr(state);
+      } else {
+        // nocov start
+        error(
+          "Internal Error: other ESC sequences not handled currently, see #4"
+        );
+        // nocov end
       }
-    } else if (state.pos_raw < pos) {
-      // Advance one character
+    } else if(string[state.pos_byte] < 0) {
+      int byte_size = FANSI_utf8clen(string[state.pos_byte]);
 
-      if(state.pos_byte == INT_MAX)
-        error("Internal Error: counter overflow while reading string.");
+      // In order to compute char display width, we need to create a charsxp
+      // with the sequence in question.  Hopefully not too much overhead since
+      // at least we benefit from the global string hash table
+      //
+      // Note that we should probably not bother with computing this if display
+      // mode is not width as it's probably expensive.
 
-      ++state.pos_byte;
+      SEXP str_chr =
+        PROTECT(mkCharLenCE(string + state.pos_byte, byte_size, CE_UTF8));
+      disp_size = R_nchar(
+        str_chr, Width, FALSE, FALSE, "when computing display width"
+      );
+      UNPROTECT(1);
+
+      // Need to check overflow?  Really only for pos_width?  Maybe that's not
+      // even true because you need at least two bytes to encode a double wide
+      // character, and there is nothing wider than 2?
+
+      state.pos_byte += byte_size;
+      ++state.pos_ansi;
       ++state.pos_raw;
+      state.last_char_width = disp_size;
+      state.pos_width += disp_size;
+      state.pos_width_target += disp_size;
     } else {
-      // We allowed entering loop so long as state.pos_raw <= pos, but we
-      // actually don't want to increment counter if at pos; we only entered so
-      // that we could potentially parse a zero length sequence that starts at
-      // pos
-
       break;
     }
+    if(!string[state.pos_byte]) break;
+    switch(type) {
+      case 0: cond = pos - state.pos_raw; break;
+      case 1: cond = pos - state.pos_width; break;
+      case 2: cond = pos - state.pos_byte; break;
+      default:
+        // nocov start
+        error("Internal Error: Illegal offset type; contact maintainer.");
+        // nocov end
+    }
+    /*
+    Rprintf(
+      "cnd %2d x %2d lag %d end %d w (%2d %2d) ansi (%2d %2d) bt (%2d %2d)\n",
+      cond, pos, lag, end, state.pos_width, state_prev.pos_width,
+      state.pos_ansi, state_prev.pos_ansi,
+      state.pos_byte, state_prev.pos_byte
+    );
+    */
+    // We still have stuff to process
+
+    if(cond > 0) continue;
+    if(cond == 0) {
+      // some ambiguity as to whether the next `state_prev` will be valid, soe
+      // we store the current one just in case
+      state_prev_buff = state_prev;
+      continue;
+    }
+    // We passed the target character, in normal case should be by just one
+    // character, altough in width mode could be more than that with wide
+    // display characters
+    /*
+     * A key problem here is that what constitues a valid offset depends on the
+     * display width of the character.  For example, -1 makes sense if the
+     * character is 1 wide, or if we're looking to match that character to end.
+     *
+     * If instead we are matching the start of a wide character, then we're
+     * looking for the overshoot to be the width (? I think) of the character?
+     */
+
+    if(type == 1) {
+      if(!lag) {
+        if(end && cond != -1) {
+          state_res = state_prev_buff;
+        } else if (!end && cond != -disp_size) {
+          state_res = state;
+        }
+      }
+      state_res.pos_width_target = pos;
+    } else if(cond < -1) {
+      // nocov start
+      error(
+        "%s%s",
+        "Internal Error: partial width should only happen in type 'width'; ",
+        "contact maintainer."
+      );
+      // nocov end
+    }
+    break;
   }
-  state.pos_ansi = state.pos_byte;
-  return state;
+  // We return the state just before we overshot the end
+
+  /*
+  Rprintf(
+    "   return pos %2d width %d ansi %2d byte %2d\n",
+    pos, state_res.pos_width, state_res.pos_ansi, state_res.pos_byte
+  );
+  */
+  return (struct FANSI_state_pair){.cur=state_res, .prev=state_prev_buff};
 }
 /*
  * We always include the size of the delimiter
@@ -427,10 +559,11 @@ unsigned int FANSI_color_write(
       int write_chrs = -1;
       if(color_extra[0] == 2) {
         write_chrs = sprintf(
-          string, "2;%d;%d;%d;", color_extra[1], color_extra[2], color_extra[3]
+          string + str_off,
+          "2;%d;%d;%d;", color_extra[1], color_extra[2], color_extra[3]
         );
       } else if (color_extra[0] == 5) {
-        write_chrs = sprintf(string, "5;%d;", color_extra[1]);
+        write_chrs = sprintf(string + str_off, "5;%d;", color_extra[1]);
       } else error("Internal Error: unexpected color code.");
 
       if(write_chrs < 0) error("Internal Error: failed writing color code.");
@@ -513,19 +646,27 @@ int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
   );
 }
 /*
- * R interface for FANSI_state_at_raw_position
+ * R interface for FANSI_state_at_position
  *
  * @param string we're interested in state of
  * @param pos integer positions along the string, one index, sorted
  */
 
-SEXP FANSI_state_at_raw_pos_ext(SEXP text, SEXP pos) {
+SEXP FANSI_state_at_pos_ext(
+  SEXP text, SEXP pos, SEXP type, SEXP lag, SEXP ends
+) {
   if(TYPEOF(text) != STRSXP && XLENGTH(text) != 1)
     error("Argument `text` must be character(1L)");
   if(TYPEOF(pos) != INTSXP)
     error("Argument `pos` must be integer");
+  if(TYPEOF(lag) != LGLSXP)
+    error("Argument `lag` must be logical");
+  if(XLENGTH(pos) != XLENGTH(lag))
+    error("Argument `lag` must be the same length as `pos`");
+  if(XLENGTH(pos) != XLENGTH(ends))
+    error("Argument `ends` must be the same length as `pos`");
 
-  const int res_cols = 3;
+  const int res_cols = 4;
   R_xlen_t len = XLENGTH(pos);
 
   if(len > R_XLEN_T_MAX / res_cols) {
@@ -535,13 +676,16 @@ SEXP FANSI_state_at_raw_pos_ext(SEXP text, SEXP pos) {
   const char * string = CHAR(text_chr);
   struct FANSI_state state = FANSI_state_init();
   struct FANSI_state state_prev = FANSI_state_init();
+  struct FANSI_state_pair state_pair, state_pair_old;
 
   // Allocate result, will be a res_cols x n matrix.  A bit wasteful to record
   // all the color values given we'll rarely use them, but variable width
   // structures are likely to be much slower.  We could encode most color values
   // into one int but it would be a little annoying to retrieve them
 
-  const char * rownames[res_cols] = {"pos.byte", "pos.raw", "pos.ansi"};
+  const char * rownames[res_cols] = {
+    "pos.byte", "pos.raw", "pos.ansi", "pos.width"
+  };
   SEXP res_rn = PROTECT(allocVector(STRSXP, res_cols));
   for(int i = 0; i < res_cols; i++)
     SET_STRING_ELT(res_rn, i, mkChar(rownames[i]));
@@ -563,28 +707,51 @@ SEXP FANSI_state_at_raw_pos_ext(SEXP text, SEXP pos) {
   SEXP res_str = PROTECT(allocVector(STRSXP, len));
   SEXP res_chr, res_chr_prev = PROTECT(mkChar(""));
 
-  int pos_prev = -1;
+  int utf8_loc = FANSI_is_utf8_loc();
+  cetype_t enc_type = getCharCE(text_chr);
+  int translate = !(
+    (utf8_loc && enc_type == CE_NATIVE) || enc_type == CE_BYTES ||
+    enc_type == CE_UTF8
+  );
+  if(translate) string = translateCharUTF8(text_chr);
+  state.string = state_prev.string = string;
+  state_pair.cur = state;
+  state_pair.prev = state_prev;
 
   // Compute state at each `pos` and record result in our results matrix
 
+  int type_int = asInteger(type);
+  int pos_i, pos_prev = -1;
+
   for(R_xlen_t i = 0; i < len; i++) {
     R_CheckUserInterrupt();
-    int pos_i = INTEGER(pos)[i];
+    pos_i = INTEGER(pos)[i];
     if(text_chr == NA_STRING || pos_i == NA_INTEGER) {
       for(R_xlen_t j = 0; j < res_cols; j++)
         INTEGER(res_mx)[i * res_cols + j] = NA_INTEGER;
     } else {
-      if(!(pos_i > pos_prev))
+      if(pos_i < pos_prev)
         error("Internal Error: `pos` must be sorted %d %d.", pos_i, pos_prev);
-      else pos_prev = pos_i;
 
-      state = FANSI_state_at_raw_position(pos_i, string, state);
+      // We need to allow the same position multiple times in case it shows up
+      // as starts and ends, etc.
+
+      if(pos_i == pos_prev) {
+        state_pair = state_pair_old;
+      } else {
+        state_pair_old = state_pair;
+      }
+      state_pair = FANSI_state_at_position(
+        pos_i, state_pair, type_int, INTEGER(lag)[i], INTEGER(ends)[i]
+      );
+      state = state_pair.cur;
 
       // Record position, but set them back to 1 index
 
       INTEGER(res_mx)[i * res_cols + 0] = safe_add(state.pos_byte, 1);
       INTEGER(res_mx)[i * res_cols + 1] = safe_add(state.pos_raw, 1);
       INTEGER(res_mx)[i * res_cols + 2] = safe_add(state.pos_ansi, 1);
+      INTEGER(res_mx)[i * res_cols + 3] = safe_add(state.pos_width_target, 1);
 
       // Record color tag if state changed
 
@@ -596,6 +763,7 @@ SEXP FANSI_state_at_raw_pos_ext(SEXP text, SEXP pos) {
       SET_STRING_ELT(res_str, i, res_chr);
       res_chr_prev = res_chr;
       UNPROTECT(1);  // note res_chr is protected by virtue of being in res_str
+      pos_prev = pos_i;
     }
     state_prev = state;
   }

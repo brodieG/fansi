@@ -20,4 +20,12 @@ unitizer_sect("Simple", {
   str03 <-sprintf("hello %sworld", rgb.und)
 
   ansi_substr2(str03, 1, 12)
+
+  str04 <- sprintf("hello%s%s world%s%s yowza", red, inv, grn.bg, rgb.und)
+
+  ansi_substr2(str04, 5, 7)
+  ansi_substr2(str04, 5, 13)
+
+  # single character
 })
+

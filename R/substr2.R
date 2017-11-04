@@ -18,18 +18,27 @@
 #'
 #' @export
 
-ansi_state <- function(text, pos) {
+ansi_state <- function(text, pos, type='chars', lag, ends) {
   stopifnot(
     is.character(text), length(text) == 1L,
-    is.numeric(pos), min(pos, 0L, na.rm=TRUE) >= 0L
+    is.numeric(pos), min(pos, 0L, na.rm=TRUE) >= 0L,
+    is.character(type),
+    !is.na(type.match <- match(type, c('chars', 'width', 'bytes')))
   )
-  .Call(FANSI_state_at_raw_pos_ext, text, as.integer(pos) - 1L)
+  .Call(
+    FANSI_state_at_pos_ext, text, as.integer(pos) - 1L, type.match - 1L,
+    lag, ends
+  )
 }
 #' Alternate substr version
 #'
 #' @export
 
-ansi_substr2 <- function(x, start, stop) {
+ansi_substr2 <- function(
+  x, start, stop, type='chars', round='first'
+) {
+  stopifnot(isTRUE(round %in% c('first', 'last', 'both', 'neither')))
+
   x <- as.character(x)
   x.len <- length(x)
 
@@ -45,28 +54,48 @@ ansi_substr2 <- function(x, start, stop) {
 
   res <- character(length(x))
   x.u <- unique(x)
+  offset <- c(chars=2, bytes=1, width=4)[type]
 
   for(u in x.u) {
     elems <- which(x == u)
     e.start <- start[elems]
     e.stop <- stop[elems]
-    e.sort <- unique.default(sort.int(c(e.start, e.stop), method='shell'))
-    state <- ansi_state(u, e.sort)
+    # note, for expediency we're currently assuming that there is no overlap
+    # between starts and stops
+    cat("reminder - convert stuff to UTF8 here and not in C\n")
 
-    # if any positions are greater than max position set them to those
+    e.order <- order(c(e.start, e.stop), method='shell')
 
-    max.pos <- max(state[[2]][2, ])
-    e.start[e.start > max.pos] <- max.pos
-    e.stop[e.stop > max.pos] <- max.pos
+    e.lag <- c(
+      rep(round %in% c('first', 'both'), length(start)),
+      rep(round %in% c('last', 'both'), length(stop))
+    )[e.order]
 
-    start.ansi.idx <- match(e.start, state[[2]][2, ])
-    stop.ansi.idx <- match(e.stop, state[[2]][2, ])
+    e.ends <- c(rep(FALSE, length(start)), rep(TRUE, length(start)))[e.order]
+    e.sort <- c(e.start, e.stop)[e.order]
+
+    state <- ansi_state(u, e.sort, type, e.lag, e.ends)
+
+    # Recover the matching values for e.sort
+
+    e.unsort.idx <- match(seq_along(e.order), e.order)
+    start.ansi.idx <- head(e.unsort.idx, length(e.start))
+    stop.ansi.idx <- tail(e.unsort.idx, length(e.stop))
+
+    # And use those to substr with
+
     start.ansi <- state[[2]][3, start.ansi.idx]
     stop.ansi <- state[[2]][3, stop.ansi.idx]
     start.tag <- state[[1]][start.ansi.idx]
+    stop.tag <- state[[1]][stop.ansi.idx]
+
+    # if there is any ANSI CSI then add a terminating CSI
+
+    end.csi <- character(length(start.tag))
+    end.csi[nzchar(start.tag) | nzchar(stop.tag)] <- '\033[0m'
 
     res[elems] <- paste0(
-      start.tag, substr(x[elems], start.ansi, stop.ansi), '\033[0m'
+      start.tag, substr(x[elems], start.ansi, stop.ansi), end.csi
     )
   }
   res

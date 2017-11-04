@@ -1,8 +1,8 @@
-## Developer Notes
+# Developer Notes
 
 These are internal developer notes.
 
-### What Escape Sequences do we consider?
+## What Escape Sequences do we consider?
 
 Seems like the natural thing is to do CSI sequences, and maybe for simplicity
 just focus on the SGR variety.  But even with SGR, there is some question as to
@@ -16,23 +16,36 @@ Some issues to consider:
   as there are no examples for how they are used.
 * What about potentially incorrect usage?  Do we warn?
 
-Seems we should go by the strict defini
+Seems we should go by the strict definition.
 
-### Interface
+QUESTION: do we support truecolor codes (i.e. 38;2;...)?  One major issue is
+that OSX terminal not only doesn't support them, but miss-reads them as a
+failed 38 followed by a 2 (blur/dim).  It seems here we just can't support
+the OSX terminal since it actually renders incorrectly.  So for now we'll
+support the truecolor stuff with the understanding that if truecolor codes
+show up OSX terminal just won't work right.
+
+For reference: https://gist.github.com/XVilka/8346728
+
+Other random notes:
+- negative numbers appear to be interpretable (at least by osx terminal)
+
+
+## Interface
 
 * `state_at_pos`
 * `find_csi`: forward state object to next CSI
 * `parse_csi`: update state object with CSI data
 * `parse_csi_token`: part of the above?
 
-### Functions
+## Functions
 
 * `substr`
 * `strip_ansi`
 * `strwrap`
 * `trim`
 
-### What do we do Next?
+## What do we do Next?
 
 * Spend time figuring out how to integrate character width?
 * All C substr?
@@ -40,12 +53,36 @@ Seems we should go by the strict defini
 * Tab resolution?
 * Generating a table of state vs. position
 
-### State vs. Position
+## State vs. Position
 
 Should position be in bytes?  Probably in characters to use in combination with
 ansi_strsub or whatever that ends up called.
 
-### What About Strip and Wrap?
+## Emoji and Other Complex Characters
+
+Main problem with emoji is that UTF-8 handling and emoji handling in R seem
+pretty terrible (though maybe not all of this is Rs fault).  Several problems:
+
+* `nchar` typical returns 1 even in width mode; maybe this is okay because in
+  terminal display these are actually displayed as one width and you end up wiht
+  overlapping emoji.  However, this calculation then isn't particularly portable
+* ZWJ width is correctly calculated at zero; however, the total width of a
+  sequence doesn't seem to collapse.  Maybe this is okay because the sequences
+  themselves aren't collapsed by the terminal (and even firefox).
+* Emoji modifiers do appear to be collapsed by the terminal, but
+  `nchar(type='width')` does not recognize this `"\U1F466\U1F3FF"`
+  (dark person).
+```
+nchar("\U1F466")                      # man
+nchar("\U1F466", type='width')
+nchar("\U1F466\U1F3FF", type='width') # dark man
+cat("\U1F466\U1F3FF\n")
+```
+* Some combining characters are correctly recognized (e.g. `"A\u30A"`, combining
+  ring), interestingly the combining ring itself is reported as width zero.
+
+
+## What About Strip and Wrap?
 
 We could:
 
@@ -103,19 +140,34 @@ an as needed basis.
 
 So we will walk the string until we pass all the cut points.
 
-### Benchmarks
+## substr_csi
+
+* For each cut point
+* Compute all offsets (CSI and UTF-8)
+
+* Need:
+    * Byte position
+    * Char length in bytes (use 0 for sub-elements of UTF8 sequences)?
+    * Display width (0 for ANSI, and 0 for sub-elements)
+
+## Benchmarks
+
+### Strip
+
+Testing with the following:
+
+```
+strings.all <- crayon::red(
+  paste("hello ", crayon::green("green"), "world", 1:1000)
+)
+strings <- strings.raw <- strip_ansi(strings.all)
+strings.index <- sample(1:1000, 100)
+strings[strings.index] <- strings.all[strings.index]
+```
 
 After `csi_pos`:
 
 ```
-> microbenchmark::microbenchmark(
-+   crayon:::strip_style(strings),
-+   crayon:::strip_style(strings.raw),
-+   crayon:::strip_style(strings.all),
-+   strip_ansi(strings),
-+   strip_ansi(strings.raw),
-+   strip_ansi(strings.all)
-+ )
 Unit: microseconds
                               expr     min       lq      mean   median
      crayon:::strip_style(strings) 285.397 290.5625 356.48010 321.1050
@@ -130,15 +182,6 @@ After we switch to two pass, doesn't really seem to help at all, in fact,
 potentially hurts.
 
 ```
-> microbenchmark::microbenchmark(times=1000,
-+   crayon:::strip_style(strings),
-+   crayon:::strip_style(strings.raw),
-+   crayon:::strip_style(strings.all),
-+   strip_ansi(strings),
-+   strip_ansi(strings.raw),
-+   strip_ansi(strings.all),
-+   has_csi(strings)
-+ )
 Unit: microseconds
                               expr      min        lq       mean    median
      crayon:::strip_style(strings)  351.474  358.0145  433.34345  382.6325
@@ -152,15 +195,6 @@ Unit: microseconds
 Back to single pass:
 
 ```
-> microbenchmark::microbenchmark(times=1000,
-+   crayon:::strip_style(strings),
-+   crayon:::strip_style(strings.raw),
-+   crayon:::strip_style(strings.all),
-+   strip_ansi(strings),
-+   strip_ansi(strings.raw),
-+   strip_ansi(strings.all),
-+   has_csi(strings)
-+ )
 Unit: microseconds
                               expr      min        lq       mean    median
      crayon:::strip_style(strings)  352.317  359.2645  449.05838  384.8680
@@ -173,3 +207,37 @@ Unit: microseconds
 ```
 
 A little odd that single pass is slower for the raw strings.
+
+One major source of slowness in existing implementation is that `gregexpr` is
+really slow:
+
+```
+strings3 <- paste("hello ", format(1:1e4), "\033[0m world")
+
+Unit: microseconds
+                                              expr       min        lq
+     grep(crayon:::ansi_regex, strings3, perl = T)  2789.884  3314.459
+ gregexpr(crayon:::ansi_regex, strings3, perl = T) 31016.941 46144.304
+                                 has_csi(strings3)   773.735   936.246
+           gsub(crayon:::ansi_regex, "", strings3) 19612.712 23770.707
+      mean    median        uq        max neval
+  3679.146  3518.972  3891.466   6459.200   100
+ 58982.953 51241.905 60528.666 144145.516   100
+  1101.074  1013.913  1135.477   4346.849   100
+ 25907.785 25017.828 27647.528  36121.900   100
+ ```
+ This pretty is unfortunate as it would allow us to take advantage of the
+ correct character offsets for use with `substr` in a very easy manner.
+
+
+### Wrap
+
+```
+Unit: microseconds
+                                     expr      min       lq      mean    median
+ yy <- ansi_substr2(y.rep, starts, stops)  329.705  342.663  516.4295  579.5910
+       zz <- substr(x.rep, starts, stops)   62.264   62.839   71.8798   67.0075
+     zz <- stri_sub(x.rep, starts, stops)   10.290   14.488  372.0339   15.9330
+             strwrap(x.paste, width = 60) 1076.706 1107.804 1265.9602 1153.7485
+           stri_wrap(x.paste, width = 60)  651.140  672.613 2847.7724  684.6655
+```

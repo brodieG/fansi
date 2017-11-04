@@ -40,6 +40,12 @@ struct FANSI_csi_pos {
  */
 
 struct FANSI_state {
+  /*
+   * The original string the state corresponds to.  This is the pointer to the
+   * beginning of the string.
+   */
+  const char * string;
+
   /* bold, italic, etc, should be interpreted as bit mask where with 2^n we
    * have:
    *
@@ -95,20 +101,30 @@ struct FANSI_state {
    * need to make it back to R which doesn't have a `size_t` type.
    *
    * - pos_byte: the byte in the string
-   * - pos_ansi: actual character position, note that for the time being this is
-   *   actually just the byte position until we add UTF-8 handling
-   * - pos_raw: the character position after we strip the handled ANSI tags
+   * - pos_ansi: actual character position
+   * - pos_raw: the character position after we strip the handled ANSI tags, the
+   *   difference with pos_ansi is that pos_ansi counts the escaped characters
+   *   whereas this one does not.
+   * - pos_width: the character postion accounting for double width characters,
+   *   etc., note in this case ASCII escape sequences are treated as zero chars.
+   *   Width is computed with R_nchar.
+   * - pos_width_target: pos_width when the requested width cannot be matched
+   *   exactly, pos_width is the exact width, and this one is what was actually
+   *   requested.  Needed so we can match back to request.
+   *
+   * Actually not clear if there is a difference b/w pos_raw and pos_ansi, might
+   * need to remove one
    */
 
   int pos_ansi;
   int pos_raw;
+  int pos_width;
+  int pos_width_target;
   int pos_byte;
 
-  /*
-   * The original string the state corresponds to.  This is the pointer to the
-   * beginning of the string.
-   */
-  const char * string;
+  // Track width of last character
+
+  int last_char_width;
 
   /* Internal Flags ------------------------------------------------------------
    *
@@ -120,9 +136,23 @@ struct FANSI_state {
   int fail;
   int last;
 };
+/*
+ * Need to keep track of fallback state, so we need ability to return two states
+ */
+struct FANSI_state_pair {
+  struct FANSI_state cur;
+  struct FANSI_state prev;
+};
 
 struct FANSI_csi_pos FANSI_find_csi(const char * x);
 
 SEXP FANSI_has(SEXP x);
 SEXP FANSI_strip(SEXP input);
-SEXP FANSI_state_at_raw_pos_ext(SEXP text, SEXP pos);
+SEXP FANSI_state_at_pos_ext(
+  SEXP text, SEXP pos, SEXP type, SEXP lag, SEXP ends
+);
+
+int FANSI_is_utf8_loc();
+int FANSI_utf8clen(char c);
+
+SEXP FANSI_check_assumptions();
