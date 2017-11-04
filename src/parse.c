@@ -441,14 +441,14 @@ struct FANSI_state_pair FANSI_state_at_position(
         error("Internal Error: Illegal offset type; contact maintainer.");
         // nocov end
     }
+    /*
     Rprintf(
       "cond %2d pos %2d lag %d end %d width (%2d %2d) ansi (%2d %2d) byte (%2d %2d)\n",
       cond, pos, lag, end, state.pos_width, state_prev.pos_width,
       state.pos_ansi, state_prev.pos_ansi,
       state.pos_byte, state_prev.pos_byte
     );
-
-
+    */
     // We still have stuff to process
 
     if(cond > 0) continue;
@@ -495,10 +495,12 @@ struct FANSI_state_pair FANSI_state_at_position(
   }
   // We return the state just before we overshot the end
 
+  /*
   Rprintf(
     "   return pos %2d width %d ansi %2d byte %2d\n",
     pos, state_res.pos_width, state_res.pos_ansi, state_res.pos_byte
   );
+  */
   return (struct FANSI_state_pair){.cur=state_res, .prev=state_prev_buff};
 }
 /*
