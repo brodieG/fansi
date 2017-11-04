@@ -10,9 +10,11 @@ unitizer_sect("substr", {
     red, lorem.cn.pieces[1], inv, lorem.cn.pieces[2], grn.bg,
     lorem.cn.pieces[3], rgb.und, lorem.cn.pieces[4], end
   )
+  lor.cn.c.1.5 <- rep(lorem.cn.col.1, 5)
+
   starts <- seq(1, 17, 4)
   ends <- starts + 3
-  ansi_substr2(rep(lorem.cn.col.1, 5), starts, ends)
+  ansi_substr2(lor.cn.c.1.5, starts, ends)
 
   # These are all six chars wide, but look different due to different width
   # characters
@@ -21,13 +23,14 @@ unitizer_sect("substr", {
     red, lorem.cn.pieces[1], "hello", inv, lorem.cn.pieces[2], " there ",
     grn.bg, lorem.cn.pieces[3], rgb.und, lorem.cn.pieces[4], end
   )
+  lor.cn.c.2.5 <- rep(lorem.cn.col.2, 5)
   starts <- seq(1, by=6, len=5)
   ends <- starts + 5
-  ansi_substr2(rep(lorem.cn.col.2, 5), starts, ends)
+  ansi_substr2(lor.cn.c.2.5, starts, ends)
 
   starts <- seq(1, by=12, len=5)
   ends <- starts + 11
-  ansi_substr2(rep(lorem.cn.col.2, 5), starts, ends, type='width')
+  ansi_substr2(lor.cn.c.2.5, starts, ends, type='width')
 
   # All wide characters even number of chars apart
 
@@ -50,6 +53,14 @@ unitizer_sect("substr", {
   # and now we grab those missing chars by allowing the round to happen
 
   ansi_substr2(lor.cn.c.3.5, starts, ends, type='width', round='both')
+
+  # jagged first one leads short, second long
+
+  starts <- seq(1, by=7, length.out=5)
+  ends <- starts + 8
+  ansi_substr2(lor.cn.c.1.5, starts, ends, type='width')
+  ansi_substr2(lor.cn.c.1.5, starts, ends, type='width', round='last')
+
 })
 unitizer_sect("rounding", {
   # handling of subsetting when we end up in middle of wide display characters
