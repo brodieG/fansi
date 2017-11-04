@@ -356,7 +356,9 @@ struct FANSI_state_pair FANSI_state_at_position(
   state.pos_width_target = state.pos_width;
 
   struct FANSI_state state_res, state_prev, state_prev_buff;
+
   state_prev = state_prev_buff = state_pair.prev;
+  state_res = state;
 
   const char * string = state.string;
 
@@ -474,11 +476,9 @@ struct FANSI_state_pair FANSI_state_at_position(
     if(type == 1) {
       if(!lag) {
         if(end && cond != -1) {
-          Rprintf("End mismatch\n");
           state_res = state_prev_buff;
         } else if (!end && cond != -disp_size) {
           state_res = state;
-          Rprintf("Start mismatch ansi %d\n", state_res.pos_ansi);
         }
       }
       state_res.pos_width_target = pos;
