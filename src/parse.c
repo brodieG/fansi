@@ -507,17 +507,37 @@ struct FANSI_state_pair FANSI_state_at_position(
     state_next_prev = FANSI_read_next(state_next_prev_prev);
     state_next = FANSI_read_next(state_next_prev);
 
-    while(state_next.string[state_next.pos_byte]) {
+    /*
+    Rprintf(
+      "npp %d %d %d np %d %d %d n %d %d %d end %d\n",
+
+      state_next_prev_prev.pos_byte,
+      state_next_prev_prev.pos_width,
+      state_next_prev_prev.pos_ansi,
+
+      state_next_prev.pos_byte,
+      state_next_prev.pos_width,
+      state_next_prev.pos_ansi,
+
+      state_next.pos_byte,
+      state_next.pos_width,
+      state_next.pos_ansi,
+
+      state_next.string[state_next.pos_byte] == 0
+    );
+    */
+
+    while(!state_next.last_char_width) {
       /*
       Rprintf(
         "next: width %d ansi %d last %d\n", state_next.pos_width,
         state_next.pos_ansi, state_next.last_char_width
       );
       */
-      if(state_next.last_char_width) break;
       state_next_prev_prev = state_next_prev;
       state_next_prev = state_next;
       state_next = FANSI_read_next(state_next);
+      if(!state_next.string[state_next.pos_byte]) break;
     }
     state_res = state_next_prev_prev;
   }

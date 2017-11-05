@@ -120,4 +120,20 @@ unitizer_sect("zero width combining", {
 
   ansi_substr2(combo, 1, 5, type='width')
   ansi_substr2(combo, 2, 6, type='width')
+
+  # zero width with double width
+
+  combo3 <- paste0(substr(lorem.cn.pieces[1], 1, 2), '\u0300')
+  Encoding(combo3) <- "UTF-8"
+  ansi_substr2(combo3, 3, 4, type='width')
+  ansi_substr2(combo3, 2, 4, type='width')
+  ansi_substr2(combo3, 4, 4, type='width')
+  ansi_substr2(combo3, 4, 5, type='width')
+
+  # start with diacritic
+
+  combo4 <- paste0('\u0300hello')
+  ansi_substr2(combo4, 1, 1, type='width')  # no diacritic
+  ansi_substr2(combo4, 1, 1)                # diacritic only
+
 })
