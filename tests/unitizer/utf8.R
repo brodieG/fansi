@@ -110,7 +110,14 @@ unitizer_sect("multi-elem", {
 unitizer_sect("zero width combining", {
   combo <- "hello\u0300\u035c world"
   Encoding(combo) <- "UTF-8"
+
   ansi_substr2(combo, 1, 5, type='width')
   ansi_substr2(combo, 5, 8, type='width')
   ansi_substr2(rep(combo, 2), c(1, 5), c(5, 8), type='width')
+
+  combo1 <- "hello\u0300\u035c"
+  Encoding(combo1) <- "UTF-8"
+
+  ansi_substr2(combo, 1, 5, type='width')
+  ansi_substr2(combo, 2, 6, type='width')
 })

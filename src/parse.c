@@ -366,7 +366,6 @@ static struct FANSI_state FANSI_read_next(struct FANSI_state state) {
       // nocov end
     }
   } else if(string[state.pos_byte] < 0) {
-    Rprintf("Read UTF8\n");
     state = FANSI_read_utf8(state);
   }
   return state;
@@ -477,6 +476,7 @@ struct FANSI_state_pair FANSI_state_at_position(
      * If instead we are matching the start of a wide character, then we're
      * looking for the overshoot to be the width of the character.
      */
+
     if(type == 1) { // width mode
       if(!lag) {
         if(end && cond != -1) {
@@ -498,20 +498,29 @@ struct FANSI_state_pair FANSI_state_at_position(
   }
   // Keep advancing if there are any zero width UTF8 characters, not entirely
   // sure what we're supposed to do with prev_buff here, need to have some test
-  // cases to see what happens
+  // cases to see what happens.  Note we only do this when we end on zero width
+  // chars
 
-  struct FANSI_state state_next, state_next_prev = state_res;
-  while(state_next_prev.string[state_next_prev.pos_byte]) {
+  if(end) {
+    struct FANSI_state state_next, state_next_prev, state_next_prev_prev;
+    state_next_prev_prev = state_res;
+    state_next_prev = FANSI_read_next(state_next_prev_prev);
     state_next = FANSI_read_next(state_next_prev);
-    Rprintf(
-      "next: width %d ansi %d last %d\n", state_next.pos_width,
-      state_next.pos_ansi, state_next.last_char_width
-    );
-    if(state_next.last_char_width) break;
-    state_next_prev = state_next;
-  }
-  state_res = state_next_prev;
 
+    while(state_next.string[state_next.pos_byte]) {
+      /*
+      Rprintf(
+        "next: width %d ansi %d last %d\n", state_next.pos_width,
+        state_next.pos_ansi, state_next.last_char_width
+      );
+      */
+      if(state_next.last_char_width) break;
+      state_next_prev_prev = state_next_prev;
+      state_next_prev = state_next;
+      state_next = FANSI_read_next(state_next);
+    }
+    state_res = state_next_prev_prev;
+  }
   // We return the state just before we overshot the end
 
   /*
