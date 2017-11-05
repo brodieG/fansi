@@ -62,7 +62,6 @@ ansi_substr2 <- function(
     e.stop <- stop[elems]
     # note, for expediency we're currently assuming that there is no overlap
     # between starts and stops
-    cat("reminder - convert stuff to UTF8 here and not in C\n")
 
     e.order <- order(c(e.start, e.stop), method='shell')
 
