@@ -129,7 +129,7 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
  * @param mode is whether we are doing foregrounds (3) or backgrounds (4)
  * @param colors is whether we are doing palette (5), or rgb truecolor (2)
  */
-struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode) {
+static struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode) {
   if(mode != 3 && mode != 4)
     error("Internal Error: parsing color with invalid mode.");
 
@@ -215,7 +215,7 @@ struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode) {
  *   advances the ESC[ bit, although in theory as per #4 should probably advance
  *   all the way for any CSI sequence, not just SGR
  */
-struct FANSI_state FANSI_parse_sgr(struct FANSI_state state) {
+static struct FANSI_state FANSI_parse_sgr(struct FANSI_state state) {
   // make a copy of the struct so we don't modify state if it turns out
   // this is an invalid SGR
 
@@ -308,6 +308,71 @@ struct FANSI_state FANSI_parse_sgr(struct FANSI_state state) {
   return state;
 }
 /*
+ * Read UTF8 character
+ */
+static struct FANSI_state FANSI_read_utf8(struct FANSI_state state) {
+  int byte_size = FANSI_utf8clen(state.string[state.pos_byte]);
+
+  // In order to compute char display width, we need to create a charsxp
+  // with the sequence in question.  Hopefully not too much overhead since
+  // at least we benefit from the global string hash table
+  //
+  // Note that we should probably not bother with computing this if display
+  // mode is not width as it's probably expensive.
+
+  SEXP str_chr =
+    PROTECT(mkCharLenCE(state.string + state.pos_byte, byte_size, CE_UTF8));
+  int disp_size = R_nchar(
+    str_chr, Width, FALSE, FALSE, "when computing display width"
+  );
+  UNPROTECT(1);
+
+  // Need to check overflow?  Really only for pos_width?  Maybe that's not
+  // even true because you need at least two bytes to encode a double wide
+  // character, and there is nothing wider than 2?
+
+  state.pos_byte += byte_size;
+  ++state.pos_ansi;
+  ++state.pos_raw;
+  state.last_char_width = disp_size;
+  state.pos_width += disp_size;
+  state.pos_width_target += disp_size;
+  return state;
+}
+/*
+ * Read a Character Off and Update State
+ */
+static struct FANSI_state FANSI_read_next(struct FANSI_state state) {
+  const char * string = state.string;
+  if(string[state.pos_byte] >  0) {
+    // Character is in the 1-127 range
+    if(string[state.pos_byte] != 27) {
+      // Normal ASCII character
+      ++state.pos_byte;
+      ++state.pos_ansi;
+      ++state.pos_raw;
+      ++state.pos_width;
+      ++state.pos_width_target;
+      state.last_char_width = 1;
+    } else if (
+      string[state.pos_byte] == 27 && string[state.pos_byte + 1] == '['
+    ) {
+      state = FANSI_parse_sgr(state);
+    } else {
+      // nocov start
+      error(
+        "Internal Error: other ESC sequences not handled currently, see #4"
+      );
+      // nocov end
+    }
+  } else if(string[state.pos_byte] < 0) {
+    Rprintf("Read UTF8\n");
+    state = FANSI_read_utf8(state);
+  }
+  return state;
+}
+
+/*
  * Compute the state given a character position (raw position)
  *
  * Assumption is that any byte > 127 is UTF8 (i.e. input strings must be all
@@ -360,19 +425,12 @@ struct FANSI_state_pair FANSI_state_at_position(
   state_prev = state_prev_buff = state_pair.prev;
   state_res = state;
 
-  const char * string = state.string;
-
   while(1) {
     state_prev = state_res = state;
     state.fail = state.last = 0;
-    int disp_size = 0;
 
     // Handle UTF-8, we need to record the byte size of the sequence as well as
     // the corresponding display width.
-
-    // Urgh, don't like the fact that we have two branches with `state.pos_raw <
-    // pos`...  Annoying because we don't apply that condition to the ESC[
-    // sequence since we can start with that as a zero width element...
 
     if(state.pos_byte == INT_MAX - 1)
       // nocov start
@@ -382,58 +440,9 @@ struct FANSI_state_pair FANSI_state_at_position(
       error("Internal Error: counter overflow while reading string.");
       // nocov end
 
-    if(string[state.pos_byte] >  0) {
-      // Character is in the 1-127 range
-      if(string[state.pos_byte] != 27) {
-        // Normal ASCII character
-        ++state.pos_byte;
-        ++state.pos_ansi;
-        ++state.pos_raw;
-        ++state.pos_width;
-        ++state.pos_width_target;
-        state.last_char_width = 1;
-      } else if (
-        string[state.pos_byte] == 27 && string[state.pos_byte + 1] == '['
-      ) {
-        state = FANSI_parse_sgr(state);
-      } else {
-        // nocov start
-        error(
-          "Internal Error: other ESC sequences not handled currently, see #4"
-        );
-        // nocov end
-      }
-    } else if(string[state.pos_byte] < 0) {
-      int byte_size = FANSI_utf8clen(string[state.pos_byte]);
+    state = FANSI_read_next(state);
+    if(!state.string[state.pos_byte]) break;
 
-      // In order to compute char display width, we need to create a charsxp
-      // with the sequence in question.  Hopefully not too much overhead since
-      // at least we benefit from the global string hash table
-      //
-      // Note that we should probably not bother with computing this if display
-      // mode is not width as it's probably expensive.
-
-      SEXP str_chr =
-        PROTECT(mkCharLenCE(string + state.pos_byte, byte_size, CE_UTF8));
-      disp_size = R_nchar(
-        str_chr, Width, FALSE, FALSE, "when computing display width"
-      );
-      UNPROTECT(1);
-
-      // Need to check overflow?  Really only for pos_width?  Maybe that's not
-      // even true because you need at least two bytes to encode a double wide
-      // character, and there is nothing wider than 2?
-
-      state.pos_byte += byte_size;
-      ++state.pos_ansi;
-      ++state.pos_raw;
-      state.last_char_width = disp_size;
-      state.pos_width += disp_size;
-      state.pos_width_target += disp_size;
-    } else {
-      break;
-    }
-    if(!string[state.pos_byte]) break;
     switch(type) {
       case 0: cond = pos - state.pos_raw; break;
       case 1: cond = pos - state.pos_width; break;
@@ -460,26 +469,21 @@ struct FANSI_state_pair FANSI_state_at_position(
       state_prev_buff = state_prev;
       continue;
     }
-    // We passed the target character, in normal case should be by just one
-    // character, altough in width mode could be more than that with wide
-    // display characters
     /*
      * A key problem here is that what constitues a valid offset depends on the
      * display width of the character.  For example, -1 makes sense if the
      * character is 1 wide, or if we're looking to match that character to end.
      *
      * If instead we are matching the start of a wide character, then we're
-     * looking for the overshoot to be the width (? I think) of the character?
+     * looking for the overshoot to be the width of the character.
      */
-
-    if(type == 1) {
+    if(type == 1) { // width mode
       if(!lag) {
         if(end && cond != -1) {
           state_res = state_prev_buff;
-        } else if (!end && cond != -disp_size) {
+        } else if (!end && cond != -state.last_char_width) {
           state_res = state;
-        }
-      }
+      } }
       state_res.pos_width_target = pos;
     } else if(cond < -1) {
       // nocov start
@@ -492,6 +496,22 @@ struct FANSI_state_pair FANSI_state_at_position(
     }
     break;
   }
+  // Keep advancing if there are any zero width UTF8 characters, not entirely
+  // sure what we're supposed to do with prev_buff here, need to have some test
+  // cases to see what happens
+
+  struct FANSI_state state_next, state_next_prev = state_res;
+  while(state_next_prev.string[state_next_prev.pos_byte]) {
+    state_next = FANSI_read_next(state_next_prev);
+    Rprintf(
+      "next: width %d ansi %d last %d\n", state_next.pos_width,
+      state_next.pos_ansi, state_next.last_char_width
+    );
+    if(state_next.last_char_width) break;
+    state_next_prev = state_next;
+  }
+  state_res = state_next_prev;
+
   // We return the state just before we overshot the end
 
   /*
