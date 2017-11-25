@@ -58,7 +58,34 @@ Other random notes:
 Should position be in bytes?  Probably in characters to use in combination with
 ansi_strsub or whatever that ends up called.
 
-## Emoji and Other Complex Characters
+## UTF-8 issues
+
+### Grapheme recognition
+
+Need to implement graphemes and word boundaries, although that is likely to
+happen later on if at all.
+
+  * [unicode segmentation](http://www.unicode.org/reports/tr29/)
+  * [utf8lite](https://github.com/patperry/utf8lite) seems to implement this
+
+Additionally, it's not clear how useful it is to fully implement this since it
+relies on terminals displaying correctly anyway.  Interestingly, the hangul
+business is recognized properly in the zero-length follow on chars:
+
+```
+> cat('\u1100\u1161\u11A8\n')
+각
+> nchar('\u1100\u1161\u11A8\n')
+[1] 4
+> nchar('\u1100\u1161\u11A8', type='width')
+[1] 2
+> nchar('\u1161\u11A8', type='width')
+[1] 0
+> nchar('\u1161', type='width')
+[1] 0
+```
+
+### Emoji
 
 Main problem with emoji is that UTF-8 handling and emoji handling in R seem
 pretty terrible (though maybe not all of this is Rs fault).  Several problems:
