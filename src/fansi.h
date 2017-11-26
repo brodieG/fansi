@@ -156,3 +156,6 @@ int FANSI_is_utf8_loc();
 int FANSI_utf8clen(char c);
 
 SEXP FANSI_check_assumptions();
+
+const char * FANSI_string_as_utf8(x);
+

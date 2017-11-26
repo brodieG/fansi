@@ -756,13 +756,8 @@ SEXP FANSI_state_at_pos_ext(
   SEXP res_str = PROTECT(allocVector(STRSXP, len));
   SEXP res_chr, res_chr_prev = PROTECT(mkChar(""));
 
-  int utf8_loc = FANSI_is_utf8_loc();
-  cetype_t enc_type = getCharCE(text_chr);
-  int translate = !(
-    (utf8_loc && enc_type == CE_NATIVE) || enc_type == CE_BYTES ||
-    enc_type == CE_UTF8
-  );
-  if(translate) string = translateCharUTF8(text_chr);
+  string = FANSI_string_as_utf8(test_chr);
+
   state.string = state_prev.string = string;
   state_pair.cur = state;
   state_pair.prev = state_prev;

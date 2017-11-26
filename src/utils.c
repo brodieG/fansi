@@ -86,3 +86,23 @@ struct FANSI_csi_pos FANSI_find_csi(const char * x) {
   }
   return res;
 }
+/*
+ * Translates a CHARSXP to a UTF8 char if necessary, otherwise returns
+ * the char
+ */
+const char * FANSI_string_as_utf8(x) {
+  if(typeof(x) != CHARSXP)
+    error("Internal Error: expect CHARSXP."); // nocov
+  int utf8_loc = FANSI_is_utf8_loc();
+
+  cetype_t enc_type = getCharCE(x);
+
+  int translate = !(
+    (utf8_loc && enc_type == CE_NATIVE) || enc_type == CE_BYTES ||
+    enc_type == CE_UTF8
+  );
+  if(translate) string = translateCharUTF8(x);
+  else string = CHAR(x);
+
+  return string;
+}
