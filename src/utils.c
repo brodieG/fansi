@@ -106,3 +106,8 @@ const char * FANSI_string_as_utf8(x) {
 
   return string;
 }
+
+inline int safe_add(int a, int b) {
+  if(a > INT_MAX - b) error("int overflow");
+  return a + b;
+}

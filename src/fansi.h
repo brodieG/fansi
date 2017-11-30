@@ -162,4 +162,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   const char * FANSI_string_as_utf8(x);
 
+  inline int safe_add(int a, int b);
+
 #endif
