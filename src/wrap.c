@@ -73,6 +73,8 @@ SEXP FANSI_strwrap_ext(
   SEXP res = PROTECT(allocVector(VECSXP, x_len));
 
   for(i = 0; i < x_len; ++i) {
+    FANSI_interrupt(i);
+
     SEXP pre_chr = !i ? asChar(initial) : asChar(prefix);
     R_len_t pre_len = R_nchar(
       pre_chr, Width, FALSE, FALSE, "when computing display width"

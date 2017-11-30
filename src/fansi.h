@@ -22,6 +22,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #ifndef _FANSI_H
 #define _FANSI_H
 
+// concept borrowed from utf8-lite
+
+#define FANSI_interrupt(i) (if(!((i) % 1000))) R_CheckUserInterrupt())
+
   /*
    * Used when computing position and size of ANSI tag with FANSI_loc
    */
