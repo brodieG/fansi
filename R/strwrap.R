@@ -1,6 +1,7 @@
 #' ANSI CSI Aware Version of strwrap
 #'
 #' @inheritParams base::strwrap
+#' @import vetr
 
 strwrap_csi <- function(
   x, width = 0.9 * getOption("width"), indent = 0,
