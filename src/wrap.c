@@ -10,20 +10,28 @@ SEXP FANSI_strwrap(
 
 }
 
-
+/*
+ * All integer inputs are expected to be positive, which should be enforced by
+ * the R interface checks.
+ *
+ * @param strict whether to force a hard cut in-word when a full word violates
+ *   the width limit on its own
+ */
 
 SEXP FANSI_strwrap_ext(
   SEXP x, SEXP width, SEXP indent, SEXP exdent, SEXP prefix,
-  SEXP initial
+  SEXP initial, SEXP strict
 ) {
   if(
     typeof(x) != STRSXP || typeof(width) != INTSXP ||
     typeof(indent) != INTSXP || typeof(exdent) != INTSXP ||
-    typeof(prefix) != STRSXP
+    typeof(prefix) != STRSXP || typeof(strict) != INTSXP
   ) {
     error("Type error.");
   }
   R_xlen_t i, x_len = XLENGTH(x);
+
+  int strict_int = asInteger(strict);
 
   // could be a little faster if we has a version that just did this for the
   // char instead of dealing with strsxps
@@ -33,25 +41,35 @@ SEXP FANSI_strwrap_ext(
 
   const char * prefix_chr = CHAR(asChar(prefix));
   const char * prefix_chr_strip = FANSI_string_as_utf8(asChar(prefix_strip));
-  const char * prefix_chr_len = R_nchar(
+  int prefix_chr_len = R_nchar(
     prefix_chr, Width, FALSE, FALSE, "when computing display width"
   )
   const char * initial_chr = CHAR(asChar(initial));
   const char * initial_chr_strip = FANSI_string_as_utf8(asChar(initial_strip));
-  const char * initial_chr_len = R_nchar(
+  int initial_chr_len = R_nchar(
     initial_chr, Width, FALSE, FALSE, "when computing display width"
   )
   UNPROTECT(2);
 
-  // Check that widths are feasible, although it seems that strwrap is happy to
-  // not wrap if not feasible; maybe we only need to check if there is a strict
-  // mode where we break words?
+  // Check that widths are feasible, although really only relevant if in strict
+  // mode
 
   int width_int = asInteger(width);
   int indent_int = asInteger(indent);
   int exdent_int = asInteger(exdent);
 
-  int pre_len = ;
+  if(
+    strict_int && (
+      safe_add(indent_int, initial_chr_len) >= width_int ||
+      safe_add(exdent_int, prefix_chr_len) >= width_int
+    )
+  )
+    error(
+      "%s%s",
+      "Width error: sum of `indent` and `initial` width or sum of `exdent` and",
+      "`prefix` width must be less than `width` when in strict mode."
+    )
+
   SEXP res = PROTECT(allocVector(VECSXP, x_len));
 
   for(i = 0; i < x_len; ++i) {
