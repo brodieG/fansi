@@ -9,7 +9,7 @@ strwrap_csi <- function(
 ) {
   if(!is.character(x)) x <- as.character(x)
   vetr(
-    character(), numeric(1), INT.POS.1,
+    character(), NUM.1.POS && . >= 1, INT.1.POS,
     INT.POS.1, character(1), simplify=LGL.1, character(1)
   )
   width <- as.integer(width)

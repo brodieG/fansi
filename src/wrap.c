@@ -2,11 +2,103 @@
 
 /*
  * x is expected to be in UTF-8 format
+ *
+ * @param buff a pointer to a character buffer.  We use pointer to a
+ *   pointer because it may need to be resized, but we also don't want to
+ *   re-allocate the buffer between calls.
+ * @param buff_size the size of the buffer
  */
 
 SEXP FANSI_strwrap(
-  const char * x, int width, int indent, const char * prefix, int prefix_len
+  const char * x, int width, int indent, int exdent, const char * prefix,
+  int prefix_len, const char * initial, int initial_len,
+  int strict, char ** buff, int * buff_size
 ) {
+  char * buff_target = * buff;
+  FANSI_state state = FANSI_state_init();
+  state.string = x;
+
+  int width_1 = width - indent - initial_len;
+  int width_2 = width - exdent - prefix_len;
+
+  if(width < 1) error("Internal Error: invalid width.");
+  if(width_tar < 0) error("Internal Error: incompatible width/indent/prefix.");
+
+  // Start with a buffer twice the width we're targeting; we'll grow it as
+  // needed.  The buffer may already exist from a previous iteration
+
+  if(!buff_target) {
+    *buff_size = FANSI_ADD_INT(width, width);
+    buff_target = R_alloc(*buff_size, sizeof(char));
+  }
+  // Track the last valid breaking point we have.  For now we are just looking
+  // for spaces, tabs.
+
+  int last_bound = 0;
+
+  // Need to do two pass to figure out how many elements we'll have?  Or maybe
+  // just store the CHARSXPs in a LISTSXP at first?  There is probably no harm
+  // in that?  Certainly a lot simpler than having to either record states, etc,
+  // or re-run everything twice
+
+  SEXP char_list = PROTECT(list1(R_NilValue));
+  int prev_newline = 0;
+  int para_start = 1;
+  int width_tar = width_1;
+
+  while(state.string[state.pos_byte]) {
+    while(state.pos_width < width_tar) {
+      int make_line = 0;
+      const char cur_chr = state[state.pos_byte];
+
+      // detect word boundaries and paragraph starts
+
+      if(cur_chr == ' ' || cur_chr == '\t' || cur_chr == '\n') {
+        last_bound = state.pos_byte;
+      }
+      // Write a line
+
+      if((cur_chr == '\n' && !prev_newline) || state.pos_width > width_tar) {
+        // Check if we are in a CSI state
+
+        if(last_bound - 1 > *buff_size) {
+          // don't do re-alloc because we are going to overwrite everything
+          // anyway
+
+          *buff_size = FANSI_ADD_INT(*buff_size, *buff_size);
+          buff_target = R_alloc(*buff_size, sizeof(char));
+        }
+
+        if(prev_newline) {
+          para_start = 1;
+          width_tar = width_1;
+        } else prev_newline = 1;
+      } else if(prev_newline) {
+        prev_newline = 0;
+        para_start = 0;
+        width_tar = width_2;
+      }
+      // Newline completes a line
+
+      if(cur_chr == '\n' && !prev_newline) {
+
+      }
+
+      state
+      // NOTE: Need to handle carriage returns
+
+      state = FANSI_read_next(state);
+      if(state.pos_width > width_tar) {
+        // Need to make the line
+
+        para_start = 0;
+        width_tar = width_2;
+      }
+
+
+    }
+  }
+  // Need
 
 }
 
@@ -72,6 +164,12 @@ SEXP FANSI_strwrap_ext(
 
   SEXP res = PROTECT(allocVector(VECSXP, x_len));
 
+  // Set up the buffer, this will be created in FANSI_strwrap, but we want a
+  // handle for it here so we can re-use
+
+  char ** buff = 0;
+  int * buff_size = 0;
+
   for(i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
 
@@ -82,7 +180,7 @@ SEXP FANSI_strwrap_ext(
     SEXP str_i = PROTECT(
       FANSI_strwrap(
         CHAR(STRING_ELT(x, i)), width_int, !i ? indent_int : exdent_int,
-        pre_chr, pre_len
+        pre_chr, pre_len, buff, buff_size
     ) );
     SET_VECTOR_ELT(res, i, str_i);
     UNPROTECT(1);
