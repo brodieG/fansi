@@ -17,12 +17,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 */
 #include "fansi.h"
 
-// note we use long int b/c these numbers are going back to R
-
-inline int safe_add(int a, int b) {
-  if(a > INT_MAX - b) error("int overflow");
-  return a + b;
-}
 /*
  * Create a state structure with everything set to zero
  *

@@ -107,7 +107,8 @@ const char * FANSI_string_as_utf8(x) {
   return string;
 }
 
-inline int safe_add(int a, int b) {
-  if(a > INT_MAX - b) error("int overflow");
+inline int safe_add(int a, int b, int line, const char * file) {
+  if(a > INT_MAX - b)
+    error("Integer overflow in %s at line %d in file %s.");
   return a + b;
 }

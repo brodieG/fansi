@@ -24,7 +24,14 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
 // concept borrowed from utf8-lite
 
-#define FANSI_interrupt(i) (if(!((i) % 1000))) R_CheckUserInterrupt())
+#define FANSI_INTERRUPT(i) (if(!((i) % 1000))) R_CheckUserInterrupt())
+#define FANSI_ADD_INT(x, y) (\
+  ((int)x) > INT_MAX - ((int)y) ? \
+  error(\
+    "Integer overflow in %s at line %d in file %s.", __func__, __LINE__,\
+    __FILE__\
+  ) : \
+  (x) + (y))
 
   /*
    * Used when computing position and size of ANSI tag with FANSI_loc
@@ -40,10 +47,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   };
 
   /*
-   * Captures the ANSI state at any particular position in a string.  Note this is
-   * only designed to capture SGR CSI codes (i.e. those of format "ESC[n;n;n;m")
-   * where "n" is a number.  This is a small subset of the possible ANSI escape
-   * codes.
+   * Captures the ANSI state at any particular position in a string.  Note this
+   * is only designed to capture SGR CSI codes (i.e. those of format
+   * "ESC[n;n;n;m") where "n" is a number.  This is a small subset of the
+   * possible ANSI escape codes.
    */
 
   struct FANSI_state {
@@ -109,18 +116,18 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      *
      * - pos_byte: the byte in the string
      * - pos_ansi: actual character position
-     * - pos_raw: the character position after we strip the handled ANSI tags, the
-     *   difference with pos_ansi is that pos_ansi counts the escaped characters
-     *   whereas this one does not.
-     * - pos_width: the character postion accounting for double width characters,
-     *   etc., note in this case ASCII escape sequences are treated as zero chars.
-     *   Width is computed with R_nchar.
+     * - pos_raw: the character position after we strip the handled ANSI tags,
+     *   the difference with pos_ansi is that pos_ansi counts the escaped
+     *   characters whereas this one does not.
+     * - pos_width: the character postion accounting for double width
+     *   characters, etc., note in this case ASCII escape sequences are treated
+     *   as zero chars.  Width is computed with R_nchar.
      * - pos_width_target: pos_width when the requested width cannot be matched
-     *   exactly, pos_width is the exact width, and this one is what was actually
-     *   requested.  Needed so we can match back to request.
+     *   exactly, pos_width is the exact width, and this one is what was
+     *   actually requested.  Needed so we can match back to request.
      *
-     * Actually not clear if there is a difference b/w pos_raw and pos_ansi, might
-     * need to remove one
+     * Actually not clear if there is a difference b/w pos_raw and pos_ansi,
+     * might need to remove one
      */
 
     int pos_ansi;
@@ -136,9 +143,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     /* Internal Flags ------------------------------------------------------------
      *
      * Used to communicate back from sub-processes that sub-parsing failed, the
-     * sub-process is supposed to leave the state pointed at the failing character
-     * with the byte position updated.  The parent process is then in charge of
-     * updating the raw position.
+     * sub-process is supposed to leave the state pointed at the failing
+     * character with the byte position updated.  The parent process is then in
+     * charge of updating the raw position.
      */
     int fail;
     int last;
@@ -167,5 +174,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   const char * FANSI_string_as_utf8(x);
 
   inline int safe_add(int a, int b);
+
+  struct FANSI_state FANSI_state_init();
 
 #endif
