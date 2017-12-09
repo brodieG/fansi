@@ -77,7 +77,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * Note that n == 0 is not used so that the translation between n values and
      * the ANSI codes that correspond to each style is direct.
      */
-
     unsigned int style;
 
     /*
@@ -173,8 +172,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   const char * FANSI_string_as_utf8(x);
 
-  inline int safe_add(int a, int b);
-
   struct FANSI_state FANSI_state_init();
+
+  int FANSI_state_size(FANSI_state state);
 
 #endif

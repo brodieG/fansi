@@ -42,41 +42,68 @@ SEXP FANSI_strwrap(
   // or re-run everything twice
 
   SEXP char_list = PROTECT(list1(R_NilValue));
-  int prev_newline = 0;
+  int prev_newline = 0;  // tracks if last non blank character was newline
   int para_start = 1;
   int width_tar = width_1;
+  int start_byte = state.pos_byte;
+
+  struct FANSI_state state_start = state;
+  struct FANSI_state state_blank = FANSI_state_init();  // reference
 
   while(state.string[state.pos_byte]) {
     while(state.pos_width < width_tar) {
       int make_line = 0;
-      const char cur_chr = state[state.pos_byte];
+      const char cur_chr = state.string[state.pos_byte];
 
       // detect word boundaries and paragraph starts
 
       if(cur_chr == ' ' || cur_chr == '\t' || cur_chr == '\n') {
         last_bound = state.pos_byte;
-      }
-      // Write a line
+      } else prev_newline = 0;
+
+      // Write a line, need special logic for newlines because any whitespace
+      // following newlines is normally just suppressed.
 
       if((cur_chr == '\n' && !prev_newline) || state.pos_width > width_tar) {
-        // Check if we are in a CSI state
 
-        if(last_bound - 1 > *buff_size) {
-          // don't do re-alloc because we are going to overwrite everything
-          // anyway
+        // Check if we are in a CSI state b/c if we are we neeed extra room for
+        // the closing state tag
 
-          *buff_size = FANSI_ADD_INT(*buff_size, *buff_size);
-          buff_target = R_alloc(*buff_size, sizeof(char));
+        int needs_close = FANSI_state_comp(state, state_blank);
+        int needs_start = FANSI_state_comp(state_start, state_blank);
+        int target_size = last_bound - start_byte - 1;
+        int state_start_size = 0;
+
+        if(needs_close) target_size = FANSI_ADD_INT(target_size, 4);
+        if(needs_start) {
+          state_start_size = FANSI_state_size(state_start);
+          target_size = FANSI_ADD_INT(target_size, state_start_size);
         }
+        if(target_size > *buff_size) {
+          // don't do re-alloc because we are going to overwrite everything
+          // anyway, double prev buffer unless entry is bigger than that
 
-        if(prev_newline) {
-          para_start = 1;
-          width_tar = width_1;
-        } else prev_newline = 1;
-      } else if(prev_newline) {
-        prev_newline = 0;
-        para_start = 0;
-        width_tar = width_2;
+          int tmp_double_size = FANSI_ADD_INT(*buff_size, *buff_size);
+          if(last_bound - 1 > tmp_double_size) tmp_double_size = last_bound - 1;
+          *buff_size = tmp_double_size;
+          buff_target = buff_target_start = R_alloc(*buff_size, sizeof(char));
+        }
+        if(cur_chr == '\n') prev_newline = 1;
+
+        if(needs_start) {
+          FANSI_csi_write(buff_target, state_start, state_start_size);
+          buff_target += state_start_size;
+        }
+        memcpy(buff_target, state_start.string, last_bound - start_byte);
+        buff_target += last_bound - start_byte;
+        if(needs_end) {
+          memcpy(buff_target + last_bound, "\033[0m", 4);
+          buff_target += 4;
+        }
+        *buff_target = 0;
+
+        // Now create the charsxp and append to the list
+
       }
       // Newline completes a line
 

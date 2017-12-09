@@ -223,7 +223,8 @@ static struct FANSI_state FANSI_parse_sgr(struct FANSI_state state) {
 
   do {
     tok_res = FANSI_parse_token(&state.string[state.pos_byte]);
-    state.pos_byte = safe_add(state.pos_byte, safe_add(tok_res.len, 1));
+    state.pos_byte =
+      FANSI_ADD_INT(state.pos_byte, FANSI_ADD_INT(tok_res.len, 1));
     state.last = tok_res.last;
 
     if(!tok_res.success) {
@@ -548,12 +549,12 @@ struct FANSI_state_pair FANSI_state_at_position(
 /*
  * We always include the size of the delimiter
  */
-unsigned int FANSI_color_size(int color, int * color_extra) {
-  unsigned int size = 0;
+int FANSI_color_size(int color, int * color_extra) {
+  int size = 0;
   if(color == 8 && color_extra[0] == 2) {
     size = 3 + 2 + 4 * 3;
   } else if (color == 8 && color_extra[0] == 5) {
-    size = 3 + 2 + 4 * 3;
+    size = 3 + 2 + 4;
   } else if (color == 8) {
     error("Internal Error: unexpected compound color format");
   } else if (color >= 0 && color < 10) {
@@ -562,6 +563,29 @@ unsigned int FANSI_color_size(int color, int * color_extra) {
     error("Internal Error: unexpected compound color format 2");
   }
   return size;
+}
+/*
+ * Computes how many bytes we need to write out a state
+ *
+ * No overflow worries here b/c ints are 32bit+
+ *
+ * Includes the ESC[m size, but not the NULL terminator, so if you are writing
+ * to a string that has nothing else in it remember to allocate an extra byte
+ * for the NULL terminator.
+ */
+int FANSI_state_size(FANSI_state state) {
+  int color_size = FANSI_color_size(state.color, state.color_extra);
+  int bg_color_size = FANSI_color_size(state.bg_color, state.bg_color_extra);
+
+  // styles are stored as bits
+
+  int style_size = (
+    state.style & 2 + state.style & 4 + state.style & 8 +
+    state.style & 16 + state.style & 32 + state.style & 64 +
+    state.style & 128 + state.style & 256 + state.style & 512;
+  ) * 2;
+
+  return color_size + bg_color_size + style_size + 3;
 }
 /*
  * Compute length in characters for a number
@@ -616,55 +640,59 @@ unsigned int FANSI_color_write(
   return str_off;
 }
 /*
- * Generate the ANSI tag corresponding to the state
+ * We split this part out because in some cases we want to modify pre-existing
+ * buffers
+ *
+ * Modifies the buffer by reference.
+ *
+ * DOES NOT ADD NULL TERMINATOR.
  */
-const char * FANSI_state_as_chr(struct FANSI_state state) {
+void FANSI_csi_write(char * buff, FANSI_state state, int buff_len) {
+  int str_pos = 0;
+  buff[str_pos++] = 27;    // ESC
+  buff[str_pos++] = '[';
+
+  // styles
+
+  for(unsigned int i = 1; i < 10; i++) {
+    if((1U << i) & state.style) {
+      buff[str_pos++] = '0' + i;
+      buff[str_pos++] = ';';
+  } }
+  // colors
+
+  str_pos += FANSI_color_write(
+    &(buff[str_pos]), state.color, state.color_extra, 3
+  );
+  str_pos += FANSI_color_write(
+    &(buff[str_pos]), state.bg_color, state.bg_color_extra, 4
+  );
+  // Finalize (note, in some cases we slightly overrallocate)
+
+  if(str_pos > buff_len)
+    // nocov start
+    error(
+      "Internal Error: tag mem allocation mismatch (%u, %u)", str_pos, tag_len
+    );
+    // nocov end
+  buff[str_pos - 1] = 'm';
+}
+/*
+ * Generate the ANSI tag corresponding to the state and write it out as a NULL
+ * terminated string.
+ */
+char * FANSI_state_as_chr(struct FANSI_state state) {
   // First pass computes total size of tag; we need to account for the separtor
   // as well
 
-  unsigned int tag_len = 0;
-  for(unsigned int i = 1; i < 10; i++) tag_len += ((1U << i) & state.style) * 2;
-
-  tag_len += FANSI_color_size(state.color, state.color_extra);
-  tag_len += FANSI_color_size(state.bg_color, state.bg_color_extra);
+  int tag_len = FANSI_state_size(state);
 
   // Now allocate and generate tag
 
-  const char * tag_res = "";
-  if(tag_len) {
-    tag_len += 3;  // for CSI, and ending NULL
-    char * tag_tmp = R_alloc(tag_len + 1 + 2, sizeof(char));
-    unsigned int str_pos = 0;
-    tag_tmp[str_pos++] = 27;    // ESC
-    tag_tmp[str_pos++] = '[';
-
-    // styles
-
-    for(unsigned int i = 1; i < 10; i++) {
-      if((1U << i) & state.style) {
-        tag_tmp[str_pos++] = '0' + i;
-        tag_tmp[str_pos++] = ';';
-      }
-    }
-    // colors
-
-    str_pos += FANSI_color_write(
-      &(tag_tmp[str_pos]), state.color, state.color_extra, 3
-    );
-    str_pos += FANSI_color_write(
-      &(tag_tmp[str_pos]), state.bg_color, state.bg_color_extra, 4
-    );
-    // Finalize (note, in some cases we slightly overrallocate)
-
-    if(str_pos + 1 > tag_len)
-      error(
-        "Internal Error: tag mem allocation mismatch (%u, %u)", str_pos, tag_len
-      );
-    tag_tmp[str_pos - 1] = 'm';
-    tag_tmp[str_pos] = '\0';
-    tag_res = (const char *) tag_tmp;
-  }
-  return tag_res;
+  char * tag_tmp = R_alloc(tag_len + 1, sizeof(char));
+  FANSI_csi_write(tag_tmp, state, tag_len);
+  tag_tmp[tag_len] = 0;
+  return tag_tmp;
 }
 /*
  * Determine whether two state structs have same style
