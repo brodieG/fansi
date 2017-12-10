@@ -104,6 +104,8 @@ SEXP FANSI_strwrap(
 
         // Now create the charsxp and append to the list
 
+        SEXP res_sxp = mkCharLenCe();
+
       }
       // Newline completes a line
 
@@ -179,8 +181,8 @@ SEXP FANSI_strwrap_ext(
 
   if(
     strict_int && (
-      safe_add(indent_int, initial_chr_len) >= width_int ||
-      safe_add(exdent_int, prefix_chr_len) >= width_int
+      FANSI_ADD_INT(indent_int, initial_chr_len) >= width_int ||
+      FANSI_ADD_INT(exdent_int, prefix_chr_len) >= width_int
     )
   )
     error(
