@@ -97,6 +97,10 @@ const char * FANSI_string_as_utf8(x) {
 
   cetype_t enc_type = getCharCE(x);
 
+  // Do we even allow CE_BYTES?  Obviously we want to allow ANSI, and don't need
+  // to convert that, but trying to remember if we would use CE_BYTES for bytes
+  // that contain > 127 (i.e. not ANSI), which could break stuff.
+
   int translate = !(
     (utf8_loc && enc_type == CE_NATIVE) || enc_type == CE_BYTES ||
     enc_type == CE_UTF8

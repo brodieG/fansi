@@ -156,6 +156,14 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     struct FANSI_state cur;
     struct FANSI_state prev;
   };
+  /*
+   * Sometimes need to keep track of a string and the encoding that it is in
+   * outside of a CHARSXP
+   */
+  struct FANSI_string_type {
+    const char * string;
+    cetype_t type;
+  };
 
   struct FANSI_csi_pos FANSI_find_csi(const char * x);
 
