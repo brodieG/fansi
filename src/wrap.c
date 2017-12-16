@@ -46,7 +46,7 @@ SEXP FANSI_strwrap(
   // in that?  Certainly a lot simpler than having to either record states, etc,
   // or re-run everything twice
 
-  SEXP char_list = PROTECT(list1(R_NilValue));
+  SEXP char_list_start = char_list = PROTECT(list1(R_NilValue));
   int prev_newline = 0;  // tracks if last non blank character was newline
   int para_start = 1;
   int width_tar = width_1;
@@ -54,10 +54,10 @@ SEXP FANSI_strwrap(
 
   struct FANSI_state state_start = state;
   struct FANSI_state state_blank = FANSI_state_init();  // reference
+  R_xlen_t size = 0;
 
   while(state.string[state.pos_byte]) {
     while(state.pos_width < width_tar) {
-      int make_line = 0;
       const char cur_chr = state.string[state.pos_byte];
 
       // detect word boundaries and paragraph starts
@@ -70,7 +70,6 @@ SEXP FANSI_strwrap(
       // following newlines is normally just suppressed.
 
       if((cur_chr == '\n' && !prev_newline) || state.pos_width > width_tar) {
-
         // Check if we are in a CSI state b/c if we are we neeed extra room for
         // the closing state tag
 
@@ -91,8 +90,10 @@ SEXP FANSI_strwrap(
           int tmp_double_size = FANSI_ADD_INT(*buff_size, *buff_size);
           if(last_bound - 1 > tmp_double_size) tmp_double_size = last_bound - 1;
           *buff_size = tmp_double_size;
-          buff_target = buff_target_start = R_alloc(*buff_size, sizeof(char));
+          buff_target = R_alloc(*buff_size, sizeof(char));
         }
+        const char * buff_target_start = buff_target;
+
         if(cur_chr == '\n') prev_newline = 1;
 
         if(needs_start) {
@@ -118,22 +119,29 @@ SEXP FANSI_strwrap(
         ) {
           chr_type = CE_UTF8;
         }
-        SEXP res_sxp = mkCharLenCe();
+        SEXP res_sxp = PROTECT(
+          mkCharLenCE(
+            buff_target_start, (int) (buff_target - buff_target_start), chr_type
+        ) );
+        SETCDR(char_list, list1(res_sxp));
+        UNPROTECT(1);
+        // overflow should be impossible here since string is at most int long
+        ++size;
       }
       // NOTE: Need to handle carriage returns
 
       state = FANSI_read_next(state);
-      if(state.pos_width > width_tar) {
-        // Need to make the line
-
-        para_start = 0;
-        width_tar = width_2;
-      }
-
-
     }
   }
-  // Need
+  if(size) {
+    SEXP res = allocVector(STRSXP, size);
+    SEXP char_last = CDR(char_start);
+    for(R_xlen_t i = 0; i < size; ++i) {
+       
+    }
+
+  }
+
 
 }
 
