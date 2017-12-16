@@ -332,6 +332,7 @@ static struct FANSI_state FANSI_read_utf8(struct FANSI_state state) {
   state.last_char_width = disp_size;
   state.pos_width += disp_size;
   state.pos_width_target += disp_size;
+  state.has_utf8 = 1;
   return state;
 }
 /*
@@ -778,7 +779,8 @@ SEXP FANSI_state_at_pos_ext(
   SEXP res_str = PROTECT(allocVector(STRSXP, len));
   SEXP res_chr, res_chr_prev = PROTECT(mkChar(""));
 
-  string = FANSI_string_as_utf8(test_chr);
+  int is_utf8_loc = FANSI_is_utf8_loc();
+  string = FANSI_string_as_utf8(test_chr, is_utf8_loc);
 
   state.string = state_prev.string = string;
   state_pair.cur = state;

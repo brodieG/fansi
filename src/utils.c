@@ -90,20 +90,19 @@ struct FANSI_csi_pos FANSI_find_csi(const char * x) {
  * Translates a CHARSXP to a UTF8 char if necessary, otherwise returns
  * the char
  */
-const char * FANSI_string_as_utf8(x) {
+const char * FANSI_string_as_utf8(const char * x, int is_utf8_loc) {
   if(typeof(x) != CHARSXP)
     error("Internal Error: expect CHARSXP."); // nocov
-  int utf8_loc = FANSI_is_utf8_loc();
 
   cetype_t enc_type = getCharCE(x);
 
-  // Do we even allow CE_BYTES?  Obviously we want to allow ANSI, and don't need
-  // to convert that, but trying to remember if we would use CE_BYTES for bytes
-  // that contain > 127 (i.e. not ANSI), which could break stuff.
+  if(enc_type == CE_BYTES)
+    error("BYTE encoded strings are not supported.");
+
+  // CE_BYTES is not necessarily of any encoding, don't allow then?
 
   int translate = !(
-    (utf8_loc && enc_type == CE_NATIVE) || enc_type == CE_BYTES ||
-    enc_type == CE_UTF8
+    (is_utf8_loc && enc_type == CE_NATIVE) || enc_type == CE_UTF8
   );
   if(translate) string = translateCharUTF8(x);
   else string = CHAR(x);

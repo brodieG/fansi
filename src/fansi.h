@@ -135,6 +135,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int pos_width_target;
     int pos_byte;
 
+    // Are there bytes outside of 0-127
+
+    int has_utf8;
+
     // Track width of last character
 
     int last_char_width;
@@ -146,6 +150,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * character with the byte position updated.  The parent process is then in
      * charge of updating the raw position.
      */
+
     int fail;
     int last;
   };
@@ -178,7 +183,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   SEXP FANSI_check_assumptions();
 
-  const char * FANSI_string_as_utf8(x);
+  const char * FANSI_string_as_utf8(const char * x, int is_utf8_loc);
 
   struct FANSI_state FANSI_state_init();
 

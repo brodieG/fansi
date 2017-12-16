@@ -1,18 +1,23 @@
-
-
 /*
- * x is expected to be in UTF-8 format
+ * All input strings are expected to be in UTF8 compatible format (i.e. either
+ * encoded in UTF8, or contain only bytes in 0-127).  That way we know we can
+ * set the encoding to UTF8 if there are any bytes greater than 127, or NATIVE
+ * otherwise under the assumption that 0-127 is valid in all encodings.
  *
  * @param buff a pointer to a character buffer.  We use pointer to a
  *   pointer because it may need to be resized, but we also don't want to
  *   re-allocate the buffer between calls.
  * @param buff_size the size of the buffer
+ * @param strict whether to hard wrap at width or not (not is what strwrap does
+ *   by default)
+ * @param is_utf8_loc whether the current locale is UTF8
  */
 
 SEXP FANSI_strwrap(
-  const char * x, int width, int indent, int exdent, const char * prefix,
-  int prefix_len, const char * initial, int initial_len,
-  int strict, char ** buff, int * buff_size
+  const char * x, int width, int indent, int exdent,
+  const char * prefix, int prefix_len, int prefix_has_utf8,
+  const char * initial, int initial_len, int initial_has_utf8,
+  int strict, char ** buff, int * buff_size, int is_utf8_loc
 ) {
   char * buff_target = * buff;
   FANSI_state state = FANSI_state_init();
@@ -102,18 +107,19 @@ SEXP FANSI_strwrap(
         }
         *buff_target = 0;
 
-        // Now create the charsxp and append to the list
+        // Now create the charsxp and append to the list, start by determining
+        // what encoding to use.  If pos_byte is greater than pos_ansi it means
+        // we must have hit a UTF8 encoded character
 
+        cetype_t chr_type = CE_NATIVE;
+        if(
+          (state.has_utf8 || initial_has_utf8 || prefix_has_utf8) &&
+          !is_utf8_loc
+        ) {
+          chr_type = CE_UTF8;
+        }
         SEXP res_sxp = mkCharLenCe();
-
       }
-      // Newline completes a line
-
-      if(cur_chr == '\n' && !prev_newline) {
-
-      }
-
-      state
       // NOTE: Need to handle carriage returns
 
       state = FANSI_read_next(state);
@@ -160,16 +166,38 @@ SEXP FANSI_strwrap_ext(
   SEXP prefix_strip = PROTECT(FANSI_strip(prefix));
   SEXP initial_strip = PROTECT(FANSI_strip(initial));
 
+  int is_utf8_loc = FANSI_is_utf8_loc();
   const char * prefix_chr = CHAR(asChar(prefix));
-  const char * prefix_chr_strip = FANSI_string_as_utf8(asChar(prefix_strip));
+  const char * prefix_chr_strip =
+    FANSI_string_as_utf8(asChar(prefix_strip), is_utf8_loc);
   int prefix_chr_len = R_nchar(
     prefix_chr, Width, FALSE, FALSE, "when computing display width"
-  )
+  );
+  const char * prefix_chr_strip_tmp = prefix_strip;
+  int prefix_has_utf8 = 0;
+  while(*prefix_chr_strip_tmp) {
+    if(*prefix_chr_strip_tmp > 127) {
+      prefix_has_utf8 = 1;
+      break;
+    }
+    ++prefix_chr_strip_tmp;
+  }
+
   const char * initial_chr = CHAR(asChar(initial));
-  const char * initial_chr_strip = FANSI_string_as_utf8(asChar(initial_strip));
+  const char * initial_chr_strip =
+    FANSI_string_as_utf8(asChar(initial_strip), is_utf8_loc);
   int initial_chr_len = R_nchar(
     initial_chr, Width, FALSE, FALSE, "when computing display width"
-  )
+  );
+  const char * initial_chr_strip_tmp = initial_strip;
+  int initial_has_utf8 = 0;
+  while(*initial_chr_strip_tmp) {
+    if(*initial_chr_strip_tmp < 0) {
+      initial_has_utf8 = 1;
+      break;
+    }
+    ++initial_chr_strip_tmp;
+  }
   UNPROTECT(2);
 
   // Check that widths are feasible, although really only relevant if in strict
@@ -208,8 +236,11 @@ SEXP FANSI_strwrap_ext(
     );
     SEXP str_i = PROTECT(
       FANSI_strwrap(
-        CHAR(STRING_ELT(x, i)), width_int, !i ? indent_int : exdent_int,
-        pre_chr, pre_len, buff, buff_size
+        CHAR(STRING_ELT(x, i)), width_int, indent_int, exdent_int,
+        prefix_chr, prefix_len, prefix_has_utf8,
+        initial_chr, initial_len, initial_has_utf8,
+        strict_int,
+        buff, buff_size
     ) );
     SET_VECTOR_ELT(res, i, str_i);
     UNPROTECT(1);
