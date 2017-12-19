@@ -133,16 +133,18 @@ SEXP FANSI_strwrap(
       state = FANSI_read_next(state);
     }
   }
-  if(size) {
-    SEXP res = allocVector(STRSXP, size);
-    SEXP char_last = CDR(char_start);
-    for(R_xlen_t i = 0; i < size; ++i) {
-       
-    }
-
+  SEXP res = PROTECT(allocVector(STRSXP, size));
+  SEXP char_last = char_start;
+  for(R_xlen_t i = 0; i < size; ++i) {
+    char_last = CDR(char_last); // first element is NULL
+    if(char_last == R_NilValue)
+      error("Internal Error: wrapped element count mismatch");  // nocov
+    SET_STRING_ELT(res, i, CAR(char_last));
   }
-
-
+  if(CDR(char_last) != R_NilValue)
+    error("Internal Error: wrapped element count mismatch 2");  // nocov
+  UNPROTECT(1);
+  return res;
 }
 
 /*
@@ -253,4 +255,6 @@ SEXP FANSI_strwrap_ext(
     SET_VECTOR_ELT(res, i, str_i);
     UNPROTECT(1);
   }
+  UNPROTECT(1);
+  return res;
 }

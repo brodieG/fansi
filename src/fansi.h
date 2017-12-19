@@ -177,6 +177,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_state_at_pos_ext(
     SEXP text, SEXP pos, SEXP type, SEXP lag, SEXP ends
   );
+  SEXP FANSI_strwrap_ext(
+    SEXP x, SEXP width, SEXP indent, SEXP exdent, SEXP prefix,
+    SEXP initial, SEXP strict
+  );
 
   int FANSI_is_utf8_loc();
   int FANSI_utf8clen(char c);
@@ -187,6 +191,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   struct FANSI_state FANSI_state_init();
 
-  int FANSI_state_size(FANSI_state state);
+  int FANSI_state_size(struct FANSI_state state);
 
 #endif
