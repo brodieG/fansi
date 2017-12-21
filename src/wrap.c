@@ -3,7 +3,7 @@
  * Data related to prefix / initial
  */
 
-static struct FANSI_prefix_dat {
+struct FANSI_prefix_dat {
   const char * string;  // string translated to utf8
   int width;            // display width as computed by R_nchar
   int bytes;            // bytes, excluding NULL terminator
@@ -15,33 +15,33 @@ static struct FANSI_prefix_dat {
  */
 
 static struct FANSI_prefix_dat compute_pre(SEXP x, int is_utf8_loc) {
-
   SEXP x_strip = PROTECT(FANSI_strip(x));
-  const char * prefix_utf8 = FANSI_string_as_utf8(asChar(x), is_utf8_loc);
-  int prefix_has_utf8 = FANSI_has_utf8(prefix_utf8);
-  int prefix_width = R_nchar(
-    prefix_strip, Width, FALSE, FALSE, "when computing display width"
+  const char * x_utf8 = FANSI_string_as_utf8(asChar(x), is_utf8_loc);
+  int x_has_utf8 = FANSI_has_utf8(x_utf8);
+  int x_width = R_nchar(
+    x_strip, Width, FALSE, FALSE, "when computing display width"
   );
-  int prefix_bytes = strlen(prefix_utf8);
+  int x_bytes = strlen(x_utf8);
 
-  SEXP prefix_chrsxp = asChar(prefix);
-  const char * prefix_chr = CHAR(prefix_chrsxp);
-  const char * prefix_chr_strip =
-    FANSI_string_as_utf8(asChar(prefix_strip), is_utf8_loc);
+  SEXP x_chrsxp = asChar(prefix);
+  const char * x_chr = CHAR(x_chrsxp);
+  const char * x_chr_strip =
+    FANSI_string_as_utf8(asChar(x_strip), is_utf8_loc);
 
-  SEXP prefix_chrsxp_strip = PROTECT(mkChar(prefix_chr_strip));
-  int prefix_chr_len = ;
-  const char * prefix_chr_strip_tmp = CHAR(asChar(prefix_strip));
-  int prefix_has_utf8 = 0;
-  while(*prefix_chr_strip_tmp) {
-    if(*prefix_chr_strip_tmp > 127) {
-      prefix_has_utf8 = 1;
+  const char * x_chr_strip_tmp = x_chr;
+  int x_has_utf8 = 0;
+  while(*x_chr_strip_tmp) {
+    if(*x_chr_strip_tmp > 127) {
+      x_has_utf8 = 1;
       break;
     }
-    ++prefix_chr_strip_tmp;
+    ++x_chr_strip_tmp;
   }
+  UNPROTECT(1);
+  return (struct FANSI_prefix_dat) {
+    .string=x_utf8, .width=x_width, .bytes=x_bytes, .has_utf8=x_has_utf8
+  };
 }
-
 /*
  * Combine initial and indent (or prefix and exdent)
  */
@@ -71,22 +71,22 @@ static char * make_pre(const char * pre_chr, int pre_len, int spaces) {
 
 SEXP FANSI_strwrap(
   const char * x, int width, int indent, int exdent,
-  const char * prefix, int prefix_len, int prefix_has_utf8,
-  const char * initial, int initial_len, int initial_has_utf8,
+  struct FANSI_prefix_dat prefix,
+  struct FANSI_prefix_dat initial,
   int strict, char ** buff, int * buff_size, int is_utf8_loc
 ) {
   char * buff_target = * buff;
   struct FANSI_state state = FANSI_state_init();
   state.string = x;
 
-  int width_1 = width - indent - initial_len;
-  int width_2 = width - exdent - prefix_len;
+  int width_1 = width - indent - initial.width;
+  int width_2 = width - exdent - prefix.width;
   int width_tar = width_1;
 
-  const char * para_start_chr = make_pre(initial, initial_len, indent);
-  int para_start_size = initial_len + indent;
-  const char * para_next_chr = make_pre(prefix, prefix_len, exdent);
-  int para_next_size = prefix_len + exdent;
+  const char * para_start_chr = make_pre(initial.string, initial.width, indent);
+  int para_start_size = initial.width + indent;
+  const char * para_next_chr = make_pre(prefix.string, prefix.width, exdent);
+  int para_next_size = prefix.width + exdent;
 
   if(width < 1) error("Internal Error: invalid width.");
   if(width_1 < 0 || width_2 < 0)
@@ -196,7 +196,7 @@ SEXP FANSI_strwrap(
 
         cetype_t chr_type = CE_NATIVE;
         if(
-          (state.has_utf8 || initial_has_utf8 || prefix_has_utf8) &&
+          (state.has_utf8 || initial.has_utf8 || prefix.has_utf8) &&
           !is_utf8_loc
         ) {
           chr_type = CE_UTF8;

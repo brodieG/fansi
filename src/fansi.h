@@ -204,15 +204,13 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   }
   /*
    * Assuming encoding is UTF-8, are there actually any non-ASCII chars in
-   * string
+   * string.
+   *
+   * `x` must be NULL terminated.
    */
 
-  inline int FANSI_has_utf8(SEXP x) {
-    SEXP x_chrsxp = asChar(x);
-    R_len_t x_len = LENGTH(x_chrsxp);
-    const char * x_chr = CHAR(x_chrsxp);
-
-    for(R_len_t i = 0; i < x_len; ++i) if(*(x_chr + i) > 127) return 1;
+  inline int FANSI_has_utf8(const char * x) {
+    while(x) {if(*(x++) > 127) return 1;}
     return 0;
   }
 
