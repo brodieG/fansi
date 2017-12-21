@@ -90,8 +90,8 @@ struct FANSI_csi_pos FANSI_find_csi(const char * x) {
  * Translates a CHARSXP to a UTF8 char if necessary, otherwise returns
  * the char
  */
-const char * FANSI_string_as_utf8(const char * x, int is_utf8_loc) {
-  if(typeof(x) != CHARSXP)
+const char * FANSI_string_as_utf8(SEXP x, int is_utf8_loc) {
+  if(TYPEOF(x) != CHARSXP)
     error("Internal Error: expect CHARSXP."); // nocov
 
   cetype_t enc_type = getCharCE(x);
@@ -104,14 +104,10 @@ const char * FANSI_string_as_utf8(const char * x, int is_utf8_loc) {
   int translate = !(
     (is_utf8_loc && enc_type == CE_NATIVE) || enc_type == CE_UTF8
   );
+  const char * string;
   if(translate) string = translateCharUTF8(x);
   else string = CHAR(x);
 
   return string;
 }
 
-inline int safe_add(int a, int b, int line, const char * file) {
-  if(a > INT_MAX - b)
-    error("Integer overflow in %s at line %d in file %s.");
-  return a + b;
-}

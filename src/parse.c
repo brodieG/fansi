@@ -136,7 +136,8 @@ static struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode)
   // First, figure out if we are in true color or palette mode
 
   res = FANSI_parse_token(&state.string[state.pos_byte]);
-  state.pos_byte = safe_add(state.pos_byte, safe_add(res.len, 1));
+  int res_len_inc = FANSI_add_int(res.len, 1);
+  state.pos_byte = FANSI_add_int(state.pos_byte, res_len_inc);
   state.last = res.last;
   if(res.success && ((res.val != 2 && res.val != 5) || res.last)) {
     // weird case, we don't want to advance the position here because `res.val`
@@ -160,7 +161,7 @@ static struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode)
 
     for(int i = 0; i < i_max; ++i) {
       res = FANSI_parse_token(&state.string[state.pos_byte]);
-      state.pos_byte = safe_add(state.pos_byte, safe_add(res.len, 1));
+      state.pos_byte = FANSI_add_int(state.pos_byte, FANSI_add_int(res.len, 1));
       state.last = res.last;
       if(res.success) {
         int early_end = res.last && i < (i_max - 1);
@@ -214,7 +215,7 @@ static struct FANSI_state FANSI_parse_sgr(struct FANSI_state state) {
   // this is an invalid SGR
 
   int pos_byte_prev = state.pos_byte;
-  state.pos_byte = safe_add(state.pos_byte, 2);
+  state.pos_byte = FANSI_add_int(state.pos_byte, 2);
   struct FANSI_state state_tmp = state;
   struct FANSI_tok_res tok_res = {.success = 0};
 
@@ -224,7 +225,7 @@ static struct FANSI_state FANSI_parse_sgr(struct FANSI_state state) {
   do {
     tok_res = FANSI_parse_token(&state.string[state.pos_byte]);
     state.pos_byte =
-      FANSI_ADD_INT(state.pos_byte, FANSI_ADD_INT(tok_res.len, 1));
+      FANSI_add_int(state.pos_byte, FANSI_add_int(tok_res.len, 1));
     state.last = tok_res.last;
 
     if(!tok_res.success) {
@@ -338,7 +339,7 @@ static struct FANSI_state FANSI_read_utf8(struct FANSI_state state) {
 /*
  * Read a Character Off and Update State
  */
-static struct FANSI_state FANSI_read_next(struct FANSI_state state) {
+struct FANSI_state FANSI_read_next(struct FANSI_state state) {
   const char * string = state.string;
   if(string[state.pos_byte] >  0) {
     // Character is in the 1-127 range
@@ -574,7 +575,7 @@ int FANSI_color_size(int color, int * color_extra) {
  * to a string that has nothing else in it remember to allocate an extra byte
  * for the NULL terminator.
  */
-int FANSI_state_size(FANSI_state state) {
+int FANSI_state_size(struct FANSI_state state) {
   int color_size = FANSI_color_size(state.color, state.color_extra);
   int bg_color_size = FANSI_color_size(state.bg_color, state.bg_color_extra);
 
@@ -583,7 +584,7 @@ int FANSI_state_size(FANSI_state state) {
   int style_size = (
     state.style & 2 + state.style & 4 + state.style & 8 +
     state.style & 16 + state.style & 32 + state.style & 64 +
-    state.style & 128 + state.style & 256 + state.style & 512;
+    state.style & 128 + state.style & 256 + state.style & 512
   ) * 2;
 
   return color_size + bg_color_size + style_size + 3;
@@ -648,7 +649,7 @@ unsigned int FANSI_color_write(
  *
  * DOES NOT ADD NULL TERMINATOR.
  */
-void FANSI_csi_write(char * buff, FANSI_state state, int buff_len) {
+void FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
   int str_pos = 0;
   buff[str_pos++] = 27;    // ESC
   buff[str_pos++] = '[';
@@ -673,7 +674,7 @@ void FANSI_csi_write(char * buff, FANSI_state state, int buff_len) {
   if(str_pos > buff_len)
     // nocov start
     error(
-      "Internal Error: tag mem allocation mismatch (%u, %u)", str_pos, tag_len
+      "Internal Error: tag mem allocation mismatch (%u, %u)", str_pos, buff_len
     );
     // nocov end
   buff[str_pos - 1] = 'm';
@@ -780,7 +781,7 @@ SEXP FANSI_state_at_pos_ext(
   SEXP res_chr, res_chr_prev = PROTECT(mkChar(""));
 
   int is_utf8_loc = FANSI_is_utf8_loc();
-  string = FANSI_string_as_utf8(test_chr, is_utf8_loc);
+  string = FANSI_string_as_utf8(text_chr, is_utf8_loc);
 
   state.string = state_prev.string = string;
   state_pair.cur = state;
@@ -816,10 +817,11 @@ SEXP FANSI_state_at_pos_ext(
 
       // Record position, but set them back to 1 index
 
-      INTEGER(res_mx)[i * res_cols + 0] = safe_add(state.pos_byte, 1);
-      INTEGER(res_mx)[i * res_cols + 1] = safe_add(state.pos_raw, 1);
-      INTEGER(res_mx)[i * res_cols + 2] = safe_add(state.pos_ansi, 1);
-      INTEGER(res_mx)[i * res_cols + 3] = safe_add(state.pos_width_target, 1);
+      INTEGER(res_mx)[i * res_cols + 0] = FANSI_add_int(state.pos_byte, 1);
+      INTEGER(res_mx)[i * res_cols + 1] = FANSI_add_int(state.pos_raw, 1);
+      INTEGER(res_mx)[i * res_cols + 2] = FANSI_add_int(state.pos_ansi, 1);
+      INTEGER(res_mx)[i * res_cols + 3] = 
+        FANSI_add_int(state.pos_width_target, 1);
 
       // Record color tag if state changed
 

@@ -24,14 +24,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
 // concept borrowed from utf8-lite
 
-#define FANSI_INTERRUPT(i) (if(!((i) % 1000))) R_CheckUserInterrupt())
-#define FANSI_ADD_INT(x, y) (\
-  ((int)x) > INT_MAX - ((int)y) ? \
-  error(\
-    "Integer overflow in %s at line %d in file %s.", __func__, __LINE__,\
-    __FILE__\
-  ) : \
-  (x) + (y))
+  inline void FANSI_interrupt(i) {if(!(i % 1000)) R_CheckUserInterrupt();}
 
   /*
    * Used when computing position and size of ANSI tag with FANSI_loc
@@ -172,6 +165,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   struct FANSI_csi_pos FANSI_find_csi(const char * x);
 
+  // External funs
+
   SEXP FANSI_has(SEXP x);
   SEXP FANSI_strip(SEXP input);
   SEXP FANSI_state_at_pos_ext(
@@ -181,16 +176,44 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP x, SEXP width, SEXP indent, SEXP exdent, SEXP prefix,
     SEXP initial, SEXP strict
   );
+  // Internal
 
-  int FANSI_is_utf8_loc();
-  int FANSI_utf8clen(char c);
+  // Utilities
 
   SEXP FANSI_check_assumptions();
-
-  const char * FANSI_string_as_utf8(const char * x, int is_utf8_loc);
-
+  int FANSI_is_utf8_loc();
+  int FANSI_utf8clen(char c);
+  const char * FANSI_string_as_utf8(SEXP x, int is_utf8_loc);
   struct FANSI_state FANSI_state_init();
-
+  int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current);
   int FANSI_state_size(struct FANSI_state state);
+  void FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len);
+  struct FANSI_state FANSI_read_next(struct FANSI_state state);
+
+  /*
+   * Add integers while checking for overflow
+   *
+   * Note we are stricter than necessary when y is negative because we want to
+   * count hitting INT_MIN as an overflow so that we can use the integer values in
+   * R where INT_MIN is NA.
+   */
+  inline int FANSI_add_int(int x, int y) {
+    if((y >= 0 && (x > INT_MAX - y)) || (y < 0 && (x <= INT_MIN - y)))
+      error ("Integer overflow");
+    return x + y;
+  }
+  /*
+   * Assuming encoding is UTF-8, are there actually any non-ASCII chars in
+   * string
+   */
+
+  inline int FANSI_has_utf8(SEXP x) {
+    SEXP x_chrsxp = asChar(x);
+    R_len_t x_len = LENGTH(x_chrsxp);
+    const char * x_chr = CHAR(x_chrsxp);
+
+    for(R_len_t i = 0; i < x_len; ++i) if(*(x_chr + i) > 127) return 1;
+    return 0;
+  }
 
 #endif

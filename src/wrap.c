@@ -1,3 +1,59 @@
+#include "fansi.h"
+/*
+ * Data related to prefix / initial
+ */
+
+static struct FANSI_prefix_dat {
+  const char * string;  // string translated to utf8
+  int width;            // display width as computed by R_nchar
+  int bytes;            // bytes, excluding NULL terminator
+  int has_utf8;         // whether utf8 contains value > 127
+};
+
+/*
+ * Generate data related to prefix / initial
+ */
+
+static struct FANSI_prefix_dat compute_pre(SEXP x, int is_utf8_loc) {
+
+  SEXP x_strip = PROTECT(FANSI_strip(x));
+  const char * prefix_utf8 = FANSI_string_as_utf8(asChar(x), is_utf8_loc);
+  int prefix_has_utf8 = FANSI_has_utf8(prefix_utf8);
+  int prefix_width = R_nchar(
+    prefix_strip, Width, FALSE, FALSE, "when computing display width"
+  );
+  int prefix_bytes = strlen(prefix_utf8);
+
+  SEXP prefix_chrsxp = asChar(prefix);
+  const char * prefix_chr = CHAR(prefix_chrsxp);
+  const char * prefix_chr_strip =
+    FANSI_string_as_utf8(asChar(prefix_strip), is_utf8_loc);
+
+  SEXP prefix_chrsxp_strip = PROTECT(mkChar(prefix_chr_strip));
+  int prefix_chr_len = ;
+  const char * prefix_chr_strip_tmp = CHAR(asChar(prefix_strip));
+  int prefix_has_utf8 = 0;
+  while(*prefix_chr_strip_tmp) {
+    if(*prefix_chr_strip_tmp > 127) {
+      prefix_has_utf8 = 1;
+      break;
+    }
+    ++prefix_chr_strip_tmp;
+  }
+}
+
+/*
+ * Combine initial and indent (or prefix and exdent)
+ */
+static char * make_pre(const char * pre_chr, int pre_len, int spaces) {
+  char * res = R_alloc(pre_len + spaces + 1, sizeof(char));
+  char * res_start = res;
+  for(int i = 0; i < spaces; ++i) *(res++) = ' ';
+  memcpy(res, pre_chr, pre_len);
+  *(res + pre_len + 1) = '\0';
+  return res_start;
+}
+
 /*
  * All input strings are expected to be in UTF8 compatible format (i.e. either
  * encoded in UTF8, or contain only bytes in 0-127).  That way we know we can
@@ -20,20 +76,27 @@ SEXP FANSI_strwrap(
   int strict, char ** buff, int * buff_size, int is_utf8_loc
 ) {
   char * buff_target = * buff;
-  FANSI_state state = FANSI_state_init();
+  struct FANSI_state state = FANSI_state_init();
   state.string = x;
 
   int width_1 = width - indent - initial_len;
   int width_2 = width - exdent - prefix_len;
+  int width_tar = width_1;
+
+  const char * para_start_chr = make_pre(initial, initial_len, indent);
+  int para_start_size = initial_len + indent;
+  const char * para_next_chr = make_pre(prefix, prefix_len, exdent);
+  int para_next_size = prefix_len + exdent;
 
   if(width < 1) error("Internal Error: invalid width.");
-  if(width_tar < 0) error("Internal Error: incompatible width/indent/prefix.");
+  if(width_1 < 0 || width_2 < 0)
+    error("Internal Error: incompatible width/indent/prefix.");
 
   // Start with a buffer twice the width we're targeting; we'll grow it as
   // needed.  The buffer may already exist from a previous iteration
 
   if(!buff_target) {
-    *buff_size = FANSI_ADD_INT(width, width);
+    *buff_size = FANSI_add_int(width, width);
     buff_target = R_alloc(*buff_size, sizeof(char));
   }
   // Track the last valid breaking point we have.  For now we are just looking
@@ -41,15 +104,13 @@ SEXP FANSI_strwrap(
 
   int last_bound = 0;
 
-  // Need to do two pass to figure out how many elements we'll have?  Or maybe
-  // just store the CHARSXPs in a LISTSXP at first?  There is probably no harm
-  // in that?  Certainly a lot simpler than having to either record states, etc,
-  // or re-run everything twice
+  // Use LISTSXP so we don't have to do a two pass process to determine how many
+  // items we're going to have
 
-  SEXP char_list_start = char_list = PROTECT(list1(R_NilValue));
+  SEXP char_list_start, char_list;
+  char_list_start = char_list = PROTECT(list1(R_NilValue));
   int prev_newline = 0;  // tracks if last non blank character was newline
   int para_start = 1;
-  int width_tar = width_1;
   int start_byte = state.pos_byte;
 
   struct FANSI_state state_start = state;
@@ -75,20 +136,25 @@ SEXP FANSI_strwrap(
 
         int needs_close = FANSI_state_comp(state, state_blank);
         int needs_start = FANSI_state_comp(state_start, state_blank);
-        int target_size = last_bound - start_byte - 1;
+        // last_bound 1 past what we need, so this should include room for NULL
+        // terminator
+        int target_size = FANSI_add_int(
+          last_bound - start_byte, 
+          (para_start ? para_start_size : para_next_size)
+        );
         int state_start_size = 0;
 
-        if(needs_close) target_size = FANSI_ADD_INT(target_size, 4);
+        if(needs_close) target_size = FANSI_add_int(target_size, 4);
         if(needs_start) {
           state_start_size = FANSI_state_size(state_start);
-          target_size = FANSI_ADD_INT(target_size, state_start_size);
+          target_size = FANSI_add_int(target_size, state_start_size);
         }
         if(target_size > *buff_size) {
           // don't do re-alloc because we are going to overwrite everything
           // anyway, double prev buffer unless entry is bigger than that
 
-          int tmp_double_size = FANSI_ADD_INT(*buff_size, *buff_size);
-          if(last_bound - 1 > tmp_double_size) tmp_double_size = last_bound - 1;
+          int tmp_double_size = FANSI_add_int(*buff_size, *buff_size);
+          if(target_size > tmp_double_size) tmp_double_size = target_size;
           *buff_size = tmp_double_size;
           buff_target = R_alloc(*buff_size, sizeof(char));
         }
@@ -96,13 +162,29 @@ SEXP FANSI_strwrap(
 
         if(cur_chr == '\n') prev_newline = 1;
 
+        // Apply prevous CSI style
+
         if(needs_start) {
           FANSI_csi_write(buff_target, state_start, state_start_size);
           buff_target += state_start_size;
         }
+        // Apply indent/exdent prefix/initial
+
+        if(para_start && para_start_size) {
+          memcpy(buff_target, para_start_chr, para_start_size);
+          buff_target += para_start_size;
+        } else if(!para_start && para_next_size) {
+          memcpy(buff_target, para_next_chr, para_next_size);
+          buff_target += para_next_size;
+        }
+        // Actual string, remember last_bound is one past what we need
+
         memcpy(buff_target, state_start.string, last_bound - start_byte);
         buff_target += last_bound - start_byte;
-        if(needs_end) {
+
+        // And turn off CSI styles if needed
+
+        if(needs_close) {
           memcpy(buff_target + last_bound, "\033[0m", 4);
           buff_target += 4;
         }
@@ -127,21 +209,26 @@ SEXP FANSI_strwrap(
         UNPROTECT(1);
         // overflow should be impossible here since string is at most int long
         ++size;
+
+        // Next line will be the beginning of a paragraph
+        para_start = (cur_chr == '\n');
       }
+      warning("Add logic to deal with carriage returns");
+
       // NOTE: Need to handle carriage returns
 
       state = FANSI_read_next(state);
     }
   }
   SEXP res = PROTECT(allocVector(STRSXP, size));
-  SEXP char_last = char_start;
+  char_list = char_list_start;
   for(R_xlen_t i = 0; i < size; ++i) {
-    char_last = CDR(char_last); // first element is NULL
-    if(char_last == R_NilValue)
+    char_list = CDR(char_list); // first element is NULL
+    if(char_list == R_NilValue)
       error("Internal Error: wrapped element count mismatch");  // nocov
-    SET_STRING_ELT(res, i, CAR(char_last));
+    SET_STRING_ELT(res, i, CAR(char_list));
   }
-  if(CDR(char_last) != R_NilValue)
+  if(CDR(char_list) != R_NilValue)
     error("Internal Error: wrapped element count mismatch 2");  // nocov
   UNPROTECT(1);
   return res;
@@ -160,9 +247,9 @@ SEXP FANSI_strwrap_ext(
   SEXP initial, SEXP strict
 ) {
   if(
-    typeof(x) != STRSXP || typeof(width) != INTSXP ||
-    typeof(indent) != INTSXP || typeof(exdent) != INTSXP ||
-    typeof(prefix) != STRSXP || typeof(strict) != INTSXP
+    TYPEOF(x) != STRSXP || TYPEOF(width) != INTSXP ||
+    TYPEOF(indent) != INTSXP || TYPEOF(exdent) != INTSXP ||
+    TYPEOF(prefix) != STRSXP || TYPEOF(strict) != INTSXP
   ) {
     error("Type error.");
   }
@@ -170,36 +257,28 @@ SEXP FANSI_strwrap_ext(
 
   int strict_int = asInteger(strict);
 
-  // could be a little faster if we has a version that just did this for the
-  // char instead of dealing with strsxps
-
-  SEXP prefix_strip = PROTECT(FANSI_strip(prefix));
+  /*
+   * Need to collect a few bits of info:
+   * * length in characters width of each string
+   * * length in bytes of each string
+   * * the actual string translated to UTF8
+   * * whether there are UTF8 chars?
+   */
   SEXP initial_strip = PROTECT(FANSI_strip(initial));
 
   int is_utf8_loc = FANSI_is_utf8_loc();
-  const char * prefix_chr = CHAR(asChar(prefix));
-  const char * prefix_chr_strip =
-    FANSI_string_as_utf8(asChar(prefix_strip), is_utf8_loc);
-  int prefix_chr_len = R_nchar(
-    prefix_chr, Width, FALSE, FALSE, "when computing display width"
-  );
-  const char * prefix_chr_strip_tmp = prefix_strip;
-  int prefix_has_utf8 = 0;
-  while(*prefix_chr_strip_tmp) {
-    if(*prefix_chr_strip_tmp > 127) {
-      prefix_has_utf8 = 1;
-      break;
-    }
-    ++prefix_chr_strip_tmp;
-  }
+  struct FANSI_prefix_dat = compute_pre(prefix, is_utf8_loc);
 
-  const char * initial_chr = CHAR(asChar(initial));
+
+  SEXP initial_chrsxp = asChar(initial);
+  const char * initial_chr = CHAR(initial_chrsxp);
   const char * initial_chr_strip =
     FANSI_string_as_utf8(asChar(initial_strip), is_utf8_loc);
+  SEXP initial_chrsxp_strip = PROTECT(mkChar(initial_chr_strip));
   int initial_chr_len = R_nchar(
-    initial_chr, Width, FALSE, FALSE, "when computing display width"
+    initial_chrsxp_strip, Width, FALSE, FALSE, "when computing display width"
   );
-  const char * initial_chr_strip_tmp = initial_strip;
+  const char * initial_chr_strip_tmp = CHAR(asChar(initial_strip));
   int initial_has_utf8 = 0;
   while(*initial_chr_strip_tmp) {
     if(*initial_chr_strip_tmp < 0) {
@@ -208,7 +287,7 @@ SEXP FANSI_strwrap_ext(
     }
     ++initial_chr_strip_tmp;
   }
-  UNPROTECT(2);
+  UNPROTECT(4);
 
   // Check that widths are feasible, although really only relevant if in strict
   // mode
@@ -219,15 +298,15 @@ SEXP FANSI_strwrap_ext(
 
   if(
     strict_int && (
-      FANSI_ADD_INT(indent_int, initial_chr_len) >= width_int ||
-      FANSI_ADD_INT(exdent_int, prefix_chr_len) >= width_int
+      FANSI_add_int(indent_int, initial_chr_len) >= width_int ||
+      FANSI_add_int(exdent_int, prefix_chr_len) >= width_int
     )
   )
     error(
       "%s%s",
       "Width error: sum of `indent` and `initial` width or sum of `exdent` and",
       "`prefix` width must be less than `width` when in strict mode."
-    )
+    );
 
   SEXP res = PROTECT(allocVector(VECSXP, x_len));
 
@@ -239,18 +318,13 @@ SEXP FANSI_strwrap_ext(
 
   for(i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
-
-    SEXP pre_chr = !i ? asChar(initial) : asChar(prefix);
-    R_len_t pre_len = R_nchar(
-      pre_chr, Width, FALSE, FALSE, "when computing display width"
-    );
     SEXP str_i = PROTECT(
       FANSI_strwrap(
         CHAR(STRING_ELT(x, i)), width_int, indent_int, exdent_int,
-        prefix_chr, prefix_len, prefix_has_utf8,
-        initial_chr, initial_len, initial_has_utf8,
+        prefix_chr, prefix_chr_len, prefix_has_utf8,
+        initial_chr, initial_chr_len, initial_has_utf8,
         strict_int,
-        buff, buff_size
+        buff, buff_size, is_utf8_loc
     ) );
     SET_VECTOR_ELT(res, i, str_i);
     UNPROTECT(1);
