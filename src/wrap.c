@@ -15,28 +15,17 @@ struct FANSI_prefix_dat {
  */
 
 static struct FANSI_prefix_dat compute_pre(SEXP x, int is_utf8_loc) {
-  SEXP x_strip = PROTECT(FANSI_strip(x));
+
   const char * x_utf8 = FANSI_string_as_utf8(asChar(x), is_utf8_loc);
   int x_has_utf8 = FANSI_has_utf8(x_utf8);
+
+  SEXP x_strip = PROTECT(FANSI_strip(x));
   int x_width = R_nchar(
     x_strip, Width, FALSE, FALSE, "when computing display width"
   );
+
   int x_bytes = strlen(x_utf8);
 
-  SEXP x_chrsxp = asChar(prefix);
-  const char * x_chr = CHAR(x_chrsxp);
-  const char * x_chr_strip =
-    FANSI_string_as_utf8(asChar(x_strip), is_utf8_loc);
-
-  const char * x_chr_strip_tmp = x_chr;
-  int x_has_utf8 = 0;
-  while(*x_chr_strip_tmp) {
-    if(*x_chr_strip_tmp > 127) {
-      x_has_utf8 = 1;
-      break;
-    }
-    ++x_chr_strip_tmp;
-  }
   UNPROTECT(1);
   return (struct FANSI_prefix_dat) {
     .string=x_utf8, .width=x_width, .bytes=x_bytes, .has_utf8=x_has_utf8
@@ -256,38 +245,10 @@ SEXP FANSI_strwrap_ext(
   R_xlen_t i, x_len = XLENGTH(x);
 
   int strict_int = asInteger(strict);
-
-  /*
-   * Need to collect a few bits of info:
-   * * length in characters width of each string
-   * * length in bytes of each string
-   * * the actual string translated to UTF8
-   * * whether there are UTF8 chars?
-   */
-  SEXP initial_strip = PROTECT(FANSI_strip(initial));
-
   int is_utf8_loc = FANSI_is_utf8_loc();
-  struct FANSI_prefix_dat = compute_pre(prefix, is_utf8_loc);
 
-
-  SEXP initial_chrsxp = asChar(initial);
-  const char * initial_chr = CHAR(initial_chrsxp);
-  const char * initial_chr_strip =
-    FANSI_string_as_utf8(asChar(initial_strip), is_utf8_loc);
-  SEXP initial_chrsxp_strip = PROTECT(mkChar(initial_chr_strip));
-  int initial_chr_len = R_nchar(
-    initial_chrsxp_strip, Width, FALSE, FALSE, "when computing display width"
-  );
-  const char * initial_chr_strip_tmp = CHAR(asChar(initial_strip));
-  int initial_has_utf8 = 0;
-  while(*initial_chr_strip_tmp) {
-    if(*initial_chr_strip_tmp < 0) {
-      initial_has_utf8 = 1;
-      break;
-    }
-    ++initial_chr_strip_tmp;
-  }
-  UNPROTECT(4);
+  struct FANSI_prefix_dat pre_dat = compute_pre(prefix, is_utf8_loc);
+  struct FANSI_prefix_dat ini_dat = compute_pre(initial, is_utf8_loc);
 
   // Check that widths are feasible, although really only relevant if in strict
   // mode
@@ -298,8 +259,8 @@ SEXP FANSI_strwrap_ext(
 
   if(
     strict_int && (
-      FANSI_add_int(indent_int, initial_chr_len) >= width_int ||
-      FANSI_add_int(exdent_int, prefix_chr_len) >= width_int
+      FANSI_add_int(indent_int, ini_dat.width) >= width_int ||
+      FANSI_add_int(exdent_int, pre_dat.width) >= width_int
     )
   )
     error(
@@ -321,10 +282,7 @@ SEXP FANSI_strwrap_ext(
     SEXP str_i = PROTECT(
       FANSI_strwrap(
         CHAR(STRING_ELT(x, i)), width_int, indent_int, exdent_int,
-        prefix_chr, prefix_chr_len, prefix_has_utf8,
-        initial_chr, initial_chr_len, initial_has_utf8,
-        strict_int,
-        buff, buff_size, is_utf8_loc
+        pre_dat, ini_dat, strict_int, buff, buff_size, is_utf8_loc
     ) );
     SET_VECTOR_ELT(res, i, str_i);
     UNPROTECT(1);
