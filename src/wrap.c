@@ -21,7 +21,7 @@ static struct FANSI_prefix_dat compute_pre(SEXP x, int is_utf8_loc) {
 
   SEXP x_strip = PROTECT(FANSI_strip(x));
   int x_width = R_nchar(
-    x_strip, Width, FALSE, FALSE, "when computing display width"
+    asChar(x_strip), Width, FALSE, FALSE, "when computing display width"
   );
 
   int x_bytes = strlen(x_utf8);
@@ -128,7 +128,7 @@ SEXP FANSI_strwrap(
         // last_bound 1 past what we need, so this should include room for NULL
         // terminator
         int target_size = FANSI_add_int(
-          last_bound - start_byte, 
+          last_bound - start_byte,
           (para_start ? para_start_size : para_next_size)
         );
         int state_start_size = 0;
@@ -232,13 +232,17 @@ SEXP FANSI_strwrap(
  */
 
 SEXP FANSI_strwrap_ext(
-  SEXP x, SEXP width, SEXP indent, SEXP exdent, SEXP prefix,
-  SEXP initial, SEXP strict
+  SEXP x, SEXP width,
+  SEXP indent, SEXP exdent,
+  SEXP prefix, SEXP initial, SEXP strict
 ) {
+
+  Rprintf("Start wrap ext\n");
   if(
     TYPEOF(x) != STRSXP || TYPEOF(width) != INTSXP ||
     TYPEOF(indent) != INTSXP || TYPEOF(exdent) != INTSXP ||
-    TYPEOF(prefix) != STRSXP || TYPEOF(strict) != INTSXP
+    TYPEOF(prefix) != STRSXP || TYPEOF(initial) != STRSXP ||
+    TYPEOF(strict) != LGLSXP
   ) {
     error("Type error.");
   }
@@ -247,8 +251,12 @@ SEXP FANSI_strwrap_ext(
   int strict_int = asInteger(strict);
   int is_utf8_loc = FANSI_is_utf8_loc();
 
+  Rprintf("compute pre\n");
+
   struct FANSI_prefix_dat pre_dat = compute_pre(prefix, is_utf8_loc);
   struct FANSI_prefix_dat ini_dat = compute_pre(initial, is_utf8_loc);
+
+  Rprintf("done compute pre\n");
 
   // Check that widths are feasible, although really only relevant if in strict
   // mode
@@ -276,6 +284,8 @@ SEXP FANSI_strwrap_ext(
 
   char ** buff = 0;
   int * buff_size = 0;
+
+  Rprintf("Start loop\n");
 
   for(i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);

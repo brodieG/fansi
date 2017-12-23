@@ -173,8 +173,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP text, SEXP pos, SEXP type, SEXP lag, SEXP ends
   );
   SEXP FANSI_strwrap_ext(
-    SEXP x, SEXP width, SEXP indent, SEXP exdent, SEXP prefix,
-    SEXP initial, SEXP strict
+    SEXP x, SEXP width,
+    SEXP indent, SEXP exdent, SEXP prefix, SEXP initial, SEXP strict
   );
   // Internal
 

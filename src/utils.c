@@ -105,8 +105,13 @@ const char * FANSI_string_as_utf8(SEXP x, int is_utf8_loc) {
     (is_utf8_loc && enc_type == CE_NATIVE) || enc_type == CE_UTF8
   );
   const char * string;
+  Rprintf(
+    "About to translate %s (translate? %d)\n",
+    type2char(TYPEOF(x)), translate
+  );
   if(translate) string = translateCharUTF8(x);
   else string = CHAR(x);
+  Rprintf("done translate\n");
 
   return string;
 }

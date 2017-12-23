@@ -19,9 +19,12 @@ strwrap_csi <- function(
   width <- as.integer(width)
   indent <- as.integer(indent)
   exdent <- as.integer(exdent)
+  strict <- as.logical(strict)
 
-  .Call(
-    FANSI_strwrap_csi, x, width, indent, exdent, prefix, simplify, initial,
-    strict
+  res <- .Call(
+    FANSI_strwrap_csi,
+    x, width, indent, exdent,
+    prefix, initial, strict
   )
+  if(simplify) unlist(res) else res
 }
