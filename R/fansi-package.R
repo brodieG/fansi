@@ -5,6 +5,7 @@
 #'
 #' @useDynLib fansi, .registration=TRUE, .fixes="FANSI_"
 #' @docType package
+#' @import vetr
 #' @name fansi-package
 
 NULL
