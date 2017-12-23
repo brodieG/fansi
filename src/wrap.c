@@ -220,8 +220,6 @@ SEXP FANSI_strwrap(
       // Next line will be the beginning of a paragraph
       para_start = (cur_chr == '\n');
     }
-    warning("Add logic to deal with carriage returns");
-
     // NOTE: Need to handle carriage returns
 
     state = FANSI_read_next(state);
