@@ -236,7 +236,7 @@ SEXP FANSI_strwrap(
   }
   if(CDR(char_list) != R_NilValue)
     error("Internal Error: wrapped element count mismatch 2");  // nocov
-  UNPROTECT(1);
+  UNPROTECT(2);
   return res;
 }
 
