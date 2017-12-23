@@ -35,7 +35,9 @@ static struct FANSI_prefix_dat compute_pre(SEXP x, int is_utf8_loc) {
  * Combine initial and indent (or prefix and exdent)
  */
 static char * make_pre(const char * pre_chr, int pre_len, int spaces) {
-  char * res = R_alloc(pre_len + spaces + 1, sizeof(char));
+  int alloc_size = FANSI_add_int(FANSI_add_int(pre_len, spaces), 1);
+  Rprintf("Allocating pre size %d\n", alloc_size);
+  char * res = R_alloc(alloc_size, sizeof(char));
   char * res_start = res;
   for(int i = 0; i < spaces; ++i) *(res++) = ' ';
   memcpy(res, pre_chr, pre_len);
@@ -64,18 +66,27 @@ SEXP FANSI_strwrap(
   struct FANSI_prefix_dat initial,
   int strict, char ** buff, int * buff_size, int is_utf8_loc
 ) {
+  Rprintf("Internal wrap\n");
   char * buff_target = * buff;
+  Rprintf("initialize state\n");
   struct FANSI_state state = FANSI_state_init();
   state.string = x;
 
-  int width_1 = width - indent - initial.width;
-  int width_2 = width - exdent - prefix.width;
+  Rprintf("State initialized\n");
+
+  int width_1_tmp = FANSI_add_int(indent, initial.width);
+  int width_1 = FANSI_add_int(width, -width_1_tmp);
+  int width_2_tmp = FANSI_add_int(exdent, prefix.width);
+  int width_2 = FANSI_add_int(width, -width_2_tmp);
+
   int width_tar = width_1;
 
+  Rprintf("Making pre\n");
   const char * para_start_chr = make_pre(initial.string, initial.width, indent);
-  int para_start_size = initial.width + indent;
+  int para_start_size = FANSI_add_int(initial.width, indent);
   const char * para_next_chr = make_pre(prefix.string, prefix.width, exdent);
-  int para_next_size = prefix.width + exdent;
+  int para_next_size = FANSI_add_int(prefix.width, exdent);
+  Rprintf("done with pre\n");
 
   if(width < 1) error("Internal Error: invalid width.");
   if(width_1 < 0 || width_2 < 0)
@@ -86,6 +97,7 @@ SEXP FANSI_strwrap(
 
   if(!buff_target) {
     *buff_size = FANSI_add_int(width, width);
+    Rprintf("Allocate initial size to %d\n", *buff_size);
     buff_target = R_alloc(*buff_size, sizeof(char));
   }
   // Track the last valid breaking point we have.  For now we are just looking
@@ -106,6 +118,7 @@ SEXP FANSI_strwrap(
   struct FANSI_state state_blank = FANSI_state_init();  // reference
   R_xlen_t size = 0;
 
+  Rprintf("Start reading chars\n");
   while(state.string[state.pos_byte]) {
     while(state.pos_width < width_tar) {
       const char cur_chr = state.string[state.pos_byte];
@@ -114,6 +127,7 @@ SEXP FANSI_strwrap(
 
       if(cur_chr == ' ' || cur_chr == '\t' || cur_chr == '\n') {
         last_bound = state.pos_byte;
+        Rprintf("Boundary at %d\n", last_bound - start_byte);
       } else prev_newline = 0;
 
       // Write a line, need special logic for newlines because any whitespace
@@ -282,7 +296,8 @@ SEXP FANSI_strwrap_ext(
   // Set up the buffer, this will be created in FANSI_strwrap, but we want a
   // handle for it here so we can re-use
 
-  char ** buff = 0;
+  char * buff_tmp = 0;
+  char ** buff = &buff_tmp;
   int * buff_size = 0;
 
   Rprintf("Start loop\n");
