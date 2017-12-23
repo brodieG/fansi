@@ -10,3 +10,4 @@ unitizer_sect("Basic wrap", {
 # * UTF8 in prefix, initial, and body
 # * Wide UTF8, combining UTF8
 # * Paragraphs
+# * Special/control characters

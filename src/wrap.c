@@ -96,9 +96,10 @@ SEXP FANSI_strwrap(
   // needed.  The buffer may already exist from a previous iteration
 
   if(!buff_target) {
+    Rprintf("Allocate initial size to %d\n", FANSI_add_int(width, width));
     *buff_size = FANSI_add_int(width, width);
-    Rprintf("Allocate initial size to %d\n", *buff_size);
     buff_target = R_alloc(*buff_size, sizeof(char));
+    Rprintf("Done buff alloc\n");
   }
   // Track the last valid breaking point we have.  For now we are just looking
   // for spaces, tabs.
@@ -118,110 +119,112 @@ SEXP FANSI_strwrap(
   struct FANSI_state state_blank = FANSI_state_init();  // reference
   R_xlen_t size = 0;
 
-  Rprintf("Start reading chars\n");
-  while(state.string[state.pos_byte]) {
-    while(state.pos_width < width_tar) {
-      const char cur_chr = state.string[state.pos_byte];
+  Rprintf("Start reading chars with tar width %d\n", width_tar);
+  while(state.string[state.pos_byte] && state.pos_width < width_tar) {
+    Rprintf(
+      "byte: %d width: %d\n", state.pos_byte - start_byte,
+      state.pos_width
+    );
+    const char cur_chr = state.string[state.pos_byte];
 
-      // detect word boundaries and paragraph starts
+    // detect word boundaries and paragraph starts
 
-      if(cur_chr == ' ' || cur_chr == '\t' || cur_chr == '\n') {
-        last_bound = state.pos_byte;
-        Rprintf("Boundary at %d\n", last_bound - start_byte);
-      } else prev_newline = 0;
+    if(cur_chr == ' ' || cur_chr == '\t' || cur_chr == '\n') {
+      last_bound = state.pos_byte;
+      Rprintf("Boundary at %d\n", last_bound - start_byte);
+    } else prev_newline = 0;
 
-      // Write a line, need special logic for newlines because any whitespace
-      // following newlines is normally just suppressed.
+    // Write a line, need special logic for newlines because any whitespace
+    // following newlines is normally just suppressed.
 
-      if((cur_chr == '\n' && !prev_newline) || state.pos_width > width_tar) {
-        // Check if we are in a CSI state b/c if we are we neeed extra room for
-        // the closing state tag
+    if((cur_chr == '\n' && !prev_newline) || state.pos_width > width_tar) {
+      // Check if we are in a CSI state b/c if we are we neeed extra room for
+      // the closing state tag
 
-        int needs_close = FANSI_state_comp(state, state_blank);
-        int needs_start = FANSI_state_comp(state_start, state_blank);
-        // last_bound 1 past what we need, so this should include room for NULL
-        // terminator
-        int target_size = FANSI_add_int(
-          last_bound - start_byte,
-          (para_start ? para_start_size : para_next_size)
-        );
-        int state_start_size = 0;
+      int needs_close = FANSI_state_comp(state, state_blank);
+      int needs_start = FANSI_state_comp(state_start, state_blank);
+      // last_bound 1 past what we need, so this should include room for NULL
+      // terminator
+      int target_size = FANSI_add_int(
+        last_bound - start_byte,
+        (para_start ? para_start_size : para_next_size)
+      );
+      int state_start_size = 0;
 
-        if(needs_close) target_size = FANSI_add_int(target_size, 4);
-        if(needs_start) {
-          state_start_size = FANSI_state_size(state_start);
-          target_size = FANSI_add_int(target_size, state_start_size);
-        }
-        if(target_size > *buff_size) {
-          // don't do re-alloc because we are going to overwrite everything
-          // anyway, double prev buffer unless entry is bigger than that
-
-          int tmp_double_size = FANSI_add_int(*buff_size, *buff_size);
-          if(target_size > tmp_double_size) tmp_double_size = target_size;
-          *buff_size = tmp_double_size;
-          buff_target = R_alloc(*buff_size, sizeof(char));
-        }
-        const char * buff_target_start = buff_target;
-
-        if(cur_chr == '\n') prev_newline = 1;
-
-        // Apply prevous CSI style
-
-        if(needs_start) {
-          FANSI_csi_write(buff_target, state_start, state_start_size);
-          buff_target += state_start_size;
-        }
-        // Apply indent/exdent prefix/initial
-
-        if(para_start && para_start_size) {
-          memcpy(buff_target, para_start_chr, para_start_size);
-          buff_target += para_start_size;
-        } else if(!para_start && para_next_size) {
-          memcpy(buff_target, para_next_chr, para_next_size);
-          buff_target += para_next_size;
-        }
-        // Actual string, remember last_bound is one past what we need
-
-        memcpy(buff_target, state_start.string, last_bound - start_byte);
-        buff_target += last_bound - start_byte;
-
-        // And turn off CSI styles if needed
-
-        if(needs_close) {
-          memcpy(buff_target + last_bound, "\033[0m", 4);
-          buff_target += 4;
-        }
-        *buff_target = 0;
-
-        // Now create the charsxp and append to the list, start by determining
-        // what encoding to use.  If pos_byte is greater than pos_ansi it means
-        // we must have hit a UTF8 encoded character
-
-        cetype_t chr_type = CE_NATIVE;
-        if(
-          (state.has_utf8 || initial.has_utf8 || prefix.has_utf8) &&
-          !is_utf8_loc
-        ) {
-          chr_type = CE_UTF8;
-        }
-        SEXP res_sxp = PROTECT(
-          mkCharLenCE(
-            buff_target_start, (int) (buff_target - buff_target_start), chr_type
-        ) );
-        SETCDR(char_list, list1(res_sxp));
-        UNPROTECT(1);
-        // overflow should be impossible here since string is at most int long
-        ++size;
-
-        // Next line will be the beginning of a paragraph
-        para_start = (cur_chr == '\n');
+      if(needs_close) target_size = FANSI_add_int(target_size, 4);
+      if(needs_start) {
+        state_start_size = FANSI_state_size(state_start);
+        target_size = FANSI_add_int(target_size, state_start_size);
       }
-      warning("Add logic to deal with carriage returns");
+      if(target_size > *buff_size) {
+        // don't do re-alloc because we are going to overwrite everything
+        // anyway, double prev buffer unless entry is bigger than that
 
-      // NOTE: Need to handle carriage returns
+        int tmp_double_size = FANSI_add_int(*buff_size, *buff_size);
+        if(target_size > tmp_double_size) tmp_double_size = target_size;
+        *buff_size = tmp_double_size;
+        buff_target = R_alloc(*buff_size, sizeof(char));
+      }
+      const char * buff_target_start = buff_target;
 
-      state = FANSI_read_next(state);
+      if(cur_chr == '\n') prev_newline = 1;
+
+      // Apply prevous CSI style
+
+      if(needs_start) {
+        FANSI_csi_write(buff_target, state_start, state_start_size);
+        buff_target += state_start_size;
+      }
+      // Apply indent/exdent prefix/initial
+
+      if(para_start && para_start_size) {
+        memcpy(buff_target, para_start_chr, para_start_size);
+        buff_target += para_start_size;
+      } else if(!para_start && para_next_size) {
+        memcpy(buff_target, para_next_chr, para_next_size);
+        buff_target += para_next_size;
+      }
+      // Actual string, remember last_bound is one past what we need
+
+      memcpy(buff_target, state_start.string, last_bound - start_byte);
+      buff_target += last_bound - start_byte;
+
+      // And turn off CSI styles if needed
+
+      if(needs_close) {
+        memcpy(buff_target + last_bound, "\033[0m", 4);
+        buff_target += 4;
+      }
+      *buff_target = 0;
+
+      // Now create the charsxp and append to the list, start by determining
+      // what encoding to use.  If pos_byte is greater than pos_ansi it means
+      // we must have hit a UTF8 encoded character
+
+      cetype_t chr_type = CE_NATIVE;
+      if(
+        (state.has_utf8 || initial.has_utf8 || prefix.has_utf8) &&
+        !is_utf8_loc
+      ) {
+        chr_type = CE_UTF8;
+      }
+      SEXP res_sxp = PROTECT(
+        mkCharLenCE(
+          buff_target_start, (int) (buff_target - buff_target_start), chr_type
+      ) );
+      SETCDR(char_list, list1(res_sxp));
+      UNPROTECT(1);
+      // overflow should be impossible here since string is at most int long
+      ++size;
+
+      // Next line will be the beginning of a paragraph
+      para_start = (cur_chr == '\n');
     }
+    warning("Add logic to deal with carriage returns");
+
+    // NOTE: Need to handle carriage returns
+
+    state = FANSI_read_next(state);
   }
   SEXP res = PROTECT(allocVector(STRSXP, size));
   char_list = char_list_start;
@@ -298,7 +301,8 @@ SEXP FANSI_strwrap_ext(
 
   char * buff_tmp = 0;
   char ** buff = &buff_tmp;
-  int * buff_size = 0;
+  int buff_size_tmp = 0;
+  int * buff_size = &buff_size_tmp;
 
   Rprintf("Start loop\n");
 
