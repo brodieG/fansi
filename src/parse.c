@@ -719,7 +719,7 @@ int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
   );
 }
 int FANSI_state_has_style(struct FANSI_state state) {
-  return state.style || state.color  || state.bg_color;
+  return state.style || state.color >= 0 || state.bg_color >= 0;
 }
 /*
  * R interface for FANSI_state_at_position

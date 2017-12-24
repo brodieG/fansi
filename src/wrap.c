@@ -53,6 +53,7 @@ SEXP FANSI_writeline(
   struct FANSI_state state_start, char ** buff, int * buff_size,
   const char * pre, int pre_size, int pre_has_utf8, int is_utf8_loc
 ) {
+  Rprintf("  Writeline start\n");
   char * buff_target = * buff;
 
   // Check if we are in a CSI state b/c if we are we neeed extra room for
@@ -60,6 +61,11 @@ SEXP FANSI_writeline(
 
   int needs_close = FANSI_state_has_style(state);
   int needs_start = FANSI_state_has_style(state_start);
+
+  Rprintf(
+    "  color: %d, bg_color: %d, style: %d\n",
+    state_start.color, state_start.bg_color, state_start.style
+  );
 
   // state_bound.pos_byte 1 past what we need, so this should include room
   // for NULL terminator
@@ -75,6 +81,7 @@ SEXP FANSI_writeline(
     target_size = FANSI_add_int(target_size, state_start_size);
   }
   if(target_size > *buff_size) {
+    Rprintf("  increase alloc\n");
     // don't do re-alloc because we are going to overwrite everything
     // anyway, double prev buffer unless entry is bigger than that
 
@@ -87,17 +94,21 @@ SEXP FANSI_writeline(
 
   // Apply prevous CSI style
 
+  Rprintf("  extras (need start: %d)\n", needs_start);
   if(needs_start) {
     FANSI_csi_write(buff_target, state_start, state_start_size);
     buff_target += state_start_size;
   }
   // Apply indent/exdent prefix/initial
 
+  Rprintf("  writing pre %s of size %d\n", pre, pre_size);
+
   memcpy(buff_target, pre, pre_size);
   buff_target += pre_size;
 
   // Actual string, remember state_bound.pos_byte is one past what we need
 
+  Rprintf("  actual string\n");
   memcpy(
     buff_target, state_start.string + state_start.pos_byte,
     state_bound.pos_byte - state_start.pos_byte
@@ -115,6 +126,8 @@ SEXP FANSI_writeline(
   // Now create the charsxp and append to the list, start by determining
   // what encoding to use.  If pos_byte is greater than pos_ansi it means
   // we must have hit a UTF8 encoded character
+
+  Rprintf("  make sexp\n");
 
   cetype_t chr_type = CE_NATIVE;
   if((state.has_utf8 || pre_has_utf8) && !is_utf8_loc) {
