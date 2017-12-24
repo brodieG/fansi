@@ -53,8 +53,7 @@ SEXP FANSI_writeline(
   struct FANSI_state state_start, char ** buff, int * buff_size,
   const char * pre, int pre_size, int pre_has_utf8, int is_utf8_loc
 ) {
-  Rprintf("  Writeline start\n");
-  char * buff_target = * buff;
+  Rprintf("  Writeline start with buff %p\n", *buff);
 
   // Check if we are in a CSI state b/c if we are we neeed extra room for
   // the closing state tag
@@ -88,40 +87,45 @@ SEXP FANSI_writeline(
     int tmp_double_size = FANSI_add_int(*buff_size, *buff_size);
     if(target_size > tmp_double_size) tmp_double_size = target_size;
     *buff_size = tmp_double_size;
-    buff_target = R_alloc(*buff_size, sizeof(char));
+    *buff = R_alloc(*buff_size, sizeof(char));
   }
-  const char * buff_target_start = buff_target;
+  const char * buff_target_start = *buff;
 
   // Apply prevous CSI style
 
   Rprintf("  extras (need start: %d)\n", needs_start);
   if(needs_start) {
-    FANSI_csi_write(buff_target, state_start, state_start_size);
-    buff_target += state_start_size;
+    FANSI_csi_write(*buff, state_start, state_start_size);
+    *buff += state_start_size;
   }
   // Apply indent/exdent prefix/initial
 
   Rprintf("  writing pre %s of size %d\n", pre, pre_size);
 
-  memcpy(buff_target, pre, pre_size);
-  buff_target += pre_size;
+  memcpy(*buff, pre, pre_size);
+  *buff += pre_size;
 
   // Actual string, remember state_bound.pos_byte is one past what we need
 
-  Rprintf("  actual string\n");
-  memcpy(
-    buff_target, state_start.string + state_start.pos_byte,
+  Rprintf(
+    "  actual string start %d nchar %d\n",
+    state_start.pos_byte,
     state_bound.pos_byte - state_start.pos_byte
   );
-  buff_target += state_bound.pos_byte - state_start.pos_byte;
+  memcpy(
+    *buff, state_start.string + state_start.pos_byte,
+    state_bound.pos_byte - state_start.pos_byte
+  );
+  *buff += state_bound.pos_byte - state_start.pos_byte;
 
   // And turn off CSI styles if needed
 
   if(needs_close) {
-    memcpy(buff_target + state_bound.pos_byte, "\033[0m", 4);
-    buff_target += 4;
+    Rprintf("  close\n");
+    memcpy(*buff + state_bound.pos_byte, "\033[0m", 4);
+    *buff += 4;
   }
-  *buff_target = 0;
+  **buff = 0;
 
   // Now create the charsxp and append to the list, start by determining
   // what encoding to use.  If pos_byte is greater than pos_ansi it means
@@ -135,7 +139,7 @@ SEXP FANSI_writeline(
   }
   SEXP res_sxp = PROTECT(
     mkCharLenCE(
-      buff_target_start, (int) (buff_target - buff_target_start), chr_type
+      buff_target_start, (int) (*buff - buff_target_start), chr_type
   ) );
   UNPROTECT(1);
   return res_sxp;
@@ -162,7 +166,6 @@ SEXP FANSI_strwrap(
   int strict, char ** buff, int * buff_size, int is_utf8_loc
 ) {
   Rprintf("Internal wrap\n");
-  char * buff_target = * buff;
   Rprintf("initialize state\n");
   struct FANSI_state state = FANSI_state_init();
   state.string = x;
@@ -190,11 +193,11 @@ SEXP FANSI_strwrap(
   // Start with a buffer twice the width we're targeting; we'll grow it as
   // needed.  The buffer may already exist from a previous iteration
 
-  if(!buff_target) {
+  if(!*buff) {
     Rprintf("Allocate initial size to %d\n", FANSI_add_int(width, width));
     *buff_size = FANSI_add_int(width, width);
-    buff_target = R_alloc(*buff_size, sizeof(char));
-    Rprintf("Done buff alloc\n");
+    *buff = R_alloc(*buff_size, sizeof(char));
+    Rprintf("Done buff alloc to %p %p\n", *buff);
   }
   // Use LISTSXP so we don't have to do a two pass process to determine how many
   // items we're going to have
@@ -247,6 +250,7 @@ SEXP FANSI_strwrap(
       );
       Rprintf("Writing '%s'\n", CHAR(res_sxp));
       SETCDR(char_list, list1(res_sxp));
+      char_list = CDR(char_list);
       UNPROTECT(1);
 
       // overflow should be impossible here since string is at most int long
@@ -267,6 +271,7 @@ SEXP FANSI_strwrap(
   }
   // Write last bit of string
 
+  Rprintf("Do we have extra %d %d", written_through , state.pos_byte);
   if(written_through < state.pos_byte) {
     SEXP res_sxp = PROTECT(
       FANSI_writeline(
@@ -277,7 +282,9 @@ SEXP FANSI_strwrap(
         is_utf8_loc
       )
     );
+    Rprintf("Writing '%s'\n", CHAR(res_sxp));
     SETCDR(char_list, list1(res_sxp));
+    ++size;
     UNPROTECT(1);
   }
   SEXP res = PROTECT(allocVector(STRSXP, size));
@@ -286,6 +293,7 @@ SEXP FANSI_strwrap(
     char_list = CDR(char_list); // first element is NULL
     if(char_list == R_NilValue)
       error("Internal Error: wrapped element count mismatch");  // nocov
+    Rprintf("string: '%s'\n", CHAR(CAR(char_list)));
     SET_STRING_ELT(res, i, CAR(char_list));
   }
   if(CDR(char_list) != R_NilValue)
