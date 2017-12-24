@@ -186,6 +186,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   const char * FANSI_string_as_utf8(SEXP x, int is_utf8_loc);
   struct FANSI_state FANSI_state_init();
   int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current);
+  int FANSI_state_has_style(struct FANSI_state state);
   int FANSI_state_size(struct FANSI_state state);
   void FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len);
   struct FANSI_state FANSI_read_next(struct FANSI_state state);

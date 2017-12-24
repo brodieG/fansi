@@ -718,6 +718,9 @@ int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
     target.bg_color_extra[3] == current.bg_color_extra[3]
   );
 }
+int FANSI_state_has_style(struct FANSI_state state) {
+  return state.style || state.color  || state.bg_color;
+}
 /*
  * R interface for FANSI_state_at_position
  *

@@ -9,5 +9,9 @@ unitizer_sect("Basic wrap", {
 # * Ansi in prefix, initial, and body
 # * UTF8 in prefix, initial, and body
 # * Wide UTF8, combining UTF8
-# * Paragraphs
+# * Paragraphs / newlines
 # * Special/control characters
+# * Spaces in sequence
+# * Tabs
+# * leading spaces
+# * prefix / initial / indent / exdent
