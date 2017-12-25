@@ -136,7 +136,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
     int last_char_width;
 
-    /* Internal Flags ------------------------------------------------------------
+    /* Internal Flags ---------------------------------------------------------
      *
      * Used to communicate back from sub-processes that sub-parsing failed, the
      * sub-process is supposed to leave the state pointed at the failing
@@ -148,7 +148,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int last;
   };
   /*
-   * Need to keep track of fallback state, so we need ability to return two states
+   * Need to keep track of fallback state, so we need ability to return two
+   * states
    */
   struct FANSI_state_pair {
     struct FANSI_state cur;

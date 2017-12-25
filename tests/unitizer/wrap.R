@@ -1,7 +1,13 @@
 library(unitizer)
 
 unitizer_sect("Basic wrap", {
-  strwrap_csi("hello world this is a lovely day", width=15)
+  hello.0 <- "hello world this is a lovely day"
+
+  identical(strwrap_csi(hello.0, width=10), strwrap(hello.0, width=10))
+
+  hello.1 <- "hello  world  this  is.  a lovely day."
+  identical(strwrap_csi(hello.1, width=10), strwrap(hello.1, width=10))
+
 })
 
 # Things to test:
@@ -15,3 +21,4 @@ unitizer_sect("Basic wrap", {
 # * Tabs
 # * leading spaces
 # * prefix / initial / indent / exdent
+# * words without breaks that exceed width
