@@ -16,7 +16,7 @@ strwrap_csi <- function(
     character(), NUM.1.POS && . >= 1, INT.1.POS,
     INT.1.POS, character(1), simplify=LGL.1, character(1)
   )
-  width <- as.integer(width)
+  width <- as.integer(width) - 1L
   indent <- as.integer(indent)
   exdent <- as.integer(exdent)
   strict <- as.logical(strict)
