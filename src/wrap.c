@@ -46,11 +46,14 @@ static char * make_pre(const char * pre_chr, int pre_len, int spaces) {
 }
 /*
  * Write a line
+ *
+ * @param state_bound the point where the boundary is
+ * @param state_start the starting point of the line
  */
 
 SEXP FANSI_writeline(
-  struct FANSI_state state, struct FANSI_state state_bound,
-  struct FANSI_state state_start, char ** buff, int * buff_size,
+  struct FANSI_state state_bound, struct FANSI_state state_start, 
+  char ** buff, int * buff_size,
   const char * pre, int pre_size, int pre_has_utf8, int is_utf8_loc
 ) {
   Rprintf("  Writeline start with buff %p\n", *buff);
@@ -58,7 +61,7 @@ SEXP FANSI_writeline(
   // Check if we are in a CSI state b/c if we are we neeed extra room for
   // the closing state tag
 
-  int needs_close = FANSI_state_has_style(state);
+  int needs_close = FANSI_state_has_style(state_bound);
   int needs_start = FANSI_state_has_style(state_start);
 
   Rprintf(
@@ -134,7 +137,7 @@ SEXP FANSI_writeline(
   Rprintf("  make sexp\n");
 
   cetype_t chr_type = CE_NATIVE;
-  if((state.has_utf8 || pre_has_utf8) && !is_utf8_loc) {
+  if((state_bound.has_utf8 || pre_has_utf8) && !is_utf8_loc) {
     chr_type = CE_UTF8;
   }
   SEXP res_sxp = PROTECT(
@@ -209,8 +212,11 @@ SEXP FANSI_strwrap(
   int para_start = 1;
   int written_through = -1; // which byte was last copied
 
-  struct FANSI_state state_start = state;
-  struct FANSI_state state_bound = state;
+  // Need to keep track of where word boundaries start and end due to
+  // possibility for multiple elements between words
+
+  struct FANSI_state state_start, state_bound, state_bound_end;
+  state_start = state_bound = state_bound_end = state;
   R_xlen_t size = 0;
 
   Rprintf("Start reading chars with tar width %d\n", width_tar);
@@ -224,7 +230,8 @@ SEXP FANSI_strwrap(
     // detect word boundaries and paragraph starts
 
     if(cur_chr == ' ' || cur_chr == '\t' || cur_chr == '\n') {
-      if(!prev_boundary) state_bound = state;
+      if(!prev_boundary) state_bound = state_bound_end = state;
+      else state_bound_end = state;
       prev_boundary = 1;
       Rprintf("Boundary at %d\n", state_bound.pos_byte - state_start.pos_byte);
     } else {
@@ -241,7 +248,7 @@ SEXP FANSI_strwrap(
 
       SEXP res_sxp = PROTECT(
         FANSI_writeline(
-          state, state_bound, state_start, buff, buff_size,
+          state_bound, state_start, buff, buff_size,
           para_start ? para_start_chr : para_next_chr,
           para_start ? para_start_size : para_next_size,
           para_start ? initial.has_utf8 : prefix.has_utf8,
@@ -259,11 +266,13 @@ SEXP FANSI_strwrap(
       // Next line will be the beginning of a paragraph
       para_start = (cur_chr == '\n');
 
-      // Recreate what the state is at the wrap point
+      // Recreate what the state is at the wrap point, including skipping the
+      // wrap character
 
       written_through = state_bound.pos_byte - 1;
-      state_bound.pos_width = 0;
-      state = state_start = state_bound;
+      state_bound_end = FANSI_read_next(state_bound_end);
+      state_bound_end.pos_width = 0;
+      state = state_start = state_bound = state_bound_end;
     }
     // NOTE: Need to handle carriage returns
 
@@ -271,11 +280,14 @@ SEXP FANSI_strwrap(
   }
   // Write last bit of string
 
-  Rprintf("Do we have extra %d %d", written_through , state.pos_byte);
+  Rprintf(
+    "Do we have extra %d %d %s", written_through , state.pos_byte,
+    state.string + state_start.pos_byte
+  );
   if(written_through < state.pos_byte) {
     SEXP res_sxp = PROTECT(
       FANSI_writeline(
-        state, state_bound, state_start, buff, buff_size,
+        state, state_start, buff, buff_size,
         para_start ? para_start_chr : para_next_chr,
         para_start ? para_start_size : para_next_size,
         para_start ? initial.has_utf8 : prefix.has_utf8,
