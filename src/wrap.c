@@ -52,8 +52,8 @@ static char * make_pre(const char * pre_chr, int pre_len, int spaces) {
  */
 
 SEXP FANSI_writeline(
-  struct FANSI_state state_bound, struct FANSI_state state_start, 
-  char ** buff, int * buff_size,
+  struct FANSI_state state_bound, struct FANSI_state state_start,
+  struct FANSI_buff * buff,
   const char * pre, int pre_size, int pre_has_utf8, int is_utf8_loc
 ) {
   Rprintf("  Writeline start with buff %p\n", *buff);
@@ -82,31 +82,24 @@ SEXP FANSI_writeline(
     state_start_size = FANSI_state_size(state_start);
     target_size = FANSI_add_int(target_size, state_start_size);
   }
-  if(target_size > *buff_size) {
-    Rprintf("  increase alloc\n");
-    // don't do re-alloc because we are going to overwrite everything
-    // anyway, double prev buffer unless entry is bigger than that
+  // Make sure buffer is large enough
+  FANSI_size_buff(buff, target_size);
 
-    int tmp_double_size = FANSI_add_int(*buff_size, *buff_size);
-    if(target_size > tmp_double_size) tmp_double_size = target_size;
-    *buff_size = tmp_double_size;
-    *buff = R_alloc(*buff_size, sizeof(char));
-  }
-  const char * buff_target_start = *buff;
+  const char * buff_target_start = buff->buff;
 
   // Apply prevous CSI style
 
   Rprintf("  extras (need start: %d)\n", needs_start);
   if(needs_start) {
-    FANSI_csi_write(*buff, state_start, state_start_size);
-    *buff += state_start_size;
+    FANSI_csi_write((buff->buff), state_start, state_start_size);
+    (buff->buff) += state_start_size;
   }
   // Apply indent/exdent prefix/initial
 
   Rprintf("  writing pre %s of size %d\n", pre, pre_size);
 
-  memcpy(*buff, pre, pre_size);
-  *buff += pre_size;
+  memcpy((buff->buff), pre, pre_size);
+  (buff->buff) += pre_size;
 
   // Actual string, remember state_bound.pos_byte is one past what we need
 
@@ -116,19 +109,19 @@ SEXP FANSI_writeline(
     state_bound.pos_byte - state_start.pos_byte
   );
   memcpy(
-    *buff, state_start.string + state_start.pos_byte,
+    (buff->buff), state_start.string + state_start.pos_byte,
     state_bound.pos_byte - state_start.pos_byte
   );
-  *buff += state_bound.pos_byte - state_start.pos_byte;
+  (buff->buff) += state_bound.pos_byte - state_start.pos_byte;
 
   // And turn off CSI styles if needed
 
   if(needs_close) {
     Rprintf("  close\n");
-    memcpy(*buff + state_bound.pos_byte, "\033[0m", 4);
-    *buff += 4;
+    memcpy((buff->buff) + state_bound.pos_byte, "\033[0m", 4);
+    (buff->buff) += 4;
   }
-  **buff = 0;
+  *(buff->buff) = 0;
 
   // Now create the charsxp and append to the list, start by determining
   // what encoding to use.  If pos_byte is greater than pos_ansi it means
@@ -142,7 +135,7 @@ SEXP FANSI_writeline(
   }
   SEXP res_sxp = PROTECT(
     mkCharLenCE(
-      buff_target_start, (int) (*buff - buff_target_start), chr_type
+      buff_target_start, (int) (buff->buff - buff_target_start), chr_type
   ) );
   UNPROTECT(1);
   return res_sxp;
@@ -153,10 +146,9 @@ SEXP FANSI_writeline(
  * set the encoding to UTF8 if there are any bytes greater than 127, or NATIVE
  * otherwise under the assumption that 0-127 is valid in all encodings.
  *
- * @param buff a pointer to a character buffer.  We use pointer to a
+ * @param buff a pointer to a buffer struct.  We use pointer to a
  *   pointer because it may need to be resized, but we also don't want to
  *   re-allocate the buffer between calls.
- * @param buff_size the size of the buffer
  * @param strict whether to hard wrap at width or not (not is what strwrap does
  *   by default)
  * @param is_utf8_loc whether the current locale is UTF8
@@ -166,7 +158,9 @@ SEXP FANSI_strwrap(
   const char * x, int width, int indent, int exdent,
   struct FANSI_prefix_dat prefix,
   struct FANSI_prefix_dat initial,
-  int strict, char ** buff, int * buff_size, int is_utf8_loc
+  int strict,
+  struct FANSI_buff * buff,
+  int is_utf8_loc
 ) {
   Rprintf("Internal wrap\n");
   Rprintf("initialize state\n");
@@ -193,15 +187,6 @@ SEXP FANSI_strwrap(
   if(width_1 < 0 || width_2 < 0)
     error("Internal Error: incompatible width/indent/prefix.");
 
-  // Start with a buffer twice the width we're targeting; we'll grow it as
-  // needed.  The buffer may already exist from a previous iteration
-
-  if(!*buff) {
-    Rprintf("Allocate initial size to %d\n", FANSI_add_int(width, width));
-    *buff_size = FANSI_add_int(width, width);
-    *buff = R_alloc(*buff_size, sizeof(char));
-    Rprintf("Done buff alloc to %p %p\n", *buff);
-  }
   // Use LISTSXP so we don't have to do a two pass process to determine how many
   // items we're going to have
 
@@ -248,7 +233,7 @@ SEXP FANSI_strwrap(
 
       SEXP res_sxp = PROTECT(
         FANSI_writeline(
-          state_bound, state_start, buff, buff_size,
+          state_bound, state_start, buff,
           para_start ? para_start_chr : para_next_chr,
           para_start ? para_start_size : para_next_size,
           para_start ? initial.has_utf8 : prefix.has_utf8,
@@ -287,7 +272,7 @@ SEXP FANSI_strwrap(
   if(written_through < state.pos_byte) {
     SEXP res_sxp = PROTECT(
       FANSI_writeline(
-        state, state_start, buff, buff_size,
+        state, state_start, buff,
         para_start ? para_start_chr : para_next_chr,
         para_start ? para_start_size : para_next_size,
         para_start ? initial.has_utf8 : prefix.has_utf8,
@@ -373,10 +358,8 @@ SEXP FANSI_strwrap_ext(
   // Set up the buffer, this will be created in FANSI_strwrap, but we want a
   // handle for it here so we can re-use
 
-  char * buff_tmp = 0;
-  char ** buff = &buff_tmp;
-  int buff_size_tmp = 0;
-  int * buff_size = &buff_size_tmp;
+  struct FANSI_buff buff;
+  buff.len = 0;  // should be implicit
 
   Rprintf("Start loop\n");
 
@@ -385,7 +368,7 @@ SEXP FANSI_strwrap_ext(
     SEXP str_i = PROTECT(
       FANSI_strwrap(
         CHAR(STRING_ELT(x, i)), width_int, indent_int, exdent_int,
-        pre_dat, ini_dat, strict_int, buff, buff_size, is_utf8_loc
+        pre_dat, ini_dat, strict_int, &buff, is_utf8_loc
     ) );
     SET_VECTOR_ELT(res, i, str_i);
     UNPROTECT(1);

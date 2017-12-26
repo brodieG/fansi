@@ -115,4 +115,18 @@ const char * FANSI_string_as_utf8(SEXP x, int is_utf8_loc) {
 
   return string;
 }
-
+/*
+ * Allocates a fresh chunk of memory if the existing one is not large enough.
+ *
+ * We never intend to re-use what's already in memory so we don't realloc.  If
+ * allocation is needed the buffer will be either twice as large as it was
+ * before, or size `size` if that is greater than twice the size.
+ */
+void FANSI_size_buff(struct FANSI_buff * buff, int size) {
+  if(size > buff->len) {
+    int tmp_double_size = FANSI_add_int(buff->len, buff->len);
+    if(size > tmp_double_size) tmp_double_size = size;
+    buff->len = tmp_double_size;
+    buff->buff = R_alloc(buff->len, sizeof(char));
+  }
+}

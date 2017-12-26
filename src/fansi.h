@@ -27,6 +27,16 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   inline void FANSI_interrupt(i) {if(!(i % 1000)) R_CheckUserInterrupt();}
 
   /*
+   * Buffer used for writing strings
+   *
+   * Kept around so we don't keep having to re-allocate memory if it is
+   * sufficiently large to write what we want.
+   */
+  struct FANSI_buff {
+    char * buff; // Buffer
+    int len;     // How many bytes the buffer has been allocated to
+  };
+  /*
    * Used when computing position and size of ANSI tag with FANSI_loc
    */
 
@@ -182,6 +192,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   // Utilities
 
   SEXP FANSI_check_assumptions();
+  void FANSI_size_buff(struct FANSI_buff * buff, int size);
   int FANSI_is_utf8_loc();
   int FANSI_utf8clen(char c);
   const char * FANSI_string_as_utf8(SEXP x, int is_utf8_loc);
