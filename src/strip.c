@@ -139,3 +139,91 @@ SEXP FANSI_strip(SEXP input) {
   UNPROTECT(1);
   return res_fin;
 }
+/*
+ * Strips Extra ASCII Spaces, and optionally ASCII control characters
+ *
+ * Won't do anything about weird UTF8 spaces, etc.
+ *
+ * Allows two spaces after periods, question marks, and exclamation marks.  This
+ * is to line up with strwrap behavior.
+ */
+
+SEXP FANSI_strip_white(SEXP input, int extra, struct FANSI_buff *buff) {
+  if(TYPEOF(input) != STRSXP) error("Input is not a character vector.");
+
+  SEXP res = PROTECT(input);  // dummy PROTECT
+  int strip_any = 0;          // Have any elements in the STRSXP been stripped
+
+  R_xlen_t len = XLENGTH(res);
+  for(R_xlen_t = 0; i < len; ++i) {
+    const char * string = CHAR(STRING_ELT(res, i));
+    const char * string_start = string;
+    char * buff_start = buff->buff;
+
+    R_len_t len_j = LENGTH(STRING_ELT(res, i));
+    int strip_this, to_strip, punct_prev, punct_prev_prev, space_prev,
+        control_prev;
+
+    strip_this = to_strip = punct_prev = punct_prev_prev = space_prev =
+      control_prev = 0;
+
+    R_len_t j_last = 0;
+
+    // First space we encounter after non-space, non-control, can be kept,
+    // unless after a punct, in which case two can be kept
+
+    for(R_len_t j = 0; j < len_j; ++j) {
+      int space = string[j] == ' ';
+      int control = extra &&
+        ((string[j] >= 1 && string[j] < 32) || string[j] == 127)
+
+      int strip =
+        (space && space_prev && !punct_prev_prev) ||
+        (space && control_prev) ||
+        (control);
+
+      // transcribe string if we've hit something that we don't need to strip
+      // and we have just been hitting chars to strip, or if we're hitting chars
+      // to strip and hit the end of the string.
+
+      if((!strip && to_strip) || (strip && j == len_j - 1)) {
+        // need to copy entire STRSXP since we haven't done that yet
+        if(!strip_any) {
+          UNPROTECT(1);  // input is still protected
+          res = PROTECT(duplicate(input));
+          strip_any = 1;
+        }
+        // Make sure buffer is big enough
+        if(!strip_this) {
+          FANSI_size_buff(buff, len_j + 1);
+          strip_this = 1;
+        }
+        // Copy the portion up to the point we know should be copied
+
+        int copy_bits = j - j_last - to_strip;
+        memcpy(buff->buff, string_start, copy_bits);
+        buff->buff += copy_bits;
+        string_start = string + j;
+        j_last = j;
+        to_strip = 0;
+      } else to_strip++;
+
+      control_prev = control;
+      space_prev = space;
+      punct_prev_prev = punct_prev;
+      punct_prev = string[j] == '.' || string[j] == '!' || string[j] == '?';
+    }
+    if(strip_this) {
+      *(buff->buff) = 0;
+
+      SEXP chrsxp = PROTECT(
+        mkCharLenCE(
+          buff_start, buff->buff - buff_start, getCharCE(STRING_ELT(input, i))
+      ) );
+      SET_STRING_ELT(res, i, chrsxp);
+      UNPROTECT(1);
+    }
+  }
+  UNPROTECT(1);
+  return res;
+}
