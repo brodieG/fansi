@@ -2,6 +2,10 @@
 
 These are internal developer notes.
 
+## Stripping
+
+Need to strip trailing whitespace.
+
 ## What Escape Sequences do we consider?
 
 Seems like the natural thing is to do CSI sequences, and maybe for simplicity
