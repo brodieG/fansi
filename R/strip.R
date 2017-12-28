@@ -9,4 +9,5 @@
 
 strip_ansi <- function(x) .Call(FANSI_strip_csi, x)
 
+strip_white <- function(x, extra=FALSE) .Call(FANSI_strip_white, x, extra)
 

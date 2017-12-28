@@ -8,7 +8,7 @@ R_CallMethodDef callMethods[] = {
   {"strip_csi", (DL_FUNC) &FANSI_strip, 1},
   {"strwrap_csi", (DL_FUNC) &FANSI_strwrap_ext, 7},
   {"state_at_pos_ext", (DL_FUNC) &FANSI_state_at_pos_ext, 5},
-
+  {"strip_white", (DL_FUNC) &FANSI_strip_white_ext, 2},
   {"check_assumptions", (DL_FUNC) &FANSI_check_assumptions, 0},
 
   {NULL, NULL, 0}

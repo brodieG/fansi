@@ -24,6 +24,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
  * Freaks out if ANSI escape sequence contains stuff outside of 1-127.  Observed
  * behavior is that that stuff gets spat out to screen but ANSI tag continues to
  * be processed...  Probably undefined behavior?
+ *
+ * Really should have tried to harmonize this and strip white?
  */
 
 SEXP FANSI_strip(SEXP input) {
@@ -155,10 +157,10 @@ SEXP FANSI_strip_white(SEXP input, int extra, struct FANSI_buff *buff) {
   int strip_any = 0;          // Have any elements in the STRSXP been stripped
 
   R_xlen_t len = XLENGTH(res);
-  for(R_xlen_t = 0; i < len; ++i) {
+  for(R_xlen_t i = 0; i < len; ++i) {
     const char * string = CHAR(STRING_ELT(res, i));
     const char * string_start = string;
-    char * buff_start = buff->buff;
+    char * buff_start;
 
     R_len_t len_j = LENGTH(STRING_ELT(res, i));
     int strip_this, to_strip, punct_prev, punct_prev_prev, space_prev,
@@ -175,7 +177,7 @@ SEXP FANSI_strip_white(SEXP input, int extra, struct FANSI_buff *buff) {
     for(R_len_t j = 0; j < len_j; ++j) {
       int space = string[j] == ' ';
       int control = extra &&
-        ((string[j] >= 1 && string[j] < 32) || string[j] == 127)
+        ((string[j] >= 1 && string[j] < 32) || string[j] == 127);
 
       int strip =
         (space && space_prev && !punct_prev_prev) ||
@@ -196,11 +198,13 @@ SEXP FANSI_strip_white(SEXP input, int extra, struct FANSI_buff *buff) {
         // Make sure buffer is big enough
         if(!strip_this) {
           FANSI_size_buff(buff, len_j + 1);
+          buff_start = buff->buff;
           strip_this = 1;
         }
         // Copy the portion up to the point we know should be copied
 
         int copy_bits = j - j_last - to_strip;
+        Rprintf("Copy bits %d\n", copy_bits);
         memcpy(buff->buff, string_start, copy_bits);
         buff->buff += copy_bits;
         string_start = string + j;
@@ -214,6 +218,11 @@ SEXP FANSI_strip_white(SEXP input, int extra, struct FANSI_buff *buff) {
       punct_prev = string[j] == '.' || string[j] == '!' || string[j] == '?';
     }
     if(strip_this) {
+      Rprintf(
+        "About to write n: %d %p %p\n",
+        buff->buff - buff_start, buff->buff,
+        buff_start
+      );
       *(buff->buff) = 0;
 
       SEXP chrsxp = PROTECT(
@@ -226,4 +235,10 @@ SEXP FANSI_strip_white(SEXP input, int extra, struct FANSI_buff *buff) {
   }
   UNPROTECT(1);
   return res;
+}
+
+SEXP FANSI_strip_white_ext(SEXP input, SEXP extra) {
+  struct FANSI_buff buff;
+
+  return FANSI_strip_white(input, asInteger(extra), &buff);
 }
