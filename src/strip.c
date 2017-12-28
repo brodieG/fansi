@@ -146,6 +146,10 @@ SEXP FANSI_strip(SEXP input) {
  *
  * Won't do anything about weird UTF8 spaces, etc.
  *
+ * Keeps newlines and tabs.  Rationale for this is we can handle the cursor
+ * effects of those two, but no really any of the others (at least not easily,
+ * e.g. \r).
+ *
  * Allows two spaces after periods, question marks, and exclamation marks.  This
  * is to line up with strwrap behavior.
  */
@@ -164,10 +168,12 @@ SEXP FANSI_strip_white(SEXP input, int extra, struct FANSI_buff *buff) {
 
     R_len_t len_j = LENGTH(STRING_ELT(res, i));
     int strip_this, to_strip, punct_prev, punct_prev_prev, space_prev,
-        control_prev;
+        control_prev, para_start;
 
     strip_this = to_strip = punct_prev = punct_prev_prev = space_prev =
       control_prev = 0;
+
+    para_start = 1;
 
     R_len_t j_last = 0;
 
@@ -178,11 +184,18 @@ SEXP FANSI_strip_white(SEXP input, int extra, struct FANSI_buff *buff) {
     for(R_len_t j = 0; j <= len_j; ++j) {
       int space = string[j] == ' ';
       int control = extra &&
-        ((string[j] >= 1 && string[j] < 32) || string[j] == 127);
+        (
+          (
+            string[j] >= 1 && string[j] < 32 &&
+            string[j] != '\n' && string[j] != '\t'
+          ) ||
+          string[j] == 127
+        );
 
       int strip =
         (space && space_prev && !punct_prev_prev) ||
         (space && control_prev) ||
+        (space && para_start) ||
         (control);
 
       // transcribe string if we've hit something that we don't need to strip
@@ -191,8 +204,8 @@ SEXP FANSI_strip_white(SEXP input, int extra, struct FANSI_buff *buff) {
 
       /*
       Rprintf(
-        "strip: %d to_strip: %d j: %d spc: %d %d ctrl: %d %d, char: %c\n", 
-        strip, to_strip, j, space, space_prev, control, control_prev, 
+        "strip: %d to_strip: %d j: %d spc: %d %d ctrl: %d %d, char: %c\n",
+        strip, to_strip, j, space, space_prev, control, control_prev,
         string[j]
       );
       */
@@ -220,6 +233,7 @@ SEXP FANSI_strip_white(SEXP input, int extra, struct FANSI_buff *buff) {
         to_strip = 0;
       } else if(strip) to_strip++;
 
+      para_start = string[j] == '\n' || (para_start && strip);
       control_prev = control;
       space_prev = space;
       punct_prev_prev = punct_prev;

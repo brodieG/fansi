@@ -17,3 +17,11 @@ unitizer_sect("Corner cases", {
   # for input after it is cated
   strip_ansi("hello\033[")
 })
+
+unitizer_sect("Whitespace", {
+  fansi:::strip_white('hello     world')
+  fansi:::strip_white('hello.    world')
+  fansi:::strip_white(c('hello     world', 'hello.    world'))
+  fansi:::strip_white('hello.   world?   moon!   wow.')
+  fansi:::strip_white('  hello')
+})
