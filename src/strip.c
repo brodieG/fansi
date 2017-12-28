@@ -172,9 +172,10 @@ SEXP FANSI_strip_white(SEXP input, int extra, struct FANSI_buff *buff) {
     R_len_t j_last = 0;
 
     // First space we encounter after non-space, non-control, can be kept,
-    // unless after a punct, in which case two can be kept
+    // unless after a punct, in which case two can be kept.  Note that we
+    // purposefully allow ourselves to read up to the NULL terminator.
 
-    for(R_len_t j = 0; j < len_j; ++j) {
+    for(R_len_t j = 0; j <= len_j; ++j) {
       int space = string[j] == ' ';
       int control = extra &&
         ((string[j] >= 1 && string[j] < 32) || string[j] == 127);
@@ -188,7 +189,14 @@ SEXP FANSI_strip_white(SEXP input, int extra, struct FANSI_buff *buff) {
       // and we have just been hitting chars to strip, or if we're hitting chars
       // to strip and hit the end of the string.
 
-      if((!strip && to_strip) || (strip && j == len_j - 1)) {
+      /*
+      Rprintf(
+        "strip: %d to_strip: %d j: %d spc: %d %d ctrl: %d %d, char: %c\n", 
+        strip, to_strip, j, space, space_prev, control, control_prev, 
+        string[j]
+      );
+      */
+      if((!strip && to_strip) || (!string[j] && strip_this)) {
         // need to copy entire STRSXP since we haven't done that yet
         if(!strip_any) {
           UNPROTECT(1);  // input is still protected
@@ -204,13 +212,13 @@ SEXP FANSI_strip_white(SEXP input, int extra, struct FANSI_buff *buff) {
         // Copy the portion up to the point we know should be copied
 
         int copy_bits = j - j_last - to_strip;
-        Rprintf("Copy bits %d\n", copy_bits);
+        //Rprintf("Copy bits %d j: %d j_last: %d\n", copy_bits, j, j_last);
         memcpy(buff->buff, string_start, copy_bits);
         buff->buff += copy_bits;
         string_start = string + j;
         j_last = j;
         to_strip = 0;
-      } else to_strip++;
+      } else if(strip) to_strip++;
 
       control_prev = control;
       space_prev = space;
@@ -218,11 +226,13 @@ SEXP FANSI_strip_white(SEXP input, int extra, struct FANSI_buff *buff) {
       punct_prev = string[j] == '.' || string[j] == '!' || string[j] == '?';
     }
     if(strip_this) {
+      /*
       Rprintf(
         "About to write n: %d %p %p\n",
         buff->buff - buff_start, buff->buff,
         buff_start
       );
+      */
       *(buff->buff) = 0;
 
       SEXP chrsxp = PROTECT(
