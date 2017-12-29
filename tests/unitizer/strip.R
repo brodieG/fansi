@@ -28,4 +28,7 @@ unitizer_sect("Whitespace", {
   fansi:::strip_white('  hello\n  world')
   fansi:::strip_white('  hello  \n  world')
   fansi:::strip_white('  hello world\n  ')
+  fansi:::strip_white('hello.   ')
+  fansi:::strip_white('hello!  ')
+  fansi:::strip_white('hello? ')
 })

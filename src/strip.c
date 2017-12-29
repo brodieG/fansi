@@ -168,10 +168,10 @@ SEXP FANSI_strip_white(SEXP input, int extra, struct FANSI_buff *buff) {
 
     R_len_t len_j = LENGTH(STRING_ELT(res, i));
     int strip_this, to_strip, punct_prev, punct_prev_prev, space_prev,
-        control_prev, para_start;
+        space_start, control_prev, para_start;
 
     strip_this = to_strip = punct_prev = punct_prev_prev = space_prev =
-      control_prev = 0;
+      space_start = control_prev = 0;
 
     para_start = 1;
 
@@ -192,24 +192,38 @@ SEXP FANSI_strip_white(SEXP input, int extra, struct FANSI_buff *buff) {
           string[j] == 127
         );
 
+      int line_end = (string[j] == '\n' || !string[j]);
+
       int strip =
         (space && space_prev && !punct_prev_prev) ||
         (space && control_prev) ||
         (space && para_start) ||
         (control);
 
+      // Need to keep track if we're in a sequence that starts with a space in
+      // case a line ends, as normally we keep one or two spaces, but if we hit
+      // the end of the line we don't want to keep them.
+
+      if(space) {
+        if(!(space_prev || control_prev)) space_start = 1;
+        else if(space && space_prev && punct_prev_prev) space_start = 2;
+      } else if(!control && !line_end) space_start = 0;
+
       // transcribe string if we've hit something that we don't need to strip
-      // and we have just been hitting chars to strip, or if we're hitting chars
-      // to strip and hit the end of the string.
 
       /*
       Rprintf(
-        "strip: %d to_strip: %d j: %d spc: %d %d ctrl: %d %d, char: %c\n",
-        strip, to_strip, j, space, space_prev, control, control_prev,
-        string[j]
+        "para_start: %d strip: %d to_strip: %d j: %d spc: %d %d %d ctrl: %d %d, write: %d strip_this: %d char: %c\n",
+        para_start, strip, to_strip, j, space, space_prev, space_start, control,
+        control_prev,
+        (!strip && to_strip) || (!string[j] && strip_this),
+        strip_this,
+        (string[j] ? string[j] : '~')
       );
       */
-      if((!strip && to_strip) || (!string[j] && strip_this)) {
+      if(
+        (!strip && to_strip) || (!string[j] && (strip_this || space_start))
+      ) {
         // need to copy entire STRSXP since we haven't done that yet
         if(!strip_any) {
           UNPROTECT(1);  // input is still protected
@@ -222,15 +236,21 @@ SEXP FANSI_strip_white(SEXP input, int extra, struct FANSI_buff *buff) {
           buff_start = buff->buff;
           strip_this = 1;
         }
-        // Copy the portion up to the point we know should be copied
+        // Copy the portion up to the point we know should be copied, need
+        // special treatment when hitting line ends with spaces.
 
-        int copy_bits = j - j_last - to_strip;
-        //Rprintf("Copy bits %d j: %d j_last: %d\n", copy_bits, j, j_last);
-        memcpy(buff->buff, string_start, copy_bits);
-        buff->buff += copy_bits;
+        int copy_bits = j - j_last - to_strip -
+          (line_end * space_start * !para_start);
+
+        // Rprintf("Copy bits %d j: %d j_last: %d\n", copy_bits, j, j_last);
+        if(copy_bits) {
+          memcpy(buff->buff, string_start, copy_bits);
+          buff->buff += copy_bits;
+        }
         string_start = string + j;
         j_last = j;
         to_strip = 0;
+        space_start = 0;
       } else if(strip) to_strip++;
 
       para_start = string[j] == '\n' || (para_start && strip);

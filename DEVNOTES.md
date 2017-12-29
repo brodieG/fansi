@@ -4,7 +4,8 @@ These are internal developer notes.
 
 ## Stripping
 
-Need to strip trailing whitespace.
+Need to strip trailing whitespace.  Although some argument about this since in
+the most likely use case we'll want to re-pad after the end to the wrap width.
 
 ## What Escape Sequences do we consider?
 
