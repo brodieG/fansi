@@ -1,4 +1,5 @@
 library(unitizer)
+library(fansi)
 
 unitizer_sect("Basic wrap", {
   hello.0 <- "hello world this is a lovely day"
@@ -7,6 +8,9 @@ unitizer_sect("Basic wrap", {
 
   hello.1 <- "hello  world  this  is.  a lovely day."
   identical(strwrap_csi(hello.1, width=10), strwrap(hello.1, width=10))
+
+  hello.2 <- "hello\rworld\rthis  is.  a lovely day."
+  strwrap(hello.2)
 
 })
 

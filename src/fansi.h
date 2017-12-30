@@ -187,7 +187,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP x, SEXP width,
     SEXP indent, SEXP exdent, SEXP prefix, SEXP initial, SEXP strict
   );
-  SEXP FANSI_strip_white_ext(SEXP input, SEXP extra);
+  SEXP FANSI_process_ext(
+    SEXP input, SEXP strip_spc, SEXP strip_tab, SEXP strip_ctl
+  );
 
   // Internal
 

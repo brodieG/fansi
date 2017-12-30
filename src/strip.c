@@ -152,9 +152,20 @@ SEXP FANSI_strip(SEXP input) {
  *
  * Allows two spaces after periods, question marks, and exclamation marks.  This
  * is to line up with strwrap behavior.
+ *
+ * Need option to strip tabs.
+ * Always keep newlines?
+ *
+ * spaces - differential control for post period?
+ * tab
+ * other_control?
+ * newlines?
  */
 
-SEXP FANSI_strip_white(SEXP input, int extra, struct FANSI_buff *buff) {
+SEXP FANSI_process(
+  SEXP input, int strip_spc, int strip_tab, int strip_ctl,
+  struct FANSI_buff *buff
+) {
   if(TYPEOF(input) != STRSXP) error("Input is not a character vector.");
 
   SEXP res = PROTECT(input);  // dummy PROTECT
@@ -182,12 +193,13 @@ SEXP FANSI_strip_white(SEXP input, int extra, struct FANSI_buff *buff) {
     // purposefully allow ourselves to read up to the NULL terminator.
 
     for(R_len_t j = 0; j <= len_j; ++j) {
-      int space = string[j] == ' ';
-      int control = extra &&
+      int space = strip_spc && string[j] == ' ';
+      int tab = strip_tab && string[j] == '\t';
+      int control = strip_ctl &&
         (
           (
             string[j] >= 1 && string[j] < 32 &&
-            string[j] != '\n' && string[j] != '\t'
+            string[j] != '\n' && !tab
           ) ||
           string[j] == 127
         );
@@ -198,7 +210,8 @@ SEXP FANSI_strip_white(SEXP input, int extra, struct FANSI_buff *buff) {
         (space && space_prev && !punct_prev_prev) ||
         (space && control_prev) ||
         (space && para_start) ||
-        (control);
+        control ||
+        tab;
 
       // Need to keep track if we're in a sequence that starts with a space in
       // case a line ends, as normally we keep one or two spaces, but if we hit
@@ -281,8 +294,13 @@ SEXP FANSI_strip_white(SEXP input, int extra, struct FANSI_buff *buff) {
   return res;
 }
 
-SEXP FANSI_strip_white_ext(SEXP input, SEXP extra) {
+SEXP FANSI_process_ext(
+  SEXP input, SEXP strip_spc, SEXP strip_tab, SEXP strip_ctl
+) {
   struct FANSI_buff buff;
 
-  return FANSI_strip_white(input, asInteger(extra), &buff);
+  return FANSI_process(
+    input, asInteger(strip_spc), asInteger(strip_tab), asInteger(strip_ctl),
+    &buff
+  );
 }

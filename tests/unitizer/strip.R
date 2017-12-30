@@ -19,16 +19,30 @@ unitizer_sect("Corner cases", {
 })
 
 unitizer_sect("Whitespace", {
-  fansi:::strip_white('hello     world')
-  fansi:::strip_white('hello.    world')
-  fansi:::strip_white(c('hello     world', 'hello.    world'))
-  fansi:::strip_white('hello.   world?   moon!   wow.')
-  fansi:::strip_white('  hello')
-  fansi:::strip_white(' \t hello')
-  fansi:::strip_white('  hello\n  world')
-  fansi:::strip_white('  hello  \n  world')
-  fansi:::strip_white('  hello world\n  ')
-  fansi:::strip_white('hello.   ')
-  fansi:::strip_white('hello!  ')
-  fansi:::strip_white('hello? ')
+  fansi:::process('hello     world')
+  fansi:::process('hello.    world')
+  fansi:::process(c('hello     world', 'hello.    world'))
+  fansi:::process('hello.   world?   moon!   wow.')
+  fansi:::process('  hello')
+  fansi:::process('  hello\n  world')
+  fansi:::process('  hello  \n  world')
+  fansi:::process('  hello world\n  ')
+  fansi:::process('hello.   ')
+  fansi:::process('hello!  ')
+  fansi:::process('hello? ')
+  fansi:::process('hello? ')
+
+  # Tabs / ctrl; newlines remain
+
+  fansi:::process(' \t hello')
+  fansi:::process(' \t hello', strip_tab=FALSE)
+  fansi:::process(' \t\a\r hello')
+  fansi:::process(' \t\a\r hello\n \a\r', strip_ctl=TRUE)
+  fansi:::process(' \t\a\r hello\n \a\r', strip_ctl=TRUE, strip_spc=FALSE)
+
+  # Make sure we are not inadvertently changing SXPs
+
+  str1 <- c("hello ", " world")
+  fansi:::process(str1)
+  str1
 })
