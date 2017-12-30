@@ -185,7 +185,14 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   );
   SEXP FANSI_strwrap_ext(
     SEXP x, SEXP width,
-    SEXP indent, SEXP exdent, SEXP prefix, SEXP initial, SEXP strict
+    SEXP indent, SEXP exdent, SEXP prefix, SEXP initial,
+    SEXP wrap_always, SEXP pad_end,
+    SEXP strip_spc, SEXP strip_tab, SEXP strip_ctl,
+    SEXP tabs_as_spc, SEXP tab_stops
+  );
+  SEXP FANSI_process(
+    SEXP input, int strip_spc, int strip_tab, int strip_ctl,
+    struct FANSI_buff * buff
   );
   SEXP FANSI_process_ext(
     SEXP input, SEXP strip_spc, SEXP strip_tab, SEXP strip_ctl

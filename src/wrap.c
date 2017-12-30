@@ -158,7 +158,7 @@ SEXP FANSI_strwrap(
   const char * x, int width, int indent, int exdent,
   struct FANSI_prefix_dat prefix,
   struct FANSI_prefix_dat initial,
-  int strict,
+  int wrap_always,
   struct FANSI_buff * buff,
   int is_utf8_loc
 ) {
@@ -310,21 +310,26 @@ SEXP FANSI_strwrap(
 SEXP FANSI_strwrap_ext(
   SEXP x, SEXP width,
   SEXP indent, SEXP exdent,
-  SEXP prefix, SEXP initial, SEXP strict
+  SEXP prefix, SEXP initial,
+  SEXP wrap_always, SEXP pad_end,
+  SEXP strip_spc, SEXP strip_tab, SEXP strip_ctl,
+  SEXP tabs_as_spc, SEXP tab_stops
 ) {
-
   Rprintf("Start wrap ext\n");
   if(
     TYPEOF(x) != STRSXP || TYPEOF(width) != INTSXP ||
     TYPEOF(indent) != INTSXP || TYPEOF(exdent) != INTSXP ||
     TYPEOF(prefix) != STRSXP || TYPEOF(initial) != STRSXP ||
-    TYPEOF(strict) != LGLSXP
+    TYPEOF(wrap_always) != LGLSXP || TYPEOF(pad_end) != LGLSXP ||
+    TYPEOF(strip_spc) != LGLSXP ||
+    TYPEOF(strip_tab) != LGLSXP || TYPEOF(strip_ctl) != LGLSXP ||
+    TYPEOF(tabs_as_spc) != LGLSXP || TYPEOF(tab_stops) != INTSXP
   ) {
     error("Type error.");
   }
   R_xlen_t i, x_len = XLENGTH(x);
 
-  int strict_int = asInteger(strict);
+  int wrap_always_int = asInteger(wrap_always);
   int is_utf8_loc = FANSI_is_utf8_loc();
 
   Rprintf("compute pre\n");
@@ -342,7 +347,7 @@ SEXP FANSI_strwrap_ext(
   int exdent_int = asInteger(exdent);
 
   if(
-    strict_int && (
+    wrap_always_int && (
       FANSI_add_int(indent_int, ini_dat.width) >= width_int ||
       FANSI_add_int(exdent_int, pre_dat.width) >= width_int
     )
@@ -350,7 +355,7 @@ SEXP FANSI_strwrap_ext(
     error(
       "%s%s",
       "Width error: sum of `indent` and `initial` width or sum of `exdent` and",
-      "`prefix` width must be less than `width` when in strict mode."
+      "`prefix` width must be less than `width` when in `wrap.always`."
     );
 
   SEXP res = PROTECT(allocVector(VECSXP, x_len));
@@ -361,6 +366,13 @@ SEXP FANSI_strwrap_ext(
   struct FANSI_buff buff;
   buff.len = 0;  // should be implicit
 
+  // Strip control/whitespaces as needed
+
+  x = PROTECT(
+    FANSI_process(
+      x, asInteger(strip_spc), asInteger(strip_tab), asInteger(strip_ctl),
+      &buff
+  ) );
   Rprintf("Start loop\n");
 
   for(i = 0; i < x_len; ++i) {
@@ -368,11 +380,11 @@ SEXP FANSI_strwrap_ext(
     SEXP str_i = PROTECT(
       FANSI_strwrap(
         CHAR(STRING_ELT(x, i)), width_int, indent_int, exdent_int,
-        pre_dat, ini_dat, strict_int, &buff, is_utf8_loc
+        pre_dat, ini_dat, wrap_always_int, &buff, is_utf8_loc
     ) );
     SET_VECTOR_ELT(res, i, str_i);
     UNPROTECT(1);
   }
-  UNPROTECT(1);
+  UNPROTECT(2);
   return res;
 }
