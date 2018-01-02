@@ -89,18 +89,18 @@ SEXP FANSI_writeline(
 
   // Apply prevous CSI style
 
-  Rprintf("  extras (need start: %d)\n", needs_start);
+  Rprintf("  extras (need start: %d size: %d)\n", needs_start, state_start_size);
   if(needs_start) {
     FANSI_csi_write((buff->buff), state_start, state_start_size);
     (buff->buff) += state_start_size;
   }
   // Apply indent/exdent prefix/initial
 
-  Rprintf("  writing pre %s of size %d\n", pre, pre_size);
-
-  memcpy((buff->buff), pre, pre_size);
-  (buff->buff) += pre_size;
-
+  if(pre_size) {
+    Rprintf("  writing pre %s of size %d\n", pre, pre_size);
+    memcpy((buff->buff), pre, pre_size);
+    (buff->buff) += pre_size;
+  }
   // Actual string, remember state_bound.pos_byte is one past what we need
 
   Rprintf(
@@ -118,7 +118,7 @@ SEXP FANSI_writeline(
 
   if(needs_close) {
     Rprintf("  close\n");
-    memcpy((buff->buff) + state_bound.pos_byte, "\033[0m", 4);
+    memcpy((buff->buff), "\033[0m", 4);
     (buff->buff) += 4;
   }
   *(buff->buff) = 0;
@@ -207,11 +207,11 @@ SEXP FANSI_strwrap(
 
   Rprintf("Start reading chars with tar width %d\n", width_tar);
   while(state.string[state.pos_byte]) {
-    Rprintf(
-      "byte: %d width: %d\n", state.pos_byte - state_start.pos_byte,
-      state.pos_width
-    );
     const char cur_chr = state.string[state.pos_byte];
+    Rprintf(
+      "byte: %d width: %d chr: '%c'\n", state.pos_byte - state_start.pos_byte,
+      state.pos_width,  cur_chr
+    );
 
     // detect word boundaries and paragraph starts
 
@@ -255,10 +255,10 @@ SEXP FANSI_strwrap(
       para_start = (cur_chr == '\n');
 
       // Recreate what the state is at the wrap point, including skipping the
-      // wrap character
+      // wrap character if there was one
 
       written_through = state_bound.pos_byte - 1;
-      state_bound_end = FANSI_read_next(state_bound_end);
+      if(has_boundary) state_bound_end = FANSI_read_ascii(state_bound_end);
       state_bound_end.pos_width = 0;
       has_boundary = 0;
       state = state_start = state_bound = state_bound_end;

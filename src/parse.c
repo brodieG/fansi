@@ -337,6 +337,19 @@ static struct FANSI_state FANSI_read_utf8(struct FANSI_state state) {
   return state;
 }
 /*
+ * Read a Character Off when we know it is an ascii char, this is so we have a
+ * consistent way of advancing state.
+ */
+struct FANSI_state FANSI_read_ascii(struct FANSI_state state) {
+  ++state.pos_byte;
+  ++state.pos_ansi;
+  ++state.pos_raw;
+  ++state.pos_width;
+  ++state.pos_width_target;
+  state.last_char_width = 1;
+  return state;
+}
+/*
  * Read a Character Off and Update State
  */
 struct FANSI_state FANSI_read_next(struct FANSI_state state) {
@@ -345,12 +358,7 @@ struct FANSI_state FANSI_read_next(struct FANSI_state state) {
     // Character is in the 1-127 range
     if(string[state.pos_byte] != 27) {
       // Normal ASCII character
-      ++state.pos_byte;
-      ++state.pos_ansi;
-      ++state.pos_raw;
-      ++state.pos_width;
-      ++state.pos_width_target;
-      state.last_char_width = 1;
+      state = FANSI_read_ascii(state);
     } else if (
       string[state.pos_byte] == 27 && string[state.pos_byte + 1] == '['
     ) {
