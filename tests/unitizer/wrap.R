@@ -9,9 +9,11 @@ unitizer_sect("Basic wrap", {
   hello.1 <- "hello  world  this  is.  a lovely day."
   identical(strwrap_csi(hello.1, width=10), strwrap(hello.1, width=10))
 
-  hello.2 <- "hello\rworld\rthis  is.  a lovely day."
-  strwrap(hello.2)
+  writeLines(strwrap_csi(hello.1, width=10))
+  writeLines(strwrap(hello.1, width=10))
 
+  hello.2 <- "hello\rworld\rthis  is.  a lovely day."
+  identical(strwrap(hello.2, width=10), strwrap_csi(hello.2, width=10))
 })
 
 # Things to test:

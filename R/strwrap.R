@@ -62,7 +62,6 @@ strwrap_csi <- function(
   width <- as.integer(width) - 1L
   indent <- as.integer(indent)
   exdent <- as.integer(exdent)
-  strict <- as.logical(strict)
 
   res <- .Call(
     FANSI_strwrap_csi,

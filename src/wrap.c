@@ -194,6 +194,7 @@ SEXP FANSI_strwrap(
   char_list_start = char_list = PROTECT(list1(R_NilValue));
   int prev_newline = 0;     // tracks if last non blank character was newline
   int prev_boundary = 0;    // tracks if previous char was a boundary
+  int has_boundary = 0;     // tracks if at least one boundary in a line
   int para_start = 1;
   int written_through = -1; // which byte was last copied
 
@@ -217,7 +218,7 @@ SEXP FANSI_strwrap(
     if(cur_chr == ' ' || cur_chr == '\t' || cur_chr == '\n') {
       if(!prev_boundary) state_bound = state_bound_end = state;
       else state_bound_end = state;
-      prev_boundary = 1;
+      has_boundary = prev_boundary = 1;
       Rprintf("Boundary at %d\n", state_bound.pos_byte - state_start.pos_byte);
     } else {
       prev_boundary = 0;
@@ -227,9 +228,11 @@ SEXP FANSI_strwrap(
     // following newlines is normally just suppressed.
 
     if(
-      (cur_chr == '\n' && !prev_newline) || state.pos_width >= width_tar
+      (cur_chr == '\n' && !prev_newline) ||
+      (state.pos_width >= width_tar && (has_boundary || wrap_always))
     ) {
       if(cur_chr == '\n') prev_newline = 1;
+      if(wrap_always && !has_boundary) state_bound = state;
 
       SEXP res_sxp = PROTECT(
         FANSI_writeline(
@@ -257,6 +260,7 @@ SEXP FANSI_strwrap(
       written_through = state_bound.pos_byte - 1;
       state_bound_end = FANSI_read_next(state_bound_end);
       state_bound_end.pos_width = 0;
+      has_boundary = 0;
       state = state_start = state_bound = state_bound_end;
     }
     // NOTE: Need to handle carriage returns
