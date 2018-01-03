@@ -78,20 +78,13 @@ struct FANSI_tok_res {
 
 struct FANSI_tok_res FANSI_parse_token(const char * string) {
   unsigned int mult, val;
-  int len, len_prev;
-  int success, last;
-  int limit = 5;
+  int len, success, last;
   success = len = val = last = 0;
   mult = 1;
 
-  while(FANSI_is_num(string) && (--limit)) {
+  while(FANSI_is_num(string)) {
     ++string;
-    len_prev = len;
-    ++len;
-    if(len < len_prev)
-      error(
-        "Internal Error: overflow trying to parse ANSI esc seq token."
-      );
+    len = FANSI_add_int(len, 1);
   }
   // Only succed if number isn't too long and terminates in ';' or 'm'
 
