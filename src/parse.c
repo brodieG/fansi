@@ -550,7 +550,9 @@ struct FANSI_state_pair FANSI_state_at_position(
   return (struct FANSI_state_pair){.cur=state_res, .prev=state_prev_buff};
 }
 /*
- * We always include the size of the delimiter
+ * We always include the size of the delimiter; could be a problem that this
+ * isn't the actual size, but rather the maximum size (i.e. we always assume
+ * three bytes even if the numbers don't get into three digits).
  */
 int FANSI_color_size(int color, int * color_extra) {
   int size = 0;
@@ -582,12 +584,20 @@ int FANSI_state_size(struct FANSI_state state) {
 
   // styles are stored as bits
 
-  int style_size = (
-    state.style & 2 + state.style & 4 + state.style & 8 +
-    state.style & 16 + state.style & 32 + state.style & 64 +
-    state.style & 128 + state.style & 256 + state.style & 512
-  ) * 2;
+  int style_size = 0;
+  for(int i = 1; i < 10; ++i){
+    style_size += ((state.style & (1 << i)) > 0) * 2;
+  }
+  Rprintf(
+      "%d %d %d %d %d %d %d %d %d\n",
+    (state.style & 2) > 0, (state.style & 4) > 0, (state.style & 8) > 0,
+    (state.style & 16) > 0, (state.style & 32) > 0, (state.style & 64) > 0,
+    (state.style & 128) > 0, (state.style & 256) > 0, (state.style & 512) > 0);
 
+  Rprintf(
+    "  size - style: %d %d %d color: %d bg_color: %d\n", state.style,
+    style_size, (state.style & 128) > 0, color_size, bg_color_size
+  );
   return color_size + bg_color_size + style_size + 2;  // +2 for ESC[
 }
 /*
@@ -824,7 +834,7 @@ SEXP FANSI_state_at_pos_ext(
       INTEGER(res_mx)[i * res_cols + 0] = FANSI_add_int(state.pos_byte, 1);
       INTEGER(res_mx)[i * res_cols + 1] = FANSI_add_int(state.pos_raw, 1);
       INTEGER(res_mx)[i * res_cols + 2] = FANSI_add_int(state.pos_ansi, 1);
-      INTEGER(res_mx)[i * res_cols + 3] = 
+      INTEGER(res_mx)[i * res_cols + 3] =
         FANSI_add_int(state.pos_width_target, 1);
 
       // Record color tag if state changed
