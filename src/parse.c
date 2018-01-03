@@ -203,7 +203,7 @@ static struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode)
  *   advances the ESC[ bit, although in theory as per #4 should probably advance
  *   all the way for any CSI sequence, not just SGR
  */
-static struct FANSI_state FANSI_parse_sgr(struct FANSI_state state) {
+struct FANSI_state FANSI_parse_sgr(struct FANSI_state state) {
   // make a copy of the struct so we don't modify state if it turns out
   // this is an invalid SGR
 

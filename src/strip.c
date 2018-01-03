@@ -191,10 +191,22 @@ SEXP FANSI_process(
     // First space we encounter after non-space, non-control, can be kept,
     // unless after a punct, in which case two can be kept.  Note that we
     // purposefully allow ourselves to read up to the NULL terminator.
+    //
+    // ANSI esc sequences are not stripped, but the spaces around them should
+    // be.  Argh, looks like it will be a major PITA to do.  Basically it is
+    // same treatment as a newline, but without actually writing a newline.
+    // Maybe not too bad so long as we don't consider punct-spc-csi-spc to need
+    // to be preserved.  Then, it is just like a non-strip ctrl, except that we
+    // need to shift stuff a lot more.
+    //
+    // I gues for now we can implement it that way. Seems increasingly likely
+    // that we're not going to want to strip controls anwyay.
 
     for(R_len_t j = 0; j <= len_j; ++j) {
+      int skip_bytes = 1;
       int space = strip_spc && string[j] == ' ';
       int tab = strip_tab && string[j] == '\t';
+      int esc = string[j] == 27;
       int control = strip_ctl &&
         (
           (
@@ -222,6 +234,17 @@ SEXP FANSI_process(
         else if(space && space_prev && punct_prev_prev) space_start = 2;
       } else if(!control && !line_end) space_start = 0;
 
+      // Deal with CSI, basically need to find out where it starts and ends, do
+      // so using FANSI_parse_sgr which has some additional unneeded overhead,
+      // but we don't want that logic in two places
+
+      if(esc && string[j + 1] == '[') {
+        struct FANSI_state state, state_post_sgr;
+        state = FANSI_state_init();
+        state.string = string + j + 1;
+        state_post_sgr = FANSI_parse_sgr(state);
+        skip_bytes = state_post_sgr.pos_byte - state.pos_byte + 1;
+      }
       // transcribe string if we've hit something that we don't need to strip
 
       /*
@@ -264,13 +287,15 @@ SEXP FANSI_process(
         j_last = j;
         to_strip = 0;
         space_start = 0;
-      } else if(strip) to_strip++;
-
+      } else if(strip) {
+        to_strip += skip_bytes;
+      }
       para_start = string[j] == '\n' || (para_start && strip);
       control_prev = control;
       space_prev = space;
       punct_prev_prev = punct_prev;
       punct_prev = string[j] == '.' || string[j] == '!' || string[j] == '?';
+      if(skip_bytes > 1) j += skip_bytes - 1;
     }
     if(strip_this) {
       /*

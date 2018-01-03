@@ -40,6 +40,16 @@ unitizer_sect("Whitespace", {
   fansi:::process(' \t\a\r hello\n \a\r', strip_ctl=TRUE)
   fansi:::process(' \t\a\r hello\n \a\r', strip_ctl=TRUE, strip_spc=FALSE)
 
+  # interactiong between punct and ctrl
+
+  fansi:::process('hello.  \r world.')
+  fansi:::process('hello.  \r world.', strip_ctl=TRUE)
+
+  # CSIs
+
+  fansi:::process('hello.  \033[31m world.\033[0m')
+  fansi:::process('hello.  \033[31m world.\033[0m', strip_ctl=TRUE)
+
   # Make sure we are not inadvertently changing SXPs
 
   str1 <- c("hello ", " world")
