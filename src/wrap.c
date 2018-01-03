@@ -258,14 +258,15 @@ SEXP FANSI_strwrap(
       // wrap character if there was one
 
       written_through = state_bound.pos_byte - 1;
-      if(has_boundary) state_bound_end = FANSI_read_ascii(state_bound_end);
-      state_bound_end.pos_width = 0;
+      if(has_boundary) {
+        state_bound_end = FANSI_read_next(state_bound_end);
+      }
       has_boundary = 0;
+      state_bound_end.pos_width = 0;
       state = state_start = state_bound = state_bound_end;
+    } else {
+      state = FANSI_read_next(state);
     }
-    // NOTE: Need to handle carriage returns
-
-    state = FANSI_read_next(state);
   }
   // Write last bit of string
 

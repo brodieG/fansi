@@ -595,7 +595,7 @@ int FANSI_state_size(struct FANSI_state state) {
     state.style & 128 + state.style & 256 + state.style & 512
   ) * 2;
 
-  return color_size + bg_color_size + style_size + 3;
+  return color_size + bg_color_size + style_size + 2;  // +2 for ESC[
 }
 /*
  * Compute length in characters for a number
