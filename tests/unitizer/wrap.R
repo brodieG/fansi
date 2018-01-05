@@ -25,7 +25,6 @@ unitizer_sect("Basic Ansi", {
   hello.5 <-
     paste0("hello ", red, "world ", grn.bg, " this is a  lovely", end, "day.")
   strwrap_csi(hello.5, 10)
-
 })
 
 # Things to test:
