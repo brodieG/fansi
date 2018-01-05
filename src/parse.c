@@ -588,6 +588,7 @@ int FANSI_state_size(struct FANSI_state state) {
   for(int i = 1; i < 10; ++i){
     style_size += ((state.style & (1 << i)) > 0) * 2;
   }
+  /*
   Rprintf(
       "%d %d %d %d %d %d %d %d %d\n",
     (state.style & 2) > 0, (state.style & 4) > 0, (state.style & 8) > 0,
@@ -598,6 +599,7 @@ int FANSI_state_size(struct FANSI_state state) {
     "  size - style: %d %d %d color: %d bg_color: %d\n", state.style,
     style_size, (state.style & 128) > 0, color_size, bg_color_size
   );
+  */
   return color_size + bg_color_size + style_size + 2;  // +2 for ESC[
 }
 /*

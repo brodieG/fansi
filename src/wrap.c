@@ -56,7 +56,9 @@ SEXP FANSI_writeline(
   struct FANSI_buff * buff,
   const char * pre, int pre_size, int pre_has_utf8, int is_utf8_loc
 ) {
+  /*
   Rprintf("  Writeline start with buff %p\n", *buff);
+  */
 
   // Check if we are in a CSI state b/c if we are we neeed extra room for
   // the closing state tag
@@ -64,10 +66,12 @@ SEXP FANSI_writeline(
   int needs_close = FANSI_state_has_style(state_bound);
   int needs_start = FANSI_state_has_style(state_start);
 
+  /*
   Rprintf(
     "  color: %d, bg_color: %d, style: %d\n",
     state_start.color, state_start.bg_color, state_start.style
   );
+  */
 
   // state_bound.pos_byte 1 past what we need, so this should include room
   // for NULL terminator
@@ -89,7 +93,9 @@ SEXP FANSI_writeline(
 
   // Apply prevous CSI style
 
+  /*
   Rprintf("  extras (need start: %d size: %d)\n", needs_start, state_start_size);
+  */
   if(needs_start) {
     FANSI_csi_write((buff->buff), state_start, state_start_size);
     (buff->buff) += state_start_size;
@@ -104,7 +110,7 @@ SEXP FANSI_writeline(
   // Actual string, remember state_bound.pos_byte is one past what we need
 
   Rprintf(
-    "  actual string start %d nchar %d\n",
+    "string start %d nchar %d\n",
     state_start.pos_byte,
     state_bound.pos_byte - state_start.pos_byte
   );
@@ -126,8 +132,6 @@ SEXP FANSI_writeline(
   // Now create the charsxp and append to the list, start by determining
   // what encoding to use.  If pos_byte is greater than pos_ansi it means
   // we must have hit a UTF8 encoded character
-
-  Rprintf("  make sexp\n");
 
   cetype_t chr_type = CE_NATIVE;
   if((state_bound.has_utf8 || pre_has_utf8) && !is_utf8_loc) {
@@ -205,13 +209,14 @@ SEXP FANSI_strwrap(
   state_start = state_bound = state_bound_end = state;
   R_xlen_t size = 0;
 
-  Rprintf("Start reading chars with tar width %d\n", width_tar);
   while(state.string[state.pos_byte]) {
     const char cur_chr = state.string[state.pos_byte];
+    /*
     Rprintf(
       "byte: %d width: %d chr: '%c'\n", state.pos_byte - state_start.pos_byte,
       state.pos_width,  cur_chr
     );
+    */
 
     // detect word boundaries and paragraph starts
 
@@ -219,7 +224,7 @@ SEXP FANSI_strwrap(
       if(!prev_boundary) state_bound = state_bound_end = state;
       else state_bound_end = state;
       has_boundary = prev_boundary = 1;
-      Rprintf("Boundary at %d\n", state_bound.pos_byte - state_start.pos_byte);
+      // Rprintf("Boundary at %d\n", state_bound.pos_byte - state_start.pos_byte);
     } else {
       prev_boundary = 0;
       prev_newline = 0;
@@ -243,7 +248,7 @@ SEXP FANSI_strwrap(
           is_utf8_loc
         )
       );
-      Rprintf("Writing '%s'\n", CHAR(res_sxp));
+      // Rprintf("Writing '%s'\n", CHAR(res_sxp));
       SETCDR(char_list, list1(res_sxp));
       char_list = CDR(char_list);
       UNPROTECT(1);
@@ -270,10 +275,12 @@ SEXP FANSI_strwrap(
   }
   // Write last bit of string
 
+  /*
   Rprintf(
     "Do we have extra %d %d %s", written_through , state.pos_byte,
     state.string + state_start.pos_byte
   );
+  */
   if(written_through < state.pos_byte) {
     SEXP res_sxp = PROTECT(
       FANSI_writeline(
@@ -284,7 +291,7 @@ SEXP FANSI_strwrap(
         is_utf8_loc
       )
     );
-    Rprintf("Writing '%s'\n", CHAR(res_sxp));
+    // Rprintf("Writing '%s'\n", CHAR(res_sxp));
     SETCDR(char_list, list1(res_sxp));
     ++size;
     UNPROTECT(1);
@@ -295,7 +302,7 @@ SEXP FANSI_strwrap(
     char_list = CDR(char_list); // first element is NULL
     if(char_list == R_NilValue)
       error("Internal Error: wrapped element count mismatch");  // nocov
-    Rprintf("string: '%s'\n", CHAR(CAR(char_list)));
+    // Rprintf("string: '%s'\n", CHAR(CAR(char_list)));
     SET_STRING_ELT(res, i, CAR(char_list));
   }
   if(CDR(char_list) != R_NilValue)

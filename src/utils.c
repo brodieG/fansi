@@ -123,10 +123,12 @@ const char * FANSI_string_as_utf8(SEXP x, int is_utf8_loc) {
  * before, or size `size` if that is greater than twice the size.
  */
 void FANSI_size_buff(struct FANSI_buff * buff, int size) {
+  Rprintf("  buff_len %d size %d\n", buff->len, size);
   if(size > buff->len) {
     int tmp_double_size = FANSI_add_int(buff->len, buff->len);
     if(size > tmp_double_size) tmp_double_size = size;
     buff->len = tmp_double_size;
+    Rprintf("  Alloc to %d\n", buff->len);
     buff->buff = R_alloc(buff->len, sizeof(char));
   }
 }
