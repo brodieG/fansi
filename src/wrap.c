@@ -213,30 +213,36 @@ SEXP FANSI_strwrap(
 
   while(state.string[state.pos_byte]) {
     const char cur_chr = state.string[state.pos_byte];
+    struct FANSI_state state_next = FANSI_read_next(state);
+
     /*
     Rprintf(
       "byte: %d width: %d chr: '%c'\n", state.pos_byte - state_start.pos_byte,
       state.pos_width,  cur_chr
     );
     */
-
     // detect word boundaries and paragraph starts
 
     if(cur_chr == ' ' || cur_chr == '\t' || cur_chr == '\n') {
       if(!prev_boundary) state_bound = state_bound_end = state;
       else state_bound_end = state;
       has_boundary = prev_boundary = 1;
-      // Rprintf("Boundary at %d\n", state_bound.pos_byte - state_start.pos_byte);
+      // Rprintf("Bound @ %d\n", state_bound.pos_byte - state_start.pos_byte);
     } else {
       prev_boundary = 0;
       prev_newline = 0;
     }
     // Write a line, need special logic for newlines because any whitespace
-    // following newlines is normally just suppressed.
+    // following newlines is normally just suppressed (actually, is this still
+    // necessary given we now process the string?).
 
     if(
       (cur_chr == '\n') ||
-      (state.pos_width >= width_tar && (has_boundary || wrap_always))
+      (
+        state.pos_width >= width_tar &&
+        state_next.pos_width > state.pos_width &&  // keep going w/ zero width
+        (has_boundary || wrap_always)
+      )
     ) {
       SEXP res_sxp;
 
@@ -277,10 +283,8 @@ SEXP FANSI_strwrap(
       has_boundary = 0;
       state_bound_end.pos_width = 0;
       state = state_start = state_bound = state_bound_end;
-    } else if(cur_chr == '\n' && prev_newline) {
-
     } else {
-      state = FANSI_read_next(state);
+      state = state_next;
     }
   }
   // Write last bit of string
