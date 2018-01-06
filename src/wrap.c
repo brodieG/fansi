@@ -90,7 +90,7 @@ SEXP FANSI_writeline(
   }
   target_size = FANSI_add_int(target_size, 1); // for NULL terminator
 
-  Rprintf("target size %d\n", target_size);
+  // Rprintf("target size %d\n", target_size);
   // Make sure buffer is large enough
   FANSI_size_buff(buff, target_size);
 
@@ -101,24 +101,26 @@ SEXP FANSI_writeline(
   /*
   */
   if(needs_start) {
-    Rprintf("  writing start: %d\n", state_start_size);
+    // Rprintf("  writing start: %d\n", state_start_size);
     FANSI_csi_write(buff_track, state_start, state_start_size);
     buff_track += state_start_size;
   }
   // Apply indent/exdent prefix/initial
 
   if(pre_size) {
-    Rprintf("  writing pre %s of size %d\n", pre, pre_size);
+    // Rprintf("  writing pre %s of size %d\n", pre, pre_size);
     memcpy(buff_track, pre, pre_size);
     buff_track += pre_size;
   }
   // Actual string, remember state_bound.pos_byte is one past what we need
 
+  /*
   Rprintf(
     "  string start %d nchar %d\n",
     state_start.pos_byte,
     state_bound.pos_byte - state_start.pos_byte
   );
+  */
   memcpy(
     buff_track, state_start.string + state_start.pos_byte,
     state_bound.pos_byte - state_start.pos_byte
@@ -128,12 +130,12 @@ SEXP FANSI_writeline(
   // And turn off CSI styles if needed
 
   if(needs_close) {
-    Rprintf("  close\n");
+    // Rprintf("  close\n");
     memcpy(buff_track, "\033[0m", 4);
     buff_track += 4;
   }
   *buff_track = 0;
-  Rprintf("written %d\n", buff_track - (buff->buff) + 1);
+  // Rprintf("written %d\n", buff_track - (buff->buff) + 1);
 
   // Now create the charsxp and append to the list, start by determining
   // what encoding to use.  If pos_byte is greater than pos_ansi it means
@@ -172,12 +174,8 @@ SEXP FANSI_strwrap(
   struct FANSI_buff * buff,
   int is_utf8_loc
 ) {
-  Rprintf("Internal wrap\n");
-  Rprintf("initialize state\n");
   struct FANSI_state state = FANSI_state_init();
   state.string = x;
-
-  Rprintf("State initialized\n");
 
   int width_1_tmp = FANSI_add_int(indent, initial.width);
   int width_1 = FANSI_add_int(width, -width_1_tmp);
@@ -186,12 +184,10 @@ SEXP FANSI_strwrap(
 
   int width_tar = width_1;
 
-  Rprintf("Making pre\n");
   const char * para_start_chr = make_pre(initial.string, initial.width, indent);
   int para_start_size = FANSI_add_int(initial.width, indent);
   const char * para_next_chr = make_pre(prefix.string, prefix.width, exdent);
   int para_next_size = FANSI_add_int(prefix.width, exdent);
-  Rprintf("done with pre start: %d next %d\n", para_start_size, para_next_size);
 
   if(width < 1) error("Internal Error: invalid width.");
   if(width_1 < 0 || width_2 < 0)
@@ -381,16 +377,11 @@ SEXP FANSI_strwrap_ext(
 
   // Strip control/whitespaces as needed
 
-  PROTECT(R_NilValue); // dummy protect while below is commented
-  /*
   x = PROTECT(
     FANSI_process(
       x, asInteger(strip_spc), asInteger(strip_tab), asInteger(strip_ctl),
       &buff
   ) );
-  */
-  Rprintf("Start loop\n");
-
   for(i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
     SEXP str_i = PROTECT(

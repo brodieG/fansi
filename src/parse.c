@@ -36,7 +36,7 @@ struct FANSI_state FANSI_reset_state(struct FANSI_state state) {
   for(int i = 0; i < 4; i++) state.bg_color_extra[i] = 0;
 
   return  state;
-};
+}
 
 // Can a byte be interpreted as ASCII number?
 
@@ -755,9 +755,9 @@ SEXP FANSI_state_at_pos_ext(
   if(XLENGTH(pos) != XLENGTH(ends))
     error("Argument `ends` must be the same length as `pos`");
 
-  const int res_cols = 4;
   R_xlen_t len = XLENGTH(pos);
 
+  const int res_cols = 4;  // if change this, need to change rownames init
   if(len > R_XLEN_T_MAX / res_cols) {
     error("Argument `pos` may be no longer than R_XLEN_T_MAX / %d", res_cols);
   }
@@ -772,7 +772,7 @@ SEXP FANSI_state_at_pos_ext(
   // structures are likely to be much slower.  We could encode most color values
   // into one int but it would be a little annoying to retrieve them
 
-  const char * rownames[res_cols] = {
+  const char * rownames[4] = { // make sure lines up with res_cols
     "pos.byte", "pos.raw", "pos.ansi", "pos.width"
   };
   SEXP res_rn = PROTECT(allocVector(STRSXP, res_cols));

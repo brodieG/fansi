@@ -39,7 +39,6 @@ SEXP FANSI_strip(SEXP input) {
   int any_ansi = 0;
   R_len_t mem_req = 0;         // how much memory we need for each ansi
   int invalid_ansi = 0;
-  R_xlen_t invalid_ansi_idx = 0;
 
   struct FANSI_csi_pos csi;
 
@@ -104,7 +103,6 @@ SEXP FANSI_strip(SEXP input) {
         }
       } else if(!invalid_ansi) {
         invalid_ansi = 1;
-        invalid_ansi_idx = i;
         warning("Invalid CSI len: %d at index %.0f", csi.len, (double) i + 1);
       }
       chr_track = csi.start + csi.len;

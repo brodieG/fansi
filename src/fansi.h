@@ -24,7 +24,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
 // concept borrowed from utf8-lite
 
-  inline void FANSI_interrupt(i) {if(!(i % 1000)) R_CheckUserInterrupt();}
+  inline void FANSI_interrupt(int i) {if(!(i % 1000)) R_CheckUserInterrupt();}
 
   /*
    * Buffer used for writing strings
