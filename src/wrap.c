@@ -235,21 +235,27 @@ SEXP FANSI_strwrap(
     // following newlines is normally just suppressed.
 
     if(
-      (cur_chr == '\n' && !prev_newline) ||
+      (cur_chr == '\n') ||
       (state.pos_width >= width_tar && (has_boundary || wrap_always))
     ) {
-      if(cur_chr == '\n') prev_newline = 1;
-      if(wrap_always && !has_boundary) state_bound = state;
+      SEXP res_sxp;
 
-      SEXP res_sxp = PROTECT(
-        FANSI_writeline(
-          state_bound, state_start, buff,
-          para_start ? para_start_chr : para_next_chr,
-          para_start ? para_start_size : para_next_size,
-          para_start ? initial.has_utf8 : prefix.has_utf8,
-          is_utf8_loc
-        )
-      );
+      if(prev_newline && cur_chr == '\n') {
+        res_sxp = PROTECT(R_BlankString);
+      } else {
+        if(wrap_always && !has_boundary) state_bound = state;
+
+        res_sxp = PROTECT(
+          FANSI_writeline(
+            state_bound, state_start, buff,
+            para_start ? para_start_chr : para_next_chr,
+            para_start ? para_start_size : para_next_size,
+            para_start ? initial.has_utf8 : prefix.has_utf8,
+            is_utf8_loc
+          )
+        );
+      }
+      if(cur_chr == '\n') prev_newline = 1;
       // Rprintf("Writing '%s'\n", CHAR(res_sxp));
       SETCDR(char_list, list1(res_sxp));
       char_list = CDR(char_list);
@@ -271,6 +277,8 @@ SEXP FANSI_strwrap(
       has_boundary = 0;
       state_bound_end.pos_width = 0;
       state = state_start = state_bound = state_bound_end;
+    } else if(cur_chr == '\n' && prev_newline) {
+
     } else {
       state = FANSI_read_next(state);
     }

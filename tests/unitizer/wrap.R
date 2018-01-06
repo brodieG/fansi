@@ -20,9 +20,12 @@ unitizer_sect("Basic wrap", {
 
   hello.4 <- "  hello  world  this  is  a lovely day."
   identical(strwrap(hello.4, width=10), strwrap_csi(hello.4, width=10))
+
+  hello.5 <- "hello.\n\n\nworld"
+  identical(strwrap(hello.5, width=10), strwrap_csi(hello.5, width=10))
 })
 unitizer_sect("Basic Ansi", {
-  hello.5 <-
+  hello2.0 <-
     paste0("hello ", red, "world ", grn.bg, " this is a  lovely", end, "day.")
   strwrap_csi(hello.5, 10)
 })
