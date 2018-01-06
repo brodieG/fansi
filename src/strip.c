@@ -173,7 +173,7 @@ SEXP FANSI_process(
   for(R_xlen_t i = 0; i < len; ++i) {
     const char * string = CHAR(STRING_ELT(res, i));
     const char * string_start = string;
-    char * buff_start;
+    char * buff_track;
 
     R_len_t len_j = LENGTH(STRING_ELT(res, i));
     int strip_this, to_strip, punct_prev, punct_prev_prev, space_prev,
@@ -267,7 +267,7 @@ SEXP FANSI_process(
         // Make sure buffer is big enough
         if(!strip_this) {
           FANSI_size_buff(buff, len_j + 1);
-          buff_start = buff->buff;
+          buff_track = buff->buff;
           strip_this = 1;
         }
         // Copy the portion up to the point we know should be copied, need
@@ -278,8 +278,8 @@ SEXP FANSI_process(
 
         // Rprintf("Copy bits %d j: %d j_last: %d\n", copy_bits, j, j_last);
         if(copy_bits) {
-          memcpy(buff->buff, string_start, copy_bits);
-          buff->buff += copy_bits;
+          memcpy(buff_track, string_start, copy_bits);
+          buff_track += copy_bits;
         }
         string_start = string + j;
         j_last = j;
@@ -303,11 +303,11 @@ SEXP FANSI_process(
         buff_start
       );
       */
-      *(buff->buff) = 0;
+      *(buff_track) = 0;
 
       SEXP chrsxp = PROTECT(
         mkCharLenCE(
-          buff_start, buff->buff - buff_start, getCharCE(STRING_ELT(input, i))
+          buff->buff, buff_track - buff->buff, getCharCE(STRING_ELT(input, i))
       ) );
       SET_STRING_ELT(res, i, chrsxp);
       UNPROTECT(1);
