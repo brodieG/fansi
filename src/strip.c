@@ -301,7 +301,17 @@ SEXP FANSI_process(
       control_prev = control;
       space_prev = space;
       punct_prev_prev = punct_prev;
-      punct_prev = string[j] == '.' || string[j] == '!' || string[j] == '?';
+
+      // To match what `strwrap` does, we treat as punctuation [.?!], and also
+      // treat them as punctuation if they are followed by closing quotes or
+      // parens.
+
+      punct_prev =
+        (string[j] == '.' || string[j] == '!' || string[j] == '?') ||
+        (
+          punct_prev &&
+          (string[j] == '"' || string[j] == '\'' || string[j] == ')')
+        );
       if(skip_bytes > 1) j += skip_bytes - 1;
     }
     if(strip_this) {
