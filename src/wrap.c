@@ -202,7 +202,6 @@ SEXP FANSI_strwrap(
   int prev_boundary = 0;    // tracks if previous char was a boundary
   int has_boundary = 0;     // tracks if at least one boundary in a line
   int para_start = 1;
-  int written_through = -1; // which byte was last copied
 
   // Need to keep track of where word boundaries start and end due to
   // possibility for multiple elements between words
@@ -211,9 +210,17 @@ SEXP FANSI_strwrap(
   state_start = state_bound = state_bound_end = state;
   R_xlen_t size = 0;
 
-  while(state.string[state.pos_byte]) {
+  while(1) {
     const char cur_chr = state.string[state.pos_byte];
-    struct FANSI_state state_next = FANSI_read_next(state);
+    struct FANSI_state state_next;
+
+    // Can no longer advance after we reach end, but we still need to assemble
+    // strings so we assign `state` even though technically not correct
+
+    int string_over = !state.string[state.pos_byte];
+
+    if(string_over) state_next = state;
+    else state_next = FANSI_read_next(state);
 
     /*
     Rprintf(
@@ -237,6 +244,7 @@ SEXP FANSI_strwrap(
     // necessary given we now process the string?).
 
     if(
+      string_over ||
       (cur_chr == '\n') ||
       (
         state.pos_width >= width_tar &&
@@ -249,8 +257,12 @@ SEXP FANSI_strwrap(
       if(prev_newline && cur_chr == '\n') {
         res_sxp = PROTECT(R_BlankString);
       } else {
-        if(wrap_always && !has_boundary) state_bound = state;
-
+        if(string_over) {
+          state_bound = state;
+          --state_bound.pos_byte;
+        } else if (wrap_always && !has_boundary) {
+          state_bound = state;
+        }
         res_sxp = PROTECT(
           FANSI_writeline(
             state_bound, state_start, buff,
@@ -262,24 +274,24 @@ SEXP FANSI_strwrap(
         );
       }
       if(cur_chr == '\n') prev_newline = 1;
-      // Rprintf("Writing '%s'\n", CHAR(res_sxp));
       SETCDR(char_list, list1(res_sxp));
       char_list = CDR(char_list);
       UNPROTECT(1);
 
       // overflow should be impossible here since string is at most int long
+
       ++size;
+      if(string_over) break;
 
       // Next line will be the beginning of a paragraph
+
       para_start = (cur_chr == '\n');
 
       // Recreate what the state is at the wrap point, including skipping the
       // wrap character if there was one
 
-      written_through = state_bound.pos_byte - 1;
-      if(has_boundary) {
-        state_bound_end = FANSI_read_next(state_bound_end);
-      }
+      if(has_boundary) state_bound_end = FANSI_read_next(state_bound_end);
+
       has_boundary = 0;
       state_bound_end.pos_width = 0;
       state = state_start = state_bound = state_bound_end;
@@ -295,21 +307,7 @@ SEXP FANSI_strwrap(
     state.string + state_start.pos_byte
   );
   */
-  if(written_through < state.pos_byte) {
-    SEXP res_sxp = PROTECT(
-      FANSI_writeline(
-        state, state_start, buff,
-        para_start ? para_start_chr : para_next_chr,
-        para_start ? para_start_size : para_next_size,
-        para_start ? initial.has_utf8 : prefix.has_utf8,
-        is_utf8_loc
-      )
-    );
-    // Rprintf("Writing '%s'\n", CHAR(res_sxp));
-    SETCDR(char_list, list1(res_sxp));
-    ++size;
-    UNPROTECT(1);
-  }
+
   SEXP res = PROTECT(allocVector(STRSXP, size));
   char_list = char_list_start;
   for(R_xlen_t i = 0; i < size; ++i) {
