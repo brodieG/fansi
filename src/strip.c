@@ -177,10 +177,10 @@ SEXP FANSI_process(
 
     R_len_t len_j = LENGTH(STRING_ELT(res, i));
     int strip_this, to_strip, punct_prev, punct_prev_prev, space_prev,
-        space_start, control_prev, para_start;
+        space_start, control_prev, para_start, newlines;
 
     strip_this = to_strip = punct_prev = punct_prev_prev = space_prev =
-      space_start = control_prev = 0;
+      space_start = control_prev = newlines = 0;
 
     para_start = 1;
 
@@ -190,6 +190,8 @@ SEXP FANSI_process(
     // unless after a punct, in which case two can be kept.  Note that we
     // purposefully allow ourselves to read up to the NULL terminator.
     //
+    // Newlines after the first two become like spaces
+    //
     // ANSI esc sequences are not stripped, but the spaces around them should
     // be.  Argh, looks like it will be a major PITA to do.  Basically it is
     // same treatment as a newline, but without actually writing a newline.
@@ -197,24 +199,31 @@ SEXP FANSI_process(
     // to be preserved.  Then, it is just like a non-strip ctrl, except that we
     // need to shift stuff a lot more.
     //
-    // I gues for now we can implement it that way. Seems increasingly likely
+    // I guess for now we can implement it that way. Seems increasingly likely
     // that we're not going to want to strip controls anwyay.
 
     for(R_len_t j = 0; j <= len_j; ++j) {
       int skip_bytes = 1;
-      int space = strip_spc && string[j] == ' ';
+      int newline = string[j] == '\n';
+      if(newline) ++newlines;
+      else if(string[j] != ' ') newlines = 0;
+
+      int space = strip_spc && (
+          (string[j] == ' ') ||
+          (newline && newlines > 2)  // treat newline like space after 1st 2
+        );
       int tab = strip_tab && string[j] == '\t';
       int esc = string[j] == 27;
       int control = strip_ctl &&
         (
           (
             string[j] >= 1 && string[j] < 32 &&
-            string[j] != '\n' && !tab
+            !newline && !tab
           ) ||
           string[j] == 127
         );
 
-      int line_end = (string[j] == '\n' || !string[j]);
+      int line_end = (newline || !string[j]);
 
       int strip =
         (space && space_prev && !punct_prev_prev) ||
