@@ -29,8 +29,15 @@ unitizer_sect("Basic wrap", {
 
   # special preserve of double space
 
-  hello.6 <- 'hello."  there how are you'
-  identical(strwrap(hello.6, width=15), strwrap_csi(hello.6, width=15))
+  hello.6a <- 'hello."  there'
+  identical(strwrap(hello.6, width=40), strwrap_csi(hello.6, width=40))
+
+  hello.6b <- 'hello.\'  there'
+  identical(strwrap(hello.6, width=40), strwrap_csi(hello.6, width=40))
+
+  hello.6c <- 'hello.)  there'
+  identical(strwrap(hello.6, width=40), strwrap_csi(hello.6, width=40))
+
 })
 unitizer_sect("Basic Ansi", {
   hello2.0 <-
