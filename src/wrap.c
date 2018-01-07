@@ -257,10 +257,7 @@ SEXP FANSI_strwrap(
       if(prev_newline && cur_chr == '\n') {
         res_sxp = PROTECT(R_BlankString);
       } else {
-        if(string_over) {
-          state_bound = state;
-          --state_bound.pos_byte;
-        } else if (wrap_always && !has_boundary) {
+        if(string_over || (wrap_always && !has_boundary)) {
           state_bound = state;
         }
         res_sxp = PROTECT(
