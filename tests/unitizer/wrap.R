@@ -30,13 +30,13 @@ unitizer_sect("Basic wrap", {
   # special preserve of double space
 
   hello.6a <- 'hello."  there'
-  identical(strwrap(hello.6, width=40), strwrap_csi(hello.6, width=40))
+  identical(strwrap(hello.6a, width=40), strwrap_csi(hello.6a, width=40))
 
   hello.6b <- 'hello.\'  there'
-  identical(strwrap(hello.6, width=40), strwrap_csi(hello.6, width=40))
+  identical(strwrap(hello.6b, width=40), strwrap_csi(hello.6b, width=40))
 
   hello.6c <- 'hello.)  there'
-  identical(strwrap(hello.6, width=40), strwrap_csi(hello.6, width=40))
+  identical(strwrap(hello.6c, width=40), strwrap_csi(hello.6c, width=40))
 
 })
 unitizer_sect("Basic Ansi", {
@@ -47,6 +47,14 @@ unitizer_sect("Basic Ansi", {
   identical(
     strwrap_csi(strip_ansi(hello2.0), 10), strwrap(strip_ansi(hello2.0), 10)
   )
+})
+unitizer_sect("Long Wrap", {
+  wrap.nrm <- strwrap(strip_ansi(lorem.r.thanks), 40)
+  wrap.csi <- strwrap_csi(lorem.r.thanks, 40)
+
+  identical(wrap.nrm, strip_ansi(wrap.csi))
+  nchar(strip_ansi(wrap.csi))
+  nchar(wrap.csi)
 })
 
 # Things to test:
