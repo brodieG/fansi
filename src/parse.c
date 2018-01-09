@@ -443,6 +443,7 @@ struct FANSI_state_pair FANSI_state_at_position(
         error("Internal Error: Illegal offset type; contact maintainer.");
         // nocov end
     }
+    /*
     Rprintf(
       "cnd %2d x %2d lag %d end %d w (%2d %2d) ansi (%2d %2d) bt (%2d %2d)\n",
       cond, pos, lag, end,
@@ -450,6 +451,7 @@ struct FANSI_state_pair FANSI_state_at_position(
       state.pos_ansi, state_prev.pos_ansi,
       state.pos_byte, state_prev.pos_byte
     );
+    */
     // We still have stuff to process
 
     if(cond > 0) continue;
@@ -498,6 +500,7 @@ struct FANSI_state_pair FANSI_state_at_position(
     state_next_prev = FANSI_read_next(state_next_prev_prev);
     state_next = FANSI_read_next(state_next_prev);
 
+    /*
     Rprintf(
       "npp %d %d %d np %d %d %d n %d %d %d end %d\n",
 
@@ -515,12 +518,15 @@ struct FANSI_state_pair FANSI_state_at_position(
 
       state_next.string[state_next.pos_byte] == 0
     );
+    */
 
     while(!state_next.last_char_width) {
+      /*
       Rprintf(
         "next: width %d ansi %d last %d\n", state_next.pos_width,
         state_next.pos_ansi, state_next.last_char_width
       );
+      */
       state_next_prev_prev = state_next_prev;
       state_next_prev = state_next;
       state_next = FANSI_read_next(state_next);
@@ -530,10 +536,12 @@ struct FANSI_state_pair FANSI_state_at_position(
   }
   // We return the state just before we overshot the end
 
+  /*
   Rprintf(
     "   return pos %2d width %d ansi %2d byte %2d\n",
     pos, state_res.pos_width, state_res.pos_ansi, state_res.pos_byte
   );
+  */
   return (struct FANSI_state_pair){.cur=state_res, .prev=state_prev_buff};
 }
 /*
