@@ -2,7 +2,7 @@ Package: fansi
 Title: ANSI CSI-aware String Functions
 Description: Counterparts to R string manipulation functions that preserve ANSI
     CSI escape sequences while treating them as zero width.
-Version: 0.0.1.9001
+Version: 0.0.1.9002
 Authors@R: c(
     person("Brodie", "Gaslam", email="brodie.gaslam@yahoo.com",
     role=c("aut", "cre")),
