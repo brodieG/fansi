@@ -17,3 +17,42 @@ unitizer_sect("Corner cases", {
   # for input after it is cated
   strip_ansi("hello\033[")
 })
+
+unitizer_sect("Whitespace", {
+  fansi:::process('hello     world')
+  fansi:::process('hello.    world')
+  fansi:::process(c('hello     world', 'hello.    world'))
+  fansi:::process('hello.   world?   moon!   wow.')
+  fansi:::process('  hello')
+  fansi:::process('  hello\n  world')
+  fansi:::process('  hello  \n  world')
+  fansi:::process('  hello world\n  ')
+  fansi:::process('hello.   ')
+  fansi:::process('hello!  ')
+  fansi:::process('hello? ')
+  fansi:::process('hello? ')
+
+  # Tabs / ctrl; newlines remain
+
+  fansi:::process(' \t hello')
+  fansi:::process(' \t hello', strip_tab=FALSE)
+  fansi:::process(' \t\a\r hello')
+  fansi:::process(' \t\a\r hello\n \a\r', strip_ctl=TRUE)
+  fansi:::process(' \t\a\r hello\n \a\r', strip_ctl=TRUE, strip_spc=FALSE)
+
+  # interactiong between punct and ctrl
+
+  fansi:::process('hello.  \r world.')
+  fansi:::process('hello.  \r world.', strip_ctl=TRUE)
+
+  # CSIs
+
+  fansi:::process('hello.  \033[31m world.\033[0m')
+  fansi:::process('hello.  \033[31m world.\033[0m', strip_ctl=TRUE)
+
+  # Make sure we are not inadvertently changing SXPs
+
+  str1 <- c("hello ", " world")
+  fansi:::process(str1)
+  str1
+})

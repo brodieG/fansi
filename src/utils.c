@@ -86,3 +86,51 @@ struct FANSI_csi_pos FANSI_find_csi(const char * x) {
   }
   return res;
 }
+/*
+ * Translates a CHARSXP to a UTF8 char if necessary, otherwise returns
+ * the char
+ */
+const char * FANSI_string_as_utf8(SEXP x, int is_utf8_loc) {
+  if(TYPEOF(x) != CHARSXP)
+    error("Internal Error: expect CHARSXP."); // nocov
+
+  cetype_t enc_type = getCharCE(x);
+
+  if(enc_type == CE_BYTES)
+    error("BYTE encoded strings are not supported.");
+
+  // CE_BYTES is not necessarily of any encoding, don't allow then?
+
+  int translate = !(
+    (is_utf8_loc && enc_type == CE_NATIVE) || enc_type == CE_UTF8
+  );
+  const char * string;
+  /*
+  Rprintf(
+    "About to translate %s (translate? %d)\n",
+    type2char(TYPEOF(x)), translate
+  );
+  */
+  if(translate) string = translateCharUTF8(x);
+  else string = CHAR(x);
+  // Rprintf("done translate\n");
+
+  return string;
+}
+/*
+ * Allocates a fresh chunk of memory if the existing one is not large enough.
+ *
+ * We never intend to re-use what's already in memory so we don't realloc.  If
+ * allocation is needed the buffer will be either twice as large as it was
+ * before, or size `size` if that is greater than twice the size.
+ */
+void FANSI_size_buff(struct FANSI_buff * buff, int size) {
+  // Rprintf("  buff_len %d size %d\n", buff->len, size);
+  if(size > buff->len) {
+    int tmp_double_size = FANSI_add_int(buff->len, buff->len);
+    if(size > tmp_double_size) tmp_double_size = size;
+    buff->len = tmp_double_size;
+    // Rprintf("  Alloc to %d\n", buff->len);
+    buff->buff = R_alloc(buff->len, sizeof(char));
+  }
+}

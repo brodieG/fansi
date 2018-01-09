@@ -17,12 +17,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 */
 #include "fansi.h"
 
-// note we use long int b/c these numbers are going back to R
-
-inline int safe_add(int a, int b) {
-  if(a > INT_MAX - b) error("int overflow");
-  return a + b;
-}
 /*
  * Create a state structure with everything set to zero
  *
@@ -42,7 +36,7 @@ struct FANSI_state FANSI_reset_state(struct FANSI_state state) {
   for(int i = 0; i < 4; i++) state.bg_color_extra[i] = 0;
 
   return  state;
-};
+}
 
 // Can a byte be interpreted as ASCII number?
 
@@ -84,20 +78,13 @@ struct FANSI_tok_res {
 
 struct FANSI_tok_res FANSI_parse_token(const char * string) {
   unsigned int mult, val;
-  int len, len_prev;
-  int success, last;
-  int limit = 5;
+  int len, success, last;
   success = len = val = last = 0;
   mult = 1;
 
-  while(FANSI_is_num(string) && (--limit)) {
+  while(FANSI_is_num(string)) {
     ++string;
-    len_prev = len;
-    ++len;
-    if(len < len_prev)
-      error(
-        "Internal Error: overflow trying to parse ANSI esc seq token."
-      );
+    len = FANSI_add_int(len, 1);
   }
   // Only succed if number isn't too long and terminates in ';' or 'm'
 
@@ -142,7 +129,8 @@ static struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode)
   // First, figure out if we are in true color or palette mode
 
   res = FANSI_parse_token(&state.string[state.pos_byte]);
-  state.pos_byte = safe_add(state.pos_byte, safe_add(res.len, 1));
+  int res_len_inc = FANSI_add_int(res.len, 1);
+  state.pos_byte = FANSI_add_int(state.pos_byte, res_len_inc);
   state.last = res.last;
   if(res.success && ((res.val != 2 && res.val != 5) || res.last)) {
     // weird case, we don't want to advance the position here because `res.val`
@@ -166,7 +154,7 @@ static struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode)
 
     for(int i = 0; i < i_max; ++i) {
       res = FANSI_parse_token(&state.string[state.pos_byte]);
-      state.pos_byte = safe_add(state.pos_byte, safe_add(res.len, 1));
+      state.pos_byte = FANSI_add_int(state.pos_byte, FANSI_add_int(res.len, 1));
       state.last = res.last;
       if(res.success) {
         int early_end = res.last && i < (i_max - 1);
@@ -215,12 +203,12 @@ static struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode)
  *   advances the ESC[ bit, although in theory as per #4 should probably advance
  *   all the way for any CSI sequence, not just SGR
  */
-static struct FANSI_state FANSI_parse_sgr(struct FANSI_state state) {
+struct FANSI_state FANSI_parse_sgr(struct FANSI_state state) {
   // make a copy of the struct so we don't modify state if it turns out
   // this is an invalid SGR
 
   int pos_byte_prev = state.pos_byte;
-  state.pos_byte = safe_add(state.pos_byte, 2);
+  state.pos_byte = FANSI_add_int(state.pos_byte, 2);
   struct FANSI_state state_tmp = state;
   struct FANSI_tok_res tok_res = {.success = 0};
 
@@ -229,7 +217,8 @@ static struct FANSI_state FANSI_parse_sgr(struct FANSI_state state) {
 
   do {
     tok_res = FANSI_parse_token(&state.string[state.pos_byte]);
-    state.pos_byte = safe_add(state.pos_byte, safe_add(tok_res.len, 1));
+    state.pos_byte =
+      FANSI_add_int(state.pos_byte, FANSI_add_int(tok_res.len, 1));
     state.last = tok_res.last;
 
     if(!tok_res.success) {
@@ -337,23 +326,32 @@ static struct FANSI_state FANSI_read_utf8(struct FANSI_state state) {
   state.last_char_width = disp_size;
   state.pos_width += disp_size;
   state.pos_width_target += disp_size;
+  state.has_utf8 = 1;
+  return state;
+}
+/*
+ * Read a Character Off when we know it is an ascii char, this is so we have a
+ * consistent way of advancing state.
+ */
+struct FANSI_state FANSI_read_ascii(struct FANSI_state state) {
+  ++state.pos_byte;
+  ++state.pos_ansi;
+  ++state.pos_raw;
+  ++state.pos_width;
+  ++state.pos_width_target;
+  state.last_char_width = 1;
   return state;
 }
 /*
  * Read a Character Off and Update State
  */
-static struct FANSI_state FANSI_read_next(struct FANSI_state state) {
+struct FANSI_state FANSI_read_next(struct FANSI_state state) {
   const char * string = state.string;
   if(string[state.pos_byte] >  0) {
     // Character is in the 1-127 range
     if(string[state.pos_byte] != 27) {
       // Normal ASCII character
-      ++state.pos_byte;
-      ++state.pos_ansi;
-      ++state.pos_raw;
-      ++state.pos_width;
-      ++state.pos_width_target;
-      state.last_char_width = 1;
+      state = FANSI_read_ascii(state);
     } else if (
       string[state.pos_byte] == 27 && string[state.pos_byte + 1] == '['
     ) {
@@ -552,14 +550,16 @@ struct FANSI_state_pair FANSI_state_at_position(
   return (struct FANSI_state_pair){.cur=state_res, .prev=state_prev_buff};
 }
 /*
- * We always include the size of the delimiter
+ * We always include the size of the delimiter; could be a problem that this
+ * isn't the actual size, but rather the maximum size (i.e. we always assume
+ * three bytes even if the numbers don't get into three digits).
  */
-unsigned int FANSI_color_size(int color, int * color_extra) {
-  unsigned int size = 0;
+int FANSI_color_size(int color, int * color_extra) {
+  int size = 0;
   if(color == 8 && color_extra[0] == 2) {
     size = 3 + 2 + 4 * 3;
   } else if (color == 8 && color_extra[0] == 5) {
-    size = 3 + 2 + 4 * 3;
+    size = 3 + 2 + 4;
   } else if (color == 8) {
     error("Internal Error: unexpected compound color format");
   } else if (color >= 0 && color < 10) {
@@ -568,6 +568,39 @@ unsigned int FANSI_color_size(int color, int * color_extra) {
     error("Internal Error: unexpected compound color format 2");
   }
   return size;
+}
+/*
+ * Computes how many bytes we need to write out a state
+ *
+ * No overflow worries here b/c ints are 32bit+
+ *
+ * Includes the ESC[m size, but not the NULL terminator, so if you are writing
+ * to a string that has nothing else in it remember to allocate an extra byte
+ * for the NULL terminator.
+ */
+int FANSI_state_size(struct FANSI_state state) {
+  int color_size = FANSI_color_size(state.color, state.color_extra);
+  int bg_color_size = FANSI_color_size(state.bg_color, state.bg_color_extra);
+
+  // styles are stored as bits
+
+  int style_size = 0;
+  for(int i = 1; i < 10; ++i){
+    style_size += ((state.style & (1 << i)) > 0) * 2;
+  }
+  /*
+  Rprintf(
+      "%d %d %d %d %d %d %d %d %d\n",
+    (state.style & 2) > 0, (state.style & 4) > 0, (state.style & 8) > 0,
+    (state.style & 16) > 0, (state.style & 32) > 0, (state.style & 64) > 0,
+    (state.style & 128) > 0, (state.style & 256) > 0, (state.style & 512) > 0);
+
+  Rprintf(
+    "  size - style: %d %d %d color: %d bg_color: %d\n", state.style,
+    style_size, (state.style & 128) > 0, color_size, bg_color_size
+  );
+  */
+  return color_size + bg_color_size + style_size + 2;  // +2 for ESC[
 }
 /*
  * Compute length in characters for a number
@@ -622,55 +655,59 @@ unsigned int FANSI_color_write(
   return str_off;
 }
 /*
- * Generate the ANSI tag corresponding to the state
+ * We split this part out because in some cases we want to modify pre-existing
+ * buffers
+ *
+ * Modifies the buffer by reference.
+ *
+ * DOES NOT ADD NULL TERMINATOR.
  */
-const char * FANSI_state_as_chr(struct FANSI_state state) {
+void FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
+  int str_pos = 0;
+  buff[str_pos++] = 27;    // ESC
+  buff[str_pos++] = '[';
+
+  // styles
+
+  for(unsigned int i = 1; i < 10; i++) {
+    if((1U << i) & state.style) {
+      buff[str_pos++] = '0' + i;
+      buff[str_pos++] = ';';
+  } }
+  // colors
+
+  str_pos += FANSI_color_write(
+    &(buff[str_pos]), state.color, state.color_extra, 3
+  );
+  str_pos += FANSI_color_write(
+    &(buff[str_pos]), state.bg_color, state.bg_color_extra, 4
+  );
+  // Finalize (note, in some cases we slightly overrallocate)
+
+  if(str_pos > buff_len)
+    // nocov start
+    error(
+      "Internal Error: tag mem allocation mismatch (%u, %u)", str_pos, buff_len
+    );
+    // nocov end
+  buff[str_pos - 1] = 'm';
+}
+/*
+ * Generate the ANSI tag corresponding to the state and write it out as a NULL
+ * terminated string.
+ */
+char * FANSI_state_as_chr(struct FANSI_state state) {
   // First pass computes total size of tag; we need to account for the separtor
   // as well
 
-  unsigned int tag_len = 0;
-  for(unsigned int i = 1; i < 10; i++) tag_len += ((1U << i) & state.style) * 2;
-
-  tag_len += FANSI_color_size(state.color, state.color_extra);
-  tag_len += FANSI_color_size(state.bg_color, state.bg_color_extra);
+  int tag_len = FANSI_state_size(state);
 
   // Now allocate and generate tag
 
-  const char * tag_res = "";
-  if(tag_len) {
-    tag_len += 3;  // for CSI, and ending NULL
-    char * tag_tmp = R_alloc(tag_len + 1 + 2, sizeof(char));
-    unsigned int str_pos = 0;
-    tag_tmp[str_pos++] = 27;    // ESC
-    tag_tmp[str_pos++] = '[';
-
-    // styles
-
-    for(unsigned int i = 1; i < 10; i++) {
-      if((1U << i) & state.style) {
-        tag_tmp[str_pos++] = '0' + i;
-        tag_tmp[str_pos++] = ';';
-      }
-    }
-    // colors
-
-    str_pos += FANSI_color_write(
-      &(tag_tmp[str_pos]), state.color, state.color_extra, 3
-    );
-    str_pos += FANSI_color_write(
-      &(tag_tmp[str_pos]), state.bg_color, state.bg_color_extra, 4
-    );
-    // Finalize (note, in some cases we slightly overrallocate)
-
-    if(str_pos + 1 > tag_len)
-      error(
-        "Internal Error: tag mem allocation mismatch (%u, %u)", str_pos, tag_len
-      );
-    tag_tmp[str_pos - 1] = 'm';
-    tag_tmp[str_pos] = '\0';
-    tag_res = (const char *) tag_tmp;
-  }
-  return tag_res;
+  char * tag_tmp = R_alloc(tag_len + 1, sizeof(char));
+  FANSI_csi_write(tag_tmp, state, tag_len);
+  tag_tmp[tag_len] = 0;
+  return tag_tmp;
 }
 /*
  * Determine whether two state structs have same style
@@ -694,6 +731,9 @@ int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
     target.bg_color_extra[3] == current.bg_color_extra[3]
   );
 }
+int FANSI_state_has_style(struct FANSI_state state) {
+  return state.style || state.color >= 0 || state.bg_color >= 0;
+}
 /*
  * R interface for FANSI_state_at_position
  *
@@ -715,9 +755,9 @@ SEXP FANSI_state_at_pos_ext(
   if(XLENGTH(pos) != XLENGTH(ends))
     error("Argument `ends` must be the same length as `pos`");
 
-  const int res_cols = 4;
   R_xlen_t len = XLENGTH(pos);
 
+  const int res_cols = 4;  // if change this, need to change rownames init
   if(len > R_XLEN_T_MAX / res_cols) {
     error("Argument `pos` may be no longer than R_XLEN_T_MAX / %d", res_cols);
   }
@@ -732,7 +772,7 @@ SEXP FANSI_state_at_pos_ext(
   // structures are likely to be much slower.  We could encode most color values
   // into one int but it would be a little annoying to retrieve them
 
-  const char * rownames[res_cols] = {
+  const char * rownames[4] = { // make sure lines up with res_cols
     "pos.byte", "pos.raw", "pos.ansi", "pos.width"
   };
   SEXP res_rn = PROTECT(allocVector(STRSXP, res_cols));
@@ -756,13 +796,9 @@ SEXP FANSI_state_at_pos_ext(
   SEXP res_str = PROTECT(allocVector(STRSXP, len));
   SEXP res_chr, res_chr_prev = PROTECT(mkChar(""));
 
-  int utf8_loc = FANSI_is_utf8_loc();
-  cetype_t enc_type = getCharCE(text_chr);
-  int translate = !(
-    (utf8_loc && enc_type == CE_NATIVE) || enc_type == CE_BYTES ||
-    enc_type == CE_UTF8
-  );
-  if(translate) string = translateCharUTF8(text_chr);
+  int is_utf8_loc = FANSI_is_utf8_loc();
+  string = FANSI_string_as_utf8(text_chr, is_utf8_loc);
+
   state.string = state_prev.string = string;
   state_pair.cur = state;
   state_pair.prev = state_prev;
@@ -797,10 +833,11 @@ SEXP FANSI_state_at_pos_ext(
 
       // Record position, but set them back to 1 index
 
-      INTEGER(res_mx)[i * res_cols + 0] = safe_add(state.pos_byte, 1);
-      INTEGER(res_mx)[i * res_cols + 1] = safe_add(state.pos_raw, 1);
-      INTEGER(res_mx)[i * res_cols + 2] = safe_add(state.pos_ansi, 1);
-      INTEGER(res_mx)[i * res_cols + 3] = safe_add(state.pos_width_target, 1);
+      INTEGER(res_mx)[i * res_cols + 0] = FANSI_add_int(state.pos_byte, 1);
+      INTEGER(res_mx)[i * res_cols + 1] = FANSI_add_int(state.pos_raw, 1);
+      INTEGER(res_mx)[i * res_cols + 2] = FANSI_add_int(state.pos_ansi, 1);
+      INTEGER(res_mx)[i * res_cols + 3] =
+        FANSI_add_int(state.pos_width_target, 1);
 
       // Record color tag if state changed
 

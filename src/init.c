@@ -6,8 +6,9 @@ static const
 R_CallMethodDef callMethods[] = {
   {"has_csi", (DL_FUNC) &FANSI_has, 1},
   {"strip_csi", (DL_FUNC) &FANSI_strip, 1},
+  {"strwrap_csi", (DL_FUNC) &FANSI_strwrap_ext, 13},
   {"state_at_pos_ext", (DL_FUNC) &FANSI_state_at_pos_ext, 5},
-
+  {"process", (DL_FUNC) &FANSI_process_ext, 4},
   {"check_assumptions", (DL_FUNC) &FANSI_check_assumptions, 0},
 
   {NULL, NULL, 0}
