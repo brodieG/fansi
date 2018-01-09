@@ -377,16 +377,15 @@ struct FANSI_state FANSI_read_next(struct FANSI_state state) {
  * with latin-1 since those are all single byte single width, but right now
  * that's not implemented.
  *
+ * This function is designed to be called iteratively on the same string with
+ * monotonically increasing values of `pos`.  This allows us to compute state at
+ * multiple positions while re-using the work we did on the earlier positions.
+ * To transfer the state info from earlier positions we use a FANSI_state_pair
+ * object that contains the state info from the previous compuation.
+ *
  * @param pos the raw position (i.e. treating parseable ansi tags as zero
  *   length) we want the state for
- * @param string the string we want to compute the state for.  NOTE: this is
- *   assumed to NULL terminated, which should be a safe assumption since the
- *   source of these strings are going to be CHARSXPs.
- * @param struct the state to start from, it should be either something produced
- *   by `state_init`, or the result of running this function on the same string,
- *   but for a position earlier in the string.  The latter use case avoids us
- *   having to reparse the string if we've already retrieved the state at an
- *   earlier position.
+ * @param state_pair two states (see description)
  * @param int type whether to use character (0), width (1), or byte (2) when
  *   computing the position
  * @param lag in cases where requested breakpoint is not feasible because of
@@ -399,11 +398,6 @@ struct FANSI_state FANSI_read_next(struct FANSI_state state) {
 struct FANSI_state_pair FANSI_state_at_position(
     int pos, struct FANSI_state_pair state_pair, int type, int lag, int end
 ) {
-  // Sanity checks, first one is a little strict since we could have an
-  // identical copy of the string, but that should not happen in intended use
-  // case since we'll be uniqueing prior; ultimtely we should just make the
-  // string part of the state and get rid of the string arg
-
   struct FANSI_state state = state_pair.cur;
   if(pos < state.pos_raw)
     error(
@@ -449,14 +443,13 @@ struct FANSI_state_pair FANSI_state_at_position(
         error("Internal Error: Illegal offset type; contact maintainer.");
         // nocov end
     }
-    /*
     Rprintf(
       "cnd %2d x %2d lag %d end %d w (%2d %2d) ansi (%2d %2d) bt (%2d %2d)\n",
-      cond, pos, lag, end, state.pos_width, state_prev.pos_width,
+      cond, pos, lag, end, 
+      state.pos_width, state_prev.pos_width,
       state.pos_ansi, state_prev.pos_ansi,
       state.pos_byte, state_prev.pos_byte
     );
-    */
     // We still have stuff to process
 
     if(cond > 0) continue;
@@ -505,7 +498,6 @@ struct FANSI_state_pair FANSI_state_at_position(
     state_next_prev = FANSI_read_next(state_next_prev_prev);
     state_next = FANSI_read_next(state_next_prev);
 
-    /*
     Rprintf(
       "npp %d %d %d np %d %d %d n %d %d %d end %d\n",
 
@@ -523,15 +515,12 @@ struct FANSI_state_pair FANSI_state_at_position(
 
       state_next.string[state_next.pos_byte] == 0
     );
-    */
 
     while(!state_next.last_char_width) {
-      /*
       Rprintf(
         "next: width %d ansi %d last %d\n", state_next.pos_width,
         state_next.pos_ansi, state_next.last_char_width
       );
-      */
       state_next_prev_prev = state_next_prev;
       state_next_prev = state_next;
       state_next = FANSI_read_next(state_next);
@@ -541,12 +530,10 @@ struct FANSI_state_pair FANSI_state_at_position(
   }
   // We return the state just before we overshot the end
 
-  /*
   Rprintf(
     "   return pos %2d width %d ansi %2d byte %2d\n",
     pos, state_res.pos_width, state_res.pos_ansi, state_res.pos_byte
   );
-  */
   return (struct FANSI_state_pair){.cur=state_res, .prev=state_prev_buff};
 }
 /*
