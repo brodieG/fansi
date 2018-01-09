@@ -212,7 +212,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current);
   int FANSI_state_has_style(struct FANSI_state state);
   int FANSI_state_size(struct FANSI_state state);
-  void FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len);
+  int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len);
   struct FANSI_state FANSI_read_ascii(struct FANSI_state state);
   struct FANSI_state FANSI_read_next(struct FANSI_state state);
 
@@ -220,8 +220,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
    * Add integers while checking for overflow
    *
    * Note we are stricter than necessary when y is negative because we want to
-   * count hitting INT_MIN as an overflow so that we can use the integer values in
-   * R where INT_MIN is NA.
+   * count hitting INT_MIN as an overflow so that we can use the integer values
+   * in R where INT_MIN is NA.
    */
   inline int FANSI_add_int(int x, int y) {
     if((y >= 0 && (x > INT_MAX - y)) || (y < 0 && (x <= INT_MIN - y)))

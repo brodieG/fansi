@@ -445,7 +445,7 @@ struct FANSI_state_pair FANSI_state_at_position(
     }
     Rprintf(
       "cnd %2d x %2d lag %d end %d w (%2d %2d) ansi (%2d %2d) bt (%2d %2d)\n",
-      cond, pos, lag, end, 
+      cond, pos, lag, end,
       state.pos_width, state_prev.pos_width,
       state.pos_ansi, state_prev.pos_ansi,
       state.pos_byte, state_prev.pos_byte
@@ -600,7 +600,7 @@ unsigned int FANSI_num_chr_len(unsigned int num) {
 /*
  * Write extra color info to string
  *
- * Modifies string by reference, returns next position in string.  This assumes
+ * Modifies string by reference.  This assumes
  * that the 3 or 4 has been written already and that we're not in a -1 color
  * state that shouldn't have color.
  *
@@ -648,8 +648,10 @@ unsigned int FANSI_color_write(
  * Modifies the buffer by reference.
  *
  * DOES NOT ADD NULL TERMINATOR.
+ *
+ * return how many bytes were written
  */
-void FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
+int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
   int str_pos = 0;
   buff[str_pos++] = 27;    // ESC
   buff[str_pos++] = '[';
@@ -678,22 +680,25 @@ void FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
     );
     // nocov end
   buff[str_pos - 1] = 'm';
+  return str_pos;
 }
 /*
  * Generate the ANSI tag corresponding to the state and write it out as a NULL
  * terminated string.
  */
 char * FANSI_state_as_chr(struct FANSI_state state) {
-  // First pass computes total size of tag; we need to account for the separtor
-  // as well
+  // First pass computes total size of tag; we need to account for the
+  // separator as well
 
   int tag_len = FANSI_state_size(state);
 
   // Now allocate and generate tag
 
   char * tag_tmp = R_alloc(tag_len + 1, sizeof(char));
-  FANSI_csi_write(tag_tmp, state, tag_len);
-  tag_tmp[tag_len] = 0;
+  int tag_len_written = FANSI_csi_write(tag_tmp, state, tag_len);
+  if(tag_len_written > tag_len)
+    error("Internal Error: CSI written larger than expected."); // nocov
+  tag_tmp[tag_len_written] = 0;
   return tag_tmp;
 }
 /*
