@@ -203,6 +203,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   // Utilities
 
   SEXP FANSI_check_assumptions();
+  SEXP FANSI_digits_in_int_ext(SEXP y);
+
   struct FANSI_state FANSI_parse_sgr(struct FANSI_state state);
   void FANSI_size_buff(struct FANSI_buff * buff, int size);
   int FANSI_is_utf8_loc();
