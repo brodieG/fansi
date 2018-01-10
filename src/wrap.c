@@ -379,8 +379,7 @@ SEXP FANSI_strwrap_ext(
   // Set up the buffer, this will be created in FANSI_strwrap, but we want a
   // handle for it here so we can re-use
 
-  struct FANSI_buff buff;
-  buff.len = 0;  // should be implicit
+  struct FANSI_buff buff = {.len = 0};
 
   // Strip control/whitespaces as needed
 

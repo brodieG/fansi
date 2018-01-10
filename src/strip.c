@@ -339,7 +339,7 @@ SEXP FANSI_process(
 SEXP FANSI_process_ext(
   SEXP input, SEXP strip_spc, SEXP strip_tab, SEXP strip_ctl
 ) {
-  struct FANSI_buff buff;
+  struct FANSI_buff buff = {.len=0};
 
   return FANSI_process(
     input, asInteger(strip_spc), asInteger(strip_tab), asInteger(strip_ctl),
