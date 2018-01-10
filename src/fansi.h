@@ -209,6 +209,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   void FANSI_size_buff(struct FANSI_buff * buff, int size);
   int FANSI_is_utf8_loc();
   int FANSI_utf8clen(char c);
+  int FANSI_digits_in_int(int x);
   const char * FANSI_string_as_utf8(SEXP x, int is_utf8_loc);
   struct FANSI_state FANSI_state_init();
   int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current);

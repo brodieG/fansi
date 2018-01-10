@@ -552,9 +552,13 @@ struct FANSI_state_pair FANSI_state_at_position(
 int FANSI_color_size(int color, int * color_extra) {
   int size = 0;
   if(color == 8 && color_extra[0] == 2) {
-    size = 3 + 2 + 4 * 3;
+    size = 3 + 2 +
+      FANSI_digits_in_int(color_extra[1]) + 1 +
+      FANSI_digits_in_int(color_extra[2]) + 1 +
+      FANSI_digits_in_int(color_extra[3]) + 1;
   } else if (color == 8 && color_extra[0] == 5) {
-    size = 3 + 2 + 4;
+    size = 3 + 2 +
+      FANSI_digits_in_int(color_extra[1]) + 1;
   } else if (color == 8) {
     error("Internal Error: unexpected compound color format");
   } else if (color >= 0 && color < 10) {
