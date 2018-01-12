@@ -38,7 +38,7 @@ static const char * make_pre(const char * pre_chr, int pre_len, int spaces) {
   int alloc_size = FANSI_add_int(FANSI_add_int(pre_len, spaces), 1);
   char * res_start = "";
   if(alloc_size > 1) {
-    Rprintf("Allocating pre size %d\n", alloc_size);
+    // Rprintf("Allocating pre size %d\n", alloc_size);
     char * res = res_start = R_alloc(alloc_size, sizeof(char));
     for(int i = 0; i < spaces; ++i) *(res++) = ' ';
     memcpy(res, pre_chr, pre_len);
@@ -58,9 +58,7 @@ SEXP FANSI_writeline(
   struct FANSI_buff * buff,
   const char * pre, int pre_size, int pre_has_utf8, int is_utf8_loc
 ) {
-  /*
-  Rprintf("  Writeline start with buff %p\n", *buff);
-  */
+  // Rprintf("  Writeline start with buff %p\n", *buff);
 
   // Check if we are in a CSI state b/c if we are we neeed extra room for
   // the closing state tag
@@ -174,6 +172,7 @@ SEXP FANSI_strwrap(
   struct FANSI_buff * buff,
   int is_utf8_loc
 ) {
+  // Rprintf("start wrap\n");
   struct FANSI_state state = FANSI_state_init();
   state.string = x;
 

@@ -17,6 +17,17 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 */
 
 #include "fansi.h"
+/*
+ * Assuming encoding is UTF-8, are there actually any non-ASCII chars in
+ * string.
+ *
+ * `x` must be NULL terminated.
+ */
+
+int FANSI_has_utf8(const char * x) {
+  while(*x) {if(*(x++) > 127) return 1;}
+  return 0;
+}
 
 int FANSI_is_utf8_loc() {
   SEXP sys_getlocale = PROTECT(install("Sys.getlocale"));
@@ -61,6 +72,36 @@ int FANSI_is_utf8_loc() {
   return(res);
 }
 
+/*
+ * Translates a CHARSXP to a UTF8 char if necessary, otherwise returns
+ * the char
+ */
+const char * FANSI_string_as_utf8(SEXP x, int is_utf8_loc) {
+  if(TYPEOF(x) != CHARSXP)
+    error("Internal Error: expect CHARSXP."); // nocov
+
+  cetype_t enc_type = getCharCE(x);
+
+  if(enc_type == CE_BYTES)
+    error("BYTE encoded strings are not supported.");
+
+  // CE_BYTES is not necessarily of any encoding, don't allow then?
+
+  int translate = !(
+    (is_utf8_loc && enc_type == CE_NATIVE) || enc_type == CE_UTF8
+  );
+  const char * string;
+  /*
+  Rprintf(
+    "About to translate %s (translate? %d)\n",
+    type2char(TYPEOF(x)), translate
+  );
+  */
+  if(translate) string = translateCharUTF8(x);
+  else string = CHAR(x);
+
+  return string;
+}
 
 /*
  * Code copied directly from src/main/util.c@1186, this code is actually not
