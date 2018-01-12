@@ -22,9 +22,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #ifndef _FANSI_H
 #define _FANSI_H
 
-// concept borrowed from utf8-lite
-
-  inline void FANSI_interrupt(int i) {if(!(i % 1000)) R_CheckUserInterrupt();}
 
   /*
    * Buffer used for writing strings
@@ -203,41 +200,23 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   // Utilities
 
   SEXP FANSI_check_assumptions();
+  SEXP FANSI_digits_in_int_ext(SEXP y);
+
   struct FANSI_state FANSI_parse_sgr(struct FANSI_state state);
   void FANSI_size_buff(struct FANSI_buff * buff, int size);
   int FANSI_is_utf8_loc();
   int FANSI_utf8clen(char c);
+  int FANSI_digits_in_int(int x);
   const char * FANSI_string_as_utf8(SEXP x, int is_utf8_loc);
   struct FANSI_state FANSI_state_init();
   int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current);
   int FANSI_state_has_style(struct FANSI_state state);
   int FANSI_state_size(struct FANSI_state state);
-  void FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len);
+  int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len);
   struct FANSI_state FANSI_read_ascii(struct FANSI_state state);
   struct FANSI_state FANSI_read_next(struct FANSI_state state);
-
-  /*
-   * Add integers while checking for overflow
-   *
-   * Note we are stricter than necessary when y is negative because we want to
-   * count hitting INT_MIN as an overflow so that we can use the integer values in
-   * R where INT_MIN is NA.
-   */
-  inline int FANSI_add_int(int x, int y) {
-    if((y >= 0 && (x > INT_MAX - y)) || (y < 0 && (x <= INT_MIN - y)))
-      error ("Integer overflow");
-    return x + y;
-  }
-  /*
-   * Assuming encoding is UTF-8, are there actually any non-ASCII chars in
-   * string.
-   *
-   * `x` must be NULL terminated.
-   */
-
-  inline int FANSI_has_utf8(const char * x) {
-    while(x) {if(*(x++) > 127) return 1;}
-    return 0;
-  }
+  int FANSI_add_int(int x, int y);
+  int FANSI_has_utf8(const char * x);
+  void FANSI_interrupt(int i);
 
 #endif

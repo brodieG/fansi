@@ -87,37 +87,6 @@ struct FANSI_csi_pos FANSI_find_csi(const char * x) {
   return res;
 }
 /*
- * Translates a CHARSXP to a UTF8 char if necessary, otherwise returns
- * the char
- */
-const char * FANSI_string_as_utf8(SEXP x, int is_utf8_loc) {
-  if(TYPEOF(x) != CHARSXP)
-    error("Internal Error: expect CHARSXP."); // nocov
-
-  cetype_t enc_type = getCharCE(x);
-
-  if(enc_type == CE_BYTES)
-    error("BYTE encoded strings are not supported.");
-
-  // CE_BYTES is not necessarily of any encoding, don't allow then?
-
-  int translate = !(
-    (is_utf8_loc && enc_type == CE_NATIVE) || enc_type == CE_UTF8
-  );
-  const char * string;
-  /*
-  Rprintf(
-    "About to translate %s (translate? %d)\n",
-    type2char(TYPEOF(x)), translate
-  );
-  */
-  if(translate) string = translateCharUTF8(x);
-  else string = CHAR(x);
-  // Rprintf("done translate\n");
-
-  return string;
-}
-/*
  * Allocates a fresh chunk of memory if the existing one is not large enough.
  *
  * We never intend to re-use what's already in memory so we don't realloc.  If
@@ -134,3 +103,46 @@ void FANSI_size_buff(struct FANSI_buff * buff, int size) {
     buff->buff = R_alloc(buff->len, sizeof(char));
   }
 }
+/*
+ * Compute how many digits are in a number
+ *
+ * Add an extra character for negative integers.
+ */
+
+int FANSI_digits_in_int(int x) {
+  int num = 1;
+  if(x < 0) {
+    ++num;
+    x = -x;
+  }
+  while((x = (x / 10))) ++num;
+  return num;
+}
+SEXP FANSI_digits_in_int_ext(SEXP y) {
+  if(TYPEOF(y) != INTSXP) error("Internal Error: required int.");
+
+  R_xlen_t ylen = XLENGTH(y);
+  SEXP res = PROTECT(allocVector(INTSXP, ylen));
+
+  for(R_xlen_t i = 0; i < ylen; ++i)
+    INTEGER(res)[i] = FANSI_digits_in_int(INTEGER(y)[i]);
+
+  UNPROTECT(1);
+  return(res);
+}
+/*
+ * Add integers while checking for overflow
+ *
+ * Note we are stricter than necessary when y is negative because we want to
+ * count hitting INT_MIN as an overflow so that we can use the integer values
+ * in R where INT_MIN is NA.
+ */
+int FANSI_add_int(int x, int y) {
+  if((y >= 0 && (x > INT_MAX - y)) || (y < 0 && (x <= INT_MIN - y)))
+    error ("Integer overflow");
+  return x + y;
+}
+
+// concept borrowed from utf8-lite
+
+void FANSI_interrupt(int i) {if(!(i % 1000)) R_CheckUserInterrupt();}

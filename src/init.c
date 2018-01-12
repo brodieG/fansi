@@ -10,6 +10,7 @@ R_CallMethodDef callMethods[] = {
   {"state_at_pos_ext", (DL_FUNC) &FANSI_state_at_pos_ext, 5},
   {"process", (DL_FUNC) &FANSI_process_ext, 4},
   {"check_assumptions", (DL_FUNC) &FANSI_check_assumptions, 0},
+  {"digits_in_int", (DL_FUNC) &FANSI_digits_in_int_ext, 1},
 
   {NULL, NULL, 0}
 };

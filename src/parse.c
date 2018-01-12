@@ -377,16 +377,15 @@ struct FANSI_state FANSI_read_next(struct FANSI_state state) {
  * with latin-1 since those are all single byte single width, but right now
  * that's not implemented.
  *
+ * This function is designed to be called iteratively on the same string with
+ * monotonically increasing values of `pos`.  This allows us to compute state at
+ * multiple positions while re-using the work we did on the earlier positions.
+ * To transfer the state info from earlier positions we use a FANSI_state_pair
+ * object that contains the state info from the previous compuation.
+ *
  * @param pos the raw position (i.e. treating parseable ansi tags as zero
  *   length) we want the state for
- * @param string the string we want to compute the state for.  NOTE: this is
- *   assumed to NULL terminated, which should be a safe assumption since the
- *   source of these strings are going to be CHARSXPs.
- * @param struct the state to start from, it should be either something produced
- *   by `state_init`, or the result of running this function on the same string,
- *   but for a position earlier in the string.  The latter use case avoids us
- *   having to reparse the string if we've already retrieved the state at an
- *   earlier position.
+ * @param state_pair two states (see description)
  * @param int type whether to use character (0), width (1), or byte (2) when
  *   computing the position
  * @param lag in cases where requested breakpoint is not feasible because of
@@ -399,11 +398,6 @@ struct FANSI_state FANSI_read_next(struct FANSI_state state) {
 struct FANSI_state_pair FANSI_state_at_position(
     int pos, struct FANSI_state_pair state_pair, int type, int lag, int end
 ) {
-  // Sanity checks, first one is a little strict since we could have an
-  // identical copy of the string, but that should not happen in intended use
-  // case since we'll be uniqueing prior; ultimtely we should just make the
-  // string part of the state and get rid of the string arg
-
   struct FANSI_state state = state_pair.cur;
   if(pos < state.pos_raw)
     error(
@@ -452,7 +446,8 @@ struct FANSI_state_pair FANSI_state_at_position(
     /*
     Rprintf(
       "cnd %2d x %2d lag %d end %d w (%2d %2d) ansi (%2d %2d) bt (%2d %2d)\n",
-      cond, pos, lag, end, state.pos_width, state_prev.pos_width,
+      cond, pos, lag, end,
+      state.pos_width, state_prev.pos_width,
       state.pos_ansi, state_prev.pos_ansi,
       state.pos_byte, state_prev.pos_byte
     );
@@ -557,9 +552,13 @@ struct FANSI_state_pair FANSI_state_at_position(
 int FANSI_color_size(int color, int * color_extra) {
   int size = 0;
   if(color == 8 && color_extra[0] == 2) {
-    size = 3 + 2 + 4 * 3;
+    size = 3 + 2 +
+      FANSI_digits_in_int(color_extra[1]) + 1 +
+      FANSI_digits_in_int(color_extra[2]) + 1 +
+      FANSI_digits_in_int(color_extra[3]) + 1;
   } else if (color == 8 && color_extra[0] == 5) {
-    size = 3 + 2 + 4;
+    size = 3 + 2 +
+      FANSI_digits_in_int(color_extra[1]) + 1;
   } else if (color == 8) {
     error("Internal Error: unexpected compound color format");
   } else if (color >= 0 && color < 10) {
@@ -603,17 +602,9 @@ int FANSI_state_size(struct FANSI_state state) {
   return color_size + bg_color_size + style_size + 2;  // +2 for ESC[
 }
 /*
- * Compute length in characters for a number
- */
-unsigned int FANSI_num_chr_len(unsigned int num) {
-  // + 1.00001 to account for 0
-  unsigned int log_len = (unsigned int) ceil(log10(num + 1.00001));
-  return log_len;
-}
-/*
  * Write extra color info to string
  *
- * Modifies string by reference, returns next position in string.  This assumes
+ * Modifies string by reference.  This assumes
  * that the 3 or 4 has been written already and that we're not in a -1 color
  * state that shouldn't have color.
  *
@@ -661,8 +652,10 @@ unsigned int FANSI_color_write(
  * Modifies the buffer by reference.
  *
  * DOES NOT ADD NULL TERMINATOR.
+ *
+ * return how many bytes were written
  */
-void FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
+int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
   int str_pos = 0;
   buff[str_pos++] = 27;    // ESC
   buff[str_pos++] = '[';
@@ -691,22 +684,25 @@ void FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
     );
     // nocov end
   buff[str_pos - 1] = 'm';
+  return str_pos;
 }
 /*
  * Generate the ANSI tag corresponding to the state and write it out as a NULL
  * terminated string.
  */
 char * FANSI_state_as_chr(struct FANSI_state state) {
-  // First pass computes total size of tag; we need to account for the separtor
-  // as well
+  // First pass computes total size of tag; we need to account for the
+  // separator as well
 
   int tag_len = FANSI_state_size(state);
 
   // Now allocate and generate tag
 
   char * tag_tmp = R_alloc(tag_len + 1, sizeof(char));
-  FANSI_csi_write(tag_tmp, state, tag_len);
-  tag_tmp[tag_len] = 0;
+  int tag_len_written = FANSI_csi_write(tag_tmp, state, tag_len);
+  if(tag_len_written > tag_len)
+    error("Internal Error: CSI written larger than expected."); // nocov
+  tag_tmp[tag_len_written] = 0;
   return tag_tmp;
 }
 /*
