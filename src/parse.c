@@ -602,14 +602,6 @@ int FANSI_state_size(struct FANSI_state state) {
   return color_size + bg_color_size + style_size + 2;  // +2 for ESC[
 }
 /*
- * Compute length in characters for a number
- */
-unsigned int FANSI_num_chr_len(unsigned int num) {
-  // + 1.00001 to account for 0
-  unsigned int log_len = (unsigned int) ceil(log10(num + 1.00001));
-  return log_len;
-}
-/*
  * Write extra color info to string
  *
  * Modifies string by reference.  This assumes
