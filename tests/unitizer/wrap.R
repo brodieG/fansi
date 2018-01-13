@@ -47,6 +47,21 @@ unitizer_sect("Basic Ansi", {
   identical(
     strwrap_csi(strip_ansi(hello2.0), 10), strwrap(strip_ansi(hello2.0), 10)
   )
+  # Specific turn off tags - turn off bold and faint
+
+  hello.bold.faint <- paste0(
+    "hello \033[1mbolded once upon a time\033[22m ",
+    "normal \033[2mfainting in faintness oh no\033[22m normal"
+  )
+  strwrap_csi(hello.bold.faint, 10)
+
+  # Specific turn off tags - blinking
+
+  hello.blinky <- paste0(
+    "hello \033[5mbliking slowly oh my\033[25m ",
+    "normal \033[6mblinking quickly oh my\033[25m normal"
+  )
+  strwrap_csi(hello.blinky, 10)
 })
 unitizer_sect("Long Wrap", {
   wrap.nrm <- strwrap(strip_ansi(lorem.r.thanks), 40)
