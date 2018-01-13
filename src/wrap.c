@@ -66,13 +66,6 @@ SEXP FANSI_writeline(
   int needs_close = FANSI_state_has_style(state_bound);
   int needs_start = FANSI_state_has_style(state_start);
 
-  /*
-  Rprintf(
-    "  color: %d, bg_color: %d, style: %d\n",
-    state_start.color, state_start.bg_color, state_start.style
-  );
-  */
-
   // state_bound.pos_byte 1 past what we need, so this should include room
   // for NULL terminator
 
