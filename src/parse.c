@@ -400,10 +400,12 @@ struct FANSI_state_pair FANSI_state_at_position(
 ) {
   struct FANSI_state state = state_pair.cur;
   if(pos < state.pos_raw)
+    // nocov start
     error(
       "Cannot re-use a state for a later position (%0f) than `pos` (%0f).",
       (double) state.pos_raw, (double) pos
     );
+    // nocov end
   int cond = 0;
 
   // Need to reset pos_width_target since it could be distorted by a previous
@@ -560,11 +562,11 @@ int FANSI_color_size(int color, int * color_extra) {
     size = 3 + 2 +
       FANSI_digits_in_int(color_extra[1]) + 1;
   } else if (color == 8) {
-    error("Internal Error: unexpected compound color format");
+    error("Internal Error: unexpected compound color format");   // nocov
   } else if (color >= 0 && color < 10) {
     size = 3;
   } else if (color >= 0) {
-    error("Internal Error: unexpected compound color format 2");
+    error("Internal Error: unexpected compound color format 2"); // nocov
   }
   return size;
 }
@@ -616,7 +618,7 @@ unsigned int FANSI_color_write(
   char * string, int color, int * color_extra, int mode
 ) {
   if(mode != 3 && mode != 4)
-    error("Internal Error: color mode must be 3 or 4");
+    error("Internal Error: color mode must be 3 or 4");  // nocov
 
   unsigned int str_off = 0;
   if(color > 0) {
