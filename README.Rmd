@@ -18,3 +18,14 @@ library(fansi)
 
 Counterparts to R string manipulation functions that preserve ANSI CSI escape
 sequences while treating them as zero width.
+
+
+## References
+
+* [ECMA-48 - Control Functions For Coded Character
+  Sets](http://www.ecma-international.org/publications/standards/Ecma-048.htm),
+  in particular pages 10-12, and 61.
+* [ANSI Escape Code - Wikipedia](https://en.wikipedia.org/wiki/ANSI_escape_code)
+  for a gentler introduction.
+
+## Acknowledgments
