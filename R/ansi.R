@@ -12,19 +12,36 @@
 #' the user, but in some cases a mismatch between how `fansi` interprets escape
 #' sequences and how the display interprets them may cause artifacts (e.g.
 #' string wrapping at the wrong column).  The most likely source of mismatches
-#' are obscure ANSI CSI SGR sequences or ANSI/other escape sequences that move
-#' the cursor.  Keep in mind that these things will also affect normal R string
-#' manipulation functions.
+#' are obscure or invalid ANSI CSI SGR sequences, and ANSI/other escape
+#' sequences that move the cursor or delete screen output.  Keep in mind that
+#' these things will also affect normal R string manipulation functions.
 #'
-#' We chose to interpret ANSI CSI SGR sequences rather than just tracking them
-#' because in most common use cases the interpretation is trivial, and the
-#' alternative is more computationally costly.  In particular, the alternative
-#' requires tracking every encountered SGR sequence up to any given point and
-#' pre-pending that to any substring from that point.
+#' Some SGR codes that may cause problems:
 #'
-#' Note that in theory it is possible to encode ANSI escape sequences with
-#' single byte introducing character in the 0x40-0x5F range, but since this is
-#' rare and it conflicts with UTF-8 encoding, we ignore it.
+#' * "[34]8;2;..." if your system does not support it as this can cause a
+#'   frame-shift due to subsequent parameters being interpreted on a stand alone
+#'   basis instead of the rgb color spec.
+#' * "26" is assumed to be a single number code, which could cause problems if
+#'   the correct interpretation changes the meaning of subsequent numbers as
+#'   "38" and "48" do.
+#' * "22" is interpreted as double underline, not bold-off
+#'
+#' We chose to interpret ANSI CSI SGR sequences because this reduces how
+#' much string transcription we need to do.  If we do not interpret the
+#' sequences then we need to record all of them from the beginning of the
+#' string and prepend all the accumulated tags up to beginning of a substring
+#' to the substring.  In many case the bulk of those accumulated tags will be
+#' irrelevant as their effects will have been superseded by subsequent tags.
+#'
+#' `fansi` assumes that ANSI CSI SGR sequences should be interpreted in
+#' cumulative "Graphic Rendition Combination Mode".  This means new SGR
+#' sequences add to rather than replace previous ones, although in some cases
+#' the effect is the same as replacement (e.g. if you have a color active and
+#' pick another one).
+#'
+#' In theory it is possible to encode ANSI escape sequences with single byte
+#' introducing character in the 0x40-0x5F range, but since this is rare and it
+#' conflicts with UTF-8 encoding, we ignore it.
 #'
 #' @section Encodings / UTF-8:
 #'
