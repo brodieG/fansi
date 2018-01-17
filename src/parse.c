@@ -70,12 +70,11 @@ struct FANSI_tok_res {
    * Type of failure
    *
    * * 0: no error
-   * * 1: well formed, but not an SGR
-   * * 2: well formed, but contains uniterpretable characters [:<=>]
-   * * 3: 
-   * * 1=no, but it only contained numbers so
+   * * 1: well formed csi sgr, but contains uninterpretable characters [:<=>]
+   * * 2: well formed csi sgr, but contains uninterpretable sub-strings
+   * * 3: well formed csi, but not an SGR
+   * * 4: malformed csi
    */
-
   int err_code;
   int last;                 // Whether it ended in 'm' (vs. ';')
 };
@@ -83,13 +82,21 @@ struct FANSI_tok_res {
  * Attempts to read CSI SGR tokens
  *
  * See struct FANSI_tok_res for return value details
+ *
+ * Note this makes no attempt to interpret the CSI other than indicate there are
+ * odd characters in it.
  */
 
 struct FANSI_tok_res FANSI_parse_token(const char * string) {
   unsigned int mult, val;
-  int len, len_intermediate, success, last, has_colon, private, has_end;
-  success = len = len_intermediate, val = last = non_standard = private = 0;
+  int len, len_intermediate, success, last, has_colon, private, has_end,
+    err_code;
+  success = len = len_intermediate, val = last = non_standard = private =
+    err_code = 0;
   mult = 1;
+
+  // `private` a bit redundant since we don't actually use it differentially to
+  // non-normal
 
   private = *string >= 0x3C && * string <= 0x3F;
 
@@ -109,33 +116,32 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
   }
   // check for final byte
 
-  if(*string == ';') {
+  if((*string == ';' || *string == 'm') && !len_intermediate) {
     // valid end of parameter substring
-  } else if(*string >= 0x40 && *string <= 0x7E) {
+
+    if(non_standard) {
+      err_code = 1;
+    } else success = 1;
+    last = (*string == 'm');
+  } else if(*string >= 0x40 && *string <= 0x7E && len_intermediate == 1) {
     // valid final byte
+    err_code = 3;
   } else {
     // invalid end
-
+    err_code = 4;
   }
+  if(success) {
+    // Read the string backwards (assume 0 if no string) and turn it into a
+    // number
 
-
-  if(FANSI_is_tok_end(string)) {
-    last = (*string == 'm');
-    if(len > 3) {
-      success = 1;
-    } else {
-      success = 2;
-
-      // Read the string backwards (assume 0 if no string) and turn it into a
-      // number
-
-      int len2 = len;
-      while(len2--) {
-        val += FANSI_as_num(--string) * mult;
-        mult *= 10;
-  } } }
+    int len2 = len;
+    while(len2--) {
+      val += FANSI_as_num(--string) * mult;
+      mult *= 10;
+  } }
   return (struct FANSI_tok_res) {
-    .val=val, .len=len, .success=success, .last=last
+    .val=val, .len=len + len_intermediate,
+    .success=success, .err_code=err_code, .last=last
   };
 }
 /*
