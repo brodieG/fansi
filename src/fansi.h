@@ -178,8 +178,16 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * character with the byte position updated.  The parent process is then in
      * charge of updating the raw position.
      */
-
-    int fail;
+    /*
+     * Type of failure
+     *
+     * * 0: no error
+     * * 1: well formed csi sgr, but contains uninterpretable characters [:<=>]
+     * * 2: well formed csi sgr, but contains uninterpretable sub-strings
+     * * 3: well formed csi, but not an SGR
+     * * 4: malformed csi
+     */
+    int err_code;
     int last;
   };
   /*

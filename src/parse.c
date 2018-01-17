@@ -65,17 +65,7 @@ int FANSI_is_tok_end(const char * string) {
 struct FANSI_tok_res {
   unsigned int val;         // The actual value of the token
   int len;                  // How many character in the token
-  int success;              // legal SGR token (0, 1)
-  /*
-   * Type of failure
-   *
-   * * 0: no error
-   * * 1: well formed csi sgr, but contains uninterpretable characters [:<=>]
-   * * 2: well formed csi sgr, but contains uninterpretable sub-strings
-   * * 3: well formed csi, but not an SGR
-   * * 4: malformed csi
-   */
-  int err_code;
+  int err_code;             // see struct FANSI_state
   int last;                 // Whether it ended in 'm' (vs. ';')
 };
 /*
@@ -89,8 +79,7 @@ struct FANSI_tok_res {
 
 struct FANSI_tok_res FANSI_parse_token(const char * string) {
   unsigned int mult, val;
-  int len, len_intermediate, success, last, has_colon, private, has_end,
-    err_code;
+  int len, len_intermediate, last, has_colon, private, has_end, err_code;
   success = len = len_intermediate, val = last = non_standard = private =
     err_code = 0;
   mult = 1;
@@ -130,22 +119,24 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
     // invalid end
     err_code = 4;
   }
-  if(success) {
-    // Read the string backwards (assume 0 if no string) and turn it into a
-    // number
+  // Final interpretations; note that anything over 255 cannot be part of a
+  // valid SGR sequence
 
+  if(!err_code && len > 3) err_code = 2;
+  if(!err_code) {
     int len2 = len;
     while(len2--) {
-      val += FANSI_as_num(--string) * mult;
+      val += (FANSI_as_num(--string) * mult);
       mult *= 10;
   } }
+  if(val > 255) err_code = 2;
+
   return (struct FANSI_tok_res) {
-    .val=val, .len=len + len_intermediate,
-    .success=success, .err_code=err_code, .last=last
+    .val=val, .len=len + len_intermediate, .err_code=err_code, .last=last
   };
 }
 /*
- * Call with state once we've advanced the string just past a [34]8;2
+ * Call with state once we've advanced the string just past a [34]8;
  *
  * Will return the state after reading through the next three tags which in
  * theory correspond to to the r,g,b values.
@@ -171,15 +162,15 @@ static struct FANSI_state FANSI_parse_colors(
   int res_len_inc = FANSI_add_int(res.len, 1);
   state.pos_byte = FANSI_add_int(state.pos_byte, res_len_inc);
   state.last = res.last;
-  if(res.success && ((res.val != 2 && res.val != 5) || res.last)) {
+  state.err_code = res.err_code;
+
+  if(!res.err_code && ((res.val != 2 && res.val != 5) || res.last)) {
     // weird case, we don't want to advance the position here because `res.val`
     // needs to be interpreted as potentially a non-color style and the prior
-    // 38 or 48 just gets tossed
+    // 38 or 48 just gets tossed (at least this happens on OSX terminal)
 
-    state.pos_byte -= (res.len + 1);
-  } else if(!res.success) {
-    state.fail = 1;
-  } else if(res.success == 2) {
+    state.pos_byte -= (res_len_inc);
+  } else if(!res.err_code) {
     int colors = res.val;
     if(colors == 2) {
       i_max = 3;
@@ -195,28 +186,25 @@ static struct FANSI_state FANSI_parse_colors(
       res = FANSI_parse_token(&state.string[state.pos_byte]);
       state.pos_byte = FANSI_add_int(state.pos_byte, FANSI_add_int(res.len, 1));
       state.last = res.last;
-      if(res.success) {
+      if(!res.err_code) {
         int early_end = res.last && i < (i_max - 1);
-        if(res.success == 2 && res.val < 256 && !early_end) {
+        if(res.val < 256 && !early_end) {
           rgb[i + 1] = res.val;
         } else {
           // Not a valid color; doesn't break parsing so that we end up with the
           // cursor at the right place
 
           valid_col = 0;
-        }
-      } else {
-        state.fail = 1;
-        break;
-      }
-    }
+          break;
+    } } }
     // Failure handling happens in the main loop, we just need to ensure the
-    // byte position is correct
+    // byte position and state is correct
 
-    if(!state.fail) {
+    if(!state.err_code) {
       if(!valid_col) {
         for(int i = 0; i < 4; i++) rgb[i] = 0;
         col = -1;
+        state.err_code = 2;  // invalid substring
       }
       if(mode == 3) {
         state.color = col;
@@ -226,8 +214,8 @@ static struct FANSI_state FANSI_parse_colors(
         for(int i = 0; i < 4; i++) state.bg_color_extra[i] = rgb[i];
       }
     }
-  } else if(res.success == 1) {
-    // do nothing here
+  } else {
+    // do nothing here, we have the option later to trigger warning or error
   } else error("Internal Error: 23234kdshf");
 
   return state;
@@ -299,10 +287,12 @@ struct FANSI_state FANSI_parse_csi(struct FANSI_state state) {
     state.pos_byte =
       FANSI_add_int(state.pos_byte, FANSI_add_int(tok_res.len, 1));
     state.last = tok_res.last;
+    state.err_code = tok_res.err_code;
 
-    if(!tok_res.success) {
-      state.fail = 1;
-    } else if(tok_res.success == 2) {
+    // Note we use `state.err_code` instead of `tok_res.err_code` as
+    // FANSI_parse_colors internally calls FANSI_parse_token
+
+    if(!state.err_code) {
       // We have a reasonable CSI value, now we need to check whether it
       // actually corresponds to anything that should modify state
 
@@ -326,9 +316,11 @@ struct FANSI_state FANSI_parse_csi(struct FANSI_state state) {
         state.style &= ~(1U << 1U);
         state.style &= ~(1U << 2U);
       } else if (tok_res.val == 23) {
+        // Turn off italics, fraktur
         state.style &= ~(1U << 3U);
         state.style &= ~(1U << 10U);
       } else if (tok_res.val == 24) {
+        // Turn off underline, double underline
         state.style &= ~(1U << 4U);
         state.style &= ~(1U << 11U);
       } else if (tok_res.val == 25) {
@@ -337,10 +329,12 @@ struct FANSI_state FANSI_parse_csi(struct FANSI_state state) {
         state.style &= ~(1U << 6U);
       } else if (tok_res.val == 26) {
         // reserved for proportional spacing as specified in CCITT
-        // Recommendation T.61
+        // Recommendation T.61; implicitly we are assuming this is a single
+        // substring parameter, unlike say 38;2;..., but really we have no idea
+        // what this is.
         state.style |= (1U << 12U);
       } else if (tok_res.val >= 20 && tok_res.val < 30) {
-        // All other styles are 1:1
+        // Turn off the other styles that map exactly from 1-9 to 21-29
         state.style &= ~(1U << (tok_res.val - 20));
       } else if (tok_res.val >= 30 && tok_res.val < 50) {
         // Colors; much shared logic between color and bg_color, so
@@ -373,18 +367,30 @@ struct FANSI_state FANSI_parse_csi(struct FANSI_state state) {
         } else if (tok_res.val == 55) {
           state.border &= ~(1U << 3);
         } else {
+          state.err_code = 2;  // unknown token
         }
       } else {
-
-        error("Unhandled ANSI CSI SGR token %d\n", tok_res.val);
+        state.err_code = 2;  // unknown token
       }
-    } else if (tok_res.success == 1) {
-      // "valid" token, but meaningless so just skip and move on to next
-    } else error("Internal Error: 350au834."); // nocov
-    // Note that state.last may be different to tok_res.last when we parse
-    // colors of the 38;5;... or 38;2;... variety.
+    }
+    // `state.err_code` can be change by the logic inside the previous `if`
+    // statement
 
-    if(tok_res.last || state.last || state.fail) break;
+    if (
+      state.err_code == 1 || state.err_code == 2 || state.err_code == 3
+    ) {
+      // "valid" token, but meaningless so just skip and move on to next
+      warning("Uninterpretable CSI token.")
+    } else if (state.err_code == 4) {
+      // "invalid" token
+      warning("Uninterpretable CSI token.")
+    } else error("Internal Error: 350au834."); // nocov
+
+    // state.last may be different to tok_res.last when we parse colors of the
+    // 38;5;... or 38;2;... variety.
+
+    if(tok_res.last || state.last || state.err_code) break;
+
   } while(1);
 
   // Invalid escape sequences count as normal characters, and at this point
@@ -392,7 +398,7 @@ struct FANSI_state FANSI_parse_csi(struct FANSI_state state) {
 
   int byte_offset = state.pos_byte - pos_byte_prev;
 
-  if(state.fail) {
+  if(state.err_code) {
     state.pos_raw += byte_offset;
     state_tmp.pos_raw = state.pos_raw;
     state_tmp.pos_byte = state.pos_byte;
