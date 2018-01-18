@@ -242,14 +242,14 @@ SEXP FANSI_process(
       } else if(!control && !line_end) space_start = 0;
 
       // Deal with CSI, basically need to find out where it starts and ends, do
-      // so using FANSI_parse_sgr which has some additional unneeded overhead,
+      // so using FANSI_parse_esc which has some additional unneeded overhead,
       // but we don't want that logic in two places
 
       if(esc && string[j + 1] == '[') {
         struct FANSI_state state, state_post_sgr;
         state = FANSI_state_init();
         state.string = string + j + 1;
-        state_post_sgr = FANSI_parse_sgr(state);
+        state_post_sgr = FANSI_parse_esc(state);
         skip_bytes = state_post_sgr.pos_byte - state.pos_byte + 1;
       }
       // transcribe string if we've hit something that we don't need to strip

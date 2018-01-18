@@ -188,6 +188,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      *      assumed to be SGR until we read the final code.
      * * 3: well formed csi, but not an SGR
      * * 4: malformed csi
+     * * 5: other escape sequence
      */
     int err_code;
     int last;
@@ -240,7 +241,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_check_assumptions();
   SEXP FANSI_digits_in_int_ext(SEXP y);
 
-  struct FANSI_state FANSI_parse_sgr(struct FANSI_state state);
+  struct FANSI_state FANSI_parse_esc(struct FANSI_state state);
   void FANSI_size_buff(struct FANSI_buff * buff, int size);
   int FANSI_is_utf8_loc();
   int FANSI_utf8clen(char c);
