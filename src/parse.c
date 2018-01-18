@@ -46,27 +46,18 @@ int FANSI_is_num(const char * string) {
 // Convert a char value to number by subtracting the zero char; only intended
 // for use with string values in [0-9]
 
-unsigned int FANSI_as_num(const char * string) {
-  if(*string < 0 || *string > 127)
-    error("Currently only ASCII-128 characters are supported");
+int FANSI_as_num(const char * string) {
   if(!FANSI_is_num(string))
     error("Internal Error: attempt to convert non-numeric char to int.");
-
-  return (unsigned int) (*string - '0');
+  return (int) (*string - '0');
 }
-// Valid end to a CSI SGR numeric token?
-
-int FANSI_is_tok_end(const char * string) {
-  return *string == ';' || *string == 'm';
-}
-
-// Store the result of reading a token
+// Store the result of reading a parameter substring token
 
 struct FANSI_tok_res {
   unsigned int val;         // The actual value of the token
   int len;                  // How many character in the token
   int err_code;             // see struct FANSI_state
-  int last;                 // Whether it ended in 'm' (vs. ';')
+  int last;                 // Whether it is the last parameter substring
 };
 /*
  * Attempts to read CSI SGR tokens
@@ -79,9 +70,10 @@ struct FANSI_tok_res {
 
 struct FANSI_tok_res FANSI_parse_token(const char * string) {
   unsigned int mult, val;
-  int len, len_intermediate, last, has_colon, private, has_end, err_code;
+  int len, len_intermediate, last, has_colon, private, has_end, err_code,
+    leading_zeros, not_zero, is_zero;
   success = len = len_intermediate, val = last = non_standard = private =
-    err_code = 0;
+    err_code = leading_zeros = not_zero = 0;
   mult = 1;
 
   // `private` a bit redundant since we don't actually use it differentially to
@@ -92,6 +84,9 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
   // cycle through valid parameter bytes
 
   while(*string >= 0x30 && *string <= 0x3F *string != ';') {
+    int is_zero = *string != '0';
+    if(!is_zero && !not_zero) not_zero = 1;
+    if(is_zero && !not_zero) ++leading_zeros;
     non_standard |= string > 0x39
     ++string;
     len = FANSI_add_int(len, 1);
@@ -114,6 +109,7 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
     last = (*string == 'm');
   } else if(*string >= 0x40 && *string <= 0x7E && len_intermediate == 1) {
     // valid final byte
+    last = 1;
     err_code = 3;
   } else {
     // invalid end
@@ -122,9 +118,14 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
   // Final interpretations; note that anything over 255 cannot be part of a
   // valid SGR sequence
 
-  if(!err_code && len > 3) err_code = 2;
+  if(last && (*string != 'm') && err_code < 3) {
+    // Not actually an SGR sequence
+    err_code = 3;
+  } else if(!err_code && (len - leading_zeros) > 3) {
+    err_code = 2;
+  }
   if(!err_code) {
-    int len2 = len;
+    int len2 = len - leading_zeros;
     while(len2--) {
       val += (FANSI_as_num(--string) * mult);
       mult *= 10;
@@ -132,14 +133,16 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
   if(val > 255) err_code = 2;
 
   return (struct FANSI_tok_res) {
-    .val=val, .len=len + len_intermediate, .err_code=err_code, .last=last
+    .val=val, .len=len + len_intermediate,
+    .err_code=err_code, .last=last
   };
 }
 /*
  * Call with state once we've advanced the string just past a [34]8;
  *
- * Will return the state after reading through the next three tags which in
- * theory correspond to to the r,g,b values.
+ * Will return the state after reading through the next two or four
+ * subparameters (depending on whether the first subparameter is 2 or 5) which
+ * in theory correspond to to the r,g,b values.
  *
  * @param mode is whether we are doing foregrounds (3) or backgrounds (4)
  * @param colors is whether we are doing palette (5), or rgb truecolor (2)
@@ -164,13 +167,15 @@ static struct FANSI_state FANSI_parse_colors(
   state.last = res.last;
   state.err_code = res.err_code;
 
-  if(!res.err_code && ((res.val != 2 && res.val != 5) || res.last)) {
+  if(!state.err_code && ((res.val != 2 && res.val != 5) || state.last)) {
     // weird case, we don't want to advance the position here because `res.val`
     // needs to be interpreted as potentially a non-color style and the prior
-    // 38 or 48 just gets tossed (at least this happens on OSX terminal)
+    // 38 or 48 just gets tossed (at least this happens on OSX terminal and
+    // iTerm)
 
     state.pos_byte -= (res_len_inc);
-  } else if(!res.err_code) {
+    state.err_code = 2;
+  } else if(!state.err_code) {
     int colors = res.val;
     if(colors == 2) {
       i_max = 3;
@@ -186,7 +191,9 @@ static struct FANSI_state FANSI_parse_colors(
       res = FANSI_parse_token(&state.string[state.pos_byte]);
       state.pos_byte = FANSI_add_int(state.pos_byte, FANSI_add_int(res.len, 1));
       state.last = res.last;
-      if(!res.err_code) {
+      state.err_code = res.err_code
+
+      if(!state.err_code) {
         int early_end = res.last && i < (i_max - 1);
         if(res.val < 256 && !early_end) {
           rgb[i + 1] = res.val;
@@ -214,10 +221,7 @@ static struct FANSI_state FANSI_parse_colors(
         for(int i = 0; i < 4; i++) state.bg_color_extra[i] = rgb[i];
       }
     }
-  } else {
-    // do nothing here, we have the option later to trigger warning or error
-  } else error("Internal Error: 23234kdshf");
-
+  }
   return state;
 }
 /*
@@ -241,38 +245,32 @@ static struct FANSI_state FANSI_parse_colors(
  *
  * @section Possible Outcomes:
  *
- * There are many possible outcomes:
- *
- *   1. Syntactically and semantically correct SGR sequence (without colons)
- *   2. Syntactically correct SGR sequence with uninterpretable (unknown tokens)
- *   3. Syntactically correct SGR sequence with partially uninterpretable tokens
- *      (e.g. 38;2;..)
- *   4. Syntactically strictly correct non-SGR sequences (max one intermediate
- *      byte)
- *   5. Syntactically correct non-SGR sequences
- *   6. Syntactically incorrect sequences
- *      * Containing 0x7F or greater, or 0x1F or lesser
- *      * Containing intermediate bytes not followed by final bytes
+ * See `FANSI_state.err_code`
  *
  * From some experimentation it doesn't seem like the intermediate bytes are
  * completely supported by the OSX terminal...  A single itermediate works okay,
  * more and it becomes a crapshoot, '!' in particular seems to cause problems.
  *
- * So we will warn for anything outside of 1 and 4.
+ * iTerm seems to read only the last 8 bits of any number specified, at least
+ * in the [34]8;2;... subparameter strings.  In other words, '255' is equivalent
+ * to '511' or some such.  Terminal doesn't recognize the rgb style
+ * sub-parameters, and in fact just seems to start interpreting subparameters
+ * right after the 38/48, so '38;2m' is read as '2m'.
+ *
+ * Both iTerm and Terminal seem to interpret the next subparameter after a 38/48
+ * if is not a 2 or a 5.
  *
  * @input state must be set with .pos_byte pointing to the ESC that begins the
  *   CSI sequence
  * @return a state updated with the SGR sequence info and with pos_byte and
  *   other position info moved to the first char after the sequence.  See
  *   details for failure modes.
- *
- *   On failure
- *   advances the ESC[ bit, although in theory as per #4 should probably advance
- *   all the way for any CSI sequence, not just SGR
  */
-struct FANSI_state FANSI_parse_csi(struct FANSI_state state) {
-  // make a copy of the struct so we don't modify state if it turns out
-  // this is an invalid SGR
+struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
+  if(state.string[state.pos_byte] != 33)
+    // nocov start
+    error("Internal error: parsing ESC sequence that doesn't start with ESC.");
+    // nocov end
 
   int pos_byte_prev = state.pos_byte;
   state.pos_byte = FANSI_add_int(state.pos_byte, 2);
@@ -373,8 +371,12 @@ struct FANSI_state FANSI_parse_csi(struct FANSI_state state) {
         state.err_code = 2;  // unknown token
       }
     }
-    // `state.err_code` can be change by the logic inside the previous `if`
-    // statement
+    //
+
+
+
+    // `state.err_code` can be changed by the previous statements from
+    // what is in `tok_res.err_code`
 
     if (
       state.err_code == 1 || state.err_code == 2 || state.err_code == 3

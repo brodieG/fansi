@@ -25,6 +25,7 @@ sequences while treating them as zero width.
 * [ECMA-48 - Control Functions For Coded Character
   Sets](http://www.ecma-international.org/publications/standards/Ecma-048.htm),
   in particular pages 10-12, and 61.
+* [CCITT Recommendation T.416](https://www.itu.int/rec/dologin_pub.asp?lang=e&id=T-REC-T.416-199303-I!!PDF-E&type=items)
 * [ANSI Escape Code - Wikipedia](https://en.wikipedia.org/wiki/ANSI_escape_code)
   for a gentler introduction.
 
