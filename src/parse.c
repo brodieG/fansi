@@ -273,9 +273,13 @@ static struct FANSI_state FANSI_parse_colors(
  *   details for failure modes.
  */
 struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
-  if(state.string[state.pos_byte] != 33)
+  if(state.string[state.pos_byte] != 27)
     // nocov start
-    error("Internal error: parsing ESC sequence that doesn't start with ESC.");
+    error(
+      "Internal error: %s (decimal char %d).",
+      "parsing ESC sequence that doesn't start with ESC",
+      (int) state.string[state.pos_byte]
+    );
     // nocov end
 
   int pos_byte_prev = state.pos_byte;

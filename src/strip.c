@@ -248,7 +248,7 @@ SEXP FANSI_process(
       if(esc && string[j + 1] == '[') {
         struct FANSI_state state, state_post_sgr;
         state = FANSI_state_init();
-        state.string = string + j + 1;
+        state.string = string + j;
         state_post_sgr = FANSI_parse_esc(state);
         skip_bytes = state_post_sgr.pos_byte - state.pos_byte + 1;
       }
