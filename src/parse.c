@@ -48,7 +48,10 @@ int FANSI_is_num(const char * string) {
 
 int FANSI_as_num(const char * string) {
   if(!FANSI_is_num(string))
-    error("Internal Error: attempt to convert non-numeric char to int.");
+    error(
+      "Internal Error: attempt to convert non-numeric char (%d) to int.",
+      (int) *string
+    );
   return (int) (*string - '0');
 }
 // Store the result of reading a parameter substring token
@@ -113,11 +116,6 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
     // invalid end
     err_code = 4;
   }
-  // If the string didn't end, then we consume one extra character for the
-  // ending
-
-  if(*string) ++len;
-
   // Final interpretations; note that anything over 255 cannot be part of a
   // valid SGR sequence
 
@@ -134,6 +132,11 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
       mult *= 10;
   } }
   if(val > 255) err_code = 2;
+
+  // If the string didn't end, then we consume one extra character for the
+  // ending
+
+  if(*string) ++len;
 
   return (struct FANSI_tok_res) {
     .val=val, .len=len + len_intermediate,
