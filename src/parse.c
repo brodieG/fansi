@@ -70,9 +70,9 @@ struct FANSI_tok_res {
 
 struct FANSI_tok_res FANSI_parse_token(const char * string) {
   unsigned int mult, val;
-  int len, len_intermediate, last, has_colon, private, has_end, err_code,
-    leading_zeros, not_zero, is_zero;
-  success = len = len_intermediate, val = last = non_standard = private =
+  int len, len_intermediate, last, non_standard, private, err_code,
+    leading_zeros, not_zero;
+  len = len_intermediate = val = last = non_standard = private =
     err_code = leading_zeros = not_zero = 0;
   mult = 1;
 
@@ -83,12 +83,12 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
 
   // cycle through valid parameter bytes
 
-  while(*string >= 0x30 && *string <= 0x3F *string != ';') {
+  while(*string >= 0x30 && *string <= 0x3F && *string != ';') {
     int is_zero = *string != '0';
     if(!is_zero && !not_zero) not_zero = 1;
     if(is_zero && !not_zero) ++leading_zeros;
-    non_standard |= string > 0x39
-    ++string;
+    non_standard |= *string > 0x39;
+    string++;
     len = FANSI_add_int(len, 1);
   }
   // check for for intermediate bytes, we allow 'infinite' here even though in
@@ -103,9 +103,7 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
   if((*string == ';' || *string == 'm') && !len_intermediate) {
     // valid end of parameter substring
 
-    if(non_standard) {
-      err_code = 1;
-    } else success = 1;
+    if(non_standard) err_code = 1;
     last = (*string == 'm');
   } else if(*string >= 0x40 && *string <= 0x7E && len_intermediate == 1) {
     // valid final byte
@@ -195,7 +193,7 @@ static struct FANSI_state FANSI_parse_colors(
       res = FANSI_parse_token(&state.string[state.pos_byte]);
       state.pos_byte = FANSI_add_int(state.pos_byte, res.len);
       state.last = res.last;
-      state.err_code = res.err_code
+      state.err_code = res.err_code;
 
       if(!state.err_code) {
         int early_end = res.last && i < (i_max - 1);
@@ -231,7 +229,7 @@ static struct FANSI_state FANSI_parse_colors(
 /*
  * Parses ESC sequences
  *
- * In particular, special treatment for ANSI CSI SGR sequences.  
+ * In particular, special treatment for ANSI CSI SGR sequences.
  *
  * @section ANSI CSI:
  *
@@ -295,7 +293,7 @@ struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
     // CSI sequence
 
     state.pos_byte = FANSI_add_int(state.pos_byte, 1);  // consume '['
-    struct FANSI_tok_res tok_res = {.success = 0};
+    struct FANSI_tok_res tok_res = {.err_code = 0};
 
     // Loop through the SGR; each token we process successfully modifies state
     // and advances to the next token
@@ -319,7 +317,7 @@ struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
         } else if (tok_res.val < 10) {
           // 1-9 are the standard styles (bold/italic)
           // We use a bit mask on to track these
-          state.style |= 1U << tok_res.val - 1;
+          state.style |= 1U << (tok_res.val - 1);
         } else if (tok_res.val < 20) {
           // These are alternative fonts
           state.font = tok_res.val;
@@ -391,29 +389,13 @@ struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
           state.err_code = 2;  // unknown token
         }
       }
-      // `state.err_code` can be changed by the previous statements from
-      // what is in `tok_res.err_code`
+      // `tok_res` value can't be used because code above, including
+      // FANSI_parse_colors can change the corresponding value in the `state`
+      // struct, so better to deal with that directly
 
-      if (
-        state.err_code == 1 || state.err_code == 2 || state.err_code == 3
-      ) {
-        // "valid" token, but meaningless so just skip and move on to next
-        warning("Uninterpretable CSI token.")
-      } else if (state.err_code == 4) {
-        // "invalid" token
-        warning("Uninterpretable CSI token.")
-      } else error("Internal Error: 350au834."); // nocov
-
-      // state.last may be different to tok_res.last when we parse colors of the
-      // 38;5;... or 38;2;... variety.
-
-      if(tok_res.last || state.last || state.err_code) break;
+      if(state.last || state.err_code) break;
     } while(1);
   }
-  // Invalid escape sequences count as normal characters, and at this point
-  // the only way to have a valid escape seq is if it ends in 'm' as otherwise
-  // there would be some `state.err_code` value
-
   int byte_offset = state.pos_byte - pos_byte_prev;
 
   if(state.err_code) {
@@ -545,7 +527,7 @@ struct FANSI_state_pair FANSI_state_at_position(
 
   while(1) {
     state_prev = state_res = state;
-    state.fail = state.last = 0;
+    state.err_code = state.last = 0;
 
     // Handle UTF-8, we need to record the byte size of the sequence as well as
     // the corresponding display width.
