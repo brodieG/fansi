@@ -125,6 +125,7 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
   } else if(!err_code && (len - leading_zeros) > 3) {
     err_code = 2;
   }
+  // Rprintf("    len: %d leading_zeros: %d\n", len, leading_zeros);
   if(!err_code) {
     int len2 = len - leading_zeros;
     while(len2--) {
@@ -293,7 +294,8 @@ struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
     state.err_code = 5;
   } else if(state.string[state.pos_byte] != '[') {
     // Other ESC sequence; note there are technically multi character sequences
-    // but we ignore them here
+    // but we ignore them here.  There is also the possibility that we mess up a
+    // utf-8 sequence if it starts right after the ESC, but oh well...
     state.pos_byte = FANSI_add_int(state.pos_byte, 1);
     state.err_code = 5;
   } else {
@@ -308,7 +310,7 @@ struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
     do {
       tok_res = FANSI_parse_token(&state.string[state.pos_byte]);
       state.pos_byte =
-        FANSI_add_int(state.pos_byte, FANSI_add_int(tok_res.len, 1));
+        FANSI_add_int(state.pos_byte, tok_res.len);
       state.last = tok_res.last;
       state.err_code = tok_res.err_code;
 
