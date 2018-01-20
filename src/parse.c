@@ -87,7 +87,7 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
   // cycle through valid parameter bytes
 
   while(*string >= 0x30 && *string <= 0x3F && *string != ';') {
-    int is_zero = *string != '0';
+    int is_zero = *string == '0';
     if(!is_zero && !not_zero) not_zero = 1;
     if(is_zero && !not_zero) ++leading_zeros;
     non_standard |= *string > 0x39;
