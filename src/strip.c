@@ -245,18 +245,18 @@ SEXP FANSI_process(
       // so using FANSI_parse_esc which has some additional unneeded overhead,
       // but we don't want that logic in two places
 
-      if(esc && string[j + 1] == '[') {
+      if(esc) {
         struct FANSI_state state, state_post_sgr;
         state = FANSI_state_init();
         state.string = string + j;
         state_post_sgr = FANSI_parse_esc(state);
-        skip_bytes = state_post_sgr.pos_byte - state.pos_byte + 1;
+        skip_bytes = state_post_sgr.pos_byte - state.pos_byte;
       }
       // transcribe string if we've hit something that we don't need to strip
 
       /*
       Rprintf(
-        "para_start: %d strip: %d to_strip: %d j: %d spc: %d %d %d ctrl: %d %d, write: %d strip_this: %d char: %c\n",
+        "pr_start: %d strip: %d to_strip: %d j: %d spc: %d %d %d ctl: %d %d, w: %d strip_this: %d chr: %c\n",
         para_start, strip, to_strip, j, space, space_prev, space_start, control,
         control_prev,
         (!strip && to_strip) || (!string[j] && strip_this),
