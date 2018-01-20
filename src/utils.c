@@ -48,6 +48,9 @@ struct FANSI_csi_pos FANSI_find_csi(const char * x) {
   if((x_start = x_track = strchr(x, 27))) {
     ++x_track;
     if(*x_track == '[') {
+      // This is a CSI sequence, so it has multiple characters that we need to
+      // skip.  The final character is processed outside of here since it has
+      // the same logic for CSI and non CSI sequences
 
       // skip [
 
@@ -60,18 +63,12 @@ struct FANSI_csi_pos FANSI_find_csi(const char * x) {
       // And all the valid intermediates
 
       while(*x_track >= 0x20 && *x_track <= 0x2F) ++x_track;
-
-      // Now there should be a single valid ending byte
-
-      if(*x_track) {
-        valid = *x_track >= 0x40 && *x_track <= 0x7E;
-        ++x_track;
-      }
-    } else if(*(x_track + 1)){
-      // Normal ESC sequence skips one char provided not at end of string
-
-      ++x_track;
     }
+    // In either normal or CSI sequence, there needs to be a final character:
+
+    valid = *x_track >= 0x40 && *x_track <= 0x7E;
+    if(*x_track) ++x_track;
+
     if(x_track - x > INT_MAX - 1)
       // nocov start
       error(
