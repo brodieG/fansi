@@ -66,7 +66,17 @@ SEXP FANSI_strip(SEXP input) {
     char * chr_buff;
     char * res_track, * res_start;
 
+    // note that csi.start is the NULL pointer if an escape is not found
+
     while((csi = FANSI_find_csi(chr_track)).start) {
+      if(csi.start - chr >= INT_MAX - csi.len)
+        // nocov start
+        error(
+          "%s%s",
+          "Internal Error: string longer than INT_MAX encountered, should ",
+          "not be possible."
+        );
+        // nocov end
       if(csi.valid) {
         // As soon as we encounter ansi, allocate vector to track what has ansi
         if(!any_ansi) {
@@ -103,7 +113,10 @@ SEXP FANSI_strip(SEXP input) {
         }
       } else if(!invalid_ansi) {
         invalid_ansi = 1;
-        warning("Invalid CSI len: %d at index %.0f", csi.len, (double) i + 1);
+        warning(
+          "Invalid ESC sequence at index %.0f, byte %d.",
+          (double) i + 1, csi.start - chr + 1
+        );
       }
       chr_track = csi.start + csi.len;
     }

@@ -19,9 +19,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #include "fansi.h"
 
 /*
- * Compute Location and Size of Next CSI ANSI Sequences
+ * Compute Location and Size of Next ANSI Sequences
  *
- * Only sequences that start in ESC [ are considered.
+ * See FANSI_parse_esc as well, where there is similar logic, although we keep
+ * it separated here for speed since we don't try to interpret the string.
  *
  * Length includes the ESC and [, and start point is the ESC.
  *
@@ -43,8 +44,9 @@ struct FANSI_csi_pos FANSI_find_csi(const char * x) {
   // the ESC is the last thing in a string, but handling it explicitly adds a
   // bit of complexity and it should be rare
 
-  while((x_start = strchr(x_track, 27))) {
-    x_track++;
+  struct FANSI_csi_pos res;
+  if((x_start = x_track = strchr(x, 27))) {
+    ++x_track;
     if(*x_track == '[') {
 
       // skip [
@@ -63,14 +65,13 @@ struct FANSI_csi_pos FANSI_find_csi(const char * x) {
 
       if(*x_track) {
         valid = *x_track >= 0x40 && *x_track <= 0x7E;
+        ++x_track;
       }
-      break;
-  } }
+    } else if(*(x_track + 1)){
+      // Normal ESC sequence skips one char provided not at end of string
 
-  struct FANSI_csi_pos res;
-  if(!x_start) {
-    res = (struct FANSI_csi_pos){.start=x_start, .len=0, .valid=0};
-  } else {
+      ++x_track;
+    }
     if(x_track - x > INT_MAX - 1)
       // nocov start
       error(
@@ -81,8 +82,10 @@ struct FANSI_csi_pos FANSI_find_csi(const char * x) {
       // nocov end
 
     res = (struct FANSI_csi_pos){
-      .start=x_start, .len=(x_track - x_start + 1), .valid=valid
+      .start=x_start, .len=(x_track - x_start), .valid=valid
     };
+  } else {
+    res = (struct FANSI_csi_pos){.start=x_start, .len=0, .valid=0};
   }
   return res;
 }

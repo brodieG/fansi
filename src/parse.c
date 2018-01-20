@@ -270,6 +270,13 @@ static struct FANSI_state FANSI_parse_colors(
  * Both iTerm and Terminal seem to interpret the next subparameter after a 38/48
  * if is not a 2 or a 5.
  *
+ * @section Illegal Bytes:
+ *
+ * Both iTerm and terminal seem to completely ignore bytes above 0x7E or below
+ * 0x20 within CSI sequences.  They seem to just display to screen / be
+ * interpreted as the C0 ESC sequences they are and then the parsing of the CSI
+ * string continues uninterrupted.
+ *
  * @input state must be set with .pos_byte pointing to the ESC that begins the
  *   CSI sequence
  * @return a state updated with the SGR sequence info and with pos_byte and
@@ -288,6 +295,8 @@ struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
 
   int pos_byte_prev = state.pos_byte;
   state.pos_byte = FANSI_add_int(state.pos_byte, 1);  // advance ESC
+
+  // NOTE: MAKE SURE LOGIC HERE IS CONCORDANT WITH WHAT IS IN FANSI_find_esc
 
   if(!state.string[state.pos_byte]) {
     // String ends in ESC
