@@ -325,7 +325,7 @@ SEXP FANSI_strwrap_ext(
   SEXP indent, SEXP exdent,
   SEXP prefix, SEXP initial,
   SEXP wrap_always, SEXP pad_end,
-  SEXP strip_spc, SEXP strip_tab, SEXP strip_ctl,
+  SEXP strip_spc,
   SEXP tabs_as_spc, SEXP tab_stops
 ) {
   if(
@@ -334,7 +334,6 @@ SEXP FANSI_strwrap_ext(
     TYPEOF(prefix) != STRSXP || TYPEOF(initial) != STRSXP ||
     TYPEOF(wrap_always) != LGLSXP || TYPEOF(pad_end) != LGLSXP ||
     TYPEOF(strip_spc) != LGLSXP ||
-    TYPEOF(strip_tab) != LGLSXP || TYPEOF(strip_ctl) != LGLSXP ||
     TYPEOF(tabs_as_spc) != LGLSXP || TYPEOF(tab_stops) != INTSXP
   ) {
     error("Type error.");
@@ -375,11 +374,7 @@ SEXP FANSI_strwrap_ext(
 
   // Strip control/whitespaces as needed
 
-  x = PROTECT(
-    FANSI_process(
-      x, asInteger(strip_spc), asInteger(strip_tab), asInteger(strip_ctl),
-      &buff
-  ) );
+  x = PROTECT(FANSI_process(x, &buff));
   for(i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
     SEXP str_i = PROTECT(

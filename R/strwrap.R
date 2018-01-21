@@ -30,12 +30,6 @@
 #' @param strip.spaces TRUE (default) or FALSE, if TRUE, extraneous spaces
 #'   (leading, trailing, repeated - except that after sentence end up to two
 #'   spaces are kept) are removed.
-#' @param strip.tabs TRUE (default) or FALSE, if TRUE, ASCII tab control
-#'   characters (i.e. '\t') are stripped.
-#' @param strip.control TRUE or FALSE (default), if TRUE, ASCII control
-#'   characters are stripped, except for tabs and newlines.  Newlines always
-#'   are implicitly stripped because CHARSXPs containing them are split at the
-#'   newline.
 #' @param tabs.as.spaces TRUE or FALSE (default) whether to convert tabs to
 #'   spaces
 #' @param tab.stops integer(1:n) indicating position of tab stops to use when
@@ -68,7 +62,7 @@ strwrap_csi <- function(
     x, width, indent, exdent,
     prefix, initial,
     FALSE, FALSE,
-    TRUE, TRUE, FALSE,
+    TRUE,
     FALSE, 8L
   )
   if(simplify) unlist(res) else res

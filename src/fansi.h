@@ -223,16 +223,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP x, SEXP width,
     SEXP indent, SEXP exdent, SEXP prefix, SEXP initial,
     SEXP wrap_always, SEXP pad_end,
-    SEXP strip_spc, SEXP strip_tab, SEXP strip_ctl,
+    SEXP strip_spc, 
     SEXP tabs_as_spc, SEXP tab_stops
   );
-  SEXP FANSI_process(
-    SEXP input, int strip_spc, int strip_tab, int strip_ctl,
-    struct FANSI_buff * buff
-  );
-  SEXP FANSI_process_ext(
-    SEXP input, SEXP strip_spc, SEXP strip_tab, SEXP strip_ctl
-  );
+  SEXP FANSI_process(SEXP input, struct FANSI_buff * buff);
+  SEXP FANSI_process_ext(SEXP input);
 
   // Internal
 
