@@ -66,7 +66,17 @@ SEXP FANSI_strip(SEXP input) {
     char * chr_buff;
     char * res_track, * res_start;
 
-    while((csi = FANSI_find_csi(chr_track)).start) {
+    // note that csi.start is the NULL pointer if an escape is not found
+
+    while((csi = FANSI_find_esc(chr_track)).start) {
+      if(csi.start - chr >= INT_MAX - csi.len)
+        // nocov start
+        error(
+          "%s%s",
+          "Internal Error: string longer than INT_MAX encountered, should ",
+          "not be possible."
+        );
+        // nocov end
       if(csi.valid) {
         // As soon as we encounter ansi, allocate vector to track what has ansi
         if(!any_ansi) {
@@ -103,7 +113,10 @@ SEXP FANSI_strip(SEXP input) {
         }
       } else if(!invalid_ansi) {
         invalid_ansi = 1;
-        warning("Invalid CSI len: %d at index %.0f", csi.len, (double) i + 1);
+        warning(
+          "Invalid ESC sequence at index %.0f, byte %d.",
+          (double) i + 1, csi.start - chr + 1
+        );
       }
       chr_track = csi.start + csi.len;
     }
@@ -242,21 +255,21 @@ SEXP FANSI_process(
       } else if(!control && !line_end) space_start = 0;
 
       // Deal with CSI, basically need to find out where it starts and ends, do
-      // so using FANSI_parse_sgr which has some additional unneeded overhead,
+      // so using FANSI_parse_esc which has some additional unneeded overhead,
       // but we don't want that logic in two places
 
-      if(esc && string[j + 1] == '[') {
+      if(esc) {
         struct FANSI_state state, state_post_sgr;
         state = FANSI_state_init();
-        state.string = string + j + 1;
-        state_post_sgr = FANSI_parse_sgr(state);
-        skip_bytes = state_post_sgr.pos_byte - state.pos_byte + 1;
+        state.string = string + j;
+        state_post_sgr = FANSI_parse_esc(state);
+        skip_bytes = state_post_sgr.pos_byte - state.pos_byte;
       }
       // transcribe string if we've hit something that we don't need to strip
 
       /*
       Rprintf(
-        "para_start: %d strip: %d to_strip: %d j: %d spc: %d %d %d ctrl: %d %d, write: %d strip_this: %d char: %c\n",
+        "pr_start: %d strip: %d to_strip: %d j: %d spc: %d %d %d ctl: %d %d, w: %d strip_this: %d chr: %c\n",
         para_start, strip, to_strip, j, space, space_prev, space_start, control,
         control_prev,
         (!strip && to_strip) || (!string[j] && strip_this),
@@ -339,7 +352,7 @@ SEXP FANSI_process(
 SEXP FANSI_process_ext(
   SEXP input, SEXP strip_spc, SEXP strip_tab, SEXP strip_ctl
 ) {
-  struct FANSI_buff buff;
+  struct FANSI_buff buff = {.len=0};
 
   return FANSI_process(
     input, asInteger(strip_spc), asInteger(strip_tab), asInteger(strip_ctl),

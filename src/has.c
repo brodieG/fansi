@@ -24,7 +24,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 int FANSI_has_int(SEXP x) {
   if(TYPEOF(x) != CHARSXP) error("Argument `x` must be CHRSXP.");
   if(x == NA_STRING) return NA_LOGICAL;
-  else return FANSI_find_csi(CHAR(x)).valid != 0;
+  else return FANSI_find_esc(CHAR(x)).valid != 0;
 }
 /*
  * Check if a CHARSXP contains ANSI esc sequences

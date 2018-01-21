@@ -19,9 +19,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #include "fansi.h"
 
 /*
- * Compute Location and Size of Next CSI ANSI Sequences
+ * Compute Location and Size of Next ANSI Sequences
  *
- * Only sequences that start in ESC [ are considered.
+ * See FANSI_parse_esc as well, where there is similar logic, although we keep
+ * it separated here for speed since we don't try to interpret the string.
  *
  * Length includes the ESC and [, and start point is the ESC.
  *
@@ -34,7 +35,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
  * processing the sequence).
  */
 
-struct FANSI_csi_pos FANSI_find_csi(const char * x) {
+struct FANSI_csi_pos FANSI_find_esc(const char * x) {
+  /***************************************************\
+  | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_parse_esc |
+  \***************************************************/
   int valid = 0;
   const char * x_track = x;
   const char * x_start = x;
@@ -43,9 +47,13 @@ struct FANSI_csi_pos FANSI_find_csi(const char * x) {
   // the ESC is the last thing in a string, but handling it explicitly adds a
   // bit of complexity and it should be rare
 
-  while((x_start = strchr(x_track, 27))) {
-    x_track++;
+  struct FANSI_csi_pos res;
+  if((x_start = x_track = strchr(x, 27))) {
+    ++x_track;
     if(*x_track == '[') {
+      // This is a CSI sequence, so it has multiple characters that we need to
+      // skip.  The final character is processed outside of here since it has
+      // the same logic for CSI and non CSI sequences
 
       // skip [
 
@@ -58,19 +66,12 @@ struct FANSI_csi_pos FANSI_find_csi(const char * x) {
       // And all the valid intermediates
 
       while(*x_track >= 0x20 && *x_track <= 0x2F) ++x_track;
+    }
+    // In either normal or CSI sequence, there needs to be a final character:
 
-      // Now there should be a single valid ending byte
+    valid = *x_track >= 0x40 && *x_track <= 0x7E;
+    if(*x_track) ++x_track;
 
-      if(*x_track) {
-        valid = *x_track >= 0x40 && *x_track <= 0x7E;
-      }
-      break;
-  } }
-
-  struct FANSI_csi_pos res;
-  if(!x_start) {
-    res = (struct FANSI_csi_pos){.start=x_start, .len=0, .valid=0};
-  } else {
     if(x_track - x > INT_MAX - 1)
       // nocov start
       error(
@@ -81,41 +82,12 @@ struct FANSI_csi_pos FANSI_find_csi(const char * x) {
       // nocov end
 
     res = (struct FANSI_csi_pos){
-      .start=x_start, .len=(x_track - x_start + 1), .valid=valid
+      .start=x_start, .len=(x_track - x_start), .valid=valid
     };
+  } else {
+    res = (struct FANSI_csi_pos){.start=x_start, .len=0, .valid=0};
   }
   return res;
-}
-/*
- * Translates a CHARSXP to a UTF8 char if necessary, otherwise returns
- * the char
- */
-const char * FANSI_string_as_utf8(SEXP x, int is_utf8_loc) {
-  if(TYPEOF(x) != CHARSXP)
-    error("Internal Error: expect CHARSXP."); // nocov
-
-  cetype_t enc_type = getCharCE(x);
-
-  if(enc_type == CE_BYTES)
-    error("BYTE encoded strings are not supported.");
-
-  // CE_BYTES is not necessarily of any encoding, don't allow then?
-
-  int translate = !(
-    (is_utf8_loc && enc_type == CE_NATIVE) || enc_type == CE_UTF8
-  );
-  const char * string;
-  /*
-  Rprintf(
-    "About to translate %s (translate? %d)\n",
-    type2char(TYPEOF(x)), translate
-  );
-  */
-  if(translate) string = translateCharUTF8(x);
-  else string = CHAR(x);
-  // Rprintf("done translate\n");
-
-  return string;
 }
 /*
  * Allocates a fresh chunk of memory if the existing one is not large enough.
@@ -134,3 +106,46 @@ void FANSI_size_buff(struct FANSI_buff * buff, int size) {
     buff->buff = R_alloc(buff->len, sizeof(char));
   }
 }
+/*
+ * Compute how many digits are in a number
+ *
+ * Add an extra character for negative integers.
+ */
+
+int FANSI_digits_in_int(int x) {
+  int num = 1;
+  if(x < 0) {
+    ++num;
+    x = -x;
+  }
+  while((x = (x / 10))) ++num;
+  return num;
+}
+SEXP FANSI_digits_in_int_ext(SEXP y) {
+  if(TYPEOF(y) != INTSXP) error("Internal Error: required int.");
+
+  R_xlen_t ylen = XLENGTH(y);
+  SEXP res = PROTECT(allocVector(INTSXP, ylen));
+
+  for(R_xlen_t i = 0; i < ylen; ++i)
+    INTEGER(res)[i] = FANSI_digits_in_int(INTEGER(y)[i]);
+
+  UNPROTECT(1);
+  return(res);
+}
+/*
+ * Add integers while checking for overflow
+ *
+ * Note we are stricter than necessary when y is negative because we want to
+ * count hitting INT_MIN as an overflow so that we can use the integer values
+ * in R where INT_MIN is NA.
+ */
+int FANSI_add_int(int x, int y) {
+  if((y >= 0 && (x > INT_MAX - y)) || (y < 0 && (x <= INT_MIN - y)))
+    error ("Integer overflow");
+  return x + y;
+}
+
+// concept borrowed from utf8-lite
+
+void FANSI_interrupt(int i) {if(!(i % 1000)) R_CheckUserInterrupt();}

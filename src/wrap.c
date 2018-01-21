@@ -38,7 +38,7 @@ static const char * make_pre(const char * pre_chr, int pre_len, int spaces) {
   int alloc_size = FANSI_add_int(FANSI_add_int(pre_len, spaces), 1);
   char * res_start = "";
   if(alloc_size > 1) {
-    Rprintf("Allocating pre size %d\n", alloc_size);
+    // Rprintf("Allocating pre size %d\n", alloc_size);
     char * res = res_start = R_alloc(alloc_size, sizeof(char));
     for(int i = 0; i < spaces; ++i) *(res++) = ' ';
     memcpy(res, pre_chr, pre_len);
@@ -58,22 +58,13 @@ SEXP FANSI_writeline(
   struct FANSI_buff * buff,
   const char * pre, int pre_size, int pre_has_utf8, int is_utf8_loc
 ) {
-  /*
-  Rprintf("  Writeline start with buff %p\n", *buff);
-  */
+  // Rprintf("  Writeline start with buff %p\n", *buff);
 
   // Check if we are in a CSI state b/c if we are we neeed extra room for
   // the closing state tag
 
   int needs_close = FANSI_state_has_style(state_bound);
   int needs_start = FANSI_state_has_style(state_start);
-
-  /*
-  Rprintf(
-    "  color: %d, bg_color: %d, style: %d\n",
-    state_start.color, state_start.bg_color, state_start.style
-  );
-  */
 
   // state_bound.pos_byte 1 past what we need, so this should include room
   // for NULL terminator
@@ -174,6 +165,7 @@ SEXP FANSI_strwrap(
   struct FANSI_buff * buff,
   int is_utf8_loc
 ) {
+  // Rprintf("start wrap\n");
   struct FANSI_state state = FANSI_state_init();
   state.string = x;
 
@@ -379,8 +371,7 @@ SEXP FANSI_strwrap_ext(
   // Set up the buffer, this will be created in FANSI_strwrap, but we want a
   // handle for it here so we can re-use
 
-  struct FANSI_buff buff;
-  buff.len = 0;  // should be implicit
+  struct FANSI_buff buff = {.len = 0};
 
   // Strip control/whitespaces as needed
 

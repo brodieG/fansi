@@ -22,9 +22,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #ifndef _FANSI_H
 #define _FANSI_H
 
-// concept borrowed from utf8-lite
-
-  inline void FANSI_interrupt(int i) {if(!(i % 1000)) R_CheckUserInterrupt();}
 
   /*
    * Buffer used for writing strings
@@ -54,42 +51,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
    * is only designed to capture SGR CSI codes (i.e. those of format
    * "ESC[n;n;n;m") where "n" is a number.  This is a small subset of the
    * possible ANSI escape codes.
+   *
+   * Note that the struct fields are ordered by size
    */
 
   struct FANSI_state {
-    /*
-     * The original string the state corresponds to.  This is the pointer to the
-     * beginning of the string.
-     */
-    const char * string;
-
-    /* bold, italic, etc, should be interpreted as bit mask where with 2^n we
-     * have:
-     *
-     * - n == 1: bold
-     * - n == 2: blur/faint
-     * - n == 3: italic
-     * - n == 4: underline
-     * - n == 5: blink slow
-     * - n == 6: blink fast
-     * - n == 7: invert
-     * - n == 8: conceal
-     * - n == 9: crossout
-     *
-     * Additionally, will be zero if there are no ANSI tags up to this point.
-     * Note that n == 0 is not used so that the translation between n values and
-     * the ANSI codes that correspond to each style is direct.
-     */
-    unsigned int style;
-
-    /*
-     * A number in 0-9, corrsponds to the ansi codes in the 3[0-9] range, if less
-     * than zero or 9 means no color is active.  If 8 (i.e. corresponding to the
-     * `38` code), then `color_extra` contains additional color info.
-     */
-
-    int color;
-
     /*
      * Encode the additional information required to render the 38 color code in
      * an array of 4 numbers:
@@ -100,17 +66,76 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      *   color value, should be a number in 0-255
      * - color_extra[2]: the "g" value when in r;g;b format, 0-255
      * - color_extra[3]: the "b" value when in r;g;b format, 0-255
+     *
+     * See also color, bgcolor
      */
 
     int color_extra[4];
+    int bg_color_extra[4];
 
     /*
-     * Same as `color` and `color_extra`, except for the ansi SGR codes starting
-     * with a 4
+     * The original string the state corresponds to.  This should always be
+     * a pointer to the beginning of the string, use the
+     * `state.string[state.pos_byte]` to access the current position.
+     */
+    const char * string;
+
+    /*
+     * should be interpreted as bit mask where with 2^n.
+     *
+     * - n ==  1: bold
+     * - n ==  2: blur/faint
+     * - n ==  3: italic
+     * - n ==  4: underline
+     * - n ==  5: blink slow
+     * - n ==  6: blink fast
+     * - n ==  7: invert
+     * - n ==  8: conceal
+     * - n ==  9: crossout
+     * - n == 10: fraktur
+     * - n == 11: double underline
+     */
+    unsigned int style;
+
+    /*
+     * should be interpreted as bit mask where with 2^n.
+     *
+     * - n == 1: framed
+     * - n == 2: encircled
+     * - n == 3: overlined
+     * - n == 4: unused (turns off a style)
+     * - n == 5: unused (turns off a style)
+     * - n == 6: reserved
+     * - n == 7: reserved
+     * - n == 8: reserved
+     * - n == 9: reserved
      */
 
-    int bg_color;
-    int bg_color_extra[4];
+    unsigned int border;
+    /*
+     * should be interpreted as bit mask where with 2^n.
+     *
+     * - n == 0: ideogram underline or right side line
+     * - n == 1: ideogram double underline or double line on the right side
+     * - n == 2: ideogram overline or left side line
+     * - n == 3: ideogram double overline or double line on the left side
+     * - n == 4: ideogram stress marking
+     */
+
+    unsigned int ideogram;
+
+    /* Alternative fonts, 10-19, where 0 is the primary font */
+
+    int font;
+
+    /*
+     * A number in 0-9, corrsponds to the ansi codes in the [3-4][0-9] range, if
+     * less than zero or 9 means no color is active.  If 8 (i.e. corresponding
+     * to the `38` code), then `color_extra` contains additional color info.
+     */
+
+    int color;           // the number follwing the 3 in 3[0-9]
+    int bg_color;        // the number follwing the 4 in 4[0-9]
 
     /*
      * Position markers (all zero index), we use int because these numbers
@@ -153,8 +178,19 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * character with the byte position updated.  The parent process is then in
      * charge of updating the raw position.
      */
-
-    int fail;
+    /*
+     * Type of failure
+     *
+     * * 0: no error
+     * * 1: well formed csi sgr, but contains uninterpretable characters [:<=>]
+     * * 2: well formed csi sgr, but contains uninterpretable sub-strings, if a
+     *      CSI sequence is not fully parsed yet (i.e. last char not read) it is
+     *      assumed to be SGR until we read the final code.
+     * * 3: well formed csi, but not an SGR
+     * * 4: malformed csi
+     * * 5: other escape sequence
+     */
+    int err_code;
     int last;
   };
   /*
@@ -174,7 +210,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     cetype_t type;
   };
 
-  struct FANSI_csi_pos FANSI_find_csi(const char * x);
+  struct FANSI_csi_pos FANSI_find_esc(const char * x);
 
   // External funs
 
@@ -203,41 +239,23 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   // Utilities
 
   SEXP FANSI_check_assumptions();
-  struct FANSI_state FANSI_parse_sgr(struct FANSI_state state);
+  SEXP FANSI_digits_in_int_ext(SEXP y);
+
+  struct FANSI_state FANSI_parse_esc(struct FANSI_state state);
   void FANSI_size_buff(struct FANSI_buff * buff, int size);
   int FANSI_is_utf8_loc();
   int FANSI_utf8clen(char c);
+  int FANSI_digits_in_int(int x);
   const char * FANSI_string_as_utf8(SEXP x, int is_utf8_loc);
   struct FANSI_state FANSI_state_init();
   int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current);
   int FANSI_state_has_style(struct FANSI_state state);
   int FANSI_state_size(struct FANSI_state state);
-  void FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len);
+  int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len);
   struct FANSI_state FANSI_read_ascii(struct FANSI_state state);
   struct FANSI_state FANSI_read_next(struct FANSI_state state);
-
-  /*
-   * Add integers while checking for overflow
-   *
-   * Note we are stricter than necessary when y is negative because we want to
-   * count hitting INT_MIN as an overflow so that we can use the integer values in
-   * R where INT_MIN is NA.
-   */
-  inline int FANSI_add_int(int x, int y) {
-    if((y >= 0 && (x > INT_MAX - y)) || (y < 0 && (x <= INT_MIN - y)))
-      error ("Integer overflow");
-    return x + y;
-  }
-  /*
-   * Assuming encoding is UTF-8, are there actually any non-ASCII chars in
-   * string.
-   *
-   * `x` must be NULL terminated.
-   */
-
-  inline int FANSI_has_utf8(const char * x) {
-    while(x) {if(*(x++) > 127) return 1;}
-    return 0;
-  }
+  int FANSI_add_int(int x, int y);
+  int FANSI_has_utf8(const char * x);
+  void FANSI_interrupt(int i);
 
 #endif
