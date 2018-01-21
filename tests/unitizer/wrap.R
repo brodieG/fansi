@@ -71,6 +71,10 @@ unitizer_sect("Long Wrap", {
   nchar(strip_ansi(wrap.csi))
   nchar(wrap.csi)
 })
+unitizer_sect("Other Escapes", {
+  strwrap_csi("hello \033kworld yohoo", 12)
+  strwrap_csi("hello \033\nworld yohoo", 12)
+})
 
 # Things to test:
 #

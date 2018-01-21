@@ -284,6 +284,9 @@ static struct FANSI_state FANSI_parse_colors(
  *   details for failure modes.
  */
 struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
+  /***************************************************\
+  | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_find_esc  |
+  \***************************************************/
   if(state.string[state.pos_byte] != 27)
     // nocov start
     error(
@@ -295,8 +298,6 @@ struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
 
   int pos_byte_prev = state.pos_byte;
   state.pos_byte = FANSI_add_int(state.pos_byte, 1);  // advance ESC
-
-  // NOTE: MAKE SURE LOGIC HERE IS CONCORDANT WITH WHAT IS IN FANSI_find_esc
 
   if(!state.string[state.pos_byte]) {
     // String ends in ESC
@@ -421,6 +422,7 @@ struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
     warning(
       "Encountered invalid escape sequence with err code %d.", state.err_code
     );
+    state.err_code = 0;
   } else {
     state.last_char_width = 1;
   }

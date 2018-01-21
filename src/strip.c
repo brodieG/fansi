@@ -68,7 +68,7 @@ SEXP FANSI_strip(SEXP input) {
 
     // note that csi.start is the NULL pointer if an escape is not found
 
-    while((csi = FANSI_find_csi(chr_track)).start) {
+    while((csi = FANSI_find_esc(chr_track)).start) {
       if(csi.start - chr >= INT_MAX - csi.len)
         // nocov start
         error(

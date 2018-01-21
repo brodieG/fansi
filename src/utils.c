@@ -35,7 +35,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
  * processing the sequence).
  */
 
-struct FANSI_csi_pos FANSI_find_csi(const char * x) {
+struct FANSI_csi_pos FANSI_find_esc(const char * x) {
+  /***************************************************\
+  | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_parse_esc |
+  \***************************************************/
   int valid = 0;
   const char * x_track = x;
   const char * x_start = x;
