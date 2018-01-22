@@ -22,8 +22,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
  *
  * We rely on struct initialization to set everything else to zero.
  */
-struct FANSI_state FANSI_state_init() {
-  return (struct FANSI_state) { .color = -1, .bg_color = -1};
+struct FANSI_state FANSI_state_init(int tabs_as_spaces, SEXP tab_stops) {
+  return (struct FANSI_state) {
+    .color = -1, .bg_color = -1, .tabs_as_spaces=tabs_as_spaces,
+    .tab_stops=tab_stops
+  };
 }
 /*
  * Reset all the display attributes, but not the position ones
@@ -365,8 +368,8 @@ struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
         } else if (tok_res.val == 26) {
           // reserved for proportional spacing as specified in CCITT
           // Recommendation T.61; implicitly we are assuming this is a single
-          // substring parameter, unlike say 38;2;..., but really we have no idea
-          // what this is.
+          // substring parameter, unlike say 38;2;..., but really we have no
+          // idea what this is.
           state.style |= (1U << 12U);
         } else if (tok_res.val >= 20 && tok_res.val < 30) {
           // Turn off the other styles that map exactly from 1-9 to 21-29
@@ -484,17 +487,29 @@ struct FANSI_state FANSI_read_c0(struct FANSI_state state) {
   --state.pos_width_target;
   return state;
 }
+/*
+ * Determine how many spaces tab width should be
+ */
 struct FANSI_state FANSI_read_tab(struct FANSI_state state) {
+  R_xlen_t stops = XLENGTH(state.tab_stops);
+  if(!stops)
+    error("Internal Error: must have at least one tab stop");  // nocov
 
+  int tab_width = 0;
+  R_xlen_t stop_idx = 0;
 
-
+  while(state.pos_width > tab_width) {
+    int stop_size = INTEGER(state.tab_stops)[stop_idx];
+    if(!stop_size) error("Internal Error: zero size tab stop.");
+    tab_width = FANSI_add_int(tab_width, stop_size);
+    if(stop_idx < stops) stop_idx++;
+  }
+  int spaces_extra = (tab_width - state.pos_width) - 1;
   state = FANSI_read_ascii(state);
-  --state.pos_width;
-  --state.pos_width_target;
+  state.pos_width += spaces_extra;
+  state.pos_width_target += spaces_extra;
   return state;
 }
-
-
 /*
  * Read a Character Off and Update State
  *
@@ -901,7 +916,8 @@ int FANSI_state_has_style(struct FANSI_state state) {
  */
 
 SEXP FANSI_state_at_pos_ext(
-  SEXP text, SEXP pos, SEXP type, SEXP lag, SEXP ends
+  SEXP text, SEXP pos, SEXP type, SEXP lag, SEXP ends, SEXP tabs_as_spaces,
+  SEXP tab_stops
 ) {
   if(TYPEOF(text) != STRSXP && XLENGTH(text) != 1)
     error("Argument `text` must be character(1L)");
@@ -922,8 +938,11 @@ SEXP FANSI_state_at_pos_ext(
   }
   SEXP text_chr = asChar(text);
   const char * string = CHAR(text_chr);
-  struct FANSI_state state = FANSI_state_init();
-  struct FANSI_state state_prev = FANSI_state_init();
+  struct FANSI_state state =
+    FANSI_state_init(asInteger(tabs_as_spaces), tab_stops);
+  struct FANSI_state state_prev =
+    FANSI_state_init(asInteger(tabs_as_spaces), tab_stops);
+
   struct FANSI_state_pair state_pair, state_pair_old;
 
   // Allocate result, will be a res_cols x n matrix.  A bit wasteful to record

@@ -163,10 +163,12 @@ SEXP FANSI_strwrap(
   struct FANSI_prefix_dat initial,
   int wrap_always,
   struct FANSI_buff * buff,
-  int is_utf8_loc
+  int is_utf8_loc,
+  int tabs_as_spaces,
+  SEXP tab_stops
 ) {
   // Rprintf("start wrap\n");
-  struct FANSI_state state = FANSI_state_init();
+  struct FANSI_state state = FANSI_state_init(tabs_as_spaces, tab_stops);
   state.string = x;
 
   int width_1_tmp = FANSI_add_int(indent, initial.width);
@@ -325,16 +327,16 @@ SEXP FANSI_strwrap_ext(
   SEXP indent, SEXP exdent,
   SEXP prefix, SEXP initial,
   SEXP wrap_always, SEXP pad_end,
-  SEXP strip_spc,
-  SEXP tabs_as_spc, SEXP tab_stops
+  SEXP strip_spaces,
+  SEXP tabs_as_spaces, SEXP tab_stops
 ) {
   if(
     TYPEOF(x) != STRSXP || TYPEOF(width) != INTSXP ||
     TYPEOF(indent) != INTSXP || TYPEOF(exdent) != INTSXP ||
     TYPEOF(prefix) != STRSXP || TYPEOF(initial) != STRSXP ||
     TYPEOF(wrap_always) != LGLSXP || TYPEOF(pad_end) != LGLSXP ||
-    TYPEOF(strip_spc) != LGLSXP ||
-    TYPEOF(tabs_as_spc) != LGLSXP || TYPEOF(tab_stops) != INTSXP
+    TYPEOF(strip_spaces) != LGLSXP ||
+    TYPEOF(tabs_as_spaces) != LGLSXP || TYPEOF(tab_stops) != INTSXP
   ) {
     error("Type error.");
   }
@@ -380,7 +382,8 @@ SEXP FANSI_strwrap_ext(
     SEXP str_i = PROTECT(
       FANSI_strwrap(
         CHAR(STRING_ELT(x, i)), width_int, indent_int, exdent_int,
-        pre_dat, ini_dat, wrap_always_int, &buff, is_utf8_loc
+        pre_dat, ini_dat, wrap_always_int, &buff, is_utf8_loc,
+        asInteger(tabs_as_spaces), tab_stops
     ) );
     SET_VECTOR_ELT(res, i, str_i);
     UNPROTECT(1);

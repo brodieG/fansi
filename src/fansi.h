@@ -226,14 +226,15 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_has(SEXP x);
   SEXP FANSI_strip(SEXP input);
   SEXP FANSI_state_at_pos_ext(
-    SEXP text, SEXP pos, SEXP type, SEXP lag, SEXP ends
+    SEXP text, SEXP pos, SEXP type, SEXP lag, SEXP ends, SEXP tabs_as_spaces,
+    SEXP tab_stops
   );
   SEXP FANSI_strwrap_ext(
     SEXP x, SEXP width,
     SEXP indent, SEXP exdent, SEXP prefix, SEXP initial,
     SEXP wrap_always, SEXP pad_end,
-    SEXP strip_spc,
-    SEXP tabs_as_spc, SEXP tab_stops
+    SEXP strip_spaces,
+    SEXP tabs_as_spaces, SEXP tab_stops
   );
   SEXP FANSI_process(SEXP input, struct FANSI_buff * buff);
   SEXP FANSI_process_ext(SEXP input);
@@ -251,7 +252,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_utf8clen(char c);
   int FANSI_digits_in_int(int x);
   const char * FANSI_string_as_utf8(SEXP x, int is_utf8_loc);
-  struct FANSI_state FANSI_state_init();
+  struct FANSI_state FANSI_state_init(int tabs_as_spaces, SEXP tab_stops);
   int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current);
   int FANSI_state_has_style(struct FANSI_state state);
   int FANSI_state_size(struct FANSI_state state);
