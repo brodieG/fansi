@@ -81,6 +81,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     const char * string;
 
     /*
+     * Tab stops, the last value repeats.  This should be a pre-protected SEXP
+     */
+    SEXP tab_stops;
+
+    /*
      * should be interpreted as bit mask where with 2^n.
      *
      * - n ==  1: bold
@@ -192,6 +197,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      */
     int err_code;
     int last;
+
+    // convert tabs to spaces
+
+    int tabs_as_spaces;
   };
   /*
    * Need to keep track of fallback state, so we need ability to return two
@@ -223,7 +232,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP x, SEXP width,
     SEXP indent, SEXP exdent, SEXP prefix, SEXP initial,
     SEXP wrap_always, SEXP pad_end,
-    SEXP strip_spc, 
+    SEXP strip_spc,
     SEXP tabs_as_spc, SEXP tab_stops
   );
   SEXP FANSI_process(SEXP input, struct FANSI_buff * buff);

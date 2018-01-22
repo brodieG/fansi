@@ -476,22 +476,51 @@ struct FANSI_state FANSI_read_ascii(struct FANSI_state state) {
   return state;
 }
 /*
+ * C0 ESC sequences treated as zero width
+ */
+struct FANSI_state FANSI_read_c0(struct FANSI_state state) {
+  state = FANSI_read_ascii(state);
+  --state.pos_width;
+  --state.pos_width_target;
+  return state;
+}
+struct FANSI_state FANSI_read_tab(struct FANSI_state state) {
+
+
+
+  state = FANSI_read_ascii(state);
+  --state.pos_width;
+  --state.pos_width_target;
+  return state;
+}
+
+
+/*
  * Read a Character Off and Update State
  *
  * This can probably use some pretty serious optimiation...
  */
 struct FANSI_state FANSI_read_next(struct FANSI_state state) {
-  const char * string = state.string;
-  if(string[state.pos_byte] > 0) {
-    // Character is in the 1-127 range
-    if(string[state.pos_byte] != 27) {
+  const char chr_val = state.string[state.pos_byte];
+  if(chr_val >= 0x20 && chr_val != 0x7f) {
+    // Character is in the 1-126 range
+    if(chr_val != 0x1b) {
       // Normal ASCII character
       state = FANSI_read_ascii(state);
-    } else if (string[state.pos_byte] == 27) {
+    } else if (chr_val == 0x1b) {
       state = FANSI_parse_esc(state);
     }
-  } else if(string[state.pos_byte] < 0) {
+  } else if(chr_val < 0) {
     state = FANSI_read_utf8(state);
+  } else if(chr_val) {
+    // These are the C0 ESC sequences
+
+    if(chr_val != 0x09 || !state.tabs_as_spaces) {
+      state = FANSI_read_c0(state);
+    } else {
+      // Handle tabs as spaces
+      state = FANSI_read_tab(state);
+    }
   }
   return state;
 }
