@@ -16,7 +16,7 @@ struct FANSI_prefix_dat {
 
 static struct FANSI_prefix_dat compute_pre(SEXP x, int is_utf8_loc) {
 
-  const char * x_utf8 = FANSI_string_as_utf8(asChar(x), is_utf8_loc);
+  const char * x_utf8 = FANSI_string_as_utf8(asChar(x), is_utf8_loc).buff;
   int x_has_utf8 = FANSI_has_utf8(x_utf8);
 
   SEXP x_strip = PROTECT(FANSI_strip(x));

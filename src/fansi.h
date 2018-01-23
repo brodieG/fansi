@@ -33,6 +33,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     char * buff; // Buffer
     int len;     // How many bytes the buffer has been allocated to
   };
+  struct FANSI_buff_const {
+    const char * buff; // buffer
+    int len;           // size of buffer
+  };
   /*
    * Used when computing position and size of ANSI tag with FANSI_loc
    */
@@ -251,7 +255,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_is_utf8_loc();
   int FANSI_utf8clen(char c);
   int FANSI_digits_in_int(int x);
-  const char * FANSI_string_as_utf8(SEXP x, int is_utf8_loc);
+  struct FANSI_buff_const FANSI_string_as_utf8(SEXP x, int is_utf8_loc);
   struct FANSI_state FANSI_state_init(int tabs_as_spaces, SEXP tab_stops);
   int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current);
   int FANSI_state_has_style(struct FANSI_state state);

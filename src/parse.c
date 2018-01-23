@@ -975,7 +975,7 @@ SEXP FANSI_state_at_pos_ext(
   SEXP res_chr, res_chr_prev = PROTECT(mkChar(""));
 
   int is_utf8_loc = FANSI_is_utf8_loc();
-  string = FANSI_string_as_utf8(text_chr, is_utf8_loc);
+  string = FANSI_string_as_utf8(text_chr, is_utf8_loc).buff;
 
   state.string = state_prev.string = string;
   state_pair.cur = state;

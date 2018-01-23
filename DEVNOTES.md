@@ -2,39 +2,14 @@
 
 These are internal developer notes.
 
-## Stripping
+## Tabs
 
-Need to strip trailing whitespace.  Although some argument about this since in
-the most likely use case we'll want to re-pad after the end to the wrap width.
+Started off thinking that we should account for tabs everywhere, but decided in
+the end that the only rational thing to do is to switch tabs for spaces in the
+input string, and then wrap that.
 
-## What Escape Sequences do we consider?
-
-Seems like the natural thing is to do CSI sequences, and maybe for simplicity
-just focus on the SGR variety.  But even with SGR, there is some question as to
-how we interpret 'cuter' variants.
-
-Some issues to consider:
-
-* What to do with "weird" characters (e.g. symbols) in the middle of a sequence?
-  It appears this is undefined behavior.
-* What about the intermediate bytes?  This is probably the most problematic one
-  as there are no examples for how they are used.
-* What about potentially incorrect usage?  Do we warn?
-
-Seems we should go by the strict definition.
-
-QUESTION: do we support truecolor codes (i.e. 38;2;...)?  One major issue is
-that OSX terminal not only doesn't support them, but miss-reads them as a
-failed 38 followed by a 2 (blur/dim).  It seems here we just can't support
-the OSX terminal since it actually renders incorrectly.  So for now we'll
-support the truecolor stuff with the understanding that if truecolor codes
-show up OSX terminal just won't work right.
-
-For reference: https://gist.github.com/XVilka/8346728
-
-Other random notes:
-- negative numbers appear to be interpretable (at least by osx terminal)
-
+This means we have to go back and remove all the tab business we started adding
+when we thought we were going to do tab handling everywhere.
 
 ## Interface
 
