@@ -37,7 +37,11 @@ struct FANSI_state FANSI_reset_state(struct FANSI_state state) {
 
   return  state;
 }
-
+struct FANSI_state FANSI_reset_width(struct FANSI_state state) {
+  state.pos_width = 0;
+  state.pos_width_target = 0;
+  return state;
+}
 // Can a byte be interpreted as ASCII number?
 
 int FANSI_is_num(const char * string) {
