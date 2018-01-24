@@ -386,9 +386,11 @@ SEXP FANSI_strwrap_ext(
 
   for(i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
+    SEXP chr = STRING_ELT(x, i);
+    if(chr == NA_STRING) continue;
     SEXP str_i = PROTECT(
       FANSI_strwrap(
-        CHAR(STRING_ELT(x, i)), width_int, indent_int, exdent_int,
+        CHAR(chr), width_int, indent_int, exdent_int,
         pre_dat, ini_dat, wrap_always_int, &buff, is_utf8_loc
     ) );
     SET_VECTOR_ELT(res, i, str_i);

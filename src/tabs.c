@@ -37,7 +37,10 @@ SEXP FANSI_tabs_as_spaces(
   for(R_xlen_t i = 0; i < len; ++i) {
     int tab_count = 0;
 
-    source = CHAR(STRING_ELT(vec, i));
+    SEXP chr = STRING_ELT(vec, i);
+    if(chr == NA_STRING) continue;
+
+    source = CHAR(chr);
     // One additional issue is that if we f
     while((source = strchr(source, '\t'))) {
       if(!tabs_in_str) {
