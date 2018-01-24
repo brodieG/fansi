@@ -11,7 +11,7 @@ R_CallMethodDef callMethods[] = {
   {"process", (DL_FUNC) &FANSI_process_ext, 1},
   {"check_assumptions", (DL_FUNC) &FANSI_check_assumptions, 0},
   {"digits_in_int", (DL_FUNC) &FANSI_digits_in_int_ext, 1},
-
+  {"tabs_as_spaces_ext", (DL_FUNC) &FANSI_tabs_as_spaces_ext, 2},
   {NULL, NULL, 0}
 };
 

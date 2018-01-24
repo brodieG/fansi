@@ -164,11 +164,9 @@ SEXP FANSI_strwrap(
   int wrap_always,
   struct FANSI_buff * buff,
   int is_utf8_loc,
-  int tabs_as_spaces,
-  SEXP tab_stops
 ) {
   // Rprintf("start wrap\n");
-  struct FANSI_state state = FANSI_state_init(tabs_as_spaces, tab_stops);
+  struct FANSI_state state = FANSI_state_init();
   state.string = x;
 
   int width_1_tmp = FANSI_add_int(indent, initial.width);
@@ -340,6 +338,8 @@ SEXP FANSI_strwrap_ext(
   ) {
     error("Type error.");
   }
+
+
   R_xlen_t i, x_len = XLENGTH(x);
 
   int wrap_always_int = asInteger(wrap_always);
@@ -374,9 +374,16 @@ SEXP FANSI_strwrap_ext(
 
   struct FANSI_buff buff = {.len = 0};
 
-  // Strip control/whitespaces as needed
+  // Strip whitespaces as needed
 
   x = PROTECT(FANSI_process(x, &buff));
+
+  // and tabs
+
+  if(asInteger(tabs_as_spaces))
+    x = PROTECT(FANSI_tabs_as_spaces(x, tab_stops, &buff, is_utf8_loc));
+  else x = PROTECT(x);
+
   for(i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
     SEXP str_i = PROTECT(
@@ -388,6 +395,6 @@ SEXP FANSI_strwrap_ext(
     SET_VECTOR_ELT(res, i, str_i);
     UNPROTECT(1);
   }
-  UNPROTECT(2);
+  UNPROTECT(3);
   return res;
 }
