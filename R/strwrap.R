@@ -25,7 +25,7 @@
 #' @inheritParams base::strwrap
 #' @param wrap.always TRUE or FALSE (default), whether to hard wrap at requested
 #'   width if no word breaks are detected within a line.
-#' @pad.end TRUE or FALSE (default), whether to fill lines with spaces up to
+#' @param pad.end TRUE or FALSE (default), whether to fill lines with spaces up to
 #'   `width`.
 #' @param strip.spaces TRUE (default) or FALSE, if TRUE, extraneous spaces
 #'   (leading, trailing, repeated - except that after sentence end up to two

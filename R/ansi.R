@@ -78,5 +78,6 @@
 #' happen for a while.
 #'
 #' @rdname string-parsing
+#' @name string-parsing
 
 NULL
