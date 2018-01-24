@@ -236,12 +236,18 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   // Internal
 
+  SEXP FANSI_tabs_as_spaces(
+    SEXP vec, SEXP tab_stops, struct FANSI_buff * buff, int is_utf8_loc
+  );
+
   // Utilities
 
   SEXP FANSI_check_assumptions();
   SEXP FANSI_digits_in_int_ext(SEXP y);
 
+  struct FANSI_state FANSI_reset_width(struct FANSI_state state);
   struct FANSI_state FANSI_parse_esc(struct FANSI_state state);
+
   void FANSI_size_buff(struct FANSI_buff * buff, int size);
   int FANSI_is_utf8_loc();
   int FANSI_utf8clen(char c);

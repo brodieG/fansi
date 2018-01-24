@@ -100,11 +100,11 @@ struct FANSI_buff_const FANSI_string_as_utf8(SEXP x, int is_utf8_loc) {
   */
   if(translate) {
     string = translateCharUTF8(x);
-    if(string == CHAR(x)) len = LENGTH(string);
-    else len = strlen(sring);
+    if(string == CHAR(x)) len = LENGTH(x);
+    else len = strlen(string);
   } else {
     string = CHAR(x);
-    len = strlen(sring);
+    len = strlen(string);
   }
   return (struct FANSI_buff_const) {.buff=string, .len=len};
 }
