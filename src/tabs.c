@@ -2,17 +2,21 @@
 
 /*
  * Determine how many spaces tab width should be
+ *
+ * state should be at a tab
  */
 int FANSI_tab_width(struct FANSI_state state, SEXP tab_stops) {
   R_xlen_t stops = XLENGTH(tab_stops);
   if(!stops)
     error("Internal Error: must have at least one tab stop");  // nocov
+  if(*(state.string + state.pos_byte) != '\t')
+    error("Internal Error: computing tab width on not a tab"); // nocov
 
   int tab_width = 0;
   R_xlen_t stop_idx = 0;
 
   Rprintf("start tab at width %d\n", state.pos_width);
-  while(state.pos_width > tab_width) {
+  while(state.pos_width >= tab_width) {
     int stop_size = INTEGER(tab_stops)[stop_idx];
     if(!stop_size) error("Internal Error: zero size tab stop.");
     tab_width = FANSI_add_int(tab_width, stop_size);
