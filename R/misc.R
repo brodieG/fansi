@@ -21,8 +21,10 @@ digits_in_int <- function(x) .Call(FANSI_digits_in_int, x)
 #' @return character, `x` with tabs replaced by spaces, with elements
 #'   possibly converted to UTF-8.
 #' @examples
-#' tabs_as_spaces('1\t1234\t12345678\t123456789\t')
-#' tabs_as_spaces('1\t1234\t12345678\t123456789\t', tab.stops=c(2,8))
+#' string <- '1\t12\t123\t1234\t12345678'
+#' ruler <- '1234567|1234567|1234567|1234567|1234567'
+#' writeLines(c(ruler, tabs_as_spaces(string), string))
+#' writeLines(c(ruler, tabs_as_spaces(string, c(2, 8), string))
 
 tabs_as_spaces <- function(x, tab.stops=getOption('fansi.tab.stops')) {
   vetr(
