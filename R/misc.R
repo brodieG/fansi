@@ -29,5 +29,5 @@ tabs_as_spaces <- function(x, tab.stops=getOption('fansi.tab.stops')) {
     character(),
     tab.stops=INT.POS.STR && length(.) > 0
   )
-  .Call(FANSI_tabs_as_spaces, x, tab.stops)
+  .Call(FANSI_tabs_as_spaces, x, as.integer(tab.stops))
 }
