@@ -106,6 +106,15 @@ SEXP FANSI_tabs_as_spaces(
           Rprintf("Writing %d bytes to %p\n", write_bytes, buff_track);
           memcpy(buff_track, state.string + last_byte, write_bytes);
           buff_track += write_bytes;
+
+          // consume tab and advance
+
+          state = FANSI_read_next(state);
+          state = FANSI_inc_width(state, extra_spaces);
+          last_byte = state.pos_byte;
+
+          // actually write the extra spaces
+
           while(extra_spaces) {
             if(extra_spaces > 10) error("too many spaces");
             Rprintf("Writing space\n", write_bytes);
@@ -113,8 +122,6 @@ SEXP FANSI_tabs_as_spaces(
             *buff_track = ' ';
             ++buff_track;
           }
-          state = FANSI_read_next(state);  // consume tab
-          last_byte = state.pos_byte;
           if(!cur_chr) *buff_track = 0;
         }
         if(!cur_chr) break;
