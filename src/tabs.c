@@ -106,6 +106,7 @@ SEXP FANSI_tabs_as_spaces(
           // consume tab and advance
 
           state = FANSI_read_next(state);
+          cur_chr = state.string[state.pos_byte];
           state = FANSI_inc_width(state, extra_spaces);
           last_byte = state.pos_byte;
 
