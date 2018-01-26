@@ -338,8 +338,6 @@ SEXP FANSI_strwrap_ext(
   ) {
     error("Type error.");
   }
-
-
   R_xlen_t i, x_len = XLENGTH(x);
 
   int wrap_always_int = asInteger(wrap_always);

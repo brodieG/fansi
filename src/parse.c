@@ -500,20 +500,16 @@ struct FANSI_state FANSI_read_c0(struct FANSI_state state) {
  */
 struct FANSI_state FANSI_read_next(struct FANSI_state state) {
   const char chr_val = state.string[state.pos_byte];
-  if(chr_val >= 0x20 && chr_val != 0x7f) {
-    // Character is in the 1-126 range
-    if(chr_val != 0x1b) {
-      // Normal ASCII character
-      state = FANSI_read_ascii(state);
-    } else if (chr_val == 0x1b) {
-      state = FANSI_parse_esc(state);
-    }
-  } else if(chr_val < 0) {
-    state = FANSI_read_utf8(state);
-  } else if(chr_val) {
-    // These are the C0 ESC sequences
-    state = FANSI_read_c0(state);
-  }
+
+  // Normal ASCII characters
+  if(chr_val >= 0x20 & chr_val < 0x7f) state = FANSI_read_ascii(state);
+  // UTF8 characters (chr_val is signed, so > 0x7f will be negative)
+  else if (chr_val < 0) state = FANSI_read_utf8(state);
+  // ESC sequences
+  else if (chr_val == 0x1b) state = FANSI_parse_esc(state);
+  // C0 escapes (e.g. \t, \n, etc)
+  else state = FANSI_read_c0(state);
+
   return state;
 }
 
