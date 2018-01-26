@@ -15,12 +15,10 @@ int FANSI_tab_width(struct FANSI_state state, SEXP tab_stops) {
   int tab_width = 0;
   R_xlen_t stop_idx = 0;
 
-  Rprintf("start tab at width %d\n", state.pos_width);
   while(state.pos_width >= tab_width) {
     int stop_size = INTEGER(tab_stops)[stop_idx];
     if(!stop_size) error("Internal Error: zero size tab stop.");
     tab_width = FANSI_add_int(tab_width, stop_size);
-    Rprintf("tab_width now: %d\n", tab_width);
     if(stop_idx < stops - 1) stop_idx++;
   }
   return tab_width - state.pos_width;
@@ -51,28 +49,21 @@ SEXP FANSI_tabs_as_spaces(
     // One additional issue is that if we f
 
     while(*source && (source = strchr(source, '\t'))) {
-      Rprintf("Found tab at %p %d\n", source, *source);
       if(!tabs_in_str) {
         tabs_in_str = 1;
         UNPROTECT(1);
         res_sxp = PROTECT(duplicate(vec));
         for(R_xlen_t j = 0; j < len_stops; ++j) {
-          Rprintf("Checking stop %d\n", INTEGER(tab_stops)[j]);
           if(INTEGER(tab_stops)[j] > max_tab_stop)
             max_tab_stop = INTEGER(tab_stops)[j];
         }
       }
-      Rprintf("boo\n");
       ++tab_count;
-      Rprintf("ar\n");
       ++source;
-      Rprintf("foo\n");
-      Rprintf("foo %d\n", *source);
     }
     if(tab_count) {
       // Need to convert to UTF8 so width calcs work
 
-      Rprintf("utf8 conv\n");
       struct FANSI_buff_const buff_utf8 =
         FANSI_string_as_utf8(STRING_ELT(vec, i), is_utf8_loc);
 
@@ -84,7 +75,6 @@ SEXP FANSI_tabs_as_spaces(
       for(int k = 0; k < tab_count; ++k) {
         new_buff_size = FANSI_add_int(new_buff_size, max_tab_stop - 1);
       }
-      Rprintf("Size buff to %d\n", new_buff_size);
       FANSI_size_buff(buff, new_buff_size);
 
       struct FANSI_state state = FANSI_state_init();
@@ -105,13 +95,11 @@ SEXP FANSI_tabs_as_spaces(
         } else if (cur_chr == '\n') {
           state = FANSI_reset_width(state);
         }
-        Rprintf("Reading char with extra spaces: %d\n", extra_spaces);
 
         // Write string
 
         if(cur_chr == '\t' || !cur_chr) {
           int write_bytes = state.pos_byte - last_byte;
-          Rprintf("Writing %d bytes to %p\n", write_bytes, buff_track);
           memcpy(buff_track, state.string + last_byte, write_bytes);
           buff_track += write_bytes;
 
@@ -125,7 +113,6 @@ SEXP FANSI_tabs_as_spaces(
 
           while(extra_spaces) {
             if(extra_spaces > 10) error("too many spaces");
-            Rprintf("Writing space\n", write_bytes);
             --extra_spaces;
             *buff_track = ' ';
             ++buff_track;

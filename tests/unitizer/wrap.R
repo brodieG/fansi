@@ -74,6 +74,10 @@ unitizer_sect("Long Wrap", {
 unitizer_sect("Other Escapes", {
   strwrap_csi("hello \033kworld yohoo", 12)
   strwrap_csi("hello \033\nworld yohoo", 12)
+
+  # c0 escapes should be treated as zero width
+
+  strwrap_csi("hello\x1F\x1F\x1F\x1F\x1F\x1F world yohoo", 12)
 })
 
 # Things to test:

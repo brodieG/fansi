@@ -22,9 +22,22 @@ digits_in_int <- function(x) .Call(FANSI_digits_in_int, x)
 #'   possibly converted to UTF-8.
 #' @examples
 #' string <- '1\t12\t123\t1234\t12345678'
-#' ruler <- '1234567|1234567|1234567|1234567|1234567'
-#' writeLines(c(ruler, tabs_as_spaces(string), string))
-#' writeLines(c(ruler, tabs_as_spaces(string, c(2, 8), string))
+#' tabs_as_spaces(string)
+#' writeLines(
+#'   c(
+#'     '-------|-------|-------|-------|-------|',
+#'     tabs_as_spaces(string)
+#' ) )
+#' writeLines(
+#'   c(
+#'     '-|--|--|--|--|--|--|--|--|--|--|',
+#'     tabs_as_spaces(string, tab.stops=c(2, 3))
+#' ) )
+#' writeLines(
+#'   c(
+#'     '-|--|-------|-------|-------|',
+#'     tabs_as_spaces(string, tab.stops=c(2, 3, 8))
+#' ) )
 
 tabs_as_spaces <- function(x, tab.stops=getOption('fansi.tab.stops')) {
   vetr(
