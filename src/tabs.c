@@ -50,8 +50,8 @@ SEXP FANSI_tabs_as_spaces(
     source = CHAR(chr);
     // One additional issue is that if we f
 
-    while(*source && *(source = strchr(source, '\t'))) {
-      Rprintf("Found tab at %p\n", source);
+    while(*source && (source = strchr(source, '\t'))) {
+      Rprintf("Found tab at %p %d\n", source, *source);
       if(!tabs_in_str) {
         tabs_in_str = 1;
         UNPROTECT(1);
@@ -62,8 +62,12 @@ SEXP FANSI_tabs_as_spaces(
             max_tab_stop = INTEGER(tab_stops)[j];
         }
       }
+      Rprintf("boo\n");
       ++tab_count;
+      Rprintf("ar\n");
       ++source;
+      Rprintf("foo\n");
+      Rprintf("foo %d\n", *source);
     }
     if(tab_count) {
       // Need to convert to UTF8 so width calcs work
