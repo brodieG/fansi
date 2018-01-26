@@ -146,7 +146,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * need to make it back to R which doesn't have a `size_t` type.
      *
      * - pos_byte: the byte in the string
-     * - pos_ansi: actual character position
+     * - pos_ansi: actual character position, different from pos_byte due to
+     *   multi-byte characters (i.e. UTF-8)
      * - pos_raw: the character position after we strip the handled ANSI tags,
      *   the difference with pos_ansi is that pos_ansi counts the escaped
      *   characters whereas this one does not.
