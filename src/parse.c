@@ -23,7 +23,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
  * We rely on struct initialization to set everything else to zero.
  */
 struct FANSI_state FANSI_state_init() {
-  return (struct FANSI_state) { .color = -1, .bg_color = -1};
+  return (struct FANSI_state) {.color = -1, .bg_color = -1};
 }
 /*
  * Reset all the display attributes, but not the position ones
@@ -37,7 +37,16 @@ struct FANSI_state FANSI_reset_state(struct FANSI_state state) {
 
   return  state;
 }
-
+struct FANSI_state FANSI_reset_width(struct FANSI_state state) {
+  state.pos_width = 0;
+  state.pos_width_target = 0;
+  return state;
+}
+struct FANSI_state FANSI_inc_width(struct FANSI_state state, int inc) {
+  state.pos_width = FANSI_add_int(state.pos_width, inc);
+  state.pos_width_target = FANSI_add_int(state.pos_width_target, inc);
+  return state;
+}
 // Can a byte be interpreted as ASCII number?
 
 int FANSI_is_num(const char * string) {
@@ -46,77 +55,117 @@ int FANSI_is_num(const char * string) {
 // Convert a char value to number by subtracting the zero char; only intended
 // for use with string values in [0-9]
 
-unsigned int FANSI_as_num(const char * string) {
-  if(*string < 0 || *string > 127)
-    error("Currently only ASCII-128 characters are supported");
+int FANSI_as_num(const char * string) {
   if(!FANSI_is_num(string))
-    error("Internal Error: attempt to convert non-numeric char to int.");
-
-  return (unsigned int) (*string - '0');
+    error(
+      "Internal Error: attempt to convert non-numeric char (%d) to int.",
+      (int) *string
+    );
+  return (int) (*string - '0');
 }
-// Valid end to a CSI SGR numeric token?
-
-int FANSI_is_tok_end(const char * string) {
-  return *string == ';' || *string == 'm';
-}
-
-// Store the result of reading a token
+// Store the result of reading a parameter substring token
 
 struct FANSI_tok_res {
   unsigned int val;         // The actual value of the token
   int len;                  // How many character in the token
-  // Whether it was a legal token, 0=no, 1=no, but it only contained numbers so
-  // it's okay to keep parsing other ones, 2=yes (0-999)
-  int success;
-  int last;                 // Whether it ended in 'm' (vs. ';')
+  int err_code;             // see struct FANSI_state
+  int last;                 // Whether it is the last parameter substring
 };
 /*
  * Attempts to read CSI SGR tokens
  *
  * See struct FANSI_tok_res for return value details
+ *
+ * Note this makes no attempt to interpret the CSI other than indicate there are
+ * odd characters in it.
  */
 
 struct FANSI_tok_res FANSI_parse_token(const char * string) {
   unsigned int mult, val;
-  int len, success, last;
-  success = len = val = last = 0;
+  int len, len_intermediate, last, non_standard, private, err_code,
+    leading_zeros, not_zero;
+  len = len_intermediate = val = last = non_standard = private =
+    err_code = leading_zeros = not_zero = 0;
   mult = 1;
 
-  while(FANSI_is_num(string)) {
-    ++string;
+  // `private` a bit redundant since we don't actually use it differentially to
+  // non-normal
+
+  private = *string >= 0x3C && * string <= 0x3F;
+
+  // cycle through valid parameter bytes
+
+  while(*string >= 0x30 && *string <= 0x3F && *string != ';') {
+    int is_zero = *string == '0';
+    if(!is_zero && !not_zero) not_zero = 1;
+    if(is_zero && !not_zero) ++leading_zeros;
+    non_standard |= *string > 0x39;
+    string++;
     len = FANSI_add_int(len, 1);
   }
-  // Only succed if number isn't too long and terminates in ';' or 'm'
+  // check for for intermediate bytes, we allow 'infinite' here even though in
+  // practice more than one is likely a bad outcome
 
-  if(FANSI_is_tok_end(string)) {
+  while(*string >= 0x20 && *string <= 0x2F) {
+    ++string;
+    len_intermediate = FANSI_add_int(len_intermediate, 1);
+  }
+  // check for final byte
+
+  if((*string == ';' || *string == 'm') && !len_intermediate) {
+    // valid end of parameter substring
+
+    if(non_standard) err_code = 1;
     last = (*string == 'm');
-    if(len > 3) {
-      success = 1;
-    } else {
-      success = 2;
+  } else if(*string >= 0x40 && *string <= 0x7E && len_intermediate == 1) {
+    // valid final byte
+    last = 1;
+    err_code = 3;
+  } else {
+    // invalid end
+    err_code = 4;
+  }
+  // Final interpretations; note that anything over 255 cannot be part of a
+  // valid SGR sequence
 
-      // Read the string backwards (assume 0 if no string) and turn it into a
-      // number
+  if(last && (*string != 'm') && err_code < 3) {
+    // Not actually an SGR sequence
+    err_code = 3;
+  } else if(!err_code && (len - leading_zeros) > 3) {
+    err_code = 2;
+  }
+  // Rprintf("    len: %d leading_zeros: %d\n", len, leading_zeros);
+  if(!err_code) {
+    int len2 = len - leading_zeros;
+    while(len2--) {
+      val += (FANSI_as_num(--string) * mult);
+      mult *= 10;
+  } }
+  if(val > 255) err_code = 2;
 
-      int len2 = len;
-      while(len2--) {
-        val += FANSI_as_num(--string) * mult;
-        mult *= 10;
-  } } }
+  // If the string didn't end, then we consume one extra character for the
+  // ending
+
+  if(*string) ++len;
+
   return (struct FANSI_tok_res) {
-    .val=val, .len=len, .success=success, .last=last
+    .val=val, .len=len + len_intermediate,
+    .err_code=err_code, .last=last
   };
 }
 /*
- * Call with state once we've advanced the string just past a [34]8;2
+ * Call with state once we've advanced the string just past a [34]8;
  *
- * Will return the state after reading through the next three tags which in
- * theory correspond to to the r,g,b values.
+ * Will return the state after reading through the next two or four
+ * subparameters (depending on whether the first subparameter is 2 or 5) which
+ * in theory correspond to to the r,g,b values.
  *
  * @param mode is whether we are doing foregrounds (3) or backgrounds (4)
  * @param colors is whether we are doing palette (5), or rgb truecolor (2)
  */
-static struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode) {
+static struct FANSI_state FANSI_parse_colors(
+  struct FANSI_state state, int mode
+) {
   if(mode != 3 && mode != 4)
     error("Internal Error: parsing color with invalid mode.");
 
@@ -129,18 +178,19 @@ static struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode)
   // First, figure out if we are in true color or palette mode
 
   res = FANSI_parse_token(&state.string[state.pos_byte]);
-  int res_len_inc = FANSI_add_int(res.len, 1);
-  state.pos_byte = FANSI_add_int(state.pos_byte, res_len_inc);
+  state.pos_byte = FANSI_add_int(state.pos_byte, res.len);
   state.last = res.last;
-  if(res.success && ((res.val != 2 && res.val != 5) || res.last)) {
+  state.err_code = res.err_code;
+
+  if(!state.err_code && ((res.val != 2 && res.val != 5) || state.last)) {
     // weird case, we don't want to advance the position here because `res.val`
     // needs to be interpreted as potentially a non-color style and the prior
-    // 38 or 48 just gets tossed
+    // 38 or 48 just gets tossed (at least this happens on OSX terminal and
+    // iTerm)
 
-    state.pos_byte -= (res.len + 1);
-  } else if(!res.success) {
-    state.fail = 1;
-  } else if(res.success == 2) {
+    state.pos_byte -= (res.len);
+    state.err_code = 2;
+  } else if(!state.err_code) {
     int colors = res.val;
     if(colors == 2) {
       i_max = 3;
@@ -154,30 +204,29 @@ static struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode)
 
     for(int i = 0; i < i_max; ++i) {
       res = FANSI_parse_token(&state.string[state.pos_byte]);
-      state.pos_byte = FANSI_add_int(state.pos_byte, FANSI_add_int(res.len, 1));
+      state.pos_byte = FANSI_add_int(state.pos_byte, res.len);
       state.last = res.last;
-      if(res.success) {
+      state.err_code = res.err_code;
+
+      if(!state.err_code) {
         int early_end = res.last && i < (i_max - 1);
-        if(res.success == 2 && res.val < 256 && !early_end) {
+        if(res.val < 256 && !early_end) {
           rgb[i + 1] = res.val;
         } else {
           // Not a valid color; doesn't break parsing so that we end up with the
           // cursor at the right place
 
           valid_col = 0;
-        }
-      } else {
-        state.fail = 1;
-        break;
-      }
-    }
+          break;
+    } } }
     // Failure handling happens in the main loop, we just need to ensure the
-    // byte position is correct
+    // byte position and state is correct
 
-    if(!state.fail) {
+    if(!state.err_code) {
       if(!valid_col) {
         for(int i = 0; i < 4; i++) rgb[i] = 0;
         col = -1;
+        state.err_code = 2;  // invalid substring
       }
       if(mode == 3) {
         state.color = col;
@@ -187,109 +236,202 @@ static struct FANSI_state FANSI_parse_colors(struct FANSI_state state, int mode)
         for(int i = 0; i < 4; i++) state.bg_color_extra[i] = rgb[i];
       }
     }
-  } else if(res.success == 1) {
-    // do nothing here
-  } else error("Internal Error: 23234kdshf");
-
+  }
   return state;
 }
 /*
- * Parses ANSI CSI SGR sequences
+ * Parses ESC sequences
+ *
+ * In particular, special treatment for ANSI CSI SGR sequences.
+ *
+ * @section ANSI CSI:
+ *
+ * Valid chars:
+ *
+ * * Paramter Bytes 03/00 - 03/15 (0x30 to 0x3F): [0-9:;<=>?]
+ *     * First bit seq should be in 03/00 - 03/11: [0-9:;]
+ *     * Otherwise a private spec
+ * * If normal spec, then parameter substrings:
+ *     * One or more numbers in 0-9
+ *     * ':' to separate numbers into decimals
+ *     * ';' terminates the substring
+ *     * 03/12-03/15 allowed if not in first bytes of the parameter string, but
+ *       reserved for future use
+ *     * Leading zeros can be omitted
+ *     * Empty substrings allowed, and trailing delimiter can/should be omitted
+ *  * Intermediate bytes 02/00-02/15 (0x20-0x2F): [ !"#$%&'()*+,\-./]
+ *  * Final bytes 04/00-07/14 (0x40-0x7E): [@A-Z\[\\\]\%_`a-z{|}~]
+ *
+ * @section Possible Outcomes:
+ *
+ * See `FANSI_state.err_code`
+ *
+ * From some experimentation it doesn't seem like the intermediate bytes are
+ * completely supported by the OSX terminal...  A single itermediate works okay,
+ * more and it becomes a crapshoot, '!' in particular seems to cause problems.
+ *
+ * iTerm seems to read only the last 8 bits of any number specified, at least
+ * in the [34]8;2;... subparameter strings.  In other words, '255' is equivalent
+ * to '511' or some such.  Terminal doesn't recognize the rgb style
+ * sub-parameters, and in fact just seems to start interpreting subparameters
+ * right after the 38/48, so '38;2m' is read as '2m'.
+ *
+ * Both iTerm and Terminal seem to interpret the next subparameter after a 38/48
+ * if is not a 2 or a 5.
+ *
+ * @section Illegal Bytes:
+ *
+ * Both iTerm and terminal seem to completely ignore bytes above 0x7E or below
+ * 0x20 within CSI sequences.  They seem to just display to screen / be
+ * interpreted as the C0 ESC sequences they are and then the parsing of the CSI
+ * string continues uninterrupted.
  *
  * @input state must be set with .pos_byte pointing to the ESC that begins the
- *   SGR sequence
+ *   CSI sequence
  * @return a state updated with the SGR sequence info and with pos_byte and
- *   other position info moved to the first char after the sequence.  On failure
- *   advances the ESC[ bit, although in theory as per #4 should probably advance
- *   all the way for any CSI sequence, not just SGR
+ *   other position info moved to the first char after the sequence.  See
+ *   details for failure modes.
  */
-struct FANSI_state FANSI_parse_sgr(struct FANSI_state state) {
-  // make a copy of the struct so we don't modify state if it turns out
-  // this is an invalid SGR
+struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
+  /***************************************************\
+  | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_find_esc  |
+  \***************************************************/
+  if(state.string[state.pos_byte] != 27)
+    // nocov start
+    error(
+      "Internal error: %s (decimal char %d).",
+      "parsing ESC sequence that doesn't start with ESC",
+      (int) state.string[state.pos_byte]
+    );
+    // nocov end
 
   int pos_byte_prev = state.pos_byte;
-  state.pos_byte = FANSI_add_int(state.pos_byte, 2);
-  struct FANSI_state state_tmp = state;
-  struct FANSI_tok_res tok_res = {.success = 0};
+  state.pos_byte = FANSI_add_int(state.pos_byte, 1);  // advance ESC
 
-  // Loop through the SGR; each token we process successfully modifies state
-  // and advances to the next token
+  if(!state.string[state.pos_byte]) {
+    // String ends in ESC
+    state.err_code = 5;
+  } else if(state.string[state.pos_byte] != '[') {
+    // Other ESC sequence; note there are technically multi character sequences
+    // but we ignore them here.  There is also the possibility that we mess up a
+    // utf-8 sequence if it starts right after the ESC, but oh well...
+    state.pos_byte = FANSI_add_int(state.pos_byte, 1);
+    state.err_code = 5;
+  } else {
+    // CSI sequence
 
-  do {
-    tok_res = FANSI_parse_token(&state.string[state.pos_byte]);
-    state.pos_byte =
-      FANSI_add_int(state.pos_byte, FANSI_add_int(tok_res.len, 1));
-    state.last = tok_res.last;
+    state.pos_byte = FANSI_add_int(state.pos_byte, 1);  // consume '['
+    struct FANSI_tok_res tok_res = {.err_code = 0};
 
-    if(!tok_res.success) {
-      state.fail = 1;
-    } else if(tok_res.success == 2) {
-      // We have a reasonable CSI value, now we need to check whether it
-      // actually corresponds to anything that should modify state
+    // Loop through the SGR; each token we process successfully modifies state
+    // and advances to the next token
 
-      if(!tok_res.val) {
-        state = FANSI_reset_state(state);
-      } else if (tok_res.val < 10) {
-        // This is a style, so update the bit mask by enabing the style
-        state.style |= 1U << tok_res.val;
-      } else if (
-        tok_res.val == 20 || tok_res.val == 21 || tok_res.val == 26
-      ) {
-        // these are corner case tags that aren't actually closing tags or
-        // could be interpreted as non-closing tags; we need to figure out
-        // what to do with this (just return invalid? but it could change
-        // display).
+    do {
+      tok_res = FANSI_parse_token(&state.string[state.pos_byte]);
+      state.pos_byte =
+        FANSI_add_int(state.pos_byte, tok_res.len);
+      state.last = tok_res.last;
+      state.err_code = tok_res.err_code;
 
-        warning("Encountered non handled tag");
-      } else if (tok_res.val == 22) {
-        // Turn off bold or faint
-        state.style &= ~(1U << 1U);
-        state.style &= ~(1U << 2U);
-      } else if (tok_res.val == 25) {
-        // Turn off blinking
-        state.style &= ~(1U << 5U);
-        state.style &= ~(1U << 6U);
-      } else if (tok_res.val >= 20 && tok_res.val < 30) {
-        // All other styles are 1:1
-        state.style &= ~(1U << (tok_res.val - 20));
-      } else if (tok_res.val >= 30 && tok_res.val < 50) {
-        // Colors; much shared logic between color and bg_color, so
-        // combining that here
+      // Note we use `state.err_code` instead of `tok_res.err_code` as
+      // FANSI_parse_colors internally calls FANSI_parse_token
 
-        int foreground = tok_res.val < 40; // true then color, else bg color
-        int col_code = tok_res.val - (foreground ? 30 : 40);
+      if(!state.err_code) {
+        // We have a reasonable CSI value, now we need to check whether it
+        // actually corresponds to anything that should modify state
 
-        if(col_code == 9) col_code = -1;
-        if(foreground) state.color = col_code;
-        else state.bg_color = col_code;
+        if(!tok_res.val) {
+          state = FANSI_reset_state(state);
+        } else if (tok_res.val < 10) {
+          // 1-9 are the standard styles (bold/italic)
+          // We use a bit mask on to track these
+          state.style |= 1U << tok_res.val;
+        } else if (tok_res.val < 20) {
+          // These are alternative fonts
+          state.font = tok_res.val;
+        } else if (tok_res.val == 20) {
+          // Fraktur
+          state.style |= (1U << 10U);
+        } else if (tok_res.val == 21) {
+          // Double underline
+          state.style |= (1U << 11U);
+        } else if (tok_res.val == 22) {
+          // Turn off bold or faint
+          state.style &= ~(1U << 1U);
+          state.style &= ~(1U << 2U);
+        } else if (tok_res.val == 23) {
+          // Turn off italics, fraktur
+          state.style &= ~(1U << 3U);
+          state.style &= ~(1U << 10U);
+        } else if (tok_res.val == 24) {
+          // Turn off underline, double underline
+          state.style &= ~(1U << 4U);
+          state.style &= ~(1U << 11U);
+        } else if (tok_res.val == 25) {
+          // Turn off blinking
+          state.style &= ~(1U << 5U);
+          state.style &= ~(1U << 6U);
+        } else if (tok_res.val == 26) {
+          // reserved for proportional spacing as specified in CCITT
+          // Recommendation T.61; implicitly we are assuming this is a single
+          // substring parameter, unlike say 38;2;..., but really we have no
+          // idea what this is.
+          state.style |= (1U << 12U);
+        } else if (tok_res.val >= 20 && tok_res.val < 30) {
+          // Turn off the other styles that map exactly from 1-9 to 21-29
+          state.style &= ~(1U << (tok_res.val - 20));
+        } else if (tok_res.val >= 30 && tok_res.val < 50) {
+          // Colors; much shared logic between color and bg_color, so
+          // combining that here
 
-        // Handle the special color codes, need to parse some subsequent
-        // tokens
+          int foreground = tok_res.val < 40; // true then color, else bg color
+          int col_code = tok_res.val - (foreground ? 30 : 40);
 
-        if(col_code == 8) {
-          state = FANSI_parse_colors(state, foreground ? 3 : 4);
+          if(col_code == 9) col_code = -1;
+          if(foreground) state.color = col_code;
+          else state.bg_color = col_code;
+
+          // Handle the special color codes, need to parse some subsequent
+          // tokens
+
+          if(col_code == 8) {
+            state = FANSI_parse_colors(state, foreground ? 3 : 4);
+          }
+        } else if(tok_res.val == 50) {
+          // Turn off 26
+          state.style &= ~(1U << 12U);
+        } else if(tok_res.val > 50 & tok_res.val < 60) {
+          // borders
+
+          if(tok_res.val < 54) {
+            state.border |= (1U << (unsigned int)(tok_res.val - 50));
+          } else if (tok_res.val == 54) {
+            state.border &= ~(1U << 1);
+            state.border &= ~(1U << 2);
+          } else if (tok_res.val == 55) {
+            state.border &= ~(1U << 3);
+          } else {
+            state.err_code = 2;  // unknown token
+          }
+        } else {
+          state.err_code = 2;  // unknown token
         }
       }
-    } else if (tok_res.success == 1) {
-      // "valid" token, but meaningless so just skip and move on to next
-    } else error("Internal Error: 350au834.");
-    // Note that state.last may be different to tok_res.last when we parse
-    // colors of the 38;5;... or 38;2;... variety.
+      // `tok_res` value can't be used because code above, including
+      // FANSI_parse_colors can change the corresponding value in the `state`
+      // struct, so better to deal with that directly
 
-    if(tok_res.last || state.last || state.fail) break;
-  } while(1);
-
-  // Invalid escape sequences count as normal characters, and at this point
-  // the only way to have a valid escape seq is if it ends in 'm'
-
+      if(state.last || state.err_code) break;
+    } while(1);
+  }
   int byte_offset = state.pos_byte - pos_byte_prev;
 
-  if(state.fail) {
-    state.pos_raw += byte_offset;
-    state_tmp.pos_raw = state.pos_raw;
-    state_tmp.pos_byte = state.pos_byte;
-    state = state_tmp;
+  if(state.err_code) {
     state.last_char_width = 0;
+    warning(
+      "Encountered invalid escape sequence with err code %d.", state.err_code
+    );
+    state.err_code = 0;
   } else {
     state.last_char_width = 1;
   }
@@ -343,29 +485,31 @@ struct FANSI_state FANSI_read_ascii(struct FANSI_state state) {
   return state;
 }
 /*
+ * C0 ESC sequences treated as zero width
+ */
+struct FANSI_state FANSI_read_c0(struct FANSI_state state) {
+  state = FANSI_read_ascii(state);
+  --state.pos_width;
+  --state.pos_width_target;
+  return state;
+}
+/*
  * Read a Character Off and Update State
+ *
+ * This can probably use some pretty serious optimiation...
  */
 struct FANSI_state FANSI_read_next(struct FANSI_state state) {
-  const char * string = state.string;
-  if(string[state.pos_byte] >  0) {
-    // Character is in the 1-127 range
-    if(string[state.pos_byte] != 27) {
-      // Normal ASCII character
-      state = FANSI_read_ascii(state);
-    } else if (
-      string[state.pos_byte] == 27 && string[state.pos_byte + 1] == '['
-    ) {
-      state = FANSI_parse_sgr(state);
-    } else {
-      // nocov start
-      error(
-        "Internal Error: other ESC sequences not handled currently, see #4"
-      );
-      // nocov end
-    }
-  } else if(string[state.pos_byte] < 0) {
-    state = FANSI_read_utf8(state);
-  }
+  const char chr_val = state.string[state.pos_byte];
+
+  // Normal ASCII characters
+  if(chr_val >= 0x20 & chr_val < 0x7f) state = FANSI_read_ascii(state);
+  // UTF8 characters (chr_val is signed, so > 0x7f will be negative)
+  else if (chr_val < 0) state = FANSI_read_utf8(state);
+  // ESC sequences
+  else if (chr_val == 0x1b) state = FANSI_parse_esc(state);
+  // C0 escapes (e.g. \t, \n, etc)
+  else state = FANSI_read_c0(state);
+
   return state;
 }
 
@@ -400,10 +544,12 @@ struct FANSI_state_pair FANSI_state_at_position(
 ) {
   struct FANSI_state state = state_pair.cur;
   if(pos < state.pos_raw)
+    // nocov start
     error(
       "Cannot re-use a state for a later position (%0f) than `pos` (%0f).",
       (double) state.pos_raw, (double) pos
     );
+    // nocov end
   int cond = 0;
 
   // Need to reset pos_width_target since it could be distorted by a previous
@@ -418,7 +564,7 @@ struct FANSI_state_pair FANSI_state_at_position(
 
   while(1) {
     state_prev = state_res = state;
-    state.fail = state.last = 0;
+    state.err_code = state.last = 0;
 
     // Handle UTF-8, we need to record the byte size of the sequence as well as
     // the corresponding display width.
@@ -560,11 +706,11 @@ int FANSI_color_size(int color, int * color_extra) {
     size = 3 + 2 +
       FANSI_digits_in_int(color_extra[1]) + 1;
   } else if (color == 8) {
-    error("Internal Error: unexpected compound color format");
+    error("Internal Error: unexpected compound color format");   // nocov
   } else if (color >= 0 && color < 10) {
     size = 3;
   } else if (color >= 0) {
-    error("Internal Error: unexpected compound color format 2");
+    error("Internal Error: unexpected compound color format 2"); // nocov
   }
   return size;
 }
@@ -616,7 +762,7 @@ unsigned int FANSI_color_write(
   char * string, int color, int * color_extra, int mode
 ) {
   if(mode != 3 && mode != 4)
-    error("Internal Error: color mode must be 3 or 4");
+    error("Internal Error: color mode must be 3 or 4");  // nocov
 
   unsigned int str_off = 0;
   if(color > 0) {
@@ -708,7 +854,7 @@ char * FANSI_state_as_chr(struct FANSI_state state) {
 /*
  * Determine whether two state structs have same style
  *
- * This only compares the style pieces
+ * This only compares the style pieces (i.e. not the position pieces)
  *
  * Returns 1 if the are different, 0 if they are equal
  */
@@ -716,6 +862,9 @@ int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
   return !(
     target.style == current.style &&
     target.color == current.color &&
+    target.border == current.border &&
+    target.font == current.font &&
+    target.ideogram == current.ideogram &&
     target.bg_color == current.bg_color &&
     target.color_extra[0] == current.color_extra[0] &&
     target.bg_color_extra[0] == current.bg_color_extra[0] &&
@@ -728,7 +877,9 @@ int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
   );
 }
 int FANSI_state_has_style(struct FANSI_state state) {
-  return state.style || state.color >= 0 || state.bg_color >= 0;
+  return
+    state.style || state.color >= 0 || state.bg_color >= 0 ||
+    state.font || state.border || state.ideogram;
 }
 /*
  * R interface for FANSI_state_at_position
@@ -761,6 +912,7 @@ SEXP FANSI_state_at_pos_ext(
   const char * string = CHAR(text_chr);
   struct FANSI_state state = FANSI_state_init();
   struct FANSI_state state_prev = FANSI_state_init();
+
   struct FANSI_state_pair state_pair, state_pair_old;
 
   // Allocate result, will be a res_cols x n matrix.  A bit wasteful to record
@@ -793,7 +945,7 @@ SEXP FANSI_state_at_pos_ext(
   SEXP res_chr, res_chr_prev = PROTECT(mkChar(""));
 
   int is_utf8_loc = FANSI_is_utf8_loc();
-  string = FANSI_string_as_utf8(text_chr, is_utf8_loc);
+  string = FANSI_string_as_utf8(text_chr, is_utf8_loc).buff;
 
   state.string = state_prev.string = string;
   state_pair.cur = state;

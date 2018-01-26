@@ -35,20 +35,15 @@ unitizer_sect("Whitespace", {
   # Tabs / ctrl; newlines remain
 
   fansi:::process(' \t hello')
-  fansi:::process(' \t hello', strip_tab=FALSE)
   fansi:::process(' \t\a\r hello')
-  fansi:::process(' \t\a\r hello\n \a\r', strip_ctl=TRUE)
-  fansi:::process(' \t\a\r hello\n \a\r', strip_ctl=TRUE, strip_spc=FALSE)
 
   # interactiong between punct and ctrl
 
   fansi:::process('hello.  \r world.')
-  fansi:::process('hello.  \r world.', strip_ctl=TRUE)
 
   # CSIs
 
   fansi:::process('hello.  \033[31m world.\033[0m')
-  fansi:::process('hello.  \033[31m world.\033[0m', strip_ctl=TRUE)
 
   # Make sure we are not inadvertently changing SXPs
 

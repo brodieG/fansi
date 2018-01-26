@@ -18,7 +18,9 @@
 #'
 #' @export
 
-ansi_state <- function(text, pos, type='chars', lag, ends) {
+ansi_state <- function(
+  text, pos, type='chars', lag, ends, tabs.as.spaces=FALSE, tab.stops=8L
+) {
   stopifnot(
     is.character(text), length(text) == 1L,
     is.numeric(pos), min(pos, 0L, na.rm=TRUE) >= 0L,
@@ -27,7 +29,7 @@ ansi_state <- function(text, pos, type='chars', lag, ends) {
   )
   .Call(
     FANSI_state_at_pos_ext, text, as.integer(pos) - 1L, type.match - 1L,
-    lag, ends
+    lag, ends, tabs.as.spaces, tab.stops
   )
 }
 #' Alternate substr version
@@ -35,11 +37,12 @@ ansi_state <- function(text, pos, type='chars', lag, ends) {
 #' @export
 
 ansi_substr2 <- function(
-  x, start, stop, type='chars', round='first'
+  x, start, stop, type='chars', round='first', tabs.as.spaces=FALSE,
+  tab.stops=8L
 ) {
+  x <- as.character(x)
   stopifnot(isTRUE(round %in% c('first', 'last', 'both', 'neither')))
 
-  x <- as.character(x)
   x.len <- length(x)
 
   # Add special case for length(x) == 1
@@ -73,8 +76,10 @@ ansi_substr2 <- function(
     e.ends <- c(rep(FALSE, length(start)), rep(TRUE, length(start)))[e.order]
     e.sort <- c(e.start, e.stop)[e.order]
 
-    state <- ansi_state(u, e.sort, type, e.lag, e.ends)
-
+    state <- ansi_state(
+      u, e.sort, type, e.lag, e.ends, tabs.as.spaces=tabs.as.spaces,
+      tab.stops=tab.stops
+    )
     # Recover the matching values for e.sort
 
     e.unsort.idx <- match(seq_along(e.order), e.order)

@@ -16,7 +16,7 @@ struct FANSI_prefix_dat {
 
 static struct FANSI_prefix_dat compute_pre(SEXP x, int is_utf8_loc) {
 
-  const char * x_utf8 = FANSI_string_as_utf8(asChar(x), is_utf8_loc);
+  const char * x_utf8 = FANSI_string_as_utf8(asChar(x), is_utf8_loc).buff;
   int x_has_utf8 = FANSI_has_utf8(x_utf8);
 
   SEXP x_strip = PROTECT(FANSI_strip(x));
@@ -65,13 +65,6 @@ SEXP FANSI_writeline(
 
   int needs_close = FANSI_state_has_style(state_bound);
   int needs_start = FANSI_state_has_style(state_start);
-
-  /*
-  Rprintf(
-    "  color: %d, bg_color: %d, style: %d\n",
-    state_start.color, state_start.bg_color, state_start.style
-  );
-  */
 
   // state_bound.pos_byte 1 past what we need, so this should include room
   // for NULL terminator
@@ -332,17 +325,16 @@ SEXP FANSI_strwrap_ext(
   SEXP indent, SEXP exdent,
   SEXP prefix, SEXP initial,
   SEXP wrap_always, SEXP pad_end,
-  SEXP strip_spc, SEXP strip_tab, SEXP strip_ctl,
-  SEXP tabs_as_spc, SEXP tab_stops
+  SEXP strip_spaces,
+  SEXP tabs_as_spaces, SEXP tab_stops
 ) {
   if(
     TYPEOF(x) != STRSXP || TYPEOF(width) != INTSXP ||
     TYPEOF(indent) != INTSXP || TYPEOF(exdent) != INTSXP ||
     TYPEOF(prefix) != STRSXP || TYPEOF(initial) != STRSXP ||
     TYPEOF(wrap_always) != LGLSXP || TYPEOF(pad_end) != LGLSXP ||
-    TYPEOF(strip_spc) != LGLSXP ||
-    TYPEOF(strip_tab) != LGLSXP || TYPEOF(strip_ctl) != LGLSXP ||
-    TYPEOF(tabs_as_spc) != LGLSXP || TYPEOF(tab_stops) != INTSXP
+    TYPEOF(strip_spaces) != LGLSXP ||
+    TYPEOF(tabs_as_spaces) != LGLSXP || TYPEOF(tab_stops) != INTSXP
   ) {
     error("Type error.");
   }
@@ -380,23 +372,28 @@ SEXP FANSI_strwrap_ext(
 
   struct FANSI_buff buff = {.len = 0};
 
-  // Strip control/whitespaces as needed
+  // Strip whitespaces as needed
 
-  x = PROTECT(
-    FANSI_process(
-      x, asInteger(strip_spc), asInteger(strip_tab), asInteger(strip_ctl),
-      &buff
-  ) );
+  x = PROTECT(FANSI_process(x, &buff));
+
+  // and tabs
+
+  if(asInteger(tabs_as_spaces))
+    x = PROTECT(FANSI_tabs_as_spaces(x, tab_stops, &buff, is_utf8_loc));
+  else x = PROTECT(x);
+
   for(i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
+    SEXP chr = STRING_ELT(x, i);
+    if(chr == NA_STRING) continue;
     SEXP str_i = PROTECT(
       FANSI_strwrap(
-        CHAR(STRING_ELT(x, i)), width_int, indent_int, exdent_int,
+        CHAR(chr), width_int, indent_int, exdent_int,
         pre_dat, ini_dat, wrap_always_int, &buff, is_utf8_loc
     ) );
     SET_VECTOR_ELT(res, i, str_i);
     UNPROTECT(1);
   }
-  UNPROTECT(2);
+  UNPROTECT(3);
   return res;
 }

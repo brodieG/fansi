@@ -4,7 +4,8 @@
 \alias{ansi_state}
 \title{Compute String ANSI State at a Given Position}
 \usage{
-ansi_state(text, pos, type = "chars", lag, ends)
+ansi_state(text, pos, type = "chars", lag, ends, tabs.as.spaces = FALSE,
+  tab.stops = 8L)
 }
 \description{
 Compute String ANSI State at a Given Position

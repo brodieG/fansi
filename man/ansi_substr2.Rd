@@ -4,7 +4,8 @@
 \alias{ansi_substr2}
 \title{Alternate substr version}
 \usage{
-ansi_substr2(x, start, stop, type = "chars", round = "first")
+ansi_substr2(x, start, stop, type = "chars", round = "first",
+  tabs.as.spaces = FALSE, tab.stops = 8L)
 }
 \description{
 Alternate substr version

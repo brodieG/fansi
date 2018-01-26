@@ -19,9 +19,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #include "fansi.h"
 
 /*
- * Compute Location and Size of Next CSI ANSI Sequences
+ * Compute Location and Size of Next ANSI Sequences
  *
- * Only sequences that start in ESC [ are considered.
+ * See FANSI_parse_esc as well, where there is similar logic, although we keep
+ * it separated here for speed since we don't try to interpret the string.
  *
  * Length includes the ESC and [, and start point is the ESC.
  *
@@ -34,7 +35,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
  * processing the sequence).
  */
 
-struct FANSI_csi_pos FANSI_find_csi(const char * x) {
+struct FANSI_csi_pos FANSI_find_esc(const char * x) {
+  /***************************************************\
+  | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_parse_esc |
+  \***************************************************/
   int valid = 0;
   const char * x_track = x;
   const char * x_start = x;
@@ -43,9 +47,13 @@ struct FANSI_csi_pos FANSI_find_csi(const char * x) {
   // the ESC is the last thing in a string, but handling it explicitly adds a
   // bit of complexity and it should be rare
 
-  while((x_start = strchr(x_track, 27))) {
-    x_track++;
+  struct FANSI_csi_pos res;
+  if((x_start = x_track = strchr(x, 27))) {
+    ++x_track;
     if(*x_track == '[') {
+      // This is a CSI sequence, so it has multiple characters that we need to
+      // skip.  The final character is processed outside of here since it has
+      // the same logic for CSI and non CSI sequences
 
       // skip [
 
@@ -58,19 +66,12 @@ struct FANSI_csi_pos FANSI_find_csi(const char * x) {
       // And all the valid intermediates
 
       while(*x_track >= 0x20 && *x_track <= 0x2F) ++x_track;
+    }
+    // In either normal or CSI sequence, there needs to be a final character:
 
-      // Now there should be a single valid ending byte
+    valid = *x_track >= 0x40 && *x_track <= 0x7E;
+    if(*x_track) ++x_track;
 
-      if(*x_track) {
-        valid = *x_track >= 0x40 && *x_track <= 0x7E;
-      }
-      break;
-  } }
-
-  struct FANSI_csi_pos res;
-  if(!x_start) {
-    res = (struct FANSI_csi_pos){.start=x_start, .len=0, .valid=0};
-  } else {
     if(x_track - x > INT_MAX - 1)
       // nocov start
       error(
@@ -81,8 +82,10 @@ struct FANSI_csi_pos FANSI_find_csi(const char * x) {
       // nocov end
 
     res = (struct FANSI_csi_pos){
-      .start=x_start, .len=(x_track - x_start + 1), .valid=valid
+      .start=x_start, .len=(x_track - x_start), .valid=valid
     };
+  } else {
+    res = (struct FANSI_csi_pos){.start=x_start, .len=0, .valid=0};
   }
   return res;
 }

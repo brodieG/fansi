@@ -20,7 +20,8 @@ SEXP FANSI_check_assumptions() {
   if(CHAR_BIT != 8)
     warningcall(R_NilValue, err_base, "CHAR_BIT is not 8", "");
 
-  // This is supposedly enforced by R
+  // This is supposedly enforced by R, and we rely on it in several places (e.g.
+  // to ensure bitmask large enough for styles)
 
   if(sizeof(int) < 4)
     warningcall(R_NilValue, err_base, "ints are not at least 32 bits", "");
