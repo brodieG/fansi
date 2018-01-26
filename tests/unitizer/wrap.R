@@ -79,6 +79,30 @@ unitizer_sect("Other Escapes", {
 
   strwrap_csi("hello\x1F\x1F\x1F\x1F\x1F\x1F world yohoo", 12)
 })
+unitizer_sect("prefix / initial", {
+  pre <- "\033[32m+ \033[0m"
+  ini <- "\033[33m> \033[0m"
+
+  hello.8a <- "hello world yohoo"
+
+  wrap.csi.2 <- strwrap_csi(hello.8a, 10, prefix=pre, initial=ini)
+  wrap.csi.2
+  wrap.nrm.2 <- strwrap(hello.8a, 10, prefix="+ ", initial="> ")
+  identical(strip_ansi(wrap.csi.2), wrap.nrm)
+
+  hello.8b <- c(hello.8a, "oh my this has 2 elements")
+  strwrap_csi(hello.8b, 10, prefix=pre, initial=ini)
+
+  pre.2 <- "\x1b[32m\xd0\x9f \x1b[0m"
+  ini.2 <- "\x1b[33m\xd1\x80 \x1b[0m"
+  hello.8c <- "hello Привет world"
+
+  Encoding(pre.2) <- "UTF-8"
+  Encoding(ini.2) <- "UTF-8"
+  Encoding(hello.8c) <- "UTF-8"
+
+  strwrap_csi(hello.8c, 10, prefix=pre.2, initial=ini.2)
+})
 
 # Things to test:
 #
