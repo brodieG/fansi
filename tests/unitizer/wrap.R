@@ -85,13 +85,17 @@ unitizer_sect("prefix / initial", {
 
   hello.8a <- "hello world yohoo"
 
-  wrap.csi.2 <- strwrap_csi(hello.8a, 10, prefix=pre, initial=ini)
+  wrap.csi.2 <- strwrap_csi(hello.8a, 14, prefix=pre, initial=ini)
   wrap.csi.2
-  wrap.nrm.2 <- strwrap(hello.8a, 10, prefix="+ ", initial="> ")
-  identical(strip_ansi(wrap.csi.2), wrap.nrm)
+  wrap.nrm.2 <- strwrap(hello.8a, 14, prefix="+ ", initial="> ")
+  identical(strip_ansi(wrap.csi.2), wrap.nrm.2)
 
   hello.8b <- c(hello.8a, "oh my this has 2 elements")
-  strwrap_csi(hello.8b, 10, prefix=pre, initial=ini)
+  wrap.csi.3 <- strwrap_csi(hello.8b, 14, prefix=pre, initial=ini)
+  wrap.csi.3
+  wrap.nrm.3 <- strwrap(hello.8b, 14, prefix="+ ", initial="> ")
+
+  identical(strip_ansi(wrap.csi.3), wrap.nrm.3)
 
   pre.2 <- "\x1b[32m\xd0\x9f \x1b[0m"
   ini.2 <- "\x1b[33m\xd1\x80 \x1b[0m"
@@ -101,7 +105,7 @@ unitizer_sect("prefix / initial", {
   Encoding(ini.2) <- "UTF-8"
   Encoding(hello.8c) <- "UTF-8"
 
-  strwrap_csi(hello.8c, 10, prefix=pre.2, initial=ini.2)
+  strwrap_csi(hello.8c, 15, prefix=pre.2, initial=ini.2)
 })
 
 # Things to test:

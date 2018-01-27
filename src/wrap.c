@@ -176,10 +176,10 @@ SEXP FANSI_strwrap(
 
   int width_tar = width_1;
 
-  const char * para_start_chr = make_pre(initial.string, initial.width, indent);
-  int para_start_size = FANSI_add_int(initial.width, indent);
-  const char * para_next_chr = make_pre(prefix.string, prefix.width, exdent);
-  int para_next_size = FANSI_add_int(prefix.width, exdent);
+  const char * para_start_chr = make_pre(initial.string, initial.bytes, indent);
+  int para_start_size = FANSI_add_int(initial.bytes, indent);
+  const char * para_next_chr = make_pre(prefix.string, prefix.bytes, exdent);
+  int para_next_size = FANSI_add_int(prefix.bytes, exdent);
 
   if(width < 1) error("Internal Error: invalid width.");
   if(width_1 < 0 || width_2 < 0)
