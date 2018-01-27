@@ -105,7 +105,11 @@ unitizer_sect("prefix / initial", {
   Encoding(ini.2) <- "UTF-8"
   Encoding(hello.8c) <- "UTF-8"
 
-  strwrap_csi(hello.8c, 15, prefix=pre.2, initial=ini.2)
+  wrap.csi.4 <- strwrap_csi(hello.8c, 15, prefix=pre.2, initial=ini.2)
+  wrap.csi.4
+  wrap.nrm.4 <- strwrap(hello.8c, 15, prefix="\xd0\x9f ", initial="\xd1\x80 ")
+
+  identical(strip_ansi(wrap.csi.4), wrap.nrm.4)
 })
 
 # Things to test:

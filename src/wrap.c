@@ -36,7 +36,7 @@ static struct FANSI_prefix_dat make_pre(SEXP x, int is_utf8_loc) {
  * Combine initial and indent (or prefix and exdent)
  */
 static struct FANSI_prefix_dat pad_pre(
-  struct FANSI_prefix_dat dat, int spaces, struct FANSI_buff * buff
+  struct FANSI_prefix_dat dat, int spaces
 ) {
   int pre_len = dat.bytes;
   const char * pre_chr = dat.string;
@@ -44,9 +44,10 @@ static struct FANSI_prefix_dat pad_pre(
   int alloc_size = FANSI_add_int(FANSI_add_int(pre_len, spaces), 1);
   char * res_start = "";
   if(alloc_size > 1) {
+    // Can't use buff here because we don't write this string out
     // Rprintf("Allocating pre size %d\n", alloc_size);
-    FANSI_size_buff(buff, alloc_size);
-    char * res = res_start = buff->buff;
+
+    char * res = res_start = R_alloc(alloc_size, sizeof(char));
     memcpy(res, pre_chr, pre_len);
     res += pre_len;
     for(int i = 0; i < spaces; ++i) *(res++) = ' ';
@@ -370,7 +371,9 @@ SEXP FANSI_strwrap_ext(
   else x = PROTECT(PROTECT(PROTECT(x)));  // PROTECT stack balance
 
   // Prepare the leading strings; could turn out to be wasteful if we don't
-  // need them all, there are three possible combinations
+  // need them all; there are three possible combinations: 1) first line of the
+  // entire input with indent, 2) first line of paragraph with prefix and
+  // indent, 3) other lines with prefix and exdent.
 
   struct FANSI_prefix_dat pre_dat_raw, ini_dat_raw,
     ini_first_dat, pre_first_dat, pre_next_dat;
@@ -379,21 +382,21 @@ SEXP FANSI_strwrap_ext(
   int exdent_int = asInteger(exdent);
 
   if(indent_int < 0 || exdent_int < 0)
-    stop("Internal Error: illegal indent/exdent values.");  // nocov
+    error("Internal Error: illegal indent/exdent values.");  // nocov
 
   pre_dat_raw = make_pre(prefix, is_utf8_loc);
   if(prefix != initial) {
     ini_dat_raw = make_pre(initial, is_utf8_loc);
   } else ini_dat_raw = pre_dat_raw;
 
-  ini_first_dat = pad_pre(ini_dat_raw, indent_int, &buff);
+  ini_first_dat = pad_pre(ini_dat_raw, indent_int);
 
   if(initial != prefix) {
-    pre_first_dat = pad_pre(pre_dat_raw, indent_int, &buff);
+    pre_first_dat = pad_pre(pre_dat_raw, indent_int);
   } else pre_first_dat = ini_first_dat;
 
   if(indent_int != exdent_int) {
-    pre_next_dat = pad_pre(pre_dat_raw, exdent_int, &buff);
+    pre_next_dat = pad_pre(pre_dat_raw, exdent_int);
   } else pre_next_dat = pre_first_dat;
 
   // Check that widths are feasible, although really only relevant if in strict
