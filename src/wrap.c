@@ -14,15 +14,16 @@ struct FANSI_prefix_dat {
  * Generate data related to prefix / initial
  */
 
-static struct FANSI_prefix_dat compute_pre(SEXP x, int is_utf8_loc) {
-
+static struct FANSI_prefix_dat make_pre(SEXP x, int is_utf8_loc) {
   const char * x_utf8 = FANSI_string_as_utf8(asChar(x), is_utf8_loc).buff;
+  // ideally we would IS_ASCII(x), but that's not available to extensions
   int x_has_utf8 = FANSI_has_utf8(x_utf8);
 
   SEXP x_strip = PROTECT(FANSI_strip(x));
   int x_width = R_nchar(
     asChar(x_strip), Width, FALSE, FALSE, "when computing display width"
   );
+  // wish we could get this directly from R_nchar, grr
 
   int x_bytes = strlen(x_utf8);
 
@@ -34,17 +35,28 @@ static struct FANSI_prefix_dat compute_pre(SEXP x, int is_utf8_loc) {
 /*
  * Combine initial and indent (or prefix and exdent)
  */
-static const char * make_pre(const char * pre_chr, int pre_len, int spaces) {
+static struct FANSI_prefix_dat pad_pre(
+  struct FANSI_prefix_dat dat, int spaces, struct FANSI_buff * buff
+) {
+  int pre_len = dat.bytes;
+  const char * pre_chr = dat.string;
+
   int alloc_size = FANSI_add_int(FANSI_add_int(pre_len, spaces), 1);
   char * res_start = "";
   if(alloc_size > 1) {
     // Rprintf("Allocating pre size %d\n", alloc_size);
-    char * res = res_start = R_alloc(alloc_size, sizeof(char));
-    for(int i = 0; i < spaces; ++i) *(res++) = ' ';
+    FANSI_size_buff(buff, alloc_size);
+    char * res = res_start = buff->buff;
     memcpy(res, pre_chr, pre_len);
-    *(res + pre_len + 1) = '\0';
+    res += pre_len;
+    for(int i = 0; i < spaces; ++i) *(res++) = ' ';
+    *res = '\0';
   }
-  return (const char *) res_start;
+  dat.string = (const char *) res_start;
+  dat.bytes += spaces;
+  dat.width += spaces;
+
+  return dat;
 }
 /*
  * Write a line
@@ -56,7 +68,7 @@ static const char * make_pre(const char * pre_chr, int pre_len, int spaces) {
 SEXP FANSI_writeline(
   struct FANSI_state state_bound, struct FANSI_state state_start,
   struct FANSI_buff * buff,
-  const char * pre, int pre_size, int pre_has_utf8, int is_utf8_loc
+  struct FANSI_prefix_dat pre_dat, int is_utf8_loc
 ) {
   // Rprintf("  Writeline start with buff %p\n", *buff);
 
@@ -70,7 +82,7 @@ SEXP FANSI_writeline(
   // for NULL terminator
 
   int target_size = FANSI_add_int(
-    state_bound.pos_byte - state_start.pos_byte, pre_size
+    state_bound.pos_byte - state_start.pos_byte, pre_dat.bytes
   );
   int state_start_size = 0;
 
@@ -98,10 +110,10 @@ SEXP FANSI_writeline(
   }
   // Apply indent/exdent prefix/initial
 
-  if(pre_size) {
+  if(pre_dat.bytes) {
     // Rprintf("  writing pre %s of size %d\n", pre, pre_size);
-    memcpy(buff_track, pre, pre_size);
-    buff_track += pre_size;
+    memcpy(buff_track, pre_dat.string, pre_dat.bytes);
+    buff_track += pre_dat.bytes;
   }
   // Actual string, remember state_bound.pos_byte is one past what we need
 
@@ -133,7 +145,7 @@ SEXP FANSI_writeline(
   // we must have hit a UTF8 encoded character
 
   cetype_t chr_type = CE_NATIVE;
-  if((state_bound.has_utf8 || pre_has_utf8) && !is_utf8_loc) {
+  if((state_bound.has_utf8 || pre_dat.has_utf8) && !is_utf8_loc) {
     chr_type = CE_UTF8;
   }
   SEXP res_sxp = PROTECT(
@@ -152,15 +164,18 @@ SEXP FANSI_writeline(
  * @param buff a pointer to a buffer struct.  We use pointer to a
  *   pointer because it may need to be resized, but we also don't want to
  *   re-allocate the buffer between calls.
+ * @param pre_first, pre_next, strings (and associated meta data) to prepend to
+ *   each line; pre_first can be based of of `prefix` or off of `initial`
+ *   depending whether we're at the very first line of the external input or not
  * @param strict whether to hard wrap at width or not (not is what strwrap does
  *   by default)
  * @param is_utf8_loc whether the current locale is UTF8
  */
 
 SEXP FANSI_strwrap(
-  const char * x, int width, int indent, int exdent,
-  struct FANSI_prefix_dat prefix,
-  struct FANSI_prefix_dat initial,
+  const char * x, int width,
+  struct FANSI_prefix_dat pre_first,
+  struct FANSI_prefix_dat pre_next,
   int wrap_always,
   struct FANSI_buff * buff,
   int is_utf8_loc
@@ -169,17 +184,10 @@ SEXP FANSI_strwrap(
   struct FANSI_state state = FANSI_state_init();
   state.string = x;
 
-  int width_1_tmp = FANSI_add_int(indent, initial.width);
-  int width_1 = FANSI_add_int(width, -width_1_tmp);
-  int width_2_tmp = FANSI_add_int(exdent, prefix.width);
-  int width_2 = FANSI_add_int(width, -width_2_tmp);
+  int width_1 = FANSI_add_int(width, -pre_first.width);
+  int width_2 = FANSI_add_int(width, -pre_next.width);
 
   int width_tar = width_1;
-
-  const char * para_start_chr = make_pre(initial.string, initial.bytes, indent);
-  int para_start_size = FANSI_add_int(initial.bytes, indent);
-  const char * para_next_chr = make_pre(prefix.string, prefix.bytes, exdent);
-  int para_next_size = FANSI_add_int(prefix.bytes, exdent);
 
   if(width < 1) error("Internal Error: invalid width.");
   if(width_1 < 0 || width_2 < 0)
@@ -255,9 +263,7 @@ SEXP FANSI_strwrap(
         res_sxp = PROTECT(
           FANSI_writeline(
             state_bound, state_start, buff,
-            para_start ? para_start_chr : para_next_chr,
-            para_start ? para_start_size : para_next_size,
-            para_start ? initial.has_utf8 : prefix.has_utf8,
+            para_start ? pre_first : pre_next,
             is_utf8_loc
           )
         );
@@ -338,25 +344,69 @@ SEXP FANSI_strwrap_ext(
   ) {
     error("Type error.");
   }
-  R_xlen_t i, x_len = XLENGTH(x);
-
-  int wrap_always_int = asInteger(wrap_always);
   int is_utf8_loc = FANSI_is_utf8_loc();
 
-  struct FANSI_prefix_dat pre_dat = compute_pre(prefix, is_utf8_loc);
-  struct FANSI_prefix_dat ini_dat = compute_pre(initial, is_utf8_loc);
+  // Set up the buffer, this will be created in FANSI_strwrap, but we want a
+  // handle for it here so we can re-use
+
+  struct FANSI_buff buff = {.len = 0};
+
+  // Strip whitespaces as needed; `strwrap` doesn't seem to do this with prefix
+  // and initial, so we don't either
+
+  x = PROTECT(FANSI_process(x, &buff));
+
+  // and tabs
+
+  if(asInteger(tabs_as_spaces)) {
+    x = PROTECT(FANSI_tabs_as_spaces(x, tab_stops, &buff, is_utf8_loc));
+    prefix = PROTECT(
+      FANSI_tabs_as_spaces(prefix, tab_stops, &buff, is_utf8_loc)
+    );
+    initial = PROTECT(
+      FANSI_tabs_as_spaces(prefix, tab_stops, &buff, is_utf8_loc)
+    );
+  }
+  else x = PROTECT(PROTECT(PROTECT(x)));  // PROTECT stack balance
+
+  // Prepare the leading strings; could turn out to be wasteful if we don't
+  // need them all, there are three possible combinations
+
+  struct FANSI_prefix_dat pre_dat_raw, ini_dat_raw,
+    ini_first_dat, pre_first_dat, pre_next_dat;
+
+  int indent_int = asInteger(indent);
+  int exdent_int = asInteger(exdent);
+
+  if(indent_int < 0 || exdent_int < 0)
+    stop("Internal Error: illegal indent/exdent values.");  // nocov
+
+  pre_dat_raw = make_pre(prefix, is_utf8_loc);
+  if(prefix != initial) {
+    ini_dat_raw = make_pre(initial, is_utf8_loc);
+  } else ini_dat_raw = pre_dat_raw;
+
+  ini_first_dat = pad_pre(ini_dat_raw, indent_int, &buff);
+
+  if(initial != prefix) {
+    pre_first_dat = pad_pre(pre_dat_raw, indent_int, &buff);
+  } else pre_first_dat = ini_first_dat;
+
+  if(indent_int != exdent_int) {
+    pre_next_dat = pad_pre(pre_dat_raw, exdent_int, &buff);
+  } else pre_next_dat = pre_first_dat;
 
   // Check that widths are feasible, although really only relevant if in strict
   // mode
 
   int width_int = asInteger(width);
-  int indent_int = asInteger(indent);
-  int exdent_int = asInteger(exdent);
+  int wrap_always_int = asInteger(wrap_always);
 
   if(
     wrap_always_int && (
-      FANSI_add_int(indent_int, ini_dat.width) >= width_int ||
-      FANSI_add_int(exdent_int, pre_dat.width) >= width_int
+      ini_first_dat.width >= width_int ||
+      pre_first_dat.width >= width_int ||
+      pre_next_dat.width >= width_int
     )
   )
     error(
@@ -365,22 +415,14 @@ SEXP FANSI_strwrap_ext(
       "`prefix` width must be less than `width` when in `wrap.always`."
     );
 
+  // Could be a little faster avoiding this allocation if it turns out nothing
+  // needs to be wrapped and we're in simplify=TRUE, but that seems like a lot
+  // of work for a rare vent
+
+  R_xlen_t i, x_len = XLENGTH(x);
   SEXP res = PROTECT(allocVector(VECSXP, x_len));
 
-  // Set up the buffer, this will be created in FANSI_strwrap, but we want a
-  // handle for it here so we can re-use
-
-  struct FANSI_buff buff = {.len = 0};
-
-  // Strip whitespaces as needed
-
-  x = PROTECT(FANSI_process(x, &buff));
-
-  // and tabs
-
-  if(asInteger(tabs_as_spaces))
-    x = PROTECT(FANSI_tabs_as_spaces(x, tab_stops, &buff, is_utf8_loc));
-  else x = PROTECT(x);
+  // Wrap each element
 
   for(i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
@@ -388,12 +430,14 @@ SEXP FANSI_strwrap_ext(
     if(chr == NA_STRING) continue;
     SEXP str_i = PROTECT(
       FANSI_strwrap(
-        CHAR(chr), width_int, indent_int, exdent_int,
-        pre_dat, ini_dat, wrap_always_int, &buff, is_utf8_loc
+        CHAR(chr), width_int,
+        i ? pre_first_dat : ini_first_dat,
+        pre_next_dat,
+        wrap_always_int, &buff, is_utf8_loc
     ) );
     SET_VECTOR_ELT(res, i, str_i);
     UNPROTECT(1);
   }
-  UNPROTECT(3);
+  UNPROTECT(5);
   return res;
 }
