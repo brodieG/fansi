@@ -177,33 +177,46 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
     char * buff_track;
 
     R_len_t len_j = LENGTH(STRING_ELT(res, i));
-    int strip_this, to_strip, punct_prev, punct_prev_prev, space_prev,
-        space_start, para_start, newlines;
+    int strip_this, to_strip, punct_prev, punct_prev_prev,
+        space_prev, space_start, para_start, newlines;
 
-    strip_this = to_strip = punct_prev = punct_prev_prev = space_prev =
-      space_start = newlines = 0;
+    strip_this = to_strip = punct_prev = punct_prev_prev =
+      space_prev = space_start = newlines = 0;
 
     para_start = 1;
 
     R_len_t j_last = 0;
 
-    // First space we encounter after non-space can be kept,
-    // unless after a punct, in which case two can be kept.  Note that we
-    // purposefully allow ourselves to read up to the NULL terminator.
+    // All spaces [ \t\n] are converted to spaces.  First space is kept, unless
+    // right after [.?!][)\\"']{0,1}, in which case one more space can be kept.
+    //
+    // We purposefully allow ourselves to read up to the NULL terminator.
     //
     // Newlines after the first two become like spaces.
 
     for(R_len_t j = 0; j <= len_j; ++j) {
-      int skip_bytes = 1;
+
       int newline = string[j] == '\n';
+      int tab = string[j] == '\t';
+
+      // Handle ESC sequences; pretend they don't exist; some question whether
+      // we should only do the ANSI csi sequences to better align with what
+      // stwrap does, or also strip the C0 sequences.  Probably strip the C0
+      // sequences and recognize that we'll get different results if those are
+      // present.
+
+      if(
+        string[j] == 0x1b ||
+        (string[j] > 0 && string[j] < 0x20 && !tab && !newline)
+      ) {
+
+      }
+
+
       if(newline) ++newlines;
-      else if(string[j] != ' ') newlines = 0;
+      else if(string[j] != ' ' && !tab) newlines = 0;
 
-      int space = (
-          (string[j] == ' ') ||
-          (newline && newlines > 2)  // treat newline like space after 1st 2
-        );
-
+      int space = ((string[j] == ' ') || tab || newline);
       int line_end = (newline || !string[j]);
 
       int strip =
@@ -217,20 +230,22 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
         if(!space_prev) space_start = 1;
         else if(space && space_prev && punct_prev_prev) space_start = 2;
       } else if(!line_end) space_start = 0;
-      // transcribe string if we've hit something that we don't need to strip
 
-      /*
       Rprintf(
         "pr_start: %d strip: %d to_strip: %d j: %d spc: %d %d %d w: %d strip_this: %d chr: %c\n",
-        para_start, strip, to_strip, 
+        para_start, strip, to_strip,
         j, space, space_prev, space_start,
         (!strip && to_strip) || (!string[j] && strip_this),
         strip_this,
         (string[j] ? string[j] : '~')
       );
-      */
+      // transcribe string if:
       if(
-        (!strip && to_strip) || (!string[j] && (strip_this || space_start))
+        // we've hit something that we don't need to strip
+        (!strip && to_strip)
+        ||
+        // string end and we've already stripped previously or ending in spaces
+        (!string[j] && (strip_this || space_start))
       ) {
         // need to copy entire STRSXP since we haven't done that yet
         if(!strip_any) {
@@ -248,21 +263,35 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
         // special treatment when hitting line ends with spaces.
 
         int copy_bits = j - j_last - to_strip -
-          (line_end * space_start * !para_start);
+          (line_end * space_start);
 
-        // Rprintf("Copy bits %d j: %d j_last: %d\n", copy_bits, j, j_last);
+        Rprintf(
+          "Copy bits %d j: %d j_last: %d buff_t: %d\n",
+          copy_bits, j, j_last, buff_track - buff->buff
+        );
         if(copy_bits) {
           memcpy(buff_track, string_start, copy_bits);
           buff_track += copy_bits;
+          // Overwrite the trailing bytes with spaces or newlines as needed
+          // because we could have tabs in there
+
+          if(para_start) {
+            *(buff_track - 1) = '\n';
+            *buff_track = '\n';
+          }
+          else if(!line_end) {
+            *(buff_track - 1) = ' ';
+            if(space_start == 2) *(buff_track - 2) = ' ';
+          }
         }
         string_start = string + j;
         j_last = j;
         to_strip = 0;
         space_start = 0;
       } else if(strip) {
-        to_strip += skip_bytes;
+        to_strip++;
       }
-      para_start = string[j] == '\n' || (para_start && strip);
+      para_start = newlines > 1;
       space_prev = space;
       punct_prev_prev = punct_prev;
 
@@ -276,7 +305,6 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
           punct_prev &&
           (string[j] == '"' || string[j] == '\'' || string[j] == ')')
         );
-      if(skip_bytes > 1) j += skip_bytes - 1;
     }
     if(strip_this) {
       /*

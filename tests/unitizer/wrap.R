@@ -97,6 +97,8 @@ unitizer_sect("prefix / initial", {
 
   identical(strip_ansi(wrap.csi.3), wrap.nrm.3)
 
+  # With UTF8
+
   pre.2 <- "\x1b[32m\xd0\x9f \x1b[0m"
   ini.2 <- "\x1b[33m\xd1\x80 \x1b[0m"
   hello.8c <- "hello Привет world"
@@ -111,6 +113,27 @@ unitizer_sect("prefix / initial", {
 
   identical(strip_ansi(wrap.csi.4), wrap.nrm.4)
 })
+unitizer_sect("prefix / initial", {
+  # a version of lorem with paragraphs
+
+  lorem.sentence <- unlist(strsplit(lorem, "[.]\\K ", perl=TRUE))
+  lorem.sentence <- gsub(",", ",\n", lorem.sentence, fixed=TRUE)
+  lorem.para <- c(
+    paste0(lorem.sentence[1:2], collapse="\n\n"),
+    paste0(lorem.sentence[3:4], collapse="\n\t\n\t  \n")
+  )
+  identical(
+    strwrap_csi(lorem.para, indent=2), strwrap(lorem.para, indent=2)
+  )
+  identical(
+    strwrap_csi(lorem.para, exdent=2), strwrap(lorem.para, exdent=2)
+  )
+  identical(
+    strwrap_csi(lorem.para, indent=4, exdent=2),
+    strwrap(lorem.para, indent=4, exdent=2)
+  )
+})
+
 
 # Things to test:
 #
