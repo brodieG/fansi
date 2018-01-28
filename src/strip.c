@@ -221,7 +221,7 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
       // case a line ends, as normally we keep one or two spaces, but if we hit
       // the end of the line we don't want to keep them.
 
-      if(space) {
+      if(space && !para_start) {
         if(!space_prev) space_start = 1;
         else if(space && space_prev && punct_prev_prev) space_start = 2;
       }
@@ -288,14 +288,14 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
         if(copy_bytes) {
           memcpy(buff_track, string_start, copy_bytes);
           buff_track += copy_bytes;
+        }
+        // Overwrite the trailing bytes with spaces or newlines as needed
+        // because we could have tabs in there; note that we can have
+        // `copy_bytes` == 0 and still want to do this (e.g. leading '\n\n')
 
-          // Overwrite the trailing bytes with spaces or newlines as needed
-          // because we could have tabs in there
-
-          if(!line_end) {
-            if(space_start) *(buff_track++) = spc_chr;
-            if(space_start > 1) *(buff_track++) = spc_chr;
-          }
+        if(!line_end) {
+          if(space_start) *(buff_track++) = spc_chr;
+          if(space_start > 1) *(buff_track++) = spc_chr;
         }
         string_start = string + j;
         j_last = j;
