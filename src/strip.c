@@ -177,11 +177,11 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
     char * buff_track;
 
     R_len_t len_j = LENGTH(STRING_ELT(res, i));
-    int strip_this, to_strip, punct_prev, punct_prev_prev,
-        space_prev, space_start, para_start, newlines;
+    int strip_this, to_strip, to_strip_nl, punct_prev, punct_prev_prev,
+        space_prev, space_start, para_start, newlines, newlines_start;
 
-    strip_this = to_strip = punct_prev = punct_prev_prev =
-      space_prev = space_start = newlines = 0;
+    strip_this = to_strip = to_strip_nl = punct_prev = punct_prev_prev =
+      space_prev = space_start = newlines = newlines_start = 0;
 
     para_start = 1;
 
@@ -190,34 +190,32 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
     // All spaces [ \t\n] are converted to spaces.  First space is kept, unless
     // right after [.?!][)\\"']{0,1}, in which case one more space can be kept.
     //
-    // We purposefully allow ourselves to read up to the NULL terminator.
+    // One exception is that sequences of spaces that resolve to more than one
+    // newline are kept as a pair of newlines.
     //
-    // Newlines after the first two become like spaces.
+    // We purposefully allow ourselves to read up to the NULL terminator.
 
     for(R_len_t j = 0; j <= len_j; ++j) {
 
       int newline = string[j] == '\n';
       int tab = string[j] == '\t';
 
+      // TBD: PROBABLY GOING TO GIVE UP ON ESC SEQ PARSING:
       // Handle ESC sequences; pretend they don't exist; some question whether
       // we should only do the ANSI csi sequences to better align with what
       // stwrap does, or also strip the C0 sequences.  Probably strip the C0
       // sequences and recognize that we'll get different results if those are
       // present.
 
-      if(
-        string[j] == 0x1b ||
-        (string[j] > 0 && string[j] < 0x20 && !tab && !newline)
-      ) {
-
+      if(newline) {
+        if(!newlines) {
+          newlines_start = j;
+          to_strip_nl = to_strip;  // how many chrs need stripping by first nl
+        }
+        ++newlines;
       }
-
-
-      if(newline) ++newlines;
-      else if(string[j] != ' ' && !tab) newlines = 0;
-
       int space = ((string[j] == ' ') || tab || newline);
-      int line_end = (newline || !string[j]);
+      int line_end = !string[j];
 
       int strip =
         (space && space_prev && !punct_prev_prev) || (space && para_start);
@@ -229,23 +227,25 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
       if(space) {
         if(!space_prev) space_start = 1;
         else if(space && space_prev && punct_prev_prev) space_start = 2;
-      } else if(!line_end) space_start = 0;
-
+      }
+      /*
       Rprintf(
-        "pr_start: %d strip: %d to_strip: %d j: %d spc: %d %d %d w: %d strip_this: %d chr: %c\n",
-        para_start, strip, to_strip,
+        "pr_st: %d %d strip: %d to_strip: %d j: %d spc: %d %d %d w: %d strip_this: %d chr: %c\n",
+        para_start, newlines, strip, to_strip,
         j, space, space_prev, space_start,
         (!strip && to_strip) || (!string[j] && strip_this),
         strip_this,
         (string[j] ? string[j] : '~')
       );
+      */
       // transcribe string if:
       if(
-        // we've hit something that we don't need to strip
+        // we've hit something that we don't need to strip, and we have accrued
+        // characters to strip
         (!strip && to_strip)
         ||
         // string end and we've already stripped previously or ending in spaces
-        (!string[j] && (strip_this || space_start))
+        (line_end && (strip_this || space_start))
       ) {
         // need to copy entire STRSXP since we haven't done that yet
         if(!strip_any) {
@@ -259,38 +259,53 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
           buff_track = buff->buff;
           strip_this = 1;
         }
-        // Copy the portion up to the point we know should be copied, need
-        // special treatment when hitting line ends with spaces.
+        // newlines normally act as spaces, but if there are two or more in a
+        // sequence of tabs/spaces then they behave like a paragraph break
+        // so we will replace that sequence with two newlines;
 
-        int copy_bits = j - j_last - to_strip -
-          (line_end * space_start);
+        char spc_chr = ' ';
+        int copy_to = j;
 
+        if(newlines > 1) {
+          copy_to = newlines_start;
+          space_start = 2;
+          to_strip = to_strip_nl;
+          spc_chr = '\n';
+        }
+        // Copy the portion up to the point we know should be copied, will add
+        // back spaces and/or newlines as needed
+
+        int copy_bits =
+          copy_to -      // current position
+          j_last -       // less last time we copied
+          to_strip;      // less extra stuff to strip
+
+        /*
         Rprintf(
-          "Copy bits %d j: %d j_last: %d buff_t: %d\n",
-          copy_bits, j, j_last, buff_track - buff->buff
+          "Copy bits %d j: %d j_last: %d spc_str: %d, buff_t: %d\n",
+          copy_bits, j, j_last,
+          space_start,
+          buff_track - buff->buff
         );
+        */
         if(copy_bits) {
           memcpy(buff_track, string_start, copy_bits);
           buff_track += copy_bits;
+
           // Overwrite the trailing bytes with spaces or newlines as needed
           // because we could have tabs in there
 
-          if(para_start) {
-            *(buff_track - 1) = '\n';
-            *buff_track = '\n';
-          }
-          else if(!line_end) {
-            *(buff_track - 1) = ' ';
-            if(space_start == 2) *(buff_track - 2) = ' ';
+          if(!line_end) {
+            if(space_start) *(buff_track++) = spc_chr;
+            if(space_start > 1) *(buff_track++) = spc_chr;
           }
         }
         string_start = string + j;
         j_last = j;
-        to_strip = 0;
-        space_start = 0;
-      } else if(strip) {
-        to_strip++;
+        to_strip = space_start = newlines = 0;
       }
+      else if(strip) to_strip++;
+
       para_start = newlines > 1;
       space_prev = space;
       punct_prev_prev = punct_prev;
