@@ -217,9 +217,6 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
       int space = ((string[j] == ' ') || tab || newline);
       int line_end = !string[j];
 
-      int strip =
-        (space && space_prev && !punct_prev_prev) || (space && para_start);
-
       // Need to keep track if we're in a sequence that starts with a space in
       // case a line ends, as normally we keep one or two spaces, but if we hit
       // the end of the line we don't want to keep them.
@@ -242,7 +239,7 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
       if(
         // we've hit something that we don't need to strip, and we have accrued
         // characters to strip
-        (!strip && to_strip)
+        (!space && to_strip)
         ||
         // string end and we've already stripped previously or ending in spaces
         (line_end && (strip_this || space_start))
@@ -275,22 +272,22 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
         // Copy the portion up to the point we know should be copied, will add
         // back spaces and/or newlines as needed
 
-        int copy_bits =
+        int copy_bytes =
           copy_to -      // current position
           j_last -       // less last time we copied
           to_strip;      // less extra stuff to strip
 
         /*
         Rprintf(
-          "Copy bits %d j: %d j_last: %d spc_str: %d, buff_t: %d\n",
-          copy_bits, j, j_last,
+          "Copy bytes %d j: %d j_last: %d to_str: %d spc_str: %d, buff_t: %d\n",
+          copy_bytes, j, j_last, to_strip,
           space_start,
           buff_track - buff->buff
         );
         */
-        if(copy_bits) {
-          memcpy(buff_track, string_start, copy_bits);
-          buff_track += copy_bits;
+        if(copy_bytes) {
+          memcpy(buff_track, string_start, copy_bytes);
+          buff_track += copy_bytes;
 
           // Overwrite the trailing bytes with spaces or newlines as needed
           // because we could have tabs in there
@@ -303,8 +300,7 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
         string_start = string + j;
         j_last = j;
         to_strip = space_start = newlines = 0;
-      }
-      else if(strip) to_strip++;
+      } else if(space) to_strip++;
 
       para_start = newlines > 1;
       space_prev = space;
