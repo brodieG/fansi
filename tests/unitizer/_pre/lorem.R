@@ -77,10 +77,12 @@ p0 <- function(...) paste0(..., collapse=' ')
 lorem.mix <- paste0(
   c(
     p0(lorem.words[1:3]), " ", '\033[32m', p0(lorem.cn.words[4:6]), " ",
-    '\033[7;1m', p0(lorem.words[4:10]),'\n\n', p0(lorem.words[11:20]),  '\n\n',
+    '\033[7;1m', p0(lorem.words[4:10]),'\n\n\033[38;5;105m',
+    p0(lorem.words[11:20]),  '\n\n',
     '\033[m', p0(lorem.cn.words[3:1]), " ", '\033[34;43m',
     p0(lorem.words[21:25]), "\033[49m", p0(lorem.words[26:30]),
-    '\033[39;4m', " ", p0(lorem.cn.words[7:12]), " ",
+    '\033[39;4m', " ",
+    p0(lorem.cn.words[7:9]), "\n\n", p0(lorem.cn.words[10:12]), " ",
     p0(lorem.words[31:36]), "\033[0m", "\n"
   ),
   collapse=""

@@ -134,7 +134,9 @@ unitizer_sect("prefix / initial with ESC", {
   identical(strip_ansi(wrap.csi.4), wrap.nrm.4)
 })
 unitizer_sect("wrap with wide UTF8 and ESC", {
-
+  wrap.mix <- strwrap_csi(lorem.mix, 25)
+  wrap.mix
+  identical(strwrap(strip_ansi(lorem.mix), 25), strip_ansi(wrap.mix))
 })
 
 
