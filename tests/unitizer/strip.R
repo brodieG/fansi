@@ -50,4 +50,18 @@ unitizer_sect("Whitespace", {
   str1 <- c("hello ", " world")
   fansi:::process(str1)
   str1
+
+  # Paragraphs and so on
+
+  fansi:::process('hello.\n\nworld')
+  fansi:::process('hello.\n\n\nworld')
+  fansi:::process('hello.\n\n\n\nworld')
+  fansi:::process('hello.\n  \nworld')
+  fansi:::process('hello.\n\t\nworld')
+  fansi:::process('hello.\n\t\n\tworld')
+  fansi:::process('hello.\n \t \n \t world')
+  fansi:::process('hello.\n\nworld\n\n')
+  fansi:::process('hello.\n\nworld\n\n  ')
+  fansi:::process('\n\nhello.\n\t\n\tworld\n\t\n woohoo\n ')
+  fansi:::process('\n \t\nhello.\n\t\n\tworld\n\t\n woohoo\n ')
 })

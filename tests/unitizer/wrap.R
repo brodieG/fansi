@@ -79,6 +79,66 @@ unitizer_sect("Other Escapes", {
 
   strwrap_csi("hello\x1F\x1F\x1F\x1F\x1F\x1F world yohoo", 12)
 })
+unitizer_sect("prefix / initial simple", {
+  # a version of lorem with paragraphs
+
+  lorem.sentence <- unlist(strsplit(lorem, "[.]\\K ", perl=TRUE))
+  lorem.sentence <- gsub(",", ",\n", lorem.sentence, fixed=TRUE)
+  lorem.para <- c(
+    paste0(lorem.sentence[1:2], collapse="\n\n"),
+    paste0(lorem.sentence[3:4], collapse="\n\t\n\t  \n")
+  )
+  identical(
+    strwrap_csi(lorem.para, indent=2), strwrap(lorem.para, indent=2)
+  )
+  identical(
+    strwrap_csi(lorem.para, exdent=2), strwrap(lorem.para, exdent=2)
+  )
+  identical(
+    strwrap_csi(lorem.para, indent=4, exdent=2),
+    strwrap(lorem.para, indent=4, exdent=2)
+  )
+})
+unitizer_sect("prefix / initial with ESC", {
+  pre <- "\033[32m+ \033[0m"
+  ini <- "\033[33m> \033[0m"
+
+  hello.8a <- "hello world yohoo"
+
+  wrap.csi.2 <- strwrap_csi(hello.8a, 14, prefix=pre, initial=ini)
+  wrap.csi.2
+  wrap.nrm.2 <- strwrap(hello.8a, 14, prefix="+ ", initial="> ")
+  identical(strip_ansi(wrap.csi.2), wrap.nrm.2)
+
+  hello.8b <- c(hello.8a, "oh my this has 2 elements")
+  wrap.csi.3 <- strwrap_csi(hello.8b, 14, prefix=pre, initial=ini)
+  wrap.csi.3
+  wrap.nrm.3 <- strwrap(hello.8b, 14, prefix="+ ", initial="> ")
+
+  identical(strip_ansi(wrap.csi.3), wrap.nrm.3)
+
+  # With UTF8
+
+  pre.2 <- "\x1b[32m\xd0\x9f \x1b[0m"
+  ini.2 <- "\x1b[33m\xd1\x80 \x1b[0m"
+  hello.8c <- "hello Привет world"
+
+  Encoding(pre.2) <- "UTF-8"
+  Encoding(ini.2) <- "UTF-8"
+  Encoding(hello.8c) <- "UTF-8"
+
+  wrap.csi.4 <- strwrap_csi(hello.8c, 15, prefix=pre.2, initial=ini.2)
+  wrap.csi.4
+  wrap.nrm.4 <- strwrap(hello.8c, 15, prefix="\xd0\x9f ", initial="\xd1\x80 ")
+
+  identical(strip_ansi(wrap.csi.4), wrap.nrm.4)
+})
+unitizer_sect("wrap with wide UTF8 and ESC", {
+  wrap.mix <- strwrap_csi(lorem.mix, 25)
+  wrap.mix
+  identical(strwrap(strip_ansi(lorem.mix), 25), strip_ansi(wrap.mix))
+})
+
 
 # Things to test:
 #
