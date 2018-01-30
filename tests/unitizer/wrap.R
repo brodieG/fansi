@@ -79,7 +79,27 @@ unitizer_sect("Other Escapes", {
 
   strwrap_csi("hello\x1F\x1F\x1F\x1F\x1F\x1F world yohoo", 12)
 })
-unitizer_sect("prefix / initial", {
+unitizer_sect("prefix / initial simple", {
+  # a version of lorem with paragraphs
+
+  lorem.sentence <- unlist(strsplit(lorem, "[.]\\K ", perl=TRUE))
+  lorem.sentence <- gsub(",", ",\n", lorem.sentence, fixed=TRUE)
+  lorem.para <- c(
+    paste0(lorem.sentence[1:2], collapse="\n\n"),
+    paste0(lorem.sentence[3:4], collapse="\n\t\n\t  \n")
+  )
+  identical(
+    strwrap_csi(lorem.para, indent=2), strwrap(lorem.para, indent=2)
+  )
+  identical(
+    strwrap_csi(lorem.para, exdent=2), strwrap(lorem.para, exdent=2)
+  )
+  identical(
+    strwrap_csi(lorem.para, indent=4, exdent=2),
+    strwrap(lorem.para, indent=4, exdent=2)
+  )
+})
+unitizer_sect("prefix / initial with ESC", {
   pre <- "\033[32m+ \033[0m"
   ini <- "\033[33m> \033[0m"
 
@@ -113,25 +133,8 @@ unitizer_sect("prefix / initial", {
 
   identical(strip_ansi(wrap.csi.4), wrap.nrm.4)
 })
-unitizer_sect("prefix / initial", {
-  # a version of lorem with paragraphs
+unitizer_sect("wrap with wide UTF8 and ESC", {
 
-  lorem.sentence <- unlist(strsplit(lorem, "[.]\\K ", perl=TRUE))
-  lorem.sentence <- gsub(",", ",\n", lorem.sentence, fixed=TRUE)
-  lorem.para <- c(
-    paste0(lorem.sentence[1:2], collapse="\n\n"),
-    paste0(lorem.sentence[3:4], collapse="\n\t\n\t  \n")
-  )
-  identical(
-    strwrap_csi(lorem.para, indent=2), strwrap(lorem.para, indent=2)
-  )
-  identical(
-    strwrap_csi(lorem.para, exdent=2), strwrap(lorem.para, exdent=2)
-  )
-  identical(
-    strwrap_csi(lorem.para, indent=4, exdent=2),
-    strwrap(lorem.para, indent=4, exdent=2)
-  )
 })
 
 
