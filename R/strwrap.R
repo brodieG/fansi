@@ -44,7 +44,7 @@
 #'   those modifications manually to the string after wrapping it.
 #' @export
 
-strwrap_csi <- function(
+strwrap_esc <- function(
   x, width = 0.9 * getOption("width"), indent = 0,
   exdent = 0, prefix = "", simplify = TRUE, initial = prefix
 ) {
@@ -71,7 +71,7 @@ strwrap_csi <- function(
 #' @export
 #' @rdname strwrap_csi
 
-strwrap2_csi <- function(
+strwrap2_esc <- function(
   x, width = 0.9 * getOption("width"), indent = 0,
   exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
   wrap.always=TRUE, pad.end=TRUE,
