@@ -74,17 +74,17 @@ strwrap_esc <- function(
 strwrap2_esc <- function(
   x, width = 0.9 * getOption("width"), indent = 0,
   exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
-  wrap.always=TRUE, pad.end=TRUE,
-  strip.spaces=FALSE, strip.tabs=FALSE, strip.control=TRUE,
-  tabs.as.spaces=FALSE, tab.stops=8L
+  wrap.always=TRUE, pad.end=" ",
+  strip.spaces=FALSE, tabs.as.spaces=FALSE, tab.stops=8L
 ) {
   if(!is.character(x)) x <- as.character(x)
   vetr(
     x=character(), width=NUM.1.POS && . >= 1, indent=INT.1.POS,
     exdent=INT.1.POS, prefix=character(1), simplify=LGL.1, initial=character(1),
-    pad.end=LGL.1, wrap.always=LGL.1, strip.spaces=LGL.1,
-    strip.control=LGL.1, tabs.as.spaces=LGL.1,
+    pad.end=CHR.1 && nchar(.) == 1, wrap.always=LGL.1, strip.spaces=LGL.1,
+    tabs.as.spaces=LGL.1,
     tab.stops=INT.POS.STR && length(.) > 0
   )
+
 }
 
