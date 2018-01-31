@@ -23,4 +23,4 @@
 #' @return logical of same length as `x`; NA values in `x` result in NA values
 #'   in return
 
-has_csi <- function(x) .Call(FANSI_has_csi, x)
+has_esc <- function(x) .Call(FANSI_has_csi, x)

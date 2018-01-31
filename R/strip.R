@@ -7,7 +7,7 @@
 #'   stripped
 #' @export
 
-strip_ansi <- function(x) .Call(FANSI_strip_csi, x)
+strip_esc <- function(x) .Call(FANSI_strip_csi, x)
 
 ## Process String by Removing Unwanted Characters
 ##

@@ -26,8 +26,23 @@ stops you will need to provide them yourself if you are using anything
 outside of the standard tab stop every 8 characters that is the default.
 }
 \examples{
-tabs_as_spaces('1\\t1234\\t12345678\\t123456789\\t')
-tabs_as_spaces('1\\t1234\\t12345678\\t123456789\\t', tab.stops=c(2,8))
+string <- '1\\t12\\t123\\t1234\\t12345678'
+tabs_as_spaces(string)
+writeLines(
+  c(
+    '-------|-------|-------|-------|-------|',
+    tabs_as_spaces(string)
+) )
+writeLines(
+  c(
+    '-|--|--|--|--|--|--|--|--|--|--|',
+    tabs_as_spaces(string, tab.stops=c(2, 3))
+) )
+writeLines(
+  c(
+    '-|--|-------|-------|-------|',
+    tabs_as_spaces(string, tab.stops=c(2, 3, 8))
+) )
 }
 \seealso{
 \link{string-parsing} for important details on how strings are

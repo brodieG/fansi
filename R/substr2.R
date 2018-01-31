@@ -18,7 +18,7 @@
 #'
 #' @export
 
-ansi_state <- function(
+state_esc <- function(
   text, pos, type='chars', lag, ends, tabs.as.spaces=FALSE, tab.stops=8L
 ) {
   stopifnot(
@@ -36,7 +36,7 @@ ansi_state <- function(
 #'
 #' @export
 
-ansi_substr2 <- function(
+substr_esc <- function(
   x, start, stop, type='chars', round='first', tabs.as.spaces=FALSE,
   tab.stops=8L
 ) {
@@ -76,7 +76,7 @@ ansi_substr2 <- function(
     e.ends <- c(rep(FALSE, length(start)), rep(TRUE, length(start)))[e.order]
     e.sort <- c(e.start, e.stop)[e.order]
 
-    state <- ansi_state(
+    state <- state_esc(
       u, e.sort, type, e.lag, e.ends, tabs.as.spaces=tabs.as.spaces,
       tab.stops=tab.stops
     )
