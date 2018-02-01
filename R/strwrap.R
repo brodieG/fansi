@@ -38,18 +38,26 @@
 #' hello.1 <- "hello \033[41mred\033[49m world"
 #' hello.2 <- "hello\t\033[41mred\033[49m\tworld"
 #'
-#' strwrap_esc(hello.1, 10)
-#' strwrap_esc(hello.2, 10)
-#' # with `strip.spaces=TRUE` strwrap2_esc is like strwrap_esc
-#' strwrap2_esc(hello.2, 10, strip.spaces=TRUE)
+#' strwrap_esc(hello.1, 12)
+#' strwrap_esc(hello.2, 12)
 #'
-#' # but by default it does not strip spaces
-#' strwrap2_esc(hello.2, 10, tabs.as.spaces=TRUE)
-#' strwrap2_esc(hello.2, 10, tabs.as.spaces=TRUE)
+#' ## With `strip.spaces=TRUE` strwrap2_esc is like strwrap_esc
+#' strwrap2_esc(hello.2, 12, strip.spaces=TRUE)
 #'
-#' # tab stops are NOT auto-detected, but you may provide
-#' # your own
-#' strwrap2_esc(hello.2, 10, tabs.as.spaces=TRUE, tab.stops=c(6, 12))
+#' ## But by default it does not strip spaces
+#' strwrap2_esc(hello.2, 12)
+#'
+#' ## You can convert tabs to spaces
+#' strwrap2_esc(hello.2, 12, tabs.as.spaces=TRUE)
+#'
+#' ## If your display has 8 wide tab stops the following two
+#' ## outputs should look the same
+#' writeLines(strwrap2_esc(hello.2, 80, tabs.as.spaces=TRUE))
+#' writeLines(hello.2)
+#'
+#' ## tab stops are NOT auto-detected, but you may provide
+#' ## your own
+#' strwrap2_esc(hello.2, 12, tabs.as.spaces=TRUE, tab.stops=c(6, 12))
 
 strwrap_esc <- function(
   x, width = 0.9 * getOption("width"), indent = 0,

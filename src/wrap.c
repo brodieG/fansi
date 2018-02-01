@@ -207,8 +207,8 @@ SEXP FANSI_strwrap(
   // Need to keep track of where word boundaries start and end due to
   // possibility for multiple elements between words
 
-  struct FANSI_state state_start, state_bound, state_bound_end;
-  state_start = state_bound = state_bound_end = state;
+  struct FANSI_state state_start, state_bound;
+  state_start = state_bound = state;
   R_xlen_t size = 0;
 
   while(1) {
@@ -229,11 +229,11 @@ SEXP FANSI_strwrap(
       state.pos_width,  cur_chr
     );
     */
-    // detect word boundaries and paragraph starts
+    // detect word boundaries and paragraph starts; note that when strip.spaces
+    // is TRUE there should never be more than two spaces in a row
 
     if(cur_chr == ' ' || cur_chr == '\t' || cur_chr == '\n') {
-      if(!prev_boundary) state_bound = state_bound_end = state;
-      else state_bound_end = state;
+      state_bound = state;
       has_boundary = prev_boundary = 1;
       // Rprintf("Bound @ %d\n", state_bound.pos_byte - state_start.pos_byte);
     } else {
@@ -286,11 +286,11 @@ SEXP FANSI_strwrap(
       // Recreate what the state is at the wrap point, including skipping the
       // wrap character if there was one
 
-      if(has_boundary) state_bound_end = FANSI_read_next(state_bound_end);
+      if(has_boundary) state_bound = FANSI_read_next(state_bound);
 
       has_boundary = 0;
-      state_bound_end.pos_width = 0;
-      state = state_start = state_bound = state_bound_end;
+      state_bound.pos_width = 0;
+      state = state_start = state_bound;
     } else {
       state = state_next;
     }
@@ -368,7 +368,8 @@ SEXP FANSI_strwrap_ext(
   // Strip whitespaces as needed; `strwrap` doesn't seem to do this with prefix
   // and initial, so we don't either
 
-  x = PROTECT(FANSI_process(x, &buff));
+  if(asInteger(strip_spaces)) x = PROTECT(FANSI_process(x, &buff));
+  else PROTECT(x);
 
   // and tabs
 
@@ -378,7 +379,7 @@ SEXP FANSI_strwrap_ext(
       FANSI_tabs_as_spaces(prefix, tab_stops, &buff, is_utf8_loc)
     );
     initial = PROTECT(
-      FANSI_tabs_as_spaces(prefix, tab_stops, &buff, is_utf8_loc)
+      FANSI_tabs_as_spaces(initial, tab_stops, &buff, is_utf8_loc)
     );
   }
   else x = PROTECT(PROTECT(PROTECT(x)));  // PROTECT stack balance

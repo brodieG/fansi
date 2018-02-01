@@ -43,8 +43,9 @@ strwrap2_esc(x, width = 0.9 * getOption("width"), indent = 0, exdent = 0,
 width if no word breaks are detected within a line.}
 
 \item{pad.end}{character(1L), a single character to use as padding at the
-end of each line until the line is \code{width} wide.  This must be a normal
-ASCII character (i.e. in range 0x20-0x7e), and defaults to a space.}
+end of each line until the line is \code{width} wide.  This must be a printable
+ASCII character, and defaults to a space.  Set to an empty string ("") to
+leave line ends unpadded.}
 
 \item{strip.spaces}{TRUE or FALSE (default), if TRUE, extraneous white spaces
 (spaces, newlines, tabs) are removed in the same way as \link[base:strwrap]{base::strwrap}
@@ -79,18 +80,26 @@ strings to UTF8 if they are not encoded in UTF8.
 hello.1 <- "hello \\033[41mred\\033[49m world"
 hello.2 <- "hello\\t\\033[41mred\\033[49m\\tworld"
 
-strwrap_esc(hello.1, 10)
-strwrap_esc(hello.2, 10)
-# with `strip.spaces=TRUE` strwrap2_esc is like strwrap_esc
-strwrap2_esc(hello.2, 10, strip.spaces=TRUE)
+strwrap_esc(hello.1, 12)
+strwrap_esc(hello.2, 12)
 
-# but by default it does not strip spaces
-strwrap2_esc(hello.2, 10, tabs.as.spaces=TRUE)
-strwrap2_esc(hello.2, 10, tabs.as.spaces=TRUE)
+## With `strip.spaces=TRUE` strwrap2_esc is like strwrap_esc
+strwrap2_esc(hello.2, 12, strip.spaces=TRUE)
 
-# tab stops are NOT auto-detected, but you may provide
-# your own
-strwrap2_esc(hello.2, 10, tabs.as.spaces=TRUE, tab.stops=c(6, 12))
+## But by default it does not strip spaces
+strwrap2_esc(hello.2, 12)
+
+## You can convert tabs to spaces
+strwrap2_esc(hello.2, 12, tabs.as.spaces=TRUE)
+
+## If your display has 8 wide tab stops the following two
+## outputs should look the same
+writeLines(strwrap2_esc(hello.2, 80, tabs.as.spaces=TRUE))
+writeLines(hello.2)
+
+## tab stops are NOT auto-detected, but you may provide
+## your own
+strwrap2_esc(hello.2, 12, tabs.as.spaces=TRUE, tab.stops=c(6, 12))
 }
 \seealso{
 \link{string-parsing} for important details on how strings are
