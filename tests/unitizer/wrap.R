@@ -138,6 +138,16 @@ unitizer_sect("wrap with wide UTF8 and ESC", {
   wrap.mix
   identical(strwrap(strip_esc(lorem.mix), 25), strip_esc(wrap.mix))
 })
+unitizer_sect("wrap2", {
+  # Examples
+
+  hello.2 <- "hello\t\033[41mred\033[49m\tworld"
+
+  strwrap2_esc(hello.2, 12, strip.spaces=TRUE)
+  strwrap2_esc(hello.2, 12)
+  strwrap2_esc(hello.2, 12, tabs.as.spaces=TRUE)
+  strwrap2_esc(hello.2, 12, tabs.as.spaces=TRUE, tab.stops=c(6, 12))
+})
 
 
 # Things to test:

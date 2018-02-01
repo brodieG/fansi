@@ -18,13 +18,13 @@
 #'   width if no word breaks are detected within a line.
 #' @param pad.end character(1L), a single character to use as padding at the
 #'   end of each line until the line is `width` wide.  This must be a printable
-#'   ASCII character, and defaults to a space.  Set to an empty string ("") to
-#'   leave line ends unpadded.
-#' @param strip.spaces TRUE or FALSE (default), if TRUE, extraneous white spaces
+#'   ASCII character or an empty string (default).  If you set it to an empty
+#'   string the line remains unpadded.
+#' @param strip.spaces TRUE (default) or FALSE, if TRUE, extraneous white spaces
 #'   (spaces, newlines, tabs) are removed in the same way as [base::strwrap]
 #'   does.
-#' @param tabs.as.spaces TRUE (default) or FALSE  whether to convert tabs to
-#'   spaces.  This setting only has an effect if `strip.spaces == FALSE`.
+#' @param tabs.as.spaces FALSE (default) or TRUE, whether to convert tabs to
+#'   spaces.  This can only be set to TRUE if `strip.spaces` is FALSE.
 #' @param tab.stops integer(1:n) indicating position of tab stops to use when
 #'   converting tabs to spaces.  If there are more tabs in a line than defined
 #'   tab stops the last tab stop is re-used.  For the purposes of applying tab
@@ -41,19 +41,22 @@
 #' strwrap_esc(hello.1, 12)
 #' strwrap_esc(hello.2, 12)
 #'
-#' ## With `strip.spaces=TRUE` strwrap2_esc is like strwrap_esc
-#' strwrap2_esc(hello.2, 12, strip.spaces=TRUE)
-#'
-#' ## But by default it does not strip spaces
+#' ## In default mode strwrap2_esc is the same as strwrap_esc
 #' strwrap2_esc(hello.2, 12)
 #'
-#' ## You can convert tabs to spaces
+#' ## But you can leave whitespace unchanged
+#' strwrap2_esc(hello.2, 12, strip.spaces=FALSE)
+#'
+#' ## And convert tabs to spaces
 #' strwrap2_esc(hello.2, 12, tabs.as.spaces=TRUE)
 #'
 #' ## If your display has 8 wide tab stops the following two
 #' ## outputs should look the same
 #' writeLines(strwrap2_esc(hello.2, 80, tabs.as.spaces=TRUE))
 #' writeLines(hello.2)
+#'
+#' ## You can also force padding to equal width
+#' strwrap2_esc(hello.2, 12, tabs.as.spaces=TRUE, pad.end=" ")
 #'
 #' ## tab stops are NOT auto-detected, but you may provide
 #' ## your own
@@ -88,8 +91,8 @@ strwrap_esc <- function(
 strwrap2_esc <- function(
   x, width = 0.9 * getOption("width"), indent = 0,
   exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
-  wrap.always=TRUE, pad.end=" ",
-  strip.spaces=FALSE, tabs.as.spaces=FALSE, tab.stops=8L
+  wrap.always=FALSE, pad.end="",
+  strip.spaces=!tabs.as.spaces, tabs.as.spaces=FALSE, tab.stops=8L
 ) {
   if(!is.character(x)) x <- as.character(x)
   vetr(
@@ -99,6 +102,9 @@ strwrap2_esc <- function(
     tabs.as.spaces=LGL.1,
     tab.stops=INT.POS.STR && length(.) > 0
   )
+  if(tabs.as.spaces && strip.spaces)
+    stop("`tabs.as.spaces` and `strip.spaces` should not both be TRUE.")
+
   width <- as.integer(width) - 1L
   indent <- as.integer(indent)
   exdent <- as.integer(exdent)

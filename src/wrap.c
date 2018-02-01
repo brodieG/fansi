@@ -69,7 +69,8 @@ static struct FANSI_prefix_dat pad_pre(
 SEXP FANSI_writeline(
   struct FANSI_state state_bound, struct FANSI_state state_start,
   struct FANSI_buff * buff,
-  struct FANSI_prefix_dat pre_dat, int is_utf8_loc
+  struct FANSI_prefix_dat pre_dat, int is_utf8_loc,
+  int tar_width, const char * pad_chr
 ) {
   // Rprintf("  Writeline start with buff %p\n", *buff);
 
@@ -82,9 +83,14 @@ SEXP FANSI_writeline(
   // state_bound.pos_byte 1 past what we need, so this should include room
   // for NULL terminator
 
-  int target_size = FANSI_add_int(
-    state_bound.pos_byte - state_start.pos_byte, pre_dat.bytes
-  );
+  int target_size = state_bound.pos_byte - state_start.pos_byte;
+  int target_pad = 0;
+
+  if(target_size <= tar_width && *pad_chr) {
+    target_pad = tar_width - target_size + 1;
+    target_size = FANSI_add_int(tar_width, 1);
+  }
+  target_size = FANSI_add_int(target_size, pre_dat.bytes);
   int state_start_size = 0;
 
   if(needs_close) target_size = FANSI_add_int(target_size, 4);
@@ -102,8 +108,6 @@ SEXP FANSI_writeline(
 
   // Apply prevous CSI style
 
-  /*
-  */
   if(needs_start) {
     // Rprintf("  writing start: %d\n", state_start_size);
     FANSI_csi_write(buff_track, state_start, state_start_size);
@@ -118,19 +122,17 @@ SEXP FANSI_writeline(
   }
   // Actual string, remember state_bound.pos_byte is one past what we need
 
-  /*
-  Rprintf(
-    "  string start %d nchar %d\n",
-    state_start.pos_byte,
-    state_bound.pos_byte - state_start.pos_byte
-  );
-  */
   memcpy(
     buff_track, state_start.string + state_start.pos_byte,
     state_bound.pos_byte - state_start.pos_byte
   );
   buff_track += state_bound.pos_byte - state_start.pos_byte;
 
+  // Add padding if needed
+
+  while(target_pad--) {
+    *(buff_track++) = *pad_chr;
+  }
   // And turn off CSI styles if needed
 
   if(needs_close) {
@@ -179,7 +181,8 @@ SEXP FANSI_strwrap(
   struct FANSI_prefix_dat pre_next,
   int wrap_always,
   struct FANSI_buff * buff,
-  int is_utf8_loc
+  int is_utf8_loc,
+  const char * pad_chr
 ) {
   // Rprintf("start wrap\n");
   struct FANSI_state state = FANSI_state_init();
@@ -265,7 +268,7 @@ SEXP FANSI_strwrap(
           FANSI_writeline(
             state_bound, state_start, buff,
             para_start ? pre_first : pre_next,
-            is_utf8_loc
+            is_utf8_loc, width_tar, pad_chr
           )
         );
       }
@@ -450,7 +453,8 @@ SEXP FANSI_strwrap_ext(
         CHAR(chr), width_int,
         i ? pre_first_dat : ini_first_dat,
         pre_next_dat,
-        wrap_always_int, &buff, is_utf8_loc
+        wrap_always_int, &buff, is_utf8_loc,
+        CHAR(asChar(pad_end))
     ) );
     SET_VECTOR_ELT(res, i, str_i);
     UNPROTECT(1);
