@@ -2,10 +2,16 @@
 % Please edit documentation in R/strwrap.R
 \name{strwrap_esc}
 \alias{strwrap_esc}
-\title{ANSI CSI Aware Versions of strwrap}
+\alias{strwrap2_esc}
+\title{ANSI Escape Sequence Aware Versions of strwrap}
 \usage{
 strwrap_esc(x, width = 0.9 * getOption("width"), indent = 0, exdent = 0,
   prefix = "", simplify = TRUE, initial = prefix)
+
+strwrap2_esc(x, width = 0.9 * getOption("width"), indent = 0, exdent = 0,
+  prefix = "", simplify = TRUE, initial = prefix, wrap.always = TRUE,
+  pad.end = " ", strip.spaces = FALSE, tabs.as.spaces = FALSE,
+  tab.stops = 8L)
 }
 \arguments{
 \item{x}{a character vector, or an object which can be converted to a
@@ -36,15 +42,16 @@ strwrap_esc(x, width = 0.9 * getOption("width"), indent = 0, exdent = 0,
 \item{wrap.always}{TRUE or FALSE (default), whether to hard wrap at requested
 width if no word breaks are detected within a line.}
 
-\item{pad.end}{TRUE or FALSE (default), whether to fill lines with spaces up to
-\code{width}.}
+\item{pad.end}{character(1L), a single character to use as padding at the
+end of each line until the line is \code{width} wide.  This must be a normal
+ASCII character (i.e. in range 0x20-0x7e), and defaults to a space.}
 
-\item{strip.spaces}{TRUE (default) or FALSE, if TRUE, extraneous spaces
-(leading, trailing, repeated - except that after sentence end up to two
-spaces are kept) are removed.}
+\item{strip.spaces}{TRUE or FALSE (default), if TRUE, extraneous white spaces
+(spaces, newlines, tabs) are removed in the same way as \link[base:strwrap]{base::strwrap}
+does.}
 
-\item{tabs.as.spaces}{TRUE or FALSE (default) whether to convert tabs to
-spaces}
+\item{tabs.as.spaces}{TRUE (default) or FALSE  whether to convert tabs to
+spaces.  This setting only has an effect if \code{strip.spaces == FALSE}.}
 
 \item{tab.stops}{integer(1:n) indicating position of tab stops to use when
 converting tabs to spaces.  If there are more tabs in a line than defined
@@ -52,32 +59,40 @@ tab stops the last tab stop is re-used.  For the purposes of applying tab
 stops, each input line is considered a line and the character count begins
 from the beginning of the input line.  Thus, if an input line is wrapped
 the tab stops will not reset at the wrap point.  Additionally,\code{indent},
-\code{exdent}, \code{initial}, and \code{prefix} will be ignore when computing tab
-positions.  If you wish to use non-default values for those parameters in
-conjunction with \code{tabs.as.spaces=TRUE}, you are probably better off adding
-those modifications manually to the string after wrapping it.}
+\code{exdent}, \code{initial}, and \code{prefix} will be ignored when computing tab
+positions.}
 }
 \description{
-Unlike \link[base:strwrap]{base::strwrap}, this function will re-encode any non-ASCII strings to
-UTF8 if they are not encoded in UTF8.
+Wraps strings to a specified width accounting for zero display width ANSI
+escape sequences and control characters.  \code{strwrap_esc} is intended to
+emulate \code{strwrap} exactly except with respect to the escape sequences, while
+\code{strwrap2_esc} adds features and changes the processing of whitespace.
 }
 \details{
-\code{strwrap2_csi} provides additional features and also has different default
-behavior to \code{strwrap}.
+\code{strwrap2_esc} can convert tabs to spaces, pad strings up to \code{width}, and
+hard-break words if single words are wider than \code{width}.
 
-Special character stripping as controlled by \code{strip.spaces}, \code{strip.tabs},
-and \code{strip.control} are done in a separate pass and as a result will cause
-the wrapping to be slower due to the need to allocate memory and populate
-the global string cache for the stripping pass in additional to the wrapping
-pass.
+Unlike \link[base:strwrap]{base::strwrap}, both these functions will re-encode any non-ASCII
+strings to UTF8 if they are not encoded in UTF8.
+}
+\examples{
+hello.1 <- "hello \\033[41mred\\033[49m world"
+hello.2 <- "hello\\t\\033[41mred\\033[49m\\tworld"
 
-Width computations are done internally by using \code{R_nchar} on non-ASCII bytes
-and counting ASCII bytes in normal ranges as being 1 wide.  This is subject
-to all the limitations of \code{R_nchar}, but additionally will provide the wrong
-answer when \code{R_nchar} correctly computes the width of a non-standard
-multi-character sequence if passed the whole sequence, but not if each
-character is passed individually as done here.  This will typically manifest
-with things like combining emoji, though as of this writing we have not found
-any combining sequences that \code{R_nchar} computes correctly when provided in
-full and incorrectly when provided character by character.
+strwrap_esc(hello.1, 10)
+strwrap_esc(hello.2, 10)
+# with `strip.spaces=TRUE` strwrap2_esc is like strwrap_esc
+strwrap2_esc(hello.2, 10, strip.spaces=TRUE)
+
+# but by default it does not strip spaces
+strwrap2_esc(hello.2, 10, tabs.as.spaces=TRUE)
+strwrap2_esc(hello.2, 10, tabs.as.spaces=TRUE)
+
+# tab stops are NOT auto-detected, but you may provide
+# your own
+strwrap2_esc(hello.2, 10, tabs.as.spaces=TRUE, tab.stops=c(6, 12))
+}
+\seealso{
+\link{string-parsing} for important details on how strings are
+interpreted and how character width is computed.
 }

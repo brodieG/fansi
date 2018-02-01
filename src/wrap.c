@@ -339,12 +339,25 @@ SEXP FANSI_strwrap_ext(
     TYPEOF(x) != STRSXP || TYPEOF(width) != INTSXP ||
     TYPEOF(indent) != INTSXP || TYPEOF(exdent) != INTSXP ||
     TYPEOF(prefix) != STRSXP || TYPEOF(initial) != STRSXP ||
-    TYPEOF(wrap_always) != LGLSXP || TYPEOF(pad_end) != LGLSXP ||
-    TYPEOF(strip_spaces) != LGLSXP ||
-    TYPEOF(tabs_as_spaces) != LGLSXP || TYPEOF(tab_stops) != INTSXP
+    TYPEOF(wrap_always) != LGLSXP ||
+    TYPEOF(pad_end) != STRSXP
   ) {
-    error("Type error.");
+    error("Internal Error: arg type error 1; contact maintainer.");
   }
+  if(
+    TYPEOF(strip_spaces) != LGLSXP ||
+    TYPEOF(tabs_as_spaces) != LGLSXP ||
+    TYPEOF(tab_stops) != INTSXP
+  ) {
+    error("Internal Error: arg type error 2; contact maintainer.");
+  }
+  const char * pad = CHAR(asChar(pad_end));
+  if(*pad != 0 && (*pad < 0x20 || *pad > 0x7e))
+    error(
+      "%s%s",
+      "Argument `pad.end` must be an empty string or a single ",
+      "printable ASCII character."
+    );
   int is_utf8_loc = FANSI_is_utf8_loc();
 
   // Set up the buffer, this will be created in FANSI_strwrap, but we want a
