@@ -147,6 +147,29 @@ unitizer_sect("wrap2", {
   strwrap2_esc(hello.2, 12)
   strwrap2_esc(hello.2, 12, tabs.as.spaces=TRUE)
   strwrap2_esc(hello.2, 12, tabs.as.spaces=TRUE, tab.stops=c(6, 12))
+
+  # complex wrap examples
+
+  r.thanks.src <- file.path(R.home("doc"), "THANKS")
+  r.thanks <- paste0(readLines(r.thanks.src), collapse="\n")
+
+  # color words based on number of letters, with odd numbered
+  # words in inverse
+
+  longest.word <- max(nchar(unlist(strsplit(r.thanks, "\\W+"))))
+
+  for(i in 2:longest.word) {
+    r.thanks <- gsub(
+      sprintf("\\b(?<!\\dm)([a-zA-Z]{%d})\\b", i),
+      sprintf("\033[3%d%sm\\1\033[m", i %% 7 + 1, if(i %% 2) ";7" else ""),
+      r.thanks,
+      perl=TRUE
+    )
+  }
+  r.wrap <- strwrap2_esc(r.thanks, 25, pad.end=".", wrap.always=TRUE);
+  writeLines(
+    paste(r.wrap[1:30], r.wrap[31:60], r.wrap[61:90])
+  )
 })
 
 

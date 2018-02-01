@@ -55,12 +55,16 @@
 #' writeLines(strwrap2_esc(hello.2, 80, tabs.as.spaces=TRUE))
 #' writeLines(hello.2)
 #'
-#' ## You can also force padding to equal width
-#' strwrap2_esc(hello.2, 12, tabs.as.spaces=TRUE, pad.end=" ")
 #'
 #' ## tab stops are NOT auto-detected, but you may provide
 #' ## your own
 #' strwrap2_esc(hello.2, 12, tabs.as.spaces=TRUE, tab.stops=c(6, 12))
+#'
+#' ## You can also force padding at the end to equal width
+#' writeLines(strwrap2_esc("hello how are you today", 10, pad.end="."))
+#'
+#' ## And a more involved example
+#'
 
 strwrap_esc <- function(
   x, width = 0.9 * getOption("width"), indent = 0,

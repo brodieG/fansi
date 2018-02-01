@@ -87,7 +87,7 @@ SEXP FANSI_writeline(
   int target_pad = 0;
 
   if(target_size <= tar_width && *pad_chr) {
-    target_pad = tar_width - target_size + 1;
+    target_pad = tar_width - target_size;
     target_size = FANSI_add_int(tar_width, 1);
   }
   target_size = FANSI_add_int(target_size, pre_dat.bytes);
