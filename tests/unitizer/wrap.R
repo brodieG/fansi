@@ -151,25 +151,36 @@ unitizer_sect("wrap2", {
   # complex wrap examples
 
   r.thanks.src <- file.path(R.home("doc"), "THANKS")
-  r.thanks <- paste0(readLines(r.thanks.src), collapse="\n")
+  r.thanks <- r.thanks.raw <- tail(readLines(r.thanks.src, encoding='UTF-8'), -38)
 
-  # color words based on number of letters, with odd numbered
-  # words in inverse
-
-  longest.word <- max(nchar(unlist(strsplit(r.thanks, "\\W+"))))
-
-  for(i in 2:longest.word) {
-    r.thanks <- gsub(
-      sprintf("\\b(?<!\\dm)([a-zA-Z]{%d})\\b", i),
-      sprintf("\033[3%d%sm\\1\033[m", i %% 7 + 1, if(i %% 2) ";7" else ""),
-      r.thanks,
-      perl=TRUE
-    )
+  for(i in seq_along(r.thanks.raw)) {
+    col <- round((i - 1) / 31 * 255)
+    r.thanks[i] <- sprintf("\033[48;5;%dm%s\033[49m", col, r.thanks.raw[i])
   }
-  r.wrap <- strwrap2_esc(r.thanks, 25, pad.end=".", wrap.always=TRUE);
+  r.thanks.clp <- paste0(r.thanks, collapse="\n")
+
+  # # color words based on number of letters, with odd numbered
+  # # words in inverse
+
+  # longest.word <- max(nchar(unlist(strsplit(r.thanks, "\\W+"))))
+
+  # for(i in 2:longest.word) {
+  #   r.thanks <- gsub(
+  #     sprintf("\\b(?<!\\dm)([a-zA-Z]{%d})\\b", i),
+  #     sprintf("\033[3%d%sm\\1\033[m", i %% 7 + 1, if(i %% 2) ";7" else ""),
+  #     r.thanks,
+  #     perl=TRUE
+  #   )
+  # }
+  r.wrap <- strwrap2_esc(r.thanks.clp, 35, pad.end=" ", wrap.always=TRUE);
   writeLines(
-    paste(r.wrap[1:30], r.wrap[31:60], r.wrap[61:90])
+    c(
+      paste0(c('+', rep(c(rep('-', 36), '+'), 2)), collapse=""),
+      paste0("| ", r.wrap[1:30], " | ", r.wrap[31:60], " |"),
+      paste0(c('+', rep(c(rep('-', 36), '+'), 2)), collapse="")
+    )
   )
+  strwrap2_esc(r.thanks.raw, 32, pad.end=" ", wrap.always=TRUE);
 })
 
 
