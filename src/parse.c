@@ -732,18 +732,6 @@ int FANSI_state_size(struct FANSI_state state) {
   for(int i = 1; i < 10; ++i){
     style_size += ((state.style & (1 << i)) > 0) * 2;
   }
-  /*
-  Rprintf(
-      "%d %d %d %d %d %d %d %d %d\n",
-    (state.style & 2) > 0, (state.style & 4) > 0, (state.style & 8) > 0,
-    (state.style & 16) > 0, (state.style & 32) > 0, (state.style & 64) > 0,
-    (state.style & 128) > 0, (state.style & 256) > 0, (state.style & 512) > 0);
-
-  Rprintf(
-    "  size - style: %d %d %d color: %d bg_color: %d\n", state.style,
-    style_size, (state.style & 128) > 0, color_size, bg_color_size
-  );
-  */
   return color_size + bg_color_size + style_size + 2;  // +2 for ESC[
 }
 /*
@@ -764,7 +752,7 @@ unsigned int FANSI_color_write(
     error("Internal Error: color mode must be 3 or 4");  // nocov
 
   unsigned int str_off = 0;
-  if(color > 0) {
+  if(color >= 0) {
     string[str_off++] = mode == 3 ? '3' : '4';
 
     if(color != 8) {
@@ -822,7 +810,7 @@ int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
   );
   // Finalize (note, in some cases we slightly overrallocate)
 
-  if(str_pos > buff_len)
+  if(str_pos != buff_len)
     // nocov start
     error(
       "Internal Error: tag mem allocation mismatch (%u, %u)", str_pos, buff_len
