@@ -84,11 +84,13 @@ SEXP FANSI_writeline(
   // for NULL terminator
 
   int target_size = state_bound.pos_byte - state_start.pos_byte;
+  int target_width = state_bound.pos_width - state_start.pos_width;
   int target_pad = 0;
 
-  if(target_size <= tar_width && *pad_chr) {
-    target_pad = tar_width - target_size;
-    target_size = FANSI_add_int(tar_width, 1);
+  if(target_width <= tar_width && *pad_chr) {
+    target_pad = tar_width - target_width;
+    target_width = FANSI_add_int(tar_width, target_pad);
+    target_size = FANSI_add_int(target_size, target_pad);
   }
   target_size = FANSI_add_int(target_size, pre_dat.bytes);
   int state_start_size = 0;
@@ -151,6 +153,12 @@ SEXP FANSI_writeline(
   if((state_bound.has_utf8 || pre_dat.has_utf8) && !is_utf8_loc) {
     chr_type = CE_UTF8;
   }
+  /*
+  Rprintf(
+    "making string: '%s' len '%d' size '%d'\n",
+    buff->buff, (int) (buff_track - buff->buff), target_size
+  );
+  */
   SEXP res_sxp = PROTECT(
     mkCharLenCE(
       buff->buff, (int) (buff_track - buff->buff), chr_type
@@ -258,20 +266,16 @@ SEXP FANSI_strwrap(
     ) {
       SEXP res_sxp;
 
-      if(prev_newline && cur_chr == '\n') {
-        res_sxp = PROTECT(R_BlankString);
-      } else {
-        if(string_over || (wrap_always && !has_boundary)) {
-          state_bound = state;
-        }
-        res_sxp = PROTECT(
-          FANSI_writeline(
-            state_bound, state_start, buff,
-            para_start ? pre_first : pre_next,
-            is_utf8_loc, width_tar, pad_chr
-          )
-        );
+      if(string_over || (wrap_always && !has_boundary)) {
+        state_bound = state;
       }
+      res_sxp = PROTECT(
+        FANSI_writeline(
+          state_bound, state_start, buff,
+          para_start ? pre_first : pre_next,
+          is_utf8_loc, width_tar, pad_chr
+        )
+      );
       if(cur_chr == '\n') prev_newline = 1;
       SETCDR(char_list, list1(res_sxp));
       char_list = CDR(char_list);
