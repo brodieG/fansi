@@ -89,6 +89,33 @@ lorem.mix <- paste0(
 )
 # writeLines(strwrap(lorem.mix, 10))
 
+lorem.r.thanks.2 <- c(
+  "Many more, too numerous to mention here, have contributed by sending bug",
+  "reports and suggesting various improvements.", "",
+  "Simon Davies whilst at the University of Auckland wrote the original",
+  "version of glm().", "",
+  "Julian Harris and Wing Kwong (Tiki) Wan whilst at the University of",
+  "Auckland assisted Ross Ihaka with the original Macintosh port.", "",
+  "R was inspired by the S environment which has been principally",
+  "developed by John Chambers, with substantial input from Douglas Bates,",
+  "Rick Becker, Bill Cleveland, Trevor Hastie, Daryl Pregibon and",
+  "Allan Wilks.", "",
+  "A special debt is owed to John Chambers who has graciously contributed",
+  "advice and encouragement in the early days of R and later became a",
+  "member of the core team.", "", "", "",
+  "The R Foundation may decide to give out <first.lastname>@R-project.org",
+  "email addresses to contributors to the R Project (even without making them",
+  "members of the R Foundation) when in the view of the R Foundation this",
+  "would help advance the R project.", "",
+  "The R Core Group, Roger Bivand, Jennifer Bryan, Di Cook, Dirk Eddelbuettel,",
+  "John Fox, Bettina Grün, Frank Harrell, Torsten Hothorn, Stefano Iacus,",
+  "Julie Josse,  Balasubramanian Narasimhan, Marc Schwartz, Heather Turner,",
+  "Bill Venables, Hadley Wickham and Achim Zeileis are the ordinary members of",
+  "the R Foundation.",
+  "In addition, David Meyer and Simon Wood are also e-addressable by",
+  "<Firstname>.<Lastname>@R-project.org."
+)
+
 
 
 
