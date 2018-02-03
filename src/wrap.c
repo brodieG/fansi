@@ -1,15 +1,18 @@
 #include "fansi.h"
 /*
  * Data related to prefix / initial
+ *
+ * Make sure to coordinate with ALL functions that generate/modify these (below)
+ * if you change the struct definition.
  */
-
 struct FANSI_prefix_dat {
   const char * string;  // string translated to utf8
   int width;            // display width as computed by R_nchar
   int bytes;            // bytes, excluding NULL terminator
+  // how many indent/exdent bytes are included in string, width, and bytes
+  int indent;
   int has_utf8;         // whether utf8 contains value > 127
 };
-
 /*
  * Generate data related to prefix / initial
  */
@@ -29,7 +32,8 @@ static struct FANSI_prefix_dat make_pre(SEXP x, int is_utf8_loc) {
 
   UNPROTECT(1);
   return (struct FANSI_prefix_dat) {
-    .string=x_utf8, .width=x_width, .bytes=x_bytes, .has_utf8=x_has_utf8
+    .string=x_utf8, .width=x_width, .bytes=x_bytes, .has_utf8=x_has_utf8,
+    .indent=0
   };
 }
 /*
@@ -54,9 +58,27 @@ static struct FANSI_prefix_dat pad_pre(
     *res = '\0';
   }
   dat.string = (const char *) res_start;
-  dat.bytes += spaces;
-  dat.width += spaces;
+  dat.bytes = FANSI_add_int(dat.bytes, spaces);
+  dat.width = FANSI_add_int(dat.width, spaces);
+  dat.indent = FANSI_add_int(dat.indent, spaces);
 
+  return dat;
+}
+/*
+ * Adjusts width and sizes to pretend there is no indent.  String itself is not
+ * modified so this only works if whatever is using the string is using the byte
+ * counter to limit how much of the string it reads
+ */
+
+static struct FANSI_prefix_dat drop_pre_indent(struct FANSI_prefix_dat dat) {
+  dat.bytes = FANSI_add_int(dat.bytes, -dat.indent);
+  dat.width = FANSI_add_int(dat.width, -dat.indent);
+  dat.indent = FANSI_add_int(dat.indent, -dat.indent);
+  if(dat.indent < 0)
+    error(
+      "Internal Error: cannot drop indent when there is none; contact ",
+      "maintainer."
+    );
   return dat;
 }
 /*
@@ -86,6 +108,18 @@ SEXP FANSI_writeline(
   int target_size = state_bound.pos_byte - state_start.pos_byte;
   int target_width = state_bound.pos_width - state_start.pos_width;
   int target_pad = 0;
+
+  if(!target_size) {
+    // handle corner case for empty strings that don't get indented by strwrap;
+    // we considered testing width instead of size as that would also prevent
+    // indent on thing that just have ESCs, but decided against it (arbitrarily)
+    //
+    // We do not re-terminate the string, instead relying on widths / sizes to
+    // make sure only the non-indent bit is copied
+
+    pre_dat = drop_pre_indent(pre_dat);
+  }
+  // If we are going to pad the end, adjust sizes and widths
 
   if(target_width <= tar_width && *pad_chr) {
     target_pad = tar_width - target_width;
@@ -254,9 +288,7 @@ SEXP FANSI_strwrap(
       prev_boundary = 0;
       prev_newline = 0;
     }
-    // Write a line, need special logic for newlines because any whitespace
-    // following newlines is normally just suppressed (actually, is this still
-    // necessary given we now process the string?).
+    // Write the line
 
     if(
       string_over ||
@@ -297,11 +329,15 @@ SEXP FANSI_strwrap(
       // wrap character if there was one, and any subsequent leading spaces if
       // there are any and we are in strip_space mode.
 
-      if(has_boundary) state_bound = FANSI_read_next(state_bound);
-      if(strip_spaces)
+      if(
+        has_boundary && state_bound.string[state_bound.pos_byte] == '\n'
+      ) {
+        state_bound = FANSI_read_next(state_bound);
+      }
+      if(strip_spaces) {
         while(state_bound.string[state_bound.pos_byte] == ' ') {
           state_bound = FANSI_read_next(state_bound);
-        }
+      } }
       has_boundary = 0;
       state_bound.pos_width = 0;
       state = state_start = state_bound;
