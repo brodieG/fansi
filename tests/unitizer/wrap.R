@@ -141,17 +141,17 @@ unitizer_sect("wrap with wide UTF8 and ESC", {
 unitizer_sect("wrap2", {
   # Examples
 
-  hello.2 <- "hello\t\033[41mred\033[49m\tworld"
+  hello.9a <- "hello\t\033[41mred\033[49m\tworld"
 
-  strwrap2_esc(hello.2, 12, strip.spaces=TRUE)
-  strwrap2_esc(hello.2, 12)
-  strwrap2_esc(hello.2, 12, tabs.as.spaces=TRUE)
-  strwrap2_esc(hello.2, 12, tabs.as.spaces=TRUE, tab.stops=c(6, 12))
+  strwrap2_esc(hello.9a, 12)
+  strwrap2_esc(hello.9a, 12, tabs.as.spaces=TRUE)
+  strwrap2_esc(hello.9a, 13, tabs.as.spaces=TRUE)
+  strwrap2_esc(hello.9a, 12, tabs.as.spaces=TRUE, tab.stops=c(6, 12))
 
   r.thanks <- lorem.r.thanks.2
 
   ## Generate colors from the 256 color palette
-  bg <- ceil((seq_along(r.thanks)) / length(r.thanks) * 215) + 16
+  bg <- ceiling(seq_along(r.thanks) / length(r.thanks) * 215) + 16
   fg <- ifelse((((bg - 16) %/% 18) %% 2), 30, 37)
   tpl <- "\033[%d;48;5;%dm%s\033[49m"
 
@@ -164,6 +164,11 @@ unitizer_sect("wrap2", {
   r.wrap <- strwrap2_esc(r.col, 35, pad.end=" ", wrap.always=TRUE)
   # writeLines(c("", paste(" ", r.wrap[1:27], " ", r.wrap[28:54]), ""))
   r.wrap
+
+  ## Pad paragraph break line when it is colored
+
+  hello.9b <- "\033[41mhello\n\nworld."
+  strwrap2_esc(hello.9b, 10, pad.end=" ")
 })
 
 
