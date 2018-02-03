@@ -190,9 +190,9 @@ SEXP FANSI_strwrap(
   int wrap_always,
   struct FANSI_buff * buff,
   int is_utf8_loc,
-  const char * pad_chr
+  const char * pad_chr,
+  int strip_spaces
 ) {
-  // Rprintf("start wrap\n");
   struct FANSI_state state = FANSI_state_init();
   state.string = x;
 
@@ -240,11 +240,14 @@ SEXP FANSI_strwrap(
       state.pos_width,  cur_chr
     );
     */
-    // detect word boundaries and paragraph starts; note that when strip.spaces
-    // is TRUE there should never be more than two spaces in a row
+    // detect word boundaries and paragraph starts; we need to track
+    // state_bound for the special case where we are in strip space mode
+    // and we happen to hit the width in a two space sequence such as we might
+    // get after [.!?].
 
     if(cur_chr == ' ' || cur_chr == '\t' || cur_chr == '\n') {
-      state_bound = state;
+      if(strip_spaces && !prev_boundary) state_bound = state;
+      else if(!strip_spaces) state_bound = state;
       has_boundary = prev_boundary = 1;
       // Rprintf("Bound @ %d\n", state_bound.pos_byte - state_start.pos_byte);
     } else {
@@ -291,10 +294,14 @@ SEXP FANSI_strwrap(
       para_start = (cur_chr == '\n');
 
       // Recreate what the state is at the wrap point, including skipping the
-      // wrap character if there was one
+      // wrap character if there was one, and any subsequent leading spaces if
+      // there are any and we are in strip_space mode.
 
       if(has_boundary) state_bound = FANSI_read_next(state_bound);
-
+      if(strip_spaces)
+        while(state_bound.string[state_bound.pos_byte] == ' ') {
+          state_bound = FANSI_read_next(state_bound);
+        }
       has_boundary = 0;
       state_bound.pos_width = 0;
       state = state_start = state_bound;
@@ -375,7 +382,9 @@ SEXP FANSI_strwrap_ext(
   // Strip whitespaces as needed; `strwrap` doesn't seem to do this with prefix
   // and initial, so we don't either
 
-  if(asInteger(strip_spaces)) x = PROTECT(FANSI_process(x, &buff));
+  int strip_spaces_int = asInteger(strip_spaces);
+
+  if(strip_spaces_int) x = PROTECT(FANSI_process(x, &buff));
   else PROTECT(x);
 
   // and tabs
@@ -458,7 +467,8 @@ SEXP FANSI_strwrap_ext(
         i ? pre_first_dat : ini_first_dat,
         pre_next_dat,
         wrap_always_int, &buff, is_utf8_loc,
-        CHAR(asChar(pad_end))
+        CHAR(asChar(pad_end)),
+        strip_spaces_int
     ) );
     SET_VECTOR_ELT(res, i, str_i);
     UNPROTECT(1);
