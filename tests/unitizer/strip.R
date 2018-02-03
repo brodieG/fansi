@@ -1,21 +1,21 @@
 library(fansi)
 
 unitizer_sect("Strip ansi", {
-  strip_ansi(sprintf("hello %sworld%s", red, end))
-  strip_ansi(sprintf("he%sllo %sworld", red, end))
-  strip_ansi(sprintf("%shello %sworld%s", grn.bg, red, end))
-  strip_ansi(sprintf("%s%shello %sworld%s", grn.bg, inv, red, end))
+  strip_esc(sprintf("hello %sworld%s", red, end))
+  strip_esc(sprintf("he%sllo %sworld", red, end))
+  strip_esc(sprintf("%shello %sworld%s", grn.bg, red, end))
+  strip_esc(sprintf("%s%shello %sworld%s", grn.bg, inv, red, end))
 
   string <- paste("string", format(1:10))
   string[c(2,4,6)] <- paste0(red, string[c(2,4,6)], end)
 
-  strip_ansi(string)
+  strip_esc(string)
 })
 unitizer_sect("Corner cases", {
-  strip_ansi("hello\033")
+  strip_esc("hello\033")
   # should this be stripped?  Not 100% clear since terminal seems to be waiting
   # for input after it is cated
-  strip_ansi("hello\033[")
+  strip_esc("hello\033[")
 })
 
 unitizer_sect("Whitespace", {
@@ -35,24 +35,33 @@ unitizer_sect("Whitespace", {
   # Tabs / ctrl; newlines remain
 
   fansi:::process(' \t hello')
-  fansi:::process(' \t hello', strip_tab=FALSE)
   fansi:::process(' \t\a\r hello')
-  fansi:::process(' \t\a\r hello\n \a\r', strip_ctl=TRUE)
-  fansi:::process(' \t\a\r hello\n \a\r', strip_ctl=TRUE, strip_spc=FALSE)
 
   # interactiong between punct and ctrl
 
   fansi:::process('hello.  \r world.')
-  fansi:::process('hello.  \r world.', strip_ctl=TRUE)
 
   # CSIs
 
   fansi:::process('hello.  \033[31m world.\033[0m')
-  fansi:::process('hello.  \033[31m world.\033[0m', strip_ctl=TRUE)
 
   # Make sure we are not inadvertently changing SXPs
 
   str1 <- c("hello ", " world")
   fansi:::process(str1)
   str1
+
+  # Paragraphs and so on
+
+  fansi:::process('hello.\n\nworld')
+  fansi:::process('hello.\n\n\nworld')
+  fansi:::process('hello.\n\n\n\nworld')
+  fansi:::process('hello.\n  \nworld')
+  fansi:::process('hello.\n\t\nworld')
+  fansi:::process('hello.\n\t\n\tworld')
+  fansi:::process('hello.\n \t \n \t world')
+  fansi:::process('hello.\n\nworld\n\n')
+  fansi:::process('hello.\n\nworld\n\n  ')
+  fansi:::process('\n\nhello.\n\t\n\tworld\n\t\n woohoo\n ')
+  fansi:::process('\n \t\nhello.\n\t\n\tworld\n\t\n woohoo\n ')
 })

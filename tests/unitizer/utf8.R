@@ -14,7 +14,7 @@ unitizer_sect("substr", {
 
   starts <- seq(1, 17, 4)
   ends <- starts + 3
-  ansi_substr2(lor.cn.c.1.5, starts, ends)
+  substr_esc(lor.cn.c.1.5, starts, ends)
 
   # These are all six chars wide, but look different due to different width
   # characters
@@ -26,11 +26,11 @@ unitizer_sect("substr", {
   lor.cn.c.2.5 <- rep(lorem.cn.col.2, 5)
   starts <- seq(1, by=6, len=5)
   ends <- starts + 5
-  ansi_substr2(lor.cn.c.2.5, starts, ends)
+  substr_esc(lor.cn.c.2.5, starts, ends)
 
   starts <- seq(1, by=12, len=5)
   ends <- starts + 11
-  ansi_substr2(lor.cn.c.2.5, starts, ends, type='width')
+  substr_esc(lor.cn.c.2.5, starts, ends, type='width')
 
   # with colors that actually work on an OSX terminal
 
@@ -39,7 +39,7 @@ unitizer_sect("substr", {
     grn.bg, lorem.cn.pieces[3], rgb.und.256, lorem.cn.pieces[4], end
   )
   lor.cn.c.4.5 <- rep(lorem.cn.col.4, 5)
-  ansi_substr2(lor.cn.c.4.5, starts, ends, type='width')
+  substr_esc(lor.cn.c.4.5, starts, ends, type='width')
 
   # All wide characters even number of chars apart
 
@@ -57,46 +57,46 @@ unitizer_sect("substr", {
   # second line has two extra single width characters because all the others are
   # losing the last character b/c we're ending in the middle, width wise
 
-  ansi_substr2(lor.cn.c.3.5, starts, ends, type='width')
+  substr_esc(lor.cn.c.3.5, starts, ends, type='width')
 
   # and now we grab those missing chars by allowing the round to happen
 
-  ansi_substr2(lor.cn.c.3.5, starts, ends, type='width', round='both')
+  substr_esc(lor.cn.c.3.5, starts, ends, type='width', round='both')
 
   # jagged first one leads short, second long
 
   starts <- seq(1, by=7, length.out=5)
   ends <- starts + 8
-  ansi_substr2(lor.cn.c.1.5, starts, ends, type='width')
-  ansi_substr2(lor.cn.c.1.5, starts, ends, type='width', round='last')
+  substr_esc(lor.cn.c.1.5, starts, ends, type='width')
+  substr_esc(lor.cn.c.1.5, starts, ends, type='width', round='last')
 
 })
 unitizer_sect("rounding", {
   # handling of subsetting when we end up in middle of wide display characters
 
-  ansi_substr2(lorem.cn.col.2, 1, 2, type='width')
-  ansi_substr2(lorem.cn.col.2, 1, 3, type='width')
-  ansi_substr2(lorem.cn.col.2, 2, 3, type='width')
-  ansi_substr2(lorem.cn.col.2, 2, 4, type='width')
-  ansi_substr2(lorem.cn.col.2, 3, 4, type='width')
+  substr_esc(lorem.cn.col.2, 1, 2, type='width')
+  substr_esc(lorem.cn.col.2, 1, 3, type='width')
+  substr_esc(lorem.cn.col.2, 2, 3, type='width')
+  substr_esc(lorem.cn.col.2, 2, 4, type='width')
+  substr_esc(lorem.cn.col.2, 3, 4, type='width')
 
-  ansi_substr2(lorem.cn.col.2, 1, 2, type='width', round='last')
-  ansi_substr2(lorem.cn.col.2, 1, 3, type='width', round='last')
-  ansi_substr2(lorem.cn.col.2, 2, 3, type='width', round='last')
-  ansi_substr2(lorem.cn.col.2, 2, 4, type='width', round='last')
-  ansi_substr2(lorem.cn.col.2, 3, 4, type='width', round='last')
+  substr_esc(lorem.cn.col.2, 1, 2, type='width', round='last')
+  substr_esc(lorem.cn.col.2, 1, 3, type='width', round='last')
+  substr_esc(lorem.cn.col.2, 2, 3, type='width', round='last')
+  substr_esc(lorem.cn.col.2, 2, 4, type='width', round='last')
+  substr_esc(lorem.cn.col.2, 3, 4, type='width', round='last')
 
-  ansi_substr2(lorem.cn.col.2, 1, 2, type='width', round='both')
-  ansi_substr2(lorem.cn.col.2, 1, 3, type='width', round='both')
-  ansi_substr2(lorem.cn.col.2, 2, 3, type='width', round='both')
-  ansi_substr2(lorem.cn.col.2, 2, 4, type='width', round='both')
-  ansi_substr2(lorem.cn.col.2, 3, 4, type='width', round='both')
+  substr_esc(lorem.cn.col.2, 1, 2, type='width', round='both')
+  substr_esc(lorem.cn.col.2, 1, 3, type='width', round='both')
+  substr_esc(lorem.cn.col.2, 2, 3, type='width', round='both')
+  substr_esc(lorem.cn.col.2, 2, 4, type='width', round='both')
+  substr_esc(lorem.cn.col.2, 3, 4, type='width', round='both')
 
-  ansi_substr2(lorem.cn.col.2, 1, 2, type='width', round='neither')
-  ansi_substr2(lorem.cn.col.2, 1, 3, type='width', round='neither')
-  ansi_substr2(lorem.cn.col.2, 2, 3, type='width', round='neither')
-  ansi_substr2(lorem.cn.col.2, 2, 4, type='width', round='neither')
-  ansi_substr2(lorem.cn.col.2, 3, 4, type='width', round='neither')
+  substr_esc(lorem.cn.col.2, 1, 2, type='width', round='neither')
+  substr_esc(lorem.cn.col.2, 1, 3, type='width', round='neither')
+  substr_esc(lorem.cn.col.2, 2, 3, type='width', round='neither')
+  substr_esc(lorem.cn.col.2, 2, 4, type='width', round='neither')
+  substr_esc(lorem.cn.col.2, 3, 4, type='width', round='neither')
 })
 unitizer_sect("multi-elem", {
   # Due to preservation of state issues, need to make sure works well with
@@ -104,36 +104,36 @@ unitizer_sect("multi-elem", {
 
   lor.cn.2.2 <- rep(lorem.cn.col.2, 2)
 
-  ansi_substr2(lor.cn.2.2, c(1,3), c(2,4), type='width')
-  ansi_substr2(lor.cn.2.2, c(2,4), c(2,4), type='width')
+  substr_esc(lor.cn.2.2, c(1,3), c(2,4), type='width')
+  substr_esc(lor.cn.2.2, c(2,4), c(2,4), type='width')
 })
 unitizer_sect("zero width combining", {
   combo <- "hello\u0300\u035c world"
   Encoding(combo) <- "UTF-8"
 
-  ansi_substr2(combo, 1, 5, type='width')
-  ansi_substr2(combo, 5, 8, type='width')
-  ansi_substr2(rep(combo, 2), c(1, 5), c(5, 8), type='width')
+  substr_esc(combo, 1, 5, type='width')
+  substr_esc(combo, 5, 8, type='width')
+  substr_esc(rep(combo, 2), c(1, 5), c(5, 8), type='width')
 
   combo1 <- "hello\u0300\u035c"
   Encoding(combo1) <- "UTF-8"
 
-  ansi_substr2(combo, 1, 5, type='width')
-  ansi_substr2(combo, 2, 6, type='width')
+  substr_esc(combo, 1, 5, type='width')
+  substr_esc(combo, 2, 6, type='width')
 
   # zero width with double width
 
   combo3 <- paste0(substr(lorem.cn.pieces[1], 1, 2), '\u0300')
   Encoding(combo3) <- "UTF-8"
-  ansi_substr2(combo3, 3, 4, type='width')
-  ansi_substr2(combo3, 2, 4, type='width')
-  ansi_substr2(combo3, 4, 4, type='width')
-  ansi_substr2(combo3, 4, 5, type='width')
+  substr_esc(combo3, 3, 4, type='width')
+  substr_esc(combo3, 2, 4, type='width')
+  substr_esc(combo3, 4, 4, type='width')
+  substr_esc(combo3, 4, 5, type='width')
 
   # start with diacritic
 
   combo4 <- paste0('\u0300hello')
-  ansi_substr2(combo4, 1, 1, type='width')  # no diacritic
-  ansi_substr2(combo4, 1, 1)                # diacritic only
+  substr_esc(combo4, 1, 1, type='width')  # no diacritic
+  substr_esc(combo4, 1, 1)                # diacritic only
 
 })

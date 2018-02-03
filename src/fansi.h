@@ -33,6 +33,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     char * buff; // Buffer
     int len;     // How many bytes the buffer has been allocated to
   };
+  struct FANSI_buff_const {
+    const char * buff; // buffer
+    int len;           // size of buffer
+  };
   /*
    * Used when computing position and size of ANSI tag with FANSI_loc
    */
@@ -142,7 +146,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * need to make it back to R which doesn't have a `size_t` type.
      *
      * - pos_byte: the byte in the string
-     * - pos_ansi: actual character position
+     * - pos_ansi: actual character position, different from pos_byte due to
+     *   multi-byte characters (i.e. UTF-8)
      * - pos_raw: the character position after we strip the handled ANSI tags,
      *   the difference with pos_ansi is that pos_ansi counts the escaped
      *   characters whereas this one does not.
@@ -223,30 +228,33 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP x, SEXP width,
     SEXP indent, SEXP exdent, SEXP prefix, SEXP initial,
     SEXP wrap_always, SEXP pad_end,
-    SEXP strip_spc, SEXP strip_tab, SEXP strip_ctl,
-    SEXP tabs_as_spc, SEXP tab_stops
+    SEXP strip_spaces,
+    SEXP tabs_as_spaces, SEXP tab_stops
   );
-  SEXP FANSI_process(
-    SEXP input, int strip_spc, int strip_tab, int strip_ctl,
-    struct FANSI_buff * buff
-  );
-  SEXP FANSI_process_ext(
-    SEXP input, SEXP strip_spc, SEXP strip_tab, SEXP strip_ctl
-  );
+  SEXP FANSI_process(SEXP input, struct FANSI_buff * buff);
+  SEXP FANSI_process_ext(SEXP input);
+  SEXP FANSI_tabs_as_spaces_ext(SEXP vec, SEXP tab_stops);
 
   // Internal
+
+  SEXP FANSI_tabs_as_spaces(
+    SEXP vec, SEXP tab_stops, struct FANSI_buff * buff, int is_utf8_loc
+  );
 
   // Utilities
 
   SEXP FANSI_check_assumptions();
   SEXP FANSI_digits_in_int_ext(SEXP y);
 
+  struct FANSI_state FANSI_inc_width(struct FANSI_state state, int inc);
+  struct FANSI_state FANSI_reset_width(struct FANSI_state state);
   struct FANSI_state FANSI_parse_esc(struct FANSI_state state);
+
   void FANSI_size_buff(struct FANSI_buff * buff, int size);
   int FANSI_is_utf8_loc();
   int FANSI_utf8clen(char c);
   int FANSI_digits_in_int(int x);
-  const char * FANSI_string_as_utf8(SEXP x, int is_utf8_loc);
+  struct FANSI_buff_const FANSI_string_as_utf8(SEXP x, int is_utf8_loc);
   struct FANSI_state FANSI_state_init();
   int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current);
   int FANSI_state_has_style(struct FANSI_state state);

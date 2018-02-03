@@ -153,30 +153,18 @@ SEXP FANSI_strip(SEXP input) {
   return res_fin;
 }
 /*
- * Strips Extra ASCII Spaces, and optionally ASCII control characters
+ * Strips Extra ASCII Spaces
  *
- * Won't do anything about weird UTF8 spaces, etc.
- *
- * Keeps newlines and tabs.  Rationale for this is we can handle the cursor
- * effects of those two, but no really any of the others (at least not easily,
- * e.g. \r).
+ * Won't do anything about weird UTF8 spaces, etc.  Originally used to have the
+ * option to handle ANSI ESC sequences and other escapes, but we ditched that in
+ * favor of simplicity.  All those characters / sequences are treated as normal
+ * characters, except for the newline.
  *
  * Allows two spaces after periods, question marks, and exclamation marks.  This
  * is to line up with strwrap behavior.
- *
- * Need option to strip tabs.
- * Always keep newlines?
- *
- * spaces - differential control for post period?
- * tab
- * other_control?
- * newlines?
  */
 
-SEXP FANSI_process(
-  SEXP input, int strip_spc, int strip_tab, int strip_ctl,
-  struct FANSI_buff *buff
-) {
+SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
   if(TYPEOF(input) != STRSXP) error("Input is not a character vector.");
 
   SEXP res = PROTECT(input);  // dummy PROTECT
@@ -189,96 +177,72 @@ SEXP FANSI_process(
     char * buff_track;
 
     R_len_t len_j = LENGTH(STRING_ELT(res, i));
-    int strip_this, to_strip, punct_prev, punct_prev_prev, space_prev,
-        space_start, control_prev, para_start, newlines;
+    int strip_this, to_strip, to_strip_nl, punct_prev, punct_prev_prev,
+        space_prev, space_start, para_start, newlines, newlines_start;
 
-    strip_this = to_strip = punct_prev = punct_prev_prev = space_prev =
-      space_start = control_prev = newlines = 0;
+    strip_this = to_strip = to_strip_nl = punct_prev = punct_prev_prev =
+      space_prev = space_start = newlines = newlines_start = 0;
 
     para_start = 1;
 
     R_len_t j_last = 0;
 
-    // First space we encounter after non-space, non-control, can be kept,
-    // unless after a punct, in which case two can be kept.  Note that we
-    // purposefully allow ourselves to read up to the NULL terminator.
+    // All spaces [ \t\n] are converted to spaces.  First space is kept, unless
+    // right after [.?!][)\\"']{0,1}, in which case one more space can be kept.
     //
-    // Newlines after the first two become like spaces
+    // One exception is that sequences of spaces that resolve to more than one
+    // newline are kept as a pair of newlines.
     //
-    // ANSI esc sequences are not stripped, but the spaces around them should
-    // be.  Argh, looks like it will be a major PITA to do.  Basically it is
-    // same treatment as a newline, but without actually writing a newline.
-    // Maybe not too bad so long as we don't consider punct-spc-csi-spc to need
-    // to be preserved.  Then, it is just like a non-strip ctrl, except that we
-    // need to shift stuff a lot more.
-    //
-    // I guess for now we can implement it that way. Seems increasingly likely
-    // that we're not going to want to strip controls anwyay.
+    // We purposefully allow ourselves to read up to the NULL terminator.
 
     for(R_len_t j = 0; j <= len_j; ++j) {
-      int skip_bytes = 1;
+
       int newline = string[j] == '\n';
-      if(newline) ++newlines;
-      else if(string[j] != ' ') newlines = 0;
+      int tab = string[j] == '\t';
 
-      int space = strip_spc && (
-          (string[j] == ' ') ||
-          (newline && newlines > 2)  // treat newline like space after 1st 2
-        );
-      int tab = strip_tab && string[j] == '\t';
-      int esc = string[j] == 27;
-      int control = strip_ctl &&
-        (
-          (
-            string[j] >= 1 && string[j] < 32 &&
-            !newline && !tab
-          ) ||
-          string[j] == 127
-        );
+      // TBD: PROBABLY GOING TO GIVE UP ON ESC SEQ PARSING:
+      // Handle ESC sequences; pretend they don't exist; some question whether
+      // we should only do the ANSI csi sequences to better align with what
+      // stwrap does, or also strip the C0 sequences.  Probably strip the C0
+      // sequences and recognize that we'll get different results if those are
+      // present.
 
-      int line_end = (newline || !string[j]);
-
-      int strip =
-        (space && space_prev && !punct_prev_prev) ||
-        (space && control_prev) ||
-        (space && para_start) ||
-        control ||
-        tab;
+      if(newline) {
+        if(!newlines) {
+          newlines_start = j;
+          to_strip_nl = to_strip;  // how many chrs need stripping by first nl
+        }
+        ++newlines;
+      }
+      int space = ((string[j] == ' ') || tab || newline);
+      int line_end = !string[j];
 
       // Need to keep track if we're in a sequence that starts with a space in
       // case a line ends, as normally we keep one or two spaces, but if we hit
       // the end of the line we don't want to keep them.
 
-      if(space) {
-        if(!(space_prev || control_prev)) space_start = 1;
+      if(space && !para_start) {
+        if(!space_prev) space_start = 1;
         else if(space && space_prev && punct_prev_prev) space_start = 2;
-      } else if(!control && !line_end) space_start = 0;
-
-      // Deal with CSI, basically need to find out where it starts and ends, do
-      // so using FANSI_parse_esc which has some additional unneeded overhead,
-      // but we don't want that logic in two places
-
-      if(esc) {
-        struct FANSI_state state, state_post_sgr;
-        state = FANSI_state_init();
-        state.string = string + j;
-        state_post_sgr = FANSI_parse_esc(state);
-        skip_bytes = state_post_sgr.pos_byte - state.pos_byte;
       }
-      // transcribe string if we've hit something that we don't need to strip
-
       /*
       Rprintf(
-        "pr_start: %d strip: %d to_strip: %d j: %d spc: %d %d %d ctl: %d %d, w: %d strip_this: %d chr: %c\n",
-        para_start, strip, to_strip, j, space, space_prev, space_start, control,
-        control_prev,
+        "pr_st: %d %d strip: %d to_strip: %d j: %d spc: %d %d %d w: %d strip_this: %d chr: %c\n",
+        para_start, newlines, strip, to_strip,
+        j, space, space_prev, space_start,
         (!strip && to_strip) || (!string[j] && strip_this),
         strip_this,
         (string[j] ? string[j] : '~')
       );
       */
+      // transcribe string if:
       if(
-        (!strip && to_strip) || (!string[j] && (strip_this || space_start))
+        // we've hit something that we don't need to strip, and we have accrued
+        // characters to strip
+        (!space && to_strip)
+        ||
+        // string end and we've already stripped previously or ending in spaces
+        (line_end && (strip_this || space_start))
       ) {
         // need to copy entire STRSXP since we haven't done that yet
         if(!strip_any) {
@@ -292,26 +256,53 @@ SEXP FANSI_process(
           buff_track = buff->buff;
           strip_this = 1;
         }
-        // Copy the portion up to the point we know should be copied, need
-        // special treatment when hitting line ends with spaces.
+        // newlines normally act as spaces, but if there are two or more in a
+        // sequence of tabs/spaces then they behave like a paragraph break
+        // so we will replace that sequence with two newlines;
 
-        int copy_bits = j - j_last - to_strip -
-          (line_end * space_start * !para_start);
+        char spc_chr = ' ';
+        int copy_to = j;
 
-        // Rprintf("Copy bits %d j: %d j_last: %d\n", copy_bits, j, j_last);
-        if(copy_bits) {
-          memcpy(buff_track, string_start, copy_bits);
-          buff_track += copy_bits;
+        if(newlines > 1) {
+          copy_to = newlines_start;
+          space_start = 2;
+          to_strip = to_strip_nl;
+          spc_chr = '\n';
+        }
+        // Copy the portion up to the point we know should be copied, will add
+        // back spaces and/or newlines as needed
+
+        int copy_bytes =
+          copy_to -      // current position
+          j_last -       // less last time we copied
+          to_strip;      // less extra stuff to strip
+
+        /*
+        Rprintf(
+          "Copy bytes %d j: %d j_last: %d to_str: %d spc_str: %d, buff_t: %d\n",
+          copy_bytes, j, j_last, to_strip,
+          space_start,
+          buff_track - buff->buff
+        );
+        */
+        if(copy_bytes) {
+          memcpy(buff_track, string_start, copy_bytes);
+          buff_track += copy_bytes;
+        }
+        // Overwrite the trailing bytes with spaces or newlines as needed
+        // because we could have tabs in there; note that we can have
+        // `copy_bytes` == 0 and still want to do this (e.g. leading '\n\n')
+
+        if(!line_end) {
+          if(space_start) *(buff_track++) = spc_chr;
+          if(space_start > 1) *(buff_track++) = spc_chr;
         }
         string_start = string + j;
         j_last = j;
-        to_strip = 0;
-        space_start = 0;
-      } else if(strip) {
-        to_strip += skip_bytes;
-      }
-      para_start = string[j] == '\n' || (para_start && strip);
-      control_prev = control;
+        to_strip = space_start = newlines = 0;
+      } else if(space) to_strip++;
+
+      para_start = newlines > 1;
       space_prev = space;
       punct_prev_prev = punct_prev;
 
@@ -325,7 +316,6 @@ SEXP FANSI_process(
           punct_prev &&
           (string[j] == '"' || string[j] == '\'' || string[j] == ')')
         );
-      if(skip_bytes > 1) j += skip_bytes - 1;
     }
     if(strip_this) {
       /*
@@ -349,13 +339,7 @@ SEXP FANSI_process(
   return res;
 }
 
-SEXP FANSI_process_ext(
-  SEXP input, SEXP strip_spc, SEXP strip_tab, SEXP strip_ctl
-) {
+SEXP FANSI_process_ext(SEXP input) {
   struct FANSI_buff buff = {.len=0};
-
-  return FANSI_process(
-    input, asInteger(strip_spc), asInteger(strip_tab), asInteger(strip_ctl),
-    &buff
-  );
+  return FANSI_process(input, &buff);
 }

@@ -23,7 +23,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
  * We rely on struct initialization to set everything else to zero.
  */
 struct FANSI_state FANSI_state_init() {
-  return (struct FANSI_state) { .color = -1, .bg_color = -1};
+  return (struct FANSI_state) {.color = -1, .bg_color = -1};
 }
 /*
  * Reset all the display attributes, but not the position ones
@@ -37,7 +37,16 @@ struct FANSI_state FANSI_reset_state(struct FANSI_state state) {
 
   return  state;
 }
-
+struct FANSI_state FANSI_reset_width(struct FANSI_state state) {
+  state.pos_width = 0;
+  state.pos_width_target = 0;
+  return state;
+}
+struct FANSI_state FANSI_inc_width(struct FANSI_state state, int inc) {
+  state.pos_width = FANSI_add_int(state.pos_width, inc);
+  state.pos_width_target = FANSI_add_int(state.pos_width_target, inc);
+  return state;
+}
 // Can a byte be interpreted as ASCII number?
 
 int FANSI_is_num(const char * string) {
@@ -365,8 +374,8 @@ struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
         } else if (tok_res.val == 26) {
           // reserved for proportional spacing as specified in CCITT
           // Recommendation T.61; implicitly we are assuming this is a single
-          // substring parameter, unlike say 38;2;..., but really we have no idea
-          // what this is.
+          // substring parameter, unlike say 38;2;..., but really we have no
+          // idea what this is.
           state.style |= (1U << 12U);
         } else if (tok_res.val >= 20 && tok_res.val < 30) {
           // Turn off the other styles that map exactly from 1-9 to 21-29
@@ -476,23 +485,30 @@ struct FANSI_state FANSI_read_ascii(struct FANSI_state state) {
   return state;
 }
 /*
+ * C0 ESC sequences treated as zero width
+ */
+struct FANSI_state FANSI_read_c0(struct FANSI_state state) {
+  state = FANSI_read_ascii(state);
+  --state.pos_width;
+  --state.pos_width_target;
+  return state;
+}
+/*
  * Read a Character Off and Update State
  *
  * This can probably use some pretty serious optimiation...
  */
 struct FANSI_state FANSI_read_next(struct FANSI_state state) {
-  const char * string = state.string;
-  if(string[state.pos_byte] > 0) {
-    // Character is in the 1-127 range
-    if(string[state.pos_byte] != 27) {
-      // Normal ASCII character
-      state = FANSI_read_ascii(state);
-    } else if (string[state.pos_byte] == 27) {
-      state = FANSI_parse_esc(state);
-    }
-  } else if(string[state.pos_byte] < 0) {
-    state = FANSI_read_utf8(state);
-  }
+  const char chr_val = state.string[state.pos_byte];
+  // Normal ASCII characters
+  if(chr_val >= 0x20 & chr_val < 0x7f) state = FANSI_read_ascii(state);
+  // UTF8 characters (chr_val is signed, so > 0x7f will be negative)
+  else if (chr_val < 0) state = FANSI_read_utf8(state);
+  // ESC sequences
+  else if (chr_val == 0x1b) state = FANSI_parse_esc(state);
+  // C0 escapes (e.g. \t, \n, etc)
+  else if(chr_val) state = FANSI_read_c0(state);
+
   return state;
 }
 
@@ -716,18 +732,6 @@ int FANSI_state_size(struct FANSI_state state) {
   for(int i = 1; i < 10; ++i){
     style_size += ((state.style & (1 << i)) > 0) * 2;
   }
-  /*
-  Rprintf(
-      "%d %d %d %d %d %d %d %d %d\n",
-    (state.style & 2) > 0, (state.style & 4) > 0, (state.style & 8) > 0,
-    (state.style & 16) > 0, (state.style & 32) > 0, (state.style & 64) > 0,
-    (state.style & 128) > 0, (state.style & 256) > 0, (state.style & 512) > 0);
-
-  Rprintf(
-    "  size - style: %d %d %d color: %d bg_color: %d\n", state.style,
-    style_size, (state.style & 128) > 0, color_size, bg_color_size
-  );
-  */
   return color_size + bg_color_size + style_size + 2;  // +2 for ESC[
 }
 /*
@@ -748,7 +752,7 @@ unsigned int FANSI_color_write(
     error("Internal Error: color mode must be 3 or 4");  // nocov
 
   unsigned int str_off = 0;
-  if(color > 0) {
+  if(color >= 0) {
     string[str_off++] = mode == 3 ? '3' : '4';
 
     if(color != 8) {
@@ -806,7 +810,7 @@ int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
   );
   // Finalize (note, in some cases we slightly overrallocate)
 
-  if(str_pos > buff_len)
+  if(str_pos != buff_len)
     // nocov start
     error(
       "Internal Error: tag mem allocation mismatch (%u, %u)", str_pos, buff_len
@@ -895,6 +899,7 @@ SEXP FANSI_state_at_pos_ext(
   const char * string = CHAR(text_chr);
   struct FANSI_state state = FANSI_state_init();
   struct FANSI_state state_prev = FANSI_state_init();
+
   struct FANSI_state_pair state_pair, state_pair_old;
 
   // Allocate result, will be a res_cols x n matrix.  A bit wasteful to record
@@ -927,7 +932,7 @@ SEXP FANSI_state_at_pos_ext(
   SEXP res_chr, res_chr_prev = PROTECT(mkChar(""));
 
   int is_utf8_loc = FANSI_is_utf8_loc();
-  string = FANSI_string_as_utf8(text_chr, is_utf8_loc);
+  string = FANSI_string_as_utf8(text_chr, is_utf8_loc).buff;
 
   state.string = state_prev.string = string;
   state_pair.cur = state;
