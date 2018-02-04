@@ -50,14 +50,14 @@ SEXP FANSI_strip(SEXP input) {
   // requires the growing buffer, etc.  For now go simple
 
   for(i = 0; i < len; ++i) {
-    if(!i % 10000) R_CheckUserInterrupt();
+    FANSI_interrupt();
     R_len_t chr_len = LENGTH(STRING_ELT(input, i));
     if(chr_len > mem_req) mem_req = chr_len;
   }
   // Now strip
 
   for(i = 0; i < len; ++i) {
-    if(!i % 1000) R_CheckUserInterrupt();
+    FANSI_interrupt();
     SEXP input_chr = STRING_ELT(input, i);
     if(input_chr == NA_STRING) continue;
 
