@@ -14,10 +14,6 @@
 #
 # Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-#' Compute String ANSI State at a Given Position
-#'
-#' @export
-
 state_esc <- function(
   text, pos, type='chars', lag, ends, tabs.as.spaces=FALSE, tab.stops=8L
 ) {
@@ -69,7 +65,7 @@ substr_esc <- function(x, start, stop) substr2_esc(x=x, start=start, stop=stop)
 #' @export
 
 substr2_esc <- function(
-  x, start, stop, type='chars', round='first', tabs.as.spaces=FALSE,
+  x, start, stop, type='chars', round='start', tabs.as.spaces=FALSE,
   tab.stops=getOption('fansi.tab.stops')
 ) {
   x <- as.character(x)
@@ -93,7 +89,7 @@ substr2_esc <- function(
 
   res <- character(length(x))
   x.u <- unique(x)
-  offset <- c(chars=2, bytes=1, width=4)[type]
+  type.m <- match(type, c('chars', 'width', 'bytes'))
 
   for(u in x.u) {
     elems <- which(x == u)
@@ -112,9 +108,9 @@ substr2_esc <- function(
     e.ends <- c(rep(FALSE, length(start)), rep(TRUE, length(start)))[e.order]
     e.sort <- c(e.start, e.stop)[e.order]
 
-    state <- state_esc(
-      u, e.sort, type, e.lag, e.ends, tabs.as.spaces=tabs.as.spaces,
-      tab.stops=tab.stops
+    state <- .Call(
+      FANSI_state_at_pos_ext,
+      u, e.sort - 1L, type.m - 1L, e.lag, e.ends, tabs.as.spaces, tab.stops
     )
     # Recover the matching values for e.sort
 
