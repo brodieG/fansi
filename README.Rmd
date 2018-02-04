@@ -9,7 +9,7 @@ knitr::opts_chunk$set(
 )
 library(fansi)
 ```
-# fansi - ANSI CSI-aware String Functions
+# fansi - ANSI Escape Aware String Functions
 
 [![](https://travis-ci.org/brodieG/fansi.svg?branch=master)](https://travis-ci.org/brodieG/fansi)
 [![](https://codecov.io/github/brodieG/fansi/coverage.svg?branch=master)](https://codecov.io/github/brodieG/fansi?branch=master)
