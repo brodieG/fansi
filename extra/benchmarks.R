@@ -1,4 +1,13 @@
+library(fansi)
 ulysses <- readLines("http://www.gutenberg.org/files/4300/4300-0.txt")
+ulysses.c <- paste0(ulysses, collapse='\n')
+n <- 1e4
+starts <- 1:n
+stops <- starts + 80
+ulysses.c.r <- rep(ulysses.c, n)
+
+system.time(substr_esc(ulysses.c.r, starts, stops))
+system.time(substr(ulysses.c.r, starts, stops))
 
 system.time(csi <- fansi::strwrap_esc(ulysses, 30))
 system.time(normal <- strwrap(ulysses, 30))
