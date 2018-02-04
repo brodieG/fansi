@@ -99,6 +99,7 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x) {
 void FANSI_size_buff(struct FANSI_buff * buff, int size) {
   // Rprintf("  buff_len %d size %d\n", buff->len, size);
   if(size > buff->len) {
+    if(size < 128) size = 128;  // in theory little penalty to ask this minimum
     int tmp_double_size = FANSI_add_int(buff->len, buff->len);
     if(size > tmp_double_size) tmp_double_size = size;
     buff->len = tmp_double_size;
