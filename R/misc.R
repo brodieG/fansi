@@ -16,8 +16,11 @@ digits_in_int <- function(x) .Call(FANSI_digits_in_int, x)
 #'   interpreted
 #' @export
 #' @param x character vector to replace tabs in.
-#' @param tab.stops integer distance between tab stops, the last tab stop
-#'   repeats as necessary.
+#' @param tab.stops integer(1:n) indicating position of tab stops to use when
+#'   converting tabs to spaces.  If there are more tabs in a line than defined
+#'   tab stops the last tab stop is re-used.  For the purposes of applying tab
+#'   stops, each input line is considered a line and the character count begins
+#'   from the beginning of the input line.  
 #' @return character, `x` with tabs replaced by spaces, with elements
 #'   possibly converted to UTF-8.
 #' @examples

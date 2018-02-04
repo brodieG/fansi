@@ -9,8 +9,11 @@ tabs_as_spaces(x, tab.stops = getOption("fansi.tab.stops"))
 \arguments{
 \item{x}{character vector to replace tabs in.}
 
-\item{tab.stops}{integer distance between tab stops, the last tab stop
-repeats as necessary.}
+\item{tab.stops}{integer(1:n) indicating position of tab stops to use when
+converting tabs to spaces.  If there are more tabs in a line than defined
+tab stops the last tab stop is re-used.  For the purposes of applying tab
+stops, each input line is considered a line and the character count begins
+from the beginning of the input line.}
 }
 \value{
 character, \code{x} with tabs replaced by spaces, with elements

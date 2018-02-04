@@ -32,17 +32,53 @@ state_esc <- function(
     lag, ends, tabs.as.spaces, tab.stops
   )
 }
-#' Alternate substr version
+#' ANSI Escape Sequence Aware Version of `substr`
 #'
+#' `substr_esc` is a drop-in replacement for `substr`.  Performance is
+#' slightly slower than `substr`.
+#'
+#' `substr2_esc` adds the ability to retrieve substrings based on display width,
+#' and byte width in addition to the normal character width.  #'
+#' `substr2_esc` also provides the option to convert tabs to spaces with
+#' [tabs_as_spaces] prior to taking substrings.
+#
+#' Because exact substrings on anything other than character width cannot be
+#' guaranteed (e.g.  because of multi-byte encodings, or double display-width
+#' characters) `substr2_esc` must make assumptions on how to resolve provided
+#' `start`/`stop` values that are infeasible and does so via the `round`
+#' parameter.  If we use "start" as the `round` value, then any time the `start`
+#' value corresponds to the middle of a multi-byte or a wide character, then
+#' that character is included in the substring, while any similar partially
+#' included character via the `stop` is left out.  The converse is true if we
+#' use "stop" as the `round` value.  "neither" would cause all partial
+#' characters to be dropped irrespective whether they correspond to `start` or
+#' `stop`, and "both" could cause all of them to be included.
+#'
+#' @inheritParams base::substr
+#' @inheritParams tabs_as_spaces
+#' @param type character(1L) in `c("char", "width", "bytes")`
+#' @param round character(1L) in `c("start", "stop", "both", "neither")`,
+#'   controls how to resolve ambiguities when a `start` or `stop` value in
+#'   "bytes" or "width" `type` mode falls within a multi-byte character or a
+#'   wide display character.  See details.
 #' @export
 
-substr_esc <- function(
+substr_esc <- function(x, start, stop) substr2_esc(x=x, start=start, stop=stop)
+
+#' @rdname substr_esc
+#' @export
+
+substr2_esc <- function(
   x, start, stop, type='chars', round='first', tabs.as.spaces=FALSE,
-  tab.stops=8L
+  tab.stops=getOption('fansi.tab.stops')
 ) {
   x <- as.character(x)
-  stopifnot(isTRUE(round %in% c('first', 'last', 'both', 'neither')))
-
+  vetr(
+    character(), integer(), integer(),
+    type=CHR.1 && . %in% c('chars', 'bytes', 'width'),
+    round=CHR.1 && . %in% c('start', 'stop', 'both', 'neither'),
+    tabs.as.spaces=LGL.1, tab.stops=INT && length(.) >= 1L
+  )
   x.len <- length(x)
 
   # Add special case for length(x) == 1
@@ -69,8 +105,8 @@ substr_esc <- function(
     e.order <- order(c(e.start, e.stop), method='shell')
 
     e.lag <- c(
-      rep(round %in% c('first', 'both'), length(start)),
-      rep(round %in% c('last', 'both'), length(stop))
+      rep(round %in% c('start', 'both'), length(start)),
+      rep(round %in% c('stop', 'both'), length(stop))
     )[e.order]
 
     e.ends <- c(rep(FALSE, length(start)), rep(TRUE, length(start)))[e.order]
@@ -105,28 +141,3 @@ substr_esc <- function(
   res
 }
 
-substr2_esc <- function(
-  x, start, stop, type='chars', round='first', tabs.as.spaces=FALSE,
-  tab.stops=8L
-) {
-  x <- as.character(x)
-  if((x.len <- length(x))) {
-    vetr(
-      x=character(),
-      start=integer() && length(.) > 0,
-      stop=integer() && length(.) > 0,
-      type=CHR.1 && .%in% c('char', 'width', 'bytes'),
-      round=CHR.1 && . %in% c('first', 'last', 'both', 'neither'),
-      tabs.as.spaces=LGL.1,
-      tab.stops=INT.POS.STR && length(.) > 1
-    )
-    start <- as.integer(start)
-    stop <- as.integer(stop)
-
-    max.len <- max(x.len,  length(start), length(stop))
-    if(x.len < max.len) x <- rep_len(x, max.len)
-    if(length(start) < max.len) start <- rep_len(start, max.len)
-    if(length(stop) < max.len) stop <- rep_len(stop, max.len)
-  }
-
-}
