@@ -1,6 +1,6 @@
-# Copyright (C) 2017  Brodie Gaslam
+# Copyright (C) 2018  Brodie Gaslam
 #
-# This file is part of "fansi - ANSI CSI-aware String Functions"
+# This file is part of "fansi - ANSI Escape Aware String Functions"
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -103,4 +103,30 @@ substr_esc <- function(
     )
   }
   res
+}
+
+substr2_esc <- function(
+  x, start, stop, type='chars', round='first', tabs.as.spaces=FALSE,
+  tab.stops=8L
+) {
+  x <- as.character(x)
+  if((x.len <- length(x))) {
+    vetr(
+      x=character(),
+      start=integer() && length(.) > 0,
+      stop=integer() && length(.) > 0,
+      type=CHR.1 && .%in% c('char', 'width', 'bytes'),
+      round=CHR.1 && . %in% c('first', 'last', 'both', 'neither'),
+      tabs.as.spaces=LGL.1,
+      tab.stops=INT.POS.STR && length(.) > 1
+    )
+    start <- as.integer(start)
+    stop <- as.integer(stop)
+
+    max.len <- max(x.len,  length(start), length(stop))
+    if(x.len < max.len) x <- rep_len(x, max.len)
+    if(length(start) < max.len) start <- rep_len(start, max.len)
+    if(length(stop) < max.len) stop <- rep_len(stop, max.len)
+  }
+
 }
