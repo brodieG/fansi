@@ -165,6 +165,9 @@ SEXP FANSI_color_to_html_ext(SEXP x) {
   R_xlen_t len = XLENGTH(x);
   if(len %% 5) error("Argument length not a multipe of 5");
 
+  struct FANSI_buff buff = {.len = 0};
+  FANSI_size_buff(&buff
+
   for(R_xlen_t i = 0; i < len; i += 5) {
     FANSI_color_to_html
 
