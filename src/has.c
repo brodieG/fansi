@@ -15,6 +15,7 @@
  *
  * Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
  */
+
 /*
  * Check if a CHARSXP contains ANSI esc sequences
  */

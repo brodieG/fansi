@@ -64,7 +64,6 @@ SEXP FANSI_tabs_as_spaces(
     if(chr == NA_STRING) continue;
 
     source = CHAR(chr);
-    // One additional issue is that if we f
 
     while(*source && (source = strchr(source, '\t'))) {
       if(!tabs_in_str) {
