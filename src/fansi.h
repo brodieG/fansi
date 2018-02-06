@@ -234,6 +234,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_process(SEXP input, struct FANSI_buff * buff);
   SEXP FANSI_process_ext(SEXP input);
   SEXP FANSI_tabs_as_spaces_ext(SEXP vec, SEXP tab_stops);
+  SEXP FANSI_color_to_html_ext(SEXP x);
 
   // Internal
 

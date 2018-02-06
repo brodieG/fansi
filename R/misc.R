@@ -64,3 +64,9 @@ tabs_as_spaces <- function(x, tab.stops=getOption('fansi.tab.stops')) {
   )
   .Call(FANSI_tabs_as_spaces, x, as.integer(tab.stops))
 }
+## Testing interface for color code to HTML conversion
+
+esc_color_code_to_html <- function(x) {
+  vetr(matrix(integer(), 5))
+  .Call(FANSI_color_to_html, as.integer(x))
+}
