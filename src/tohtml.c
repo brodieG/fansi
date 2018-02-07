@@ -18,49 +18,6 @@
 
 #include "fansi.h"
 /*
- * Looks like we don't need to worry about C0 sequences, however we must
- * parse all ESC sequences as HTML gladly displays everything right after the
- * initial ESC
- *
- * <span style='color: '>
- * <span style='background-color: '>
- * <span style='text-decoration: '>
- * <span style='text-decoration: '>
- * <span style='font-weight: '>
- */
-
-SEXP FANSI_esc_to_html(SEXP x) {
-  if(TYPEOF(x) != STRSXP)
-    error("Argument `x` must be a character vector");
-
-  R_xlen_t x_len = XLENGTH(x);
-  // struct FANSI_buff buff = {.len=0};
-
-  for(R_xlen_t i = 0; i < x_len; ++i) {
-    FANSI_interrupt(i);
-
-    SEXP chrsxp = STRING_ELT(x, i);
-    const char * string_start = CHAR(chrsxp);
-    const char * string = string_start;
-
-    while(*string && (string = strchr(string, '\t'))) {
-      /*
-      if(!tabs_in_str) {
-        tabs_in_str = 1;
-        UNPROTECT(1);
-        res_sxp = PROTECT(duplicate(vec));
-        for(R_xlen_t j = 0; j < len_stops; ++j) {
-          if(INTEGER(tab_stops)[j] > max_tab_stop)
-            max_tab_stop = INTEGER(tab_stops)[j];
-        }
-      }
-      */
-      ++string;
-    }
-  }
-  return R_NilValue;
-}
-/*
  * All color conversions taken from
  *
  * <https://en.wikipedia.org/wiki/ANSI_escape_code>
@@ -161,9 +118,66 @@ int FANSI_color_to_html(
   return res_bytes;
 }
 /*
+ * Looks like we don't need to worry about C0 sequences, however we must
+ * parse all ESC sequences as HTML gladly displays everything right after the
+ * initial ESC
+ *
+ * <span style='color: '>
+ * <span style='background-color: '>
+ * <span style='text-decoration: '>
+ * <span style='text-decoration: '>
+ * <span style='font-weight: '>
+ */
+
+SEXP FANSI_esc_to_html(SEXP x) {
+  if(TYPEOF(x) != STRSXP)
+    error("Argument `x` must be a character vector");
+
+  R_xlen_t x_len = XLENGTH(x);
+  struct FANSI_buff buff = {.len=0};
+  struct FANSI_state state = FANSI_state_init();
+  struct FANSI_state state_prev = FANSI_state_init();
+
+  for(R_xlen_t i = 0; i < x_len; ++i) {
+    FANSI_interrupt(i);
+
+    SEXP chrsxp = STRING_ELT(x, i);
+    const char * string_start = CHAR(chrsxp);
+    const char * string = string_start;
+
+    R_len_t len_init = LENGTH(chrsxp);
+    int len_extra = 0;
+
+    while(*string && (string = strchr(string, 0x1b))) {
+      // Since we don't care about width, etc, we only use the state objects to
+      // parse the ESC sequences
+
+      state = FANSI_reset_pos(state);
+      state.string = string;
+
+      // read all sequential ESC tags
+
+      do {
+        state = FANSI_read_next(state);
+      } while(state.string[state.pos_byte] == 0x1b)
+
+      // If we have a change from the previous tag, then we should write out the
+      // state
+
+      if(FANSI_state_comp(state, state_prev)) {
+
+      }
+      state_prev = state;
+      ++string;
+    }
+  }
+  return R_NilValue;
+}
+/*
  * Testing interface
  *
- * x is a 5 x N matrix.
+ * x is a 5 x N matrix where, for each column the first value is a color code,
+ * and subsequent values correspond to the state.color_extra values.
  */
 
 SEXP FANSI_color_to_html_ext(SEXP x) {
