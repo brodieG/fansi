@@ -25,7 +25,7 @@ unitizer_sect('colors', {
 
   # cells.255 <- sprintf(span, colors.255, style)
   # cells.255.color <- sapply(
-  #   split(head(tail(cells, -16), 216), rep(1:6, each=36)),
+  #   split(head(tail(cells.255, -16), 216), rep(1:6, each=36)),
   #   function(x) sprintf('<div>%s</div>', paste0(x, collapse=""))
   # )
 
@@ -47,9 +47,9 @@ unitizer_sect('colors', {
   #     '<h3>8 colors</h3>',
   #     '<div>', paste0(cells.8, collapse=""), '</div>',
   #     '<h3>255 colors</h3>',
-  #     '<div>', paste0(cells[1:16], collapse=""), '</div>',
+  #     '<div>', paste0(cells.255[1:16], collapse=""), '</div>',
   #     cells.255.color,
-  #     '<div>', paste0(cells[(256-23):256], collapse=""), '</div>',
+  #     '<div>', paste0(cells.255[(256-23):256], collapse=""), '</div>',
   #     '<h3>True Color</h3>',
   #     cells.tru.rows,
   #     '</html>'
