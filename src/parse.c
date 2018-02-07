@@ -35,7 +35,18 @@ struct FANSI_state FANSI_reset_state(struct FANSI_state state) {
   for(int i = 0; i < 4; i++) state.color_extra[i] = 0;
   state.bg_color = -1;
   for(int i = 0; i < 4; i++) state.bg_color_extra[i] = 0;
+  state.border = 0;
+  state.ideogram = 0;
+  state.font = 0;
 
+  return  state;
+}
+struct FANSI_state FANSI_reset_pos(struct FANSI_state state) {
+  state.pos_ansi = 0;
+  state.pos_raw = 0;
+  state.pos_width = 0;
+  state.pos_width_target = 0;
+  state.pos_byte = 0;
   return  state;
 }
 struct FANSI_state FANSI_reset_width(struct FANSI_state state) {
