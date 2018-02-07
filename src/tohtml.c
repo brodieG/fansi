@@ -31,19 +31,20 @@
 
 SEXP FANSI_esc_to_html(SEXP x) {
   if(TYPEOF(x) != STRSXP)
-    error("Argument `x` must be a character vector")
+    error("Argument `x` must be a character vector");
 
-  R_xlen_t x_len = XLENGTH(x)
-  struct FANSI_buff * buff = {.len=0};
+  R_xlen_t x_len = XLENGTH(x);
+  // struct FANSI_buff buff = {.len=0};
 
   for(R_xlen_t i = 0; i < x_len; ++i) {
-    FANSI_interrupt();
+    FANSI_interrupt(i);
 
-    const char * chrsxp = STRING_ELT(x, i);
+    SEXP chrsxp = STRING_ELT(x, i);
     const char * string_start = CHAR(chrsxp);
-    const char * string = start;
+    const char * string = string_start;
 
-    while(*source && (source = strchr(source, '\t'))) {
+    while(*string && (string = strchr(string, '\t'))) {
+      /*
       if(!tabs_in_str) {
         tabs_in_str = 1;
         UNPROTECT(1);
@@ -53,13 +54,12 @@ SEXP FANSI_esc_to_html(SEXP x) {
             max_tab_stop = INTEGER(tab_stops)[j];
         }
       }
-      ++tab_count;
-      ++source;
+      */
+      ++string;
     }
-    while()
   }
+  return R_NilValue;
 }
-static const char * standard_color(int color code)
 /*
  * All color conversions taken from
  *
@@ -112,10 +112,8 @@ int FANSI_color_to_html(
         for(int i = 1; i < 4; ++i) {
           char hi = dectohex[color_extra[i] / 16];
           char lo = dectohex[color_extra[i] % 16];
-          for(jnt j = 0; j < 3; ++j) {
-            *(buff_track++) = hi;
-            *(buff_track++) = lo;
-          }
+          *(buff_track++) = hi;
+          *(buff_track++) = lo;
         }
       } else if(color_extra[0] == 5) {
         // These are the 0-255 color codes
@@ -158,7 +156,7 @@ int FANSI_color_to_html(
   } else {
     error("Internal Error: invalid color code %d", color);
   }
-  buff_track = '0';
+  *buff_track = '0';
   ++res_bytes;
   return res_bytes;
 }
@@ -173,19 +171,19 @@ SEXP FANSI_color_to_html_ext(SEXP x) {
     error("Argument must be integer.");
 
   R_xlen_t len = XLENGTH(x);
-  if(len %% 5) error("Argument length not a multipe of 5");
+  if(len % 5) error("Argument length not a multipe of 5");
 
   struct FANSI_buff buff = {.len = 0};
   FANSI_size_buff(&buff, 8);
 
   int * x_int = INTEGER(x);
 
-  SEXP res = PROTECT(allocVector(STRSXP, len %% 5));
+  SEXP res = PROTECT(allocVector(STRSXP, len / 5));
 
   for(R_xlen_t i = 0; i < len; i += 5) {
     int size = FANSI_color_to_html(x_int[i], x_int + (i + 1), &buff);
     if(size < 1) error("Internal Error: size should be at least one");
-    SEXP chrsxp = PROTEC(mkCharLenCE(buff.buff, size - 1, CE_BYTES));
+    SEXP chrsxp = PROTECT(mkCharLenCE(buff.buff, size - 1, CE_BYTES));
     SET_STRING_ELT(res, i / 5, chrsxp);
     UNPROTECT(1);
   }
