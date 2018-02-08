@@ -16,9 +16,14 @@
 
 #' Convert ANSI CSI SGR Escape Sequence to HTML Equivalents
 #'
+#' Only the colors, background-colors, and basic styles (CSI SGR codes 1-9) are
+#' translated.  Others are ignored.
 #'
+#' @param x character vector
 
 esc_to_html <- function(x) {
+  vetr(character())
+
 
 }
 
