@@ -85,7 +85,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     const char * string;
 
     /*
-     * should be interpreted as bit mask where with 2^n.
+     * should be interpreted as bit mask where with 2^n., 1-9 match to the
+     * corresponding ANSI CSI SGR codes, 10 and greater are not necessarily
+     * contiguous but were put here because they could co-exist with the style
      *
      * - n ==  1: bold
      * - n ==  2: blur/faint
@@ -258,6 +260,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   struct FANSI_buff_const FANSI_string_as_utf8(SEXP x, int is_utf8_loc);
   struct FANSI_state FANSI_state_init();
   int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current);
+  int FANSI_state_comp_basic(
+    struct FANSI_state target, struct FANSI_state current
+  );
   int FANSI_state_has_style(struct FANSI_state state);
   int FANSI_state_size(struct FANSI_state state);
   int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len);

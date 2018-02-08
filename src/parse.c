@@ -855,15 +855,18 @@ char * FANSI_state_as_chr(struct FANSI_state state) {
  *
  * This only compares the style pieces (i.e. not the position pieces)
  *
- * Returns 1 if the are different, 0 if they are equal
+ * Returns 1 if the are different, 0 if they are equal.
+ *
+ * _basic is used just for the 1-9 SGR codes plus colors.
  */
-int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
-  return !(
-    target.style == current.style &&
+int FANSI_state_comp_basic(
+  struct FANSI_state target, struct FANSI_state current
+) {
+  return(
+    // 1023 is '11 1111 1111' in binary, so this will grab the last ten bits
+    // of the styles which are the 1-9 styles
+    (target.style & 1023) == (current.style & 1023) &&
     target.color == current.color &&
-    target.border == current.border &&
-    target.font == current.font &&
-    target.ideogram == current.ideogram &&
     target.bg_color == current.bg_color &&
     target.color_extra[0] == current.color_extra[0] &&
     target.bg_color_extra[0] == current.bg_color_extra[0] &&
@@ -873,6 +876,15 @@ int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
     target.bg_color_extra[2] == current.bg_color_extra[2] &&
     target.color_extra[3] == current.color_extra[3] &&
     target.bg_color_extra[3] == current.bg_color_extra[3]
+  )
+}
+int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
+  return !(
+    FANSI_state_comp_basic(target, current) &&
+    target.style == current.style &&
+    target.border == current.border &&
+    target.font == current.font &&
+    target.ideogram == current.ideogram
   );
 }
 int FANSI_state_has_style(struct FANSI_state state) {
