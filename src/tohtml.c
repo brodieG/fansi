@@ -18,6 +18,35 @@
 
 #include "fansi.h"
 /*
+ * Looks like we don't need to worry about C0 sequences, however we must
+ * parse all ESC sequences as HTML gladly displays everything right after the
+ * initial ESC.
+ *
+ * In terms of sequences we consider meaningful, only colors and basic styles
+ * for html translation
+ */
+static struct FANSI_css {const char * css; int len;}
+static const struct FANSI_css css_style[9] = {
+  // Code 1: bold
+  {.css="font-weight: bold;", .len=18},
+  // Code 2: lighter
+  {.css="font-weight: 100;", .len=17},
+  // Code 3: italic
+  {.css="font-style: italic;", .len=19},
+  // Code 4: underline
+  {.css="text-decoration: underline;", .len=27},
+  // Code 5: blink
+  {.css="text-decoration: blink;", .len=23},
+  // Code 6: blink
+  {.css="text-decoration: blink;", .len=23},
+  // Code 7: invert; unused
+  {.css="", .len=0},
+  // Code 8: conceal
+  {.css="color: transparent;", .len=19},
+  // Code 9: line-through
+  {.css="text-decoration: line-through;", .len=30},
+}
+/*
  * All color conversions taken from
  *
  * <https://en.wikipedia.org/wiki/ANSI_escape_code>
@@ -26,15 +55,13 @@
  * @param color_extra a pointer to a 4 long integer array as you would get in
  *   struct FANSI_state.color_extra
  * @param buff must be pre-allocated to be able to hold the color in format
- *   #FFFFFF including the null terminator (so at least 8 bytes), will be
- *   modified by reference, and the pointer will be left pointing to the
- *   beginning of the string.
- * @return how many bytes were written, guaranteed to be between 1 byte and 8,
- *   includes.
+ *   #FFFFFF including the null terminator (so at least 8 bytes)
+ * @return how many bytes were written, guaranteed to be 7 bytes, does not
+ *   include the NULL terminator that is also written just in case.
  */
 
 int FANSI_color_to_html(
-  int color, int * color_extra, struct FANSI_buff * buff
+  int color, int * color_extra, char * buff
 ) {
   // CAREFUL: DON'T WRITE MORE THAN 7 BYTES + NULL TERMINATOR
 
@@ -55,11 +82,12 @@ int FANSI_color_to_html(
   const char * std_5[6] = {"00", "5F", "87", "AF", "D7", "FF"};
   int res_bytes = 0;
 
-  char * buff_track = buff->buff;
+  char * buff_track = buff;
 
   if(color == 9) {
-    memcpy(buff_track, "none", 4);
-    res_bytes = 4;
+    error(
+      "Internal Error: should not be applying no-color; contact maintainer."
+    );
   } else if(color >= 0 && color < 10) {
     *(buff_track++) = '#';
     res_bytes = 7;
@@ -114,20 +142,65 @@ int FANSI_color_to_html(
     error("Internal Error: invalid color code %d", color);
   }
   *buff_track = '0';
-  ++res_bytes;
   return res_bytes;
 }
+
+int FANSI_state_as_html(struct FANSI_state state, char * buff) {
+  // Styles
+
+  const char * buff_start = buff;
+  memcpy(buff, "</span><span style='", 20);
+  buff += 20;
+
+  // Colors color: #FFFFFF; background-color: #FFFFFF;
+
+  int invert = state.style & (1 << 7);
+  int color = invert ? state.bgcolor : state.color;
+  int color_extra[4] = invert ? state.bgcolor_extra : state.color_extra;
+  int bgcolor = invert ? state.bgcolor : state.color;
+  int bgcolor_extra[4] = invert ? state.bgcolor_extra : state.color_extra;
+
+  if(color >= 0) {
+    memcpy(buff, "color: ", 7);
+    buff += 7;
+    buff += FANSI_color_write(color, color_extra);
+    *(buff++) = ';'
+  }
+  if(bgcolor >= 0) {
+    memcpy(buff, "background-color: ", 18);
+    buff += 18;
+    buff += FANSI_color_write(bgcolor, bgcolor_extra);
+    *(buff++) = ';'
+  }
+  // Styles (need to go after color for trnasparent to work)
+
+  for(int i = 1; i < 10; ++i) {
+    if(state.style & (1 << i)) {
+      memcpy(buff, css_style.css, css_style.len);
+      buff += css_style[i - 1].len;
+    }
+  }
+  *buff = 0;
+  return (int)(buff - buff_start);
+}
 /*
- * Looks like we don't need to worry about C0 sequences, however we must
- * parse all ESC sequences as HTML gladly displays everything right after the
- * initial ESC
- *
- * <span style='color: '>
- * <span style='background-color: '>
- * <span style='text-decoration: '>
- * <span style='text-decoration: '>
- * <span style='font-weight: '>
+ * Compute size of each state
  */
+int FANSI_state_size_as_html(struct FANSI_state state) {
+  int size = 22;  // </span><span style="">
+  // Styles
+
+  for(int i = 1; i < 10; ++i) {
+    if(state.style & (1 << i)) size += css_style[i - 1].len;
+  }
+  // Colors color: #FFFFFF; background-color: #FFFFFF;
+
+  int invert = state.style & (1 << 7);
+  if(state.color >= 0) size += invert ? 26 : 15;
+  if(state.bgcolor >= 0) size += invert ? 15 : 26;
+
+  return size;
+}
 
 SEXP FANSI_esc_to_html(SEXP x) {
   if(TYPEOF(x) != STRSXP)
@@ -138,6 +211,10 @@ SEXP FANSI_esc_to_html(SEXP x) {
   struct FANSI_state state = FANSI_state_init();
   struct FANSI_state state_prev = FANSI_state_init();
 
+  int is_utf8_loc = 0;
+
+  SEXP res = PROTECT(x);
+
   for(R_xlen_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
 
@@ -145,8 +222,18 @@ SEXP FANSI_esc_to_html(SEXP x) {
     const char * string_start = CHAR(chrsxp);
     const char * string = string_start;
 
-    R_len_t len_init = LENGTH(chrsxp);
-    int len_extra = 0;
+    R_len_t bytes_init = LENGTH(chrsxp);
+
+    int bytes_extra = 0;   // Net bytes being add via tags (css - ESC)
+    int bytes_final = 0;
+    int has_esc = 0;
+
+    // Process the strings in two passes, in pass 1 we compute how many bytes
+    // we'll need to store the string, and in the second we actually write it.
+    // This is obviously a bit wasteful as we parse the ESC sequences twice, but
+    // the alternative is to track a growing list or some such of accrued parsed
+    // sequences.  The latter might be faster, but more work for us so we'll
+    // leave it and see if it becomes a major issue.
 
     while(*string && (string = strchr(string, 0x1b))) {
       // Since we don't care about width, etc, we only use the state objects to
@@ -161,17 +248,152 @@ SEXP FANSI_esc_to_html(SEXP x) {
         state = FANSI_read_next(state);
       } while(state.string[state.pos_byte] == 0x1b)
 
-      // If we have a change from the previous tag, then we should write out the
-      // state
+      // If we have a change from the previous tag, then compute size
 
-      if(FANSI_state_comp(state, state_prev)) {
+      if(FANSI_state_comp_basic(state, state_prev)) {
+        if(!has_esc) has_esc = 1;
 
-      }
+        // bytes_esc cannot overflow int because the input is supposed to be an
+        // R sourced string
+
+        int bytes_esc = state.pos_byte - state_prev.pos_byte;
+        int bytes_html = FANSI_state_size_as_html(state);
+        int bytes_net = bytes_html - bytes_esc;
+
+        if(bytes_net >= 0) {
+          if(bytes_extra > INT_MAX - bytes_net - 1) {
+            error(
+              "%s%s %.0f %s",
+              "Expanding ESC sequences into CSS will create a string longer ",
+              "than INT_MAX at position", (double) (i + 1),
+              "which is not allowed by R."
+            );
+          }
+          bytes_extra += bytes_net;
+        } else {
+          if(bytes_extra < INT_MIN - bytes_net) {
+            // This should actually be impossible as a string that is only ESC
+            // sequences with no SGR is the only way to get that big a decrease,
+            // and if it doesn't have SGR then it wouldn't enter this loop
+            // nocov start
+            error(
+              "%s%s",
+              "Internal Error: unexpectedly large byte shrinking when ",
+              "converting ESC sequences to CSS; contact maintainer."
+            );
+            // nocov end
+          }
+          bytes_extra += bytes_net;
+      } }
       state_prev = state;
       ++string;
     }
+    if(has_esc) {
+      // we will use an extra <span></span> to simplify logic
+
+      int span_start = 6;
+      int span_end = 7;
+      int span_extra = span_start + span_end;
+
+      // Check for overall overflow, including allowing a terminating NULL,
+
+      if(
+        bytes_extra >= 0 && (
+          bytes_init > INT_MAX - bytes_extra - 1 - span_extra
+        )
+      ) {
+        error(
+          "%s%s %.0f %s",
+          "Expanding ESC sequences into CSS will create a string longer ",
+          "than INT_MAX at position", (double) (i + 1),
+          "which is not allowed by R."
+        );
+      }
+      bytes_final = bytes_init + bytes_extra + span_extra;
+      if(bytes_final < 0) {
+        error(
+          "%s%s",
+          "Internal Error: css translated string -ve length; shouldn't happen, ",
+          "contact maintainer."
+        )
+      }
+      // Allocate target vector if it hasn't been yet
+
+      if(x == res) {
+        UNPROTECT(1);
+        res = PROTECT(duplicate(x));
+        is_utf8_loc = FANSI_is_utf8_loc();
+      }
+      // Allocate buffer and do second pass
+
+      FANSI_size_buff(buff, bytes_final);
+      state = state_prev = FANSI_state_init();
+
+      string = string_start;
+
+      int first_esc = 1;
+      char * buff_track = buff.buff;
+
+      while(*string && (string = strchr(string, 0x1b))) {
+        state = FANSI_reset_pos(state);
+        state.string = string;
+
+        // read all sequential ESC tags
+
+        do {
+          state = FANSI_read_next(state);
+        } while(state.string[state.pos_byte] == 0x1b)
+
+        // If we have a change from the previous tag, then compute size
+
+        if(FANSI_state_comp_basic(state, state_prev)) {
+          // Write the leading span if needed
+          if(first_esc) {
+            first_esc = 0;
+            memcpy(buff_track, "<span>", span_start);
+            buff_track += span_start;
+          }
+          // The text since the last ESC
+
+          const char * string_last =
+            state_prev.string + state_prev.pos_byte + 1;
+          int bytes_prev = string - string_last;
+          memcpy(buff_track, string_last, bytes_prev);
+          buff_track += bytes_prev;
+
+          // And the actual HTML / CSS
+
+          buff_track += FANSI_state_as_html(state, buff_track);
+        }
+        state_prev = state;
+        ++string;
+      }
+      // Last hunk left to write and trailing SPAN
+
+      const char * string_last =
+        state_prev.string + state_prev.pos_byte + 1;
+      int bytes_stub = len_init - (string_last - string_start) + 1;
+      memcpy(buff_track, string_last, bytes_stub);
+      buff_track += bytes_stub;
+      memcpy(buff_track, "</span>", span_end);
+      buff_track += span_end;
+      *(buff_track) = '0';  // not strictly needed
+
+      // Now create the charsxp what encoding to use.
+
+      cetype_t chr_type = CE_NATIVE;
+      if(state.has_utf8 && !is_utf8_loc) chr_type = CE_UTF8;
+
+      SEXP chrsxp = PROTECT(
+        mkCharLenCE(
+          buff.buff, (int) (buff_track - buff.buff), chr_type
+      ) );
+      SET_STRING_ELT(res, i, chrsxp);
+      UNPROTECT(1);
+    }
   }
-  return R_NilValue;
+  UNPROTECT(1);
+  return res;
 }
 /*
  * Testing interface
