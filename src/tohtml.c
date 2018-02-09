@@ -25,7 +25,8 @@
  * In terms of sequences we consider meaningful, only colors and basic styles
  * for html translation
  */
-static struct FANSI_css {const char * css; int len;}
+struct FANSI_css {const char * css; int len;};
+
 static const struct FANSI_css css_style[9] = {
   // Code 1: bold
   {.css="font-weight: bold;", .len=18},
@@ -45,7 +46,7 @@ static const struct FANSI_css css_style[9] = {
   {.css="color: transparent;", .len=19},
   // Code 9: line-through
   {.css="text-decoration: line-through;", .len=30},
-}
+};
 /*
  * All color conversions taken from
  *
@@ -147,7 +148,6 @@ int FANSI_color_to_html(
 
 int FANSI_state_as_html(struct FANSI_state state, char * buff) {
   // Styles
-
   const char * buff_start = buff;
   memcpy(buff, "</span><span style='", 20);
   buff += 20;
@@ -155,28 +155,28 @@ int FANSI_state_as_html(struct FANSI_state state, char * buff) {
   // Colors color: #FFFFFF; background-color: #FFFFFF;
 
   int invert = state.style & (1 << 7);
-  int color = invert ? state.bgcolor : state.color;
-  int color_extra[4] = invert ? state.bgcolor_extra : state.color_extra;
-  int bgcolor = invert ? state.bgcolor : state.color;
-  int bgcolor_extra[4] = invert ? state.bgcolor_extra : state.color_extra;
+  int color = invert ? state.bg_color : state.color;
+  int * color_extra = invert ? state.bg_color_extra : state.color_extra;
+  int bg_color = invert ? state.bg_color : state.color;
+  int * bg_color_extra = invert ? state.bg_color_extra : state.color_extra;
 
   if(color >= 0) {
     memcpy(buff, "color: ", 7);
     buff += 7;
-    buff += FANSI_color_write(color, color_extra);
-    *(buff++) = ';'
+    buff += FANSI_color_to_html(color, color_extra, buff);
+    *(buff++) = ';';
   }
-  if(bgcolor >= 0) {
+  if(bg_color >= 0) {
     memcpy(buff, "background-color: ", 18);
     buff += 18;
-    buff += FANSI_color_write(bgcolor, bgcolor_extra);
-    *(buff++) = ';'
+    buff += FANSI_color_to_html(bg_color, bg_color_extra, buff);
+    *(buff++) = ';';
   }
   // Styles (need to go after color for trnasparent to work)
 
   for(int i = 1; i < 10; ++i) {
     if(state.style & (1 << i)) {
-      memcpy(buff, css_style.css, css_style.len);
+      memcpy(buff, css_style[i - 1].css, css_style[i - 1].len);
       buff += css_style[i - 1].len;
     }
   }
@@ -197,7 +197,7 @@ int FANSI_state_size_as_html(struct FANSI_state state) {
 
   int invert = state.style & (1 << 7);
   if(state.color >= 0) size += invert ? 26 : 15;
-  if(state.bgcolor >= 0) size += invert ? 15 : 26;
+  if(state.bg_color >= 0) size += invert ? 15 : 26;
 
   return size;
 }
@@ -246,7 +246,7 @@ SEXP FANSI_esc_to_html(SEXP x) {
 
       do {
         state = FANSI_read_next(state);
-      } while(state.string[state.pos_byte] == 0x1b)
+      } while(state.string[state.pos_byte] == 0x1b);
 
       // If we have a change from the previous tag, then compute size
 
@@ -315,7 +315,7 @@ SEXP FANSI_esc_to_html(SEXP x) {
           "%s%s",
           "Internal Error: css translated string -ve length; shouldn't happen, ",
           "contact maintainer."
-        )
+        );
       }
       // Allocate target vector if it hasn't been yet
 
@@ -326,7 +326,7 @@ SEXP FANSI_esc_to_html(SEXP x) {
       }
       // Allocate buffer and do second pass
 
-      FANSI_size_buff(buff, bytes_final);
+      FANSI_size_buff(&buff, bytes_final);
       state = state_prev = FANSI_state_init();
 
       string = string_start;
@@ -342,7 +342,7 @@ SEXP FANSI_esc_to_html(SEXP x) {
 
         do {
           state = FANSI_read_next(state);
-        } while(state.string[state.pos_byte] == 0x1b)
+        } while(state.string[state.pos_byte] == 0x1b);
 
         // If we have a change from the previous tag, then compute size
 
@@ -372,7 +372,7 @@ SEXP FANSI_esc_to_html(SEXP x) {
 
       const char * string_last =
         state_prev.string + state_prev.pos_byte + 1;
-      int bytes_stub = len_init - (string_last - string_start) + 1;
+      int bytes_stub = bytes_init - (string_last - string_start) + 1;
       memcpy(buff_track, string_last, bytes_stub);
       buff_track += bytes_stub;
       memcpy(buff_track, "</span>", span_end);
@@ -417,7 +417,7 @@ SEXP FANSI_color_to_html_ext(SEXP x) {
   SEXP res = PROTECT(allocVector(STRSXP, len / 5));
 
   for(R_xlen_t i = 0; i < len; i += 5) {
-    int size = FANSI_color_to_html(x_int[i], x_int + (i + 1), &buff);
+    int size = FANSI_color_to_html(x_int[i], x_int + (i + 1), buff.buff);
     if(size < 1) error("Internal Error: size should be at least one");
     SEXP chrsxp = PROTECT(mkCharLenCE(buff.buff, size - 1, CE_BYTES));
     SET_STRING_ELT(res, i / 5, chrsxp);
