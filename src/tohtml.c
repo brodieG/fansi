@@ -419,7 +419,7 @@ SEXP FANSI_color_to_html_ext(SEXP x) {
   for(R_xlen_t i = 0; i < len; i += 5) {
     int size = FANSI_color_to_html(x_int[i], x_int + (i + 1), buff.buff);
     if(size < 1) error("Internal Error: size should be at least one");
-    SEXP chrsxp = PROTECT(mkCharLenCE(buff.buff, size - 1, CE_BYTES));
+    SEXP chrsxp = PROTECT(mkCharLenCE(buff.buff, size, CE_BYTES));
     SET_STRING_ELT(res, i / 5, chrsxp);
     UNPROTECT(1);
   }
