@@ -7,7 +7,7 @@
 \usage{
 substr_esc(x, start, stop)
 
-substr2_esc(x, start, stop, type = "chars", round = "first",
+substr2_esc(x, start, stop, type = "chars", round = "start",
   tabs.as.spaces = FALSE, tab.stops = getOption("fansi.tab.stops"))
 }
 \arguments{

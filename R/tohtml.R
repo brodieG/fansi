@@ -19,11 +19,16 @@
 #' Only the colors, background-colors, and basic styles (CSI SGR codes 1-9) are
 #' translated.  Others are ignored.
 #'
+#' @export
 #' @param x character vector
+#' @return a character vector with all escape sequences removed and any basic
+#'   ANSI CSI SGR escape sequences applied via SPAN html objects with specified
+#'   css styles.
+#' @examples
+#' esc_to_html("hello\033[31;42;1mworld\033[m")
 
 esc_to_html <- function(x) {
   vetr(character())
-
-
+  .Call(FANSI_esc_to_html, x)
 }
 

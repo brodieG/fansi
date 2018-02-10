@@ -201,7 +201,6 @@ int FANSI_state_size_as_html(struct FANSI_state state) {
 
   return size;
 }
-
 SEXP FANSI_esc_to_html(SEXP x) {
   if(TYPEOF(x) != STRSXP)
     error("Argument `x` must be a character vector");
@@ -239,6 +238,7 @@ SEXP FANSI_esc_to_html(SEXP x) {
       // Since we don't care about width, etc, we only use the state objects to
       // parse the ESC sequences
 
+      Rprintf("Found ESC\n");
       state = FANSI_reset_pos(state);
       state.string = string;
 
@@ -288,6 +288,7 @@ SEXP FANSI_esc_to_html(SEXP x) {
       state_prev = state;
       ++string;
     }
+    Rprintf("has esc %d\n", has_esc);
     if(has_esc) {
       // we will use an extra <span></span> to simplify logic
 
@@ -388,6 +389,7 @@ SEXP FANSI_esc_to_html(SEXP x) {
         mkCharLenCE(
           buff.buff, (int) (buff_track - buff.buff), chr_type
       ) );
+      PrintValue(chrsxp);
       SET_STRING_ELT(res, i, chrsxp);
       UNPROTECT(1);
     }

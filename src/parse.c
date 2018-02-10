@@ -862,9 +862,9 @@ char * FANSI_state_as_chr(struct FANSI_state state) {
 int FANSI_state_comp_basic(
   struct FANSI_state target, struct FANSI_state current
 ) {
-  return
-    // 1023 is '11 1111 1111' in binary, so this will grab the last ten bits
-    // of the styles which are the 1-9 styles
+  // 1023 is '11 1111 1111' in binary, so this will grab the last ten bits
+  // of the styles which are the 1-9 styles
+  return !(
     (target.style & 1023) == (current.style & 1023) &&
     target.color == current.color &&
     target.bg_color == current.bg_color &&
@@ -875,7 +875,8 @@ int FANSI_state_comp_basic(
     target.color_extra[2] == current.color_extra[2] &&
     target.bg_color_extra[2] == current.bg_color_extra[2] &&
     target.color_extra[3] == current.color_extra[3] &&
-    target.bg_color_extra[3] == current.bg_color_extra[3];
+    target.bg_color_extra[3] == current.bg_color_extra[3]
+  );
 }
 int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
   return !(
