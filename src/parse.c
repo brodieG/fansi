@@ -892,6 +892,9 @@ int FANSI_state_has_style(struct FANSI_state state) {
     state.style || state.color >= 0 || state.bg_color >= 0 ||
     state.font || state.border || state.ideogram;
 }
+int FANSI_state_has_style_basic(struct FANSI_state state) {
+  return state.style || state.color >= 0 || state.bg_color >= 0;
+}
 /*
  * R interface for FANSI_state_at_position
  *
