@@ -169,8 +169,8 @@ int FANSI_state_as_html(struct FANSI_state state, int first, char * buff) {
     int invert = state.style & (1 << 7);
     int color = invert ? state.bg_color : state.color;
     int * color_extra = invert ? state.bg_color_extra : state.color_extra;
-    int bg_color = invert ? state.bg_color : state.color;
-    int * bg_color_extra = invert ? state.bg_color_extra : state.color_extra;
+    int bg_color = invert ? state.color : state.bg_color;
+    int * bg_color_extra = invert ? state.color_extra : state.bg_color_extra;
 
     if(color >= 0) {
       memcpy(buff, "color: ", 7);
