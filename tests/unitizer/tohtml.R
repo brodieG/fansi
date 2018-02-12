@@ -58,3 +58,7 @@ unitizer_sect('colors', {
   # )
   # browseURL(tmp)
 })
+untizer_sect("simple html conversion", {
+  esc_to_html("hello\033[31;42;1mworld\033[0m")
+  esc_to_html("hello\033[31;42;1mworld\033[m")
+})
