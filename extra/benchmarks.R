@@ -25,7 +25,7 @@ ulysses.clr[close] <- paste0(ulysses.clr[close], '\033[m')
 
 system.time(csi.clr <- fansi::strwrap_esc(ulysses.clr, 30))
 
-ulysses <- readLines(
+ulysses <- ulysses.c <- readLines(
   "http://www.gutenberg.org/files/4300/4300-0.txt", encoding='UTF-8'
 )
 bg <- ceiling((seq_along(ulysses)) %% 215 + 1) + 16
@@ -34,17 +34,29 @@ tpl <- "\033[%d;48;5;%dm%s\033[49m"
 
 ## Apply colors to strings and collapse
 
-nz <- nzchar(r.thanks)
-r.thanks[nz] <- sprintf(tpl, fg[nz], bg[nz], r.thanks[nz])
-r.col <- paste0(r.thanks, collapse="\n")
+nz <- nzchar(ulysses)
+ulysses.c[nz] <- sprintf(tpl, fg[nz], bg[nz], ulysses[nz])
+txt <- paste0(ulysses.c, collapse="\n")
 
-## Wrap and display
-system.time(r.wrap <- strwrap2_esc(r.col, 25, pad.end=" ", wrap.always=TRUE))
-cols <- c("", paste(" ", r.wrap[1:27], " ", r.wrap[28:54]), "")
+## Wrap and display in three columns
 
+system.time(txt.w <- strwrap2_esc(txt, 25, pad.end=" ", wrap.always=TRUE))
+txt.w <- tail(txt.w, -37)
+mult.3.len <- (length(txt.w) %/% 3) * 3
+txt.w <- head(txt.w, mult.3.len)
+txt.w.split <- split(txt.w, rep(1:3, each=length(txt.w) / 3))
+
+cols <- c("", do.call(paste, c(txt.w.split, list(sep="   "))), "")
+system.time(cols.html <- esc_to_html(cols))
+
+
+write
+
+cols <- head(cols, 50)
+
+writeLines(cols)
 cols.html <- esc_to_html(cols)
 tmp <- tempfile()
-writeLines(esc_to_html(cols), tmp)
 writeLines(
   c("<html><meta charset='UTF-8'><pre>", cols.html, "</pre></html>"), tmp
 )
