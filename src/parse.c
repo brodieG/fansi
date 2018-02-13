@@ -880,7 +880,7 @@ int FANSI_state_comp_basic(
 }
 int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
   return !(
-    FANSI_state_comp_basic(target, current) &&
+    !FANSI_state_comp_basic(target, current) &&
     target.style == current.style &&
     target.border == current.border &&
     target.font == current.font &&
