@@ -389,25 +389,24 @@ SEXP FANSI_esc_to_html(SEXP x) {
 
         state = read_all_esc(state);
 
-        // If we have a change from the previous tag, then compute size
+        // The text since the last ESC
+
+        const char * string_last = string_start + state_prev.pos_byte;
+        int bytes_prev = string - string_last;
+        // Rprintf("write prev: '%.*s'\n", bytes_prev, string_last);
+        memcpy(buff_track, string_last, bytes_prev);
+        buff_track += bytes_prev;
+
+        // If we have a change from the previous tag, write html/css
 
         if(FANSI_state_comp_basic(state, state_prev)) {
-          // Write the leading span if needed
-          // The text since the last ESC
-
-          const char * string_last = string_start + state_prev.pos_byte;
-          int bytes_prev = string - string_last;
-          memcpy(buff_track, string_last, bytes_prev);
-          buff_track += bytes_prev;
-
-          // And the actual HTML / CSS
-
           int bytes_html = FANSI_state_as_html(state, first_esc, buff_track);
+          // Rprintf("write html: '%.*s'\n", bytes_html, buff_track);
           buff_track += bytes_html;
           if(first_esc) first_esc = 0;
         }
         state_prev = state;
-        ++string;
+        string = state.string + state.pos_byte;
       }
       // Last hunk left to write and trailing SPAN
 
