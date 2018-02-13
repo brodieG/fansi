@@ -234,12 +234,6 @@ static int state_size_as_html(struct FANSI_state state, int first) {
  * for clarity
  */
 
-static struct FANSI_state read_all_esc(struct FANSI_state state) {
-  do {
-    state = FANSI_read_next(state);
-  } while(state.string[state.pos_byte] == 0x1b);
-  return state;
-}
 static int html_compute_size(
   struct FANSI_state state, int bytes_extra, int bytes_esc_start, int first,
   R_xlen_t i
@@ -350,7 +344,7 @@ SEXP FANSI_esc_to_html(SEXP x) {
       // them
 
       int esc_start = state.pos_byte;
-      state = read_all_esc(state);
+      state = FANSI_read_next(state);
       if(FANSI_state_comp_basic(state, state_prev)) {
         bytes_extra =
           html_compute_size(state, bytes_extra, esc_start, !has_esc, i);
@@ -387,7 +381,7 @@ SEXP FANSI_esc_to_html(SEXP x) {
 
         // read all sequential ESC tags
 
-        state = read_all_esc(state);
+        state = FANSI_read_next(state);
 
         // The text since the last ESC
 

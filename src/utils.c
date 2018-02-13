@@ -49,38 +49,39 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x) {
 
   struct FANSI_csi_pos res;
   if((x_start = x_track = strchr(x, 27))) {
-    ++x_track;
-    if(*x_track == '[') {
-      // This is a CSI sequence, so it has multiple characters that we need to
-      // skip.  The final character is processed outside of here since it has
-      // the same logic for CSI and non CSI sequences
-
-      // skip [
-
+    while(*x_track == 27) {
       ++x_track;
+      if(*x_track == '[') {
+        // This is a CSI sequence, so it has multiple characters that we need to
+        // skip.  The final character is processed outside of here since it has
+        // the same logic for CSI and non CSI sequences
 
-      // Skip all the valid parameters tokens
+        // skip [
 
-      while(*x_track >= 0x30 && *x_track <= 0x3F) ++x_track;
+        ++x_track;
 
-      // And all the valid intermediates
+        // Skip all the valid parameters tokens
 
-      while(*x_track >= 0x20 && *x_track <= 0x2F) ++x_track;
+        while(*x_track >= 0x30 && *x_track <= 0x3F) ++x_track;
+
+        // And all the valid intermediates
+
+        while(*x_track >= 0x20 && *x_track <= 0x2F) ++x_track;
+      }
+      // In either normal or CSI sequence, there needs to be a final character:
+
+      valid = *x_track >= 0x40 && *x_track <= 0x7E;
+      if(*x_track) ++x_track;
+
+      if(x_track - x > INT_MAX - 1)
+        // nocov start
+        error(
+          "%s%s",
+          "Interal Error: encountered CSI seq that is too long; ",
+          "contact maintianer."
+        );
+        // nocov end
     }
-    // In either normal or CSI sequence, there needs to be a final character:
-
-    valid = *x_track >= 0x40 && *x_track <= 0x7E;
-    if(*x_track) ++x_track;
-
-    if(x_track - x > INT_MAX - 1)
-      // nocov start
-      error(
-        "%s%s",
-        "Interal Error: encountered CSI seq that is too long; ",
-        "contact maintianer."
-      );
-      // nocov end
-
     res = (struct FANSI_csi_pos){
       .start=x_start, .len=(x_track - x_start), .valid=valid
     };
