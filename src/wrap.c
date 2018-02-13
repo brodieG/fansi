@@ -202,9 +202,8 @@ SEXP FANSI_writeline(
   // we must have hit a UTF8 encoded character
 
   cetype_t chr_type = CE_NATIVE;
-  if((state_bound.has_utf8 || pre_dat.has_utf8) && !is_utf8_loc) {
-    chr_type = CE_UTF8;
-  }
+  if((state_bound.has_utf8 || pre_dat.has_utf8)) chr_type = CE_UTF8;
+
   /*
   Rprintf(
     "making string: '%s' len '%d' size '%d'\n",

@@ -143,7 +143,7 @@ SEXP FANSI_tabs_as_spaces(
       // Write the CHARSXP
 
       cetype_t chr_type = CE_NATIVE;
-      if(state.has_utf8 && !is_utf8_loc) chr_type = CE_UTF8;
+      if(state.has_utf8) chr_type = CE_UTF8;
 
       SEXP chr_sxp = PROTECT(
         mkCharLenCE(buff_start, (int) (buff_track - buff_start), chr_type)

@@ -423,7 +423,7 @@ SEXP FANSI_esc_to_html(SEXP x) {
       // Now create the charsxp what encoding to use.
 
       cetype_t chr_type = CE_NATIVE;
-      if(state.has_utf8 && !is_utf8_loc) chr_type = CE_UTF8;
+      if(state.has_utf8) chr_type = CE_UTF8;
 
       SEXP chrsxp = PROTECT(
         mkCharLenCE(
