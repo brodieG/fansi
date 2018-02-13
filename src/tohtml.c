@@ -410,9 +410,10 @@ SEXP FANSI_esc_to_html(SEXP x) {
       }
       // Last hunk left to write and trailing SPAN
 
-      const char * string_last =
-        state_prev.string + state_prev.pos_byte + 1;
-      int bytes_stub = bytes_init - (string_last - string_start) + 1;
+      const char * string_last = state_prev.string + state_prev.pos_byte;
+      int bytes_stub = bytes_init - (string_last - string_start);
+      // Rprintf("last: '%s'\n", string_last);
+      // Rprintf("stub %d string %d\n", bytes_stub, (string_last - string_start));
       memcpy(buff_track, string_last, bytes_stub);
       buff_track += bytes_stub;
       memcpy(buff_track, "</span>", span_end);
