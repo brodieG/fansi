@@ -61,7 +61,7 @@ static const struct FANSI_css css_style[9] = {
  *   include the NULL terminator that is also written just in case.
  */
 
-int FANSI_color_to_html(
+static int color_to_html(
   int color, int * color_extra, char * buff
 ) {
   // CAREFUL: DON'T WRITE MORE THAN 7 BYTES + NULL TERMINATOR
@@ -146,7 +146,7 @@ int FANSI_color_to_html(
   return res_bytes;
 }
 
-int FANSI_state_as_html(struct FANSI_state state, int first, char * buff) {
+static int state_as_html(struct FANSI_state state, int first, char * buff) {
   // Styles
   const char * buff_start = buff;
   if(!FANSI_state_has_style_basic(state)) {
@@ -175,13 +175,13 @@ int FANSI_state_as_html(struct FANSI_state state, int first, char * buff) {
     if(color >= 0) {
       memcpy(buff, "color: ", 7);
       buff += 7;
-      buff += FANSI_color_to_html(color, color_extra, buff);
+      buff += color_to_html(color, color_extra, buff);
       *(buff++) = ';';
     }
     if(bg_color >= 0) {
       memcpy(buff, "background-color: ", 18);
       buff += 18;
-      buff += FANSI_color_to_html(bg_color, bg_color_extra, buff);
+      buff += color_to_html(bg_color, bg_color_extra, buff);
       *(buff++) = ';';
     }
     // Styles (need to go after color for trnasparent to work)
@@ -394,7 +394,7 @@ SEXP FANSI_esc_to_html(SEXP x) {
         // If we have a change from the previous tag, write html/css
 
         if(FANSI_state_comp_basic(state, state_prev)) {
-          int bytes_html = FANSI_state_as_html(state, first_esc, buff_track);
+          int bytes_html = state_as_html(state, first_esc, buff_track);
           // Rprintf("write html: '%.*s'\n", bytes_html, buff_track);
           buff_track += bytes_html;
           if(first_esc) first_esc = 0;
@@ -452,7 +452,7 @@ SEXP FANSI_color_to_html_ext(SEXP x) {
   SEXP res = PROTECT(allocVector(STRSXP, len / 5));
 
   for(R_xlen_t i = 0; i < len; i += 5) {
-    int size = FANSI_color_to_html(x_int[i], x_int + (i + 1), buff.buff);
+    int size = color_to_html(x_int[i], x_int + (i + 1), buff.buff);
     if(size < 1) error("Internal Error: size should be at least one");
     SEXP chrsxp = PROTECT(mkCharLenCE(buff.buff, size, CE_BYTES));
     SET_STRING_ELT(res, i / 5, chrsxp);
