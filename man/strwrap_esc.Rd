@@ -9,8 +9,8 @@ strwrap_esc(x, width = 0.9 * getOption("width"), indent = 0, exdent = 0,
   prefix = "", simplify = TRUE, initial = prefix)
 
 strwrap2_esc(x, width = 0.9 * getOption("width"), indent = 0, exdent = 0,
-  prefix = "", simplify = TRUE, initial = prefix, wrap.always = TRUE,
-  pad.end = " ", strip.spaces = FALSE, tabs.as.spaces = FALSE,
+  prefix = "", simplify = TRUE, initial = prefix, wrap.always = FALSE,
+  pad.end = "", strip.spaces = !tabs.as.spaces, tabs.as.spaces = FALSE,
   tab.stops = 8L)
 }
 \arguments{
@@ -44,24 +44,21 @@ width if no word breaks are detected within a line.}
 
 \item{pad.end}{character(1L), a single character to use as padding at the
 end of each line until the line is \code{width} wide.  This must be a printable
-ASCII character, and defaults to a space.  Set to an empty string ("") to
-leave line ends unpadded.}
+ASCII character or an empty string (default).  If you set it to an empty
+string the line remains unpadded.}
 
-\item{strip.spaces}{TRUE or FALSE (default), if TRUE, extraneous white spaces
+\item{strip.spaces}{TRUE (default) or FALSE, if TRUE, extraneous white spaces
 (spaces, newlines, tabs) are removed in the same way as \link[base:strwrap]{base::strwrap}
 does.}
 
-\item{tabs.as.spaces}{TRUE (default) or FALSE  whether to convert tabs to
-spaces.  This setting only has an effect if \code{strip.spaces == FALSE}.}
+\item{tabs.as.spaces}{FALSE (default) or TRUE, whether to convert tabs to
+spaces.  This can only be set to TRUE if \code{strip.spaces} is FALSE.}
 
 \item{tab.stops}{integer(1:n) indicating position of tab stops to use when
 converting tabs to spaces.  If there are more tabs in a line than defined
 tab stops the last tab stop is re-used.  For the purposes of applying tab
 stops, each input line is considered a line and the character count begins
-from the beginning of the input line.  Thus, if an input line is wrapped
-the tab stops will not reset at the wrap point.  Additionally,\code{indent},
-\code{exdent}, \code{initial}, and \code{prefix} will be ignored when computing tab
-positions.}
+from the beginning of the input line.}
 }
 \description{
 Wraps strings to a specified width accounting for zero display width ANSI
@@ -75,6 +72,11 @@ hard-break words if single words are wider than \code{width}.
 
 Unlike \link[base:strwrap]{base::strwrap}, both these functions will re-encode any non-ASCII
 strings to UTF8 if they are not encoded in UTF8.
+
+When replacing tabs with spaces the tabs are computed relative to the
+beginning of the input line, not the most recent wrap point.
+Additionally,\code{indent}, \code{exdent}, \code{initial}, and \code{prefix} will be ignored when
+computing tab positions.
 }
 \examples{
 hello.1 <- "hello \\033[41mred\\033[49m world"
@@ -83,13 +85,13 @@ hello.2 <- "hello\\t\\033[41mred\\033[49m\\tworld"
 strwrap_esc(hello.1, 12)
 strwrap_esc(hello.2, 12)
 
-## With `strip.spaces=TRUE` strwrap2_esc is like strwrap_esc
-strwrap2_esc(hello.2, 12, strip.spaces=TRUE)
-
-## But by default it does not strip spaces
+## In default mode strwrap2_esc is the same as strwrap_esc
 strwrap2_esc(hello.2, 12)
 
-## You can convert tabs to spaces
+## But you can leave whitespace unchanged
+strwrap2_esc(hello.2, 12, strip.spaces=FALSE)
+
+## And convert tabs to spaces
 strwrap2_esc(hello.2, 12, tabs.as.spaces=TRUE)
 
 ## If your display has 8 wide tab stops the following two
@@ -100,6 +102,28 @@ writeLines(hello.2)
 ## tab stops are NOT auto-detected, but you may provide
 ## your own
 strwrap2_esc(hello.2, 12, tabs.as.spaces=TRUE, tab.stops=c(6, 12))
+
+## You can also force padding at the end to equal width
+writeLines(strwrap2_esc("hello how are you today", 10, pad.end="."))
+
+## And a more involved example where we read the
+## NEWS file, color it line by line, wrap it to
+## 25 width and display some of it in 3 columns
+## (works best on displays that support ANSI CSI
+## SGR sequences)
+
+NEWS <- readLines(file.path(R.home('doc'), 'NEWS'))
+bg <- ceiling((seq_along(NEWS)) \%\% 215 + 1) + 16
+fg <- ifelse((((bg - 16) \%/\% 18) \%\% 2), 30, 37)
+tpl <- "\\033[\%d;48;5;\%dm\%s\\033[49m"
+
+nz <- nzchar(NEWS)
+NEWS[nz] <- sprintf(tpl, fg[nz], bg[nz], NEWS[nz])
+NEWS[!nz] <- '\\n\\n'
+NEWS.C <- paste0(NEWS, collapse="")
+
+W <- strwrap2_esc(NEWS.C, 25, pad.end=" ", wrap.always=TRUE)
+writeLines(c("", paste(W[1:40], W[200:240], W[410:450]), ""))
 }
 \seealso{
 \link{string-parsing} for important details on how strings are

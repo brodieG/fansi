@@ -14,15 +14,21 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-#' Simple Programmable NSE
+#' Convert ANSI CSI SGR Escape Sequence to HTML Equivalents
 #'
-#' Counterparts to R string manipulation functions that preserve ANSI
-#' CSI escape sequences while treating them as zero width.
+#' Only the colors, background-colors, and basic styles (CSI SGR codes 1-9) are
+#' translated.  Others are ignored.
 #'
-#' @useDynLib fansi, .registration=TRUE, .fixes="FANSI_"
-#' @docType package
-#' @import vetr
-#' @name fansi-package
+#' @export
+#' @param x character vector
+#' @return a character vector with all escape sequences removed and any basic
+#'   ANSI CSI SGR escape sequences applied via SPAN html objects with specified
+#'   css styles.
+#' @examples
+#' esc_to_html("hello\033[31;42;1mworld\033[m")
 
-NULL
+esc_to_html <- function(x) {
+  vetr(character())
+  .Call(FANSI_esc_to_html, x)
+}
 

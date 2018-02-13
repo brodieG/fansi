@@ -1,3 +1,19 @@
+## Copyright (C) 2018  Brodie Gaslam
+##
+## This file is part of "fansi - ANSI Escape Aware String Functions"
+##
+## This program is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 2 of the License, or
+## (at your option) any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+
 #' ANSI Escape Sequence Aware Versions of strwrap
 #'
 #' Wraps strings to a specified width accounting for zero display width ANSI
@@ -11,9 +27,15 @@
 #' Unlike [base::strwrap], both these functions will re-encode any non-ASCII
 #' strings to UTF8 if they are not encoded in UTF8.
 #'
+#' When replacing tabs with spaces the tabs are computed relative to the
+#' beginning of the input line, not the most recent wrap point.
+#' Additionally,`indent`, `exdent`, `initial`, and `prefix` will be ignored when
+#' computing tab positions.
+#'
 #' @seealso [string-parsing] for important details on how strings are
 #'   interpreted and how character width is computed.
 #' @inheritParams base::strwrap
+#' @inheritParams tabs_as_spaces
 #' @param wrap.always TRUE or FALSE (default), whether to hard wrap at requested
 #'   width if no word breaks are detected within a line.
 #' @param pad.end character(1L), a single character to use as padding at the
@@ -25,14 +47,6 @@
 #'   does.
 #' @param tabs.as.spaces FALSE (default) or TRUE, whether to convert tabs to
 #'   spaces.  This can only be set to TRUE if `strip.spaces` is FALSE.
-#' @param tab.stops integer(1:n) indicating position of tab stops to use when
-#'   converting tabs to spaces.  If there are more tabs in a line than defined
-#'   tab stops the last tab stop is re-used.  For the purposes of applying tab
-#'   stops, each input line is considered a line and the character count begins
-#'   from the beginning of the input line.  Thus, if an input line is wrapped
-#'   the tab stops will not reset at the wrap point.  Additionally,`indent`,
-#'   `exdent`, `initial`, and `prefix` will be ignored when computing tab
-#'   positions.
 #' @export
 #' @examples
 #' hello.1 <- "hello \033[41mred\033[49m world"
@@ -55,7 +69,6 @@
 #' writeLines(strwrap2_esc(hello.2, 80, tabs.as.spaces=TRUE))
 #' writeLines(hello.2)
 #'
-#'
 #' ## tab stops are NOT auto-detected, but you may provide
 #' ## your own
 #' strwrap2_esc(hello.2, 12, tabs.as.spaces=TRUE, tab.stops=c(6, 12))
@@ -63,8 +76,24 @@
 #' ## You can also force padding at the end to equal width
 #' writeLines(strwrap2_esc("hello how are you today", 10, pad.end="."))
 #'
-#' ## And a more involved example
+#' ## And a more involved example where we read the
+#' ## NEWS file, color it line by line, wrap it to
+#' ## 25 width and display some of it in 3 columns
+#' ## (works best on displays that support ANSI CSI
+#' ## SGR sequences)
 #'
+#' NEWS <- readLines(file.path(R.home('doc'), 'NEWS'))
+#' bg <- ceiling((seq_along(NEWS)) %% 215 + 1) + 16
+#' fg <- ifelse((((bg - 16) %/% 18) %% 2), 30, 37)
+#' tpl <- "\033[%d;48;5;%dm%s\033[49m"
+#'
+#' nz <- nzchar(NEWS)
+#' NEWS[nz] <- sprintf(tpl, fg[nz], bg[nz], NEWS[nz])
+#' NEWS[!nz] <- '\n\n'
+#' NEWS.C <- paste0(NEWS, collapse="")
+#'
+#' W <- strwrap2_esc(NEWS.C, 25, pad.end=" ", wrap.always=TRUE)
+#' writeLines(c("", paste(W[1:40], W[200:240], W[410:450]), ""))
 
 strwrap_esc <- function(
   x, width = 0.9 * getOption("width"), indent = 0,

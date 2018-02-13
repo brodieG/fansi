@@ -1,3 +1,21 @@
+/*
+ * Copyright (C) 2018  Brodie Gaslam
+ *
+ * This file is part of "fansi - ANSI Escape Aware String Functions"
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+ */
+
 #include "fansi.h"
 
 /*
@@ -46,7 +64,6 @@ SEXP FANSI_tabs_as_spaces(
     if(chr == NA_STRING) continue;
 
     source = CHAR(chr);
-    // One additional issue is that if we f
 
     while(*source && (source = strchr(source, '\t'))) {
       if(!tabs_in_str) {
@@ -126,7 +143,7 @@ SEXP FANSI_tabs_as_spaces(
       // Write the CHARSXP
 
       cetype_t chr_type = CE_NATIVE;
-      if(state.has_utf8 && !is_utf8_loc) chr_type = CE_UTF8;
+      if(state.has_utf8) chr_type = CE_UTF8;
 
       SEXP chr_sxp = PROTECT(
         mkCharLenCE(buff_start, (int) (buff_track - buff_start), chr_type)

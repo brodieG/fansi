@@ -1,20 +1,21 @@
 /*
-Copyright (C) 2017  Brodie Gaslam
+ * Copyright (C) 2018  Brodie Gaslam
+ *
+ * This file is part of "fansi - ANSI Escape Aware String Functions"
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+ */
 
-This file is part of "fansi - ANSI-aware String Functions"
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
-*/
 #include "fansi.h"
 /*
  * Strips ANSI tags from input
@@ -49,14 +50,14 @@ SEXP FANSI_strip(SEXP input) {
   // requires the growing buffer, etc.  For now go simple
 
   for(i = 0; i < len; ++i) {
-    if(!i % 10000) R_CheckUserInterrupt();
+    FANSI_interrupt(i);
     R_len_t chr_len = LENGTH(STRING_ELT(input, i));
     if(chr_len > mem_req) mem_req = chr_len;
   }
   // Now strip
 
   for(i = 0; i < len; ++i) {
-    if(!i % 1000) R_CheckUserInterrupt();
+    FANSI_interrupt(i);
     SEXP input_chr = STRING_ELT(input, i);
     if(input_chr == NA_STRING) continue;
 

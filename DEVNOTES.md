@@ -2,6 +2,35 @@
 
 These are internal developer notes.
 
+## To HTML
+
+One of the problems is that we won't know the size of our target buffer until
+we've seen all the tags and evaluated their rendered size.
+
+So we have a choice to:
+
+1. Two pass, computing sizes first, and then actually generating the strings
+    * Obviously we have two passes, not ideal
+        * Need both new tag size
+        * And old removal size
+    * But also need to be super careful about sizes
+2. One pass, generate HTML as we go
+    * But if we run out of room in buffer will need to grow it and copy it
+3. Two pass, generate HTML as we go, but don't write full string until end
+    * Need to allocate potentially growing array containing either the strings
+      or the information needed to generate them
+
+So basically:
+
+1. re-do the parse twice for each element
+2. risk having to re-write the entire buffer each time we run out of room
+3. track a growing array of strings
+
+Probably re-do the parse twice seems like the least worst of the two options.
+
+One way that we can potentially mitigate the cost of this is with a linked list,
+but that requires repeated allocations for each element.
+
 ## Tabs
 
 Started off thinking that we should account for tabs everywhere, but decided in
@@ -10,13 +39,6 @@ input string, and then wrap that.
 
 This means we have to go back and remove all the tab business we started adding
 when we thought we were going to do tab handling everywhere.
-
-## Interface
-
-* `state_at_pos`
-* `find_csi`: forward state object to next CSI
-* `parse_csi`: update state object with CSI data
-* `parse_csi_token`: part of the above?
 
 ## Functions
 
@@ -29,8 +51,6 @@ when we thought we were going to do tab handling everywhere.
 
 * Spend time figuring out how to integrate character width?
 * All C substr?
-* All C strwrap?
-* Tab resolution?
 * Generating a table of state vs. position
 
 ## State vs. Position

@@ -47,6 +47,13 @@ unitizer_sect("Basic Ansi", {
   identical(
     strwrap_esc(strip_esc(hello2.0), 10), strwrap(strip_esc(hello2.0), 10)
   )
+  # turn off tag generic
+
+  hello2.1 <- paste0("hello \033[41mworld\033[m how are you today")
+  hello2.2 <- paste0("hello \033[41mworld\033[0m how are you today")
+
+  strwrap_esc(hello2.1, 15)
+
   # Specific turn off tags - turn off bold and faint
 
   hello.bold.faint <- paste0(

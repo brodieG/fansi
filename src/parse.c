@@ -1,20 +1,21 @@
 /*
-Copyright (C) 2017  Brodie Gaslam
+ * Copyright (C) 2018  Brodie Gaslam
+ *
+ * This file is part of "fansi - ANSI Escape Aware String Functions"
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+ */
 
-This file is part of "fansi - ANSI CSI-aware String Functions"
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
-*/
 #include "fansi.h"
 
 /*
@@ -34,7 +35,18 @@ struct FANSI_state FANSI_reset_state(struct FANSI_state state) {
   for(int i = 0; i < 4; i++) state.color_extra[i] = 0;
   state.bg_color = -1;
   for(int i = 0; i < 4; i++) state.bg_color_extra[i] = 0;
+  state.border = 0;
+  state.ideogram = 0;
+  state.font = 0;
 
+  return  state;
+}
+struct FANSI_state FANSI_reset_pos(struct FANSI_state state) {
+  state.pos_ansi = 0;
+  state.pos_raw = 0;
+  state.pos_width = 0;
+  state.pos_width_target = 0;
+  state.pos_byte = 0;
   return  state;
 }
 struct FANSI_state FANSI_reset_width(struct FANSI_state state) {
@@ -843,15 +855,18 @@ char * FANSI_state_as_chr(struct FANSI_state state) {
  *
  * This only compares the style pieces (i.e. not the position pieces)
  *
- * Returns 1 if the are different, 0 if they are equal
+ * Returns 1 if the are different, 0 if they are equal.
+ *
+ * _basic is used just for the 1-9 SGR codes plus colors.
  */
-int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
+int FANSI_state_comp_basic(
+  struct FANSI_state target, struct FANSI_state current
+) {
+  // 1023 is '11 1111 1111' in binary, so this will grab the last ten bits
+  // of the styles which are the 1-9 styles
   return !(
-    target.style == current.style &&
+    (target.style & 1023) == (current.style & 1023) &&
     target.color == current.color &&
-    target.border == current.border &&
-    target.font == current.font &&
-    target.ideogram == current.ideogram &&
     target.bg_color == current.bg_color &&
     target.color_extra[0] == current.color_extra[0] &&
     target.bg_color_extra[0] == current.bg_color_extra[0] &&
@@ -863,10 +878,22 @@ int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
     target.bg_color_extra[3] == current.bg_color_extra[3]
   );
 }
+int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
+  return !(
+    !FANSI_state_comp_basic(target, current) &&
+    target.style == current.style &&
+    target.border == current.border &&
+    target.font == current.font &&
+    target.ideogram == current.ideogram
+  );
+}
 int FANSI_state_has_style(struct FANSI_state state) {
   return
     state.style || state.color >= 0 || state.bg_color >= 0 ||
     state.font || state.border || state.ideogram;
+}
+int FANSI_state_has_style_basic(struct FANSI_state state) {
+  return state.style || state.color >= 0 || state.bg_color >= 0;
 }
 /*
  * R interface for FANSI_state_at_position

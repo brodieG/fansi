@@ -2,11 +2,52 @@
 % Please edit documentation in R/substr2.R
 \name{substr_esc}
 \alias{substr_esc}
-\title{Alternate substr version}
+\alias{substr2_esc}
+\title{ANSI Escape Sequence Aware Version of \code{substr}}
 \usage{
-substr_esc(x, start, stop, type = "chars", round = "first",
-  tabs.as.spaces = FALSE, tab.stops = 8L)
+substr_esc(x, start, stop)
+
+substr2_esc(x, start, stop, type = "chars", round = "start",
+  tabs.as.spaces = FALSE, tab.stops = getOption("fansi.tab.stops"))
+}
+\arguments{
+\item{x}{a character vector.}
+
+\item{start}{integer.  The first element to be replaced.}
+
+\item{stop}{integer.  The last element to be replaced.}
+
+\item{type}{character(1L) in \code{c("char", "width", "bytes")}}
+
+\item{round}{character(1L) in \code{c("start", "stop", "both", "neither")},
+controls how to resolve ambiguities when a \code{start} or \code{stop} value in
+"bytes" or "width" \code{type} mode falls within a multi-byte character or a
+wide display character.  See details.}
+
+\item{tab.stops}{integer(1:n) indicating position of tab stops to use when
+converting tabs to spaces.  If there are more tabs in a line than defined
+tab stops the last tab stop is re-used.  For the purposes of applying tab
+stops, each input line is considered a line and the character count begins
+from the beginning of the input line.}
 }
 \description{
-Alternate substr version
+\code{substr_esc} is a drop-in replacement for \code{substr}.  Performance is
+slightly slower than \code{substr}.
+}
+\details{
+\code{substr2_esc} adds the ability to retrieve substrings based on display width,
+and byte width in addition to the normal character width.  #'
+\code{substr2_esc} also provides the option to convert tabs to spaces with
+\link{tabs_as_spaces} prior to taking substrings.
+Because exact substrings on anything other than character width cannot be
+guaranteed (e.g.  because of multi-byte encodings, or double display-width
+characters) \code{substr2_esc} must make assumptions on how to resolve provided
+\code{start}/\code{stop} values that are infeasible and does so via the \code{round}
+parameter.  If we use "start" as the \code{round} value, then any time the \code{start}
+value corresponds to the middle of a multi-byte or a wide character, then
+that character is included in the substring, while any similar partially
+included character via the \code{stop} is left out.  The converse is true if we
+use "stop" as the \code{round} value.  "neither" would cause all partial
+characters to be dropped irrespective whether they correspond to \code{start} or
+\code{stop}, and "both" could cause all of them to be included.
 }

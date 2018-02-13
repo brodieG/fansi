@@ -85,7 +85,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     const char * string;
 
     /*
-     * should be interpreted as bit mask where with 2^n.
+     * should be interpreted as bit mask where with 2^n., 1-9 match to the
+     * corresponding ANSI CSI SGR codes, 10 and greater are not necessarily
+     * contiguous but were put here because they could co-exist with the style
      *
      * - n ==  1: bold
      * - n ==  2: blur/faint
@@ -234,6 +236,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_process(SEXP input, struct FANSI_buff * buff);
   SEXP FANSI_process_ext(SEXP input);
   SEXP FANSI_tabs_as_spaces_ext(SEXP vec, SEXP tab_stops);
+  SEXP FANSI_color_to_html_ext(SEXP x);
+  SEXP FANSI_esc_to_html(SEXP x);
 
   // Internal
 
@@ -247,6 +251,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_digits_in_int_ext(SEXP y);
 
   struct FANSI_state FANSI_inc_width(struct FANSI_state state, int inc);
+  struct FANSI_state FANSI_reset_pos(struct FANSI_state state);
   struct FANSI_state FANSI_reset_width(struct FANSI_state state);
   struct FANSI_state FANSI_parse_esc(struct FANSI_state state);
 
@@ -257,7 +262,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   struct FANSI_buff_const FANSI_string_as_utf8(SEXP x, int is_utf8_loc);
   struct FANSI_state FANSI_state_init();
   int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current);
+  int FANSI_state_comp_basic(
+    struct FANSI_state target, struct FANSI_state current
+  );
   int FANSI_state_has_style(struct FANSI_state state);
+  int FANSI_state_has_style_basic(struct FANSI_state state);
   int FANSI_state_size(struct FANSI_state state);
   int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len);
   struct FANSI_state FANSI_read_ascii(struct FANSI_state state);

@@ -89,6 +89,8 @@ lorem.mix <- paste0(
 )
 # writeLines(strwrap(lorem.mix, 10))
 
+# From readLines(file.path(R.home("doc"), "THANKS"))
+
 lorem.r.thanks.2 <- c(
   "Many more, too numerous to mention here, have contributed by sending bug",
   "reports and suggesting various improvements.", "",

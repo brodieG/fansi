@@ -16,31 +16,27 @@
  * Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
  */
 
+// #include "fansi.h"
+
 /*
- * Check if a CHARSXP contains ANSI esc sequences
+ * Read through a string collecting tag info up until which ever max we exceed
  */
-
-#include "fansi.h"
-
-int FANSI_has_int(SEXP x) {
-  if(TYPEOF(x) != CHARSXP) error("Argument `x` must be CHRSXP.");
-  if(x == NA_STRING) return NA_LOGICAL;
-  else return FANSI_find_esc(CHAR(x)).valid != 0;
-}
-/*
- * Check if a CHARSXP contains ANSI esc sequences
- */
-SEXP FANSI_has(SEXP x) {
-  if(TYPEOF(x) != STRSXP) error("Argument `x` must be character.");
-  R_xlen_t len = XLENGTH(x);
-
-  SEXP res = PROTECT(allocVector(LGLSXP, len));
-  int * res_int = LOGICAL(res);
-
-  for(R_xlen_t i = 0; i < len; ++i)
-    res_int[i] = FANSI_has_int(STRING_ELT(x, i));
-
-  UNPROTECT(1);
-  return res;
-}
-
+// SEXP FANSI_get_tags(
+//   const char * string, int max_byte, int max_width, int max_chr
+// ) {
+//   struct FANSI_state state = FANSI_state_init();
+//   state.string = string;
+// 
+//   while(state.string[state.pos_byte]) {
+//     if(state.string[state.pos_byte] == 0x1b) {
+//       struct FANSI_state state_start = state;
+// 
+// 
+//     }
+// 
+// 
+// 
+//   }
+// 
+// 
+// }
