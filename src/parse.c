@@ -317,127 +317,132 @@ struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
     );
     // nocov end
 
-  int pos_byte_prev = state.pos_byte;
-  state.pos_byte = FANSI_add_int(state.pos_byte, 1);  // advance ESC
+  // consume all ESC sequences
 
-  if(!state.string[state.pos_byte]) {
-    // String ends in ESC
-    state.err_code = 5;
-  } else if(state.string[state.pos_byte] != '[') {
-    // Other ESC sequence; note there are technically multi character sequences
-    // but we ignore them here.  There is also the possibility that we mess up a
-    // utf-8 sequence if it starts right after the ESC, but oh well...
-    state.pos_byte = FANSI_add_int(state.pos_byte, 1);
-    state.err_code = 5;
-  } else {
-    // CSI sequence
+  while(state.string[state.pos_byte] == 27) {
+    int pos_byte_prev = state.pos_byte;
+    state.pos_byte = FANSI_add_int(state.pos_byte, 1);  // advance ESC
 
-    state.pos_byte = FANSI_add_int(state.pos_byte, 1);  // consume '['
-    struct FANSI_tok_res tok_res = {.err_code = 0};
+    if(!state.string[state.pos_byte]) {
+      // String ends in ESC
+      state.err_code = 5;
+    } else if(state.string[state.pos_byte] != '[') {
+      // Other ESC sequence; note there are technically multi character
+      // sequences but we ignore them here.  There is also the possibility that
+      // we mess up a utf-8 sequence if it starts right after the ESC, but oh
+      // well...
+      state.pos_byte = FANSI_add_int(state.pos_byte, 1);
+      state.err_code = 5;
+    } else {
+      // CSI sequence
 
-    // Loop through the SGR; each token we process successfully modifies state
-    // and advances to the next token
+      state.pos_byte = FANSI_add_int(state.pos_byte, 1);  // consume '['
+      struct FANSI_tok_res tok_res = {.err_code = 0};
 
-    do {
-      tok_res = FANSI_parse_token(&state.string[state.pos_byte]);
-      state.pos_byte =
-        FANSI_add_int(state.pos_byte, tok_res.len);
-      state.last = tok_res.last;
-      state.err_code = tok_res.err_code;
+      // Loop through the SGR; each token we process successfully modifies state
+      // and advances to the next token
 
-      // Note we use `state.err_code` instead of `tok_res.err_code` as
-      // FANSI_parse_colors internally calls FANSI_parse_token
+      do {
+        tok_res = FANSI_parse_token(&state.string[state.pos_byte]);
+        state.pos_byte =
+          FANSI_add_int(state.pos_byte, tok_res.len);
+        state.last = tok_res.last;
+        state.err_code = tok_res.err_code;
 
-      if(!state.err_code) {
-        // We have a reasonable CSI value, now we need to check whether it
-        // actually corresponds to anything that should modify state
+        // Note we use `state.err_code` instead of `tok_res.err_code` as
+        // FANSI_parse_colors internally calls FANSI_parse_token
 
-        if(!tok_res.val) {
-          state = FANSI_reset_state(state);
-        } else if (tok_res.val < 10) {
-          // 1-9 are the standard styles (bold/italic)
-          // We use a bit mask on to track these
-          state.style |= 1U << tok_res.val;
-        } else if (tok_res.val < 20) {
-          // These are alternative fonts
-          state.font = tok_res.val;
-        } else if (tok_res.val == 20) {
-          // Fraktur
-          state.style |= (1U << 10U);
-        } else if (tok_res.val == 21) {
-          // Double underline
-          state.style |= (1U << 11U);
-        } else if (tok_res.val == 22) {
-          // Turn off bold or faint
-          state.style &= ~(1U << 1U);
-          state.style &= ~(1U << 2U);
-        } else if (tok_res.val == 23) {
-          // Turn off italics, fraktur
-          state.style &= ~(1U << 3U);
-          state.style &= ~(1U << 10U);
-        } else if (tok_res.val == 24) {
-          // Turn off underline, double underline
-          state.style &= ~(1U << 4U);
-          state.style &= ~(1U << 11U);
-        } else if (tok_res.val == 25) {
-          // Turn off blinking
-          state.style &= ~(1U << 5U);
-          state.style &= ~(1U << 6U);
-        } else if (tok_res.val == 26) {
-          // reserved for proportional spacing as specified in CCITT
-          // Recommendation T.61; implicitly we are assuming this is a single
-          // substring parameter, unlike say 38;2;..., but really we have no
-          // idea what this is.
-          state.style |= (1U << 12U);
-        } else if (tok_res.val >= 20 && tok_res.val < 30) {
-          // Turn off the other styles that map exactly from 1-9 to 21-29
-          state.style &= ~(1U << (tok_res.val - 20));
-        } else if (tok_res.val >= 30 && tok_res.val < 50) {
-          // Colors; much shared logic between color and bg_color, so
-          // combining that here
+        if(!state.err_code) {
+          // We have a reasonable CSI value, now we need to check whether it
+          // actually corresponds to anything that should modify state
 
-          int foreground = tok_res.val < 40; // true then color, else bg color
-          int col_code = tok_res.val - (foreground ? 30 : 40);
+          if(!tok_res.val) {
+            state = FANSI_reset_state(state);
+          } else if (tok_res.val < 10) {
+            // 1-9 are the standard styles (bold/italic)
+            // We use a bit mask on to track these
+            state.style |= 1U << tok_res.val;
+          } else if (tok_res.val < 20) {
+            // These are alternative fonts
+            state.font = tok_res.val;
+          } else if (tok_res.val == 20) {
+            // Fraktur
+            state.style |= (1U << 10U);
+          } else if (tok_res.val == 21) {
+            // Double underline
+            state.style |= (1U << 11U);
+          } else if (tok_res.val == 22) {
+            // Turn off bold or faint
+            state.style &= ~(1U << 1U);
+            state.style &= ~(1U << 2U);
+          } else if (tok_res.val == 23) {
+            // Turn off italics, fraktur
+            state.style &= ~(1U << 3U);
+            state.style &= ~(1U << 10U);
+          } else if (tok_res.val == 24) {
+            // Turn off underline, double underline
+            state.style &= ~(1U << 4U);
+            state.style &= ~(1U << 11U);
+          } else if (tok_res.val == 25) {
+            // Turn off blinking
+            state.style &= ~(1U << 5U);
+            state.style &= ~(1U << 6U);
+          } else if (tok_res.val == 26) {
+            // reserved for proportional spacing as specified in CCITT
+            // Recommendation T.61; implicitly we are assuming this is a single
+            // substring parameter, unlike say 38;2;..., but really we have no
+            // idea what this is.
+            state.style |= (1U << 12U);
+          } else if (tok_res.val >= 20 && tok_res.val < 30) {
+            // Turn off the other styles that map exactly from 1-9 to 21-29
+            state.style &= ~(1U << (tok_res.val - 20));
+          } else if (tok_res.val >= 30 && tok_res.val < 50) {
+            // Colors; much shared logic between color and bg_color, so
+            // combining that here
 
-          if(col_code == 9) col_code = -1;
-          if(foreground) state.color = col_code;
-          else state.bg_color = col_code;
+            int foreground = tok_res.val < 40; // true then color, else bg color
+            int col_code = tok_res.val - (foreground ? 30 : 40);
 
-          // Handle the special color codes, need to parse some subsequent
-          // tokens
+            if(col_code == 9) col_code = -1;
+            if(foreground) state.color = col_code;
+            else state.bg_color = col_code;
 
-          if(col_code == 8) {
-            state = FANSI_parse_colors(state, foreground ? 3 : 4);
-          }
-        } else if(tok_res.val == 50) {
-          // Turn off 26
-          state.style &= ~(1U << 12U);
-        } else if(tok_res.val > 50 & tok_res.val < 60) {
-          // borders
+            // Handle the special color codes, need to parse some subsequent
+            // tokens
 
-          if(tok_res.val < 54) {
-            state.border |= (1U << (unsigned int)(tok_res.val - 50));
-          } else if (tok_res.val == 54) {
-            state.border &= ~(1U << 1);
-            state.border &= ~(1U << 2);
-          } else if (tok_res.val == 55) {
-            state.border &= ~(1U << 3);
+            if(col_code == 8) {
+              state = FANSI_parse_colors(state, foreground ? 3 : 4);
+            }
+          } else if(tok_res.val == 50) {
+            // Turn off 26
+            state.style &= ~(1U << 12U);
+          } else if(tok_res.val > 50 & tok_res.val < 60) {
+            // borders
+
+            if(tok_res.val < 54) {
+              state.border |= (1U << (unsigned int)(tok_res.val - 50));
+            } else if (tok_res.val == 54) {
+              state.border &= ~(1U << 1);
+              state.border &= ~(1U << 2);
+            } else if (tok_res.val == 55) {
+              state.border &= ~(1U << 3);
+            } else {
+              state.err_code = 2;  // unknown token
+            }
           } else {
             state.err_code = 2;  // unknown token
           }
-        } else {
-          state.err_code = 2;  // unknown token
         }
-      }
-      // `tok_res` value can't be used because code above, including
-      // FANSI_parse_colors can change the corresponding value in the `state`
-      // struct, so better to deal with that directly
+        // `tok_res` value can't be used because code above, including
+        // FANSI_parse_colors can change the corresponding value in the `state`
+        // struct, so better to deal with that directly
 
-      if(state.last || state.err_code) break;
-    } while(1);
+        if(state.last || state.err_code) break;
+      } while(1);
+    }
+    int byte_offset = state.pos_byte - pos_byte_prev;
+    state.pos_ansi += byte_offset;
   }
-  int byte_offset = state.pos_byte - pos_byte_prev;
-
   if(state.err_code) {
     state.last_char_width = 0;
     warning(
@@ -447,7 +452,6 @@ struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
   } else {
     state.last_char_width = 1;
   }
-  state.pos_ansi += byte_offset;
   return state;
 }
 /*
