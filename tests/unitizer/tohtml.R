@@ -1,11 +1,15 @@
 library(unitizer)
+library(fansi)
 
 unitizer_sect('colors', {
   style <- "width: 16px; height: 16px; display: inline-block;"
   span <- '<span style="background-color: %s; %s"></span>'
 
-  colors.8 <- fansi:::esc_color_code_to_html(rbind(c(0:7, 9), 0L, 0L, 0L, 0L))
+  colors.8 <- fansi:::esc_color_code_to_html(rbind(c(0:7), 0L, 0L, 0L, 0L))
   colors.8
+
+  # error
+  fansi:::esc_color_code_to_html(matrix(c(9L, 0L, 0L, 0L, 0L)))
 
   colors.255 <- fansi:::esc_color_code_to_html(rbind(8L, 5L, 0:255, 0L, 0L))
   colors.255
@@ -58,7 +62,38 @@ unitizer_sect('colors', {
   # )
   # browseURL(tmp)
 })
-untizer_sect("simple html conversion", {
-  esc_to_html("hello\033[31;42;1mworld\033[0m")
-  esc_to_html("hello\033[31;42;1mworld\033[m")
+unitizer_sect("simple html conversion", {
+  as_html_page <- function(x) {
+    # note this will clutter temp directory, but needed so we can examine source
+    tmp <- tempfile()
+    writeLines(c("<html><pre>", as.character(x), "</pre></html>"), tmp)
+    browseURL(tmp)
+  }
+  esc_to_html("hello \033[31;42;1mworld\033[0m")
+  esc_to_html("hello \033[31;48;5;23;1mworld\033[m")
+
+  # this turned out to be a good corner case, italic is not actually
+  # italicized
+
+  esc_to_html(
+    "\033[1mbold\033[22m \033[2mfaint\033[22m \033[mitalic\033[24m\n"
+  )
+
+  csi_string <- c(
+    "\033[1mbold\033[22m \033[2mfaint\033[22m \033[3mitalic\033[24m",
+    "\033[4munderline\033[24m \033[5mslow-blink\033[25m",
+    "\033[6mfast-blink\033[25m",
+    "\033[31;42mred-fg-green-bg\033[7minverse \033[7minverse-off\033[39;49m",
+    "\033[8mconceal\033[28m reveal \033[9mcrossed-out\033[29mclear\033[m",
+    "\033[1;41mbold\033[22m \033[2;42mfaint\033[22m \033[3;43mitalic\033[23m",
+    "\033[4;44munderline\033[24m \033[5;45mslow-blink\033[25m",
+    "\033[6;46mfast-blink\033[25m",
+    "\033[31;42mred-fg-green-bg\033[7minverse \033[7minverse-off\033[39;49m",
+    "\033[8mconceal\033[28m reveal \033[9mcrossed-out\033[29mclear\033[m",
+    "\033[3mitalic again\033[24m not italic?\033[m"
+  )
+  html_string <- esc_to_html(csi_string)
+  html_string
+  # tmp <- tempfile()
+  # writeLines(c("<html><pre>", html_string, "</pre></html>"))
 })
