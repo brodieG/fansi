@@ -852,10 +852,28 @@ int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
     &(buff[str_pos]), state.bg_color, state.bg_color_extra, 4
   );
   // Borders
-  //
-  // Ideogram
-  // Font
 
+  if(state.border) {
+    for(int i = 1; i < 4; ++i){
+      buff[str_pos++] = '5';
+      buff[str_pos++] = '0' + i;
+      buff[str_pos++] = ';';
+  } }
+  // Ideogram
+
+  if(state.ideogram) {
+    for(int i = 0; i < 5; ++i){
+      buff[str_pos++] = '6';
+      buff[str_pos++] = '0' + i;
+      buff[str_pos++] = ';';
+  } }
+  // font
+
+  if(state.font) {
+    buff[str_pos++] = '1';
+    buff[str_pos++] = '0' + (state.font %% 10);
+    buff[str_pos++] = ';';
+  }
   // Finalize
 
   if(str_pos != buff_len)
