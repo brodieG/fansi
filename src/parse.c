@@ -871,7 +871,7 @@ int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
 
   if(state.font) {
     buff[str_pos++] = '1';
-    buff[str_pos++] = '0' + (state.font %% 10);
+    buff[str_pos++] = '0' + (state.font % 10);
     buff[str_pos++] = ';';
   }
   // Finalize
