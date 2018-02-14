@@ -745,10 +745,37 @@ int FANSI_state_size(struct FANSI_state state) {
   // styles are stored as bits
 
   int style_size = 0;
-  for(int i = 1; i < 10; ++i){
-    style_size += ((state.style & (1 << i)) > 0) * 2;
+  if(state.style) {
+    for(int i = 1; i < 10; ++i){
+      style_size += ((state.style & (1 << i)) > 0) * 2;
+    }
   }
-  return color_size + bg_color_size + style_size + 2;  // +2 for ESC[
+  // Some question of whether we are adding a slowdown to check for rarely use
+  // ESC sequences such as these...
+
+  // Border
+
+  int border_size = 0;
+  if(state.border) {
+    for(int i = 1; i < 4; ++i){
+      border_size += ((state.border & (1 << i)) > 0) * 3;
+    }
+  }
+  // Ideogram
+
+  int ideogram_size = 0;
+  if(state.ideogram) {
+    for(int i = 0; i < 5; ++i){
+      ideogram_size += ((state.ideogram & (1 << i)) > 0) * 3;
+    }
+  }
+  // font
+
+  int font_size = 0;
+  if(state.font) font_size = 3;
+
+  return color_size + bg_color_size + style_size +
+    border_size + ideogram_size + font_size + 2;  // +2 for ESC[
 }
 /*
  * Write extra color info to string
@@ -811,8 +838,8 @@ int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
 
   // styles
 
-  for(unsigned int i = 1; i < 10; i++) {
-    if((1U << i) & state.style) {
+  for(int i = 1; i < 10; i++) {
+    if((1 << i) & state.style) {
       buff[str_pos++] = '0' + i;
       buff[str_pos++] = ';';
   } }
@@ -824,7 +851,12 @@ int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
   str_pos += FANSI_color_write(
     &(buff[str_pos]), state.bg_color, state.bg_color_extra, 4
   );
-  // Finalize (note, in some cases we slightly overrallocate)
+  // Borders
+  //
+  // Ideogram
+  // Font
+
+  // Finalize
 
   if(str_pos != buff_len)
     // nocov start
