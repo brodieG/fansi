@@ -364,7 +364,11 @@ struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
             state.style |= 1U << tok_res.val;
           } else if (tok_res.val < 20) {
             // These are alternative fonts
-            state.font = tok_res.val;
+            if(tok_res.val == 10) {
+              state.font = 0;
+            } else {
+              state.font = tok_res.val;
+            }
           } else if (tok_res.val == 20) {
             // Fraktur
             state.style |= (1U << 10U);
@@ -426,6 +430,16 @@ struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
               state.border &= ~(1U << 2);
             } else if (tok_res.val == 55) {
               state.border &= ~(1U << 3);
+            } else {
+              state.err_code = 2;  // unknown token
+            }
+          } else if(tok_res.val >= 60 & tok_res.val < 70) {
+            // borders
+
+            if(tok_res.val < 65) {
+              state.ideogram |= (1U << (unsigned int)(tok_res.val - 60));
+            } else if (tok_res.val == 65) {
+              state.ideogram = 0;
             } else {
               state.err_code = 2;  // unknown token
             }
@@ -745,10 +759,37 @@ int FANSI_state_size(struct FANSI_state state) {
   // styles are stored as bits
 
   int style_size = 0;
-  for(int i = 1; i < 10; ++i){
-    style_size += ((state.style & (1 << i)) > 0) * 2;
+  if(state.style) {
+    for(int i = 1; i < 10; ++i){
+      style_size += ((state.style & (1 << i)) > 0) * 2;
+    }
   }
-  return color_size + bg_color_size + style_size + 2;  // +2 for ESC[
+  // Some question of whether we are adding a slowdown to check for rarely use
+  // ESC sequences such as these...
+
+  // Border
+
+  int border_size = 0;
+  if(state.border) {
+    for(int i = 1; i < 4; ++i){
+      border_size += ((state.border & (1 << i)) > 0) * 3;
+    }
+  }
+  // Ideogram
+
+  int ideogram_size = 0;
+  if(state.ideogram) {
+    for(int i = 0; i < 5; ++i){
+      ideogram_size += ((state.ideogram & (1 << i)) > 0) * 3;
+    }
+  }
+  // font
+
+  int font_size = 0;
+  if(state.font) font_size = 3;
+
+  return color_size + bg_color_size + style_size +
+    border_size + ideogram_size + font_size + 2;  // +2 for ESC[
 }
 /*
  * Write extra color info to string
@@ -805,14 +846,19 @@ unsigned int FANSI_color_write(
  * return how many bytes were written
  */
 int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
+  /****************************************************\
+  | IMPORTANT: KEEP THIS ALIGNED WITH state_as_html    |
+  | although right now ignoring rare escapes in html   |
+  \****************************************************/
+
   int str_pos = 0;
   buff[str_pos++] = 27;    // ESC
   buff[str_pos++] = '[';
 
   // styles
 
-  for(unsigned int i = 1; i < 10; i++) {
-    if((1U << i) & state.style) {
+  for(int i = 1; i < 10; i++) {
+    if((1 << i) & state.style) {
       buff[str_pos++] = '0' + i;
       buff[str_pos++] = ';';
   } }
@@ -824,10 +870,37 @@ int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
   str_pos += FANSI_color_write(
     &(buff[str_pos]), state.bg_color, state.bg_color_extra, 4
   );
-  // Finalize (note, in some cases we slightly overrallocate)
+  // Borders
+
+  if(state.border) {
+    for(int i = 1; i < 4; ++i){
+      if((1 << i) & state.border) {
+        buff[str_pos++] = '5';
+        buff[str_pos++] = '0' + i;
+        buff[str_pos++] = ';';
+  } } }
+  // Ideogram
+
+  if(state.ideogram) {
+    for(int i = 0; i < 5; ++i){
+      if((1 << i) & state.ideogram) {
+        buff[str_pos++] = '6';
+        buff[str_pos++] = '0' + i;
+        buff[str_pos++] = ';';
+  } } }
+  // font
+
+  if(state.font) {
+    buff[str_pos++] = '1';
+    buff[str_pos++] = '0' + (state.font % 10);
+    buff[str_pos++] = ';';
+  }
+  // Finalize
 
   if(str_pos != buff_len)
     // nocov start
+    // note this error is really too late, as we could have written past
+    // allocation in the steps above
     error(
       "Internal Error: tag mem allocation mismatch (%u, %u)", str_pos, buff_len
     );

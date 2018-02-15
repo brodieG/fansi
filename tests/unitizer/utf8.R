@@ -135,5 +135,13 @@ unitizer_sect("zero width combining", {
   combo4 <- paste0('\u0300hello')
   substr2_esc(combo4, 1, 1, type='width')  # no diacritic
   substr2_esc(combo4, 1, 1)                # diacritic only
+})
+unitizer_sect("Emoji combining", {
+  flags <- "\U0001f1e6\U0001f1f7\U0001f1e6\U0001f1f4\U0001f1e6\U0001f1ee"
 
+  nchar(flags, type='chars')
+  nchar(flags, type='width')
+
+  substr2_esc(flags, 1, 2)
+  substr2_esc(flags, 1, 2, type='width')
 })
