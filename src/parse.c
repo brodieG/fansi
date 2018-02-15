@@ -433,6 +433,16 @@ struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
             } else {
               state.err_code = 2;  // unknown token
             }
+          } else if(tok_res.val >= 60 & tok_res.val < 70) {
+            // borders
+
+            if(tok_res.val < 65) {
+              state.ideogram |= (1U << (unsigned int)(tok_res.val - 60));
+            } else if (tok_res.val == 65) {
+              state.ideogram = 0;
+            } else {
+              state.err_code = 2;  // unknown token
+            }
           } else {
             state.err_code = 2;  // unknown token
           }
@@ -859,18 +869,20 @@ int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
 
   if(state.border) {
     for(int i = 1; i < 4; ++i){
-      buff[str_pos++] = '5';
-      buff[str_pos++] = '0' + i;
-      buff[str_pos++] = ';';
-  } }
+      if((1 << i) & state.border) {
+        buff[str_pos++] = '5';
+        buff[str_pos++] = '0' + i;
+        buff[str_pos++] = ';';
+  } } }
   // Ideogram
 
   if(state.ideogram) {
     for(int i = 0; i < 5; ++i){
-      buff[str_pos++] = '6';
-      buff[str_pos++] = '0' + i;
-      buff[str_pos++] = ';';
-  } }
+      if((1 << i) & state.ideogram) {
+        buff[str_pos++] = '6';
+        buff[str_pos++] = '0' + i;
+        buff[str_pos++] = ';';
+  } } }
   // font
 
   if(state.font) {
@@ -882,6 +894,8 @@ int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
 
   if(str_pos != buff_len)
     // nocov start
+    // note this error is really too late, as we could have written past
+    // allocation in the steps above
     error(
       "Internal Error: tag mem allocation mismatch (%u, %u)", str_pos, buff_len
     );
