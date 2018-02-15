@@ -846,6 +846,11 @@ unsigned int FANSI_color_write(
  * return how many bytes were written
  */
 int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
+  /****************************************************\
+  | IMPORTANT: KEEP THIS ALIGNED WITH state_as_html    |
+  | although right now ignoring rare escapes in html   |
+  \****************************************************/
+
   int str_pos = 0;
   buff[str_pos++] = 27;    // ESC
   buff[str_pos++] = '[';

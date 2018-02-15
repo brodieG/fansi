@@ -147,6 +147,11 @@ static int color_to_html(
 }
 
 static int state_as_html(struct FANSI_state state, int first, char * buff) {
+  /****************************************************\
+  | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_csi_write  |
+  | although right now ignoring rare escapes in html   |
+  \****************************************************/
+
   // Styles
   const char * buff_start = buff;
   if(!FANSI_state_has_style_basic(state)) {
