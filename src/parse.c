@@ -364,7 +364,11 @@ struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
             state.style |= 1U << tok_res.val;
           } else if (tok_res.val < 20) {
             // These are alternative fonts
-            state.font = tok_res.val;
+            if(tok_res.val == 10) {
+              state.font = 0;
+            } else {
+              state.font = tok_res.val;
+            }
           } else if (tok_res.val == 20) {
             // Fraktur
             state.style |= (1U << 10U);
