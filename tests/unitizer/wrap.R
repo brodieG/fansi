@@ -175,17 +175,48 @@ unitizer_sect("wrap2", {
   ## Pad paragraph break line when it is colored
 
   hello.9b <- "\033[41mhello\n\nworld."
-  strwrap2_esc(hello.9b, 10, pad.end=" ")
+  strwrap2_esc(hello.9b, 8, pad.end=" ")
+
+  ## Leading spaces
+
+  hello.9b <- "  \033[41mhello world."
+  strwrap2_esc(hello.9b, 8, strip.spaces=FALSE)
+  hello.9c <- "\033[41m  hello world."
 })
-
-
+unitizer_sect("long words", {
+  hello.long <- "\033[31mhelloworld\033[mlongword"
+  strwrap_esc(hello.long, 8)
+  strwrap2_esc(hello.long, 8, wrap.always=TRUE)
+})
+unitizer_sect("rare escapes", {
+  hello.border <- c(
+    "hello \033[51mworld woohoo\033[54m woohoo",
+    "hello \033[52mworld woohoo\033[54m woohoo",
+    "hello \033[53mworld woohoo\033[55m woohoo"
+  )
+  strwrap_esc(hello.border, 12)
+  hello.ideogram <- c(
+    "hello \033[60mworld woohoo\033[65m woohoo",
+    "hello \033[61mworld woohoo\033[65m woohoo",
+    "hello \033[62mworld woohoo\033[65m woohoo",
+    "hello \033[63mworld woohoo\033[65m woohoo",
+    "hello \033[64mworld woohoo\033[65m woohoo"
+  )
+  strwrap_esc(hello.ideogram, 12)
+  hello.font <- c(
+    "hello \033[10mworld woohoo\033[10m woohoo",
+    "hello \033[11mworld woohoo\033[10m woohoo",
+    "hello \033[12mworld woohoo\033[10m woohoo",
+    "hello \033[13mworld woohoo\033[10m woohoo",
+    "hello \033[14mworld woohoo\033[10m woohoo",
+    "hello \033[15mworld woohoo\033[10m woohoo",
+    "hello \033[16mworld woohoo\033[10m woohoo",
+    "hello \033[17mworld woohoo\033[10m woohoo",
+    "hello \033[18mworld woohoo\033[10m woohoo",
+    "hello \033[19mworld woohoo\033[10m woohoo"
+  )
+  strwrap_esc(hello.font, 12)
+})
 # Things to test:
 #
-# * Ansi in prefix, initial, and body
-# * UTF8 in prefix, initial, and body
-# * Wide UTF8, combining UTF8
 # * Special/control characters
-# * Tabs
-# * leading spaces
-# * prefix / initial / indent / exdent
-# * words without breaks that exceed width
