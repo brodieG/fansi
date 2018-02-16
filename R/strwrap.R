@@ -36,6 +36,7 @@
 #'   interpreted and how character width is computed.
 #' @inheritParams base::strwrap
 #' @inheritParams tabs_as_spaces
+#' @inheritParams substr_esc
 #' @param wrap.always TRUE or FALSE (default), whether to hard wrap at requested
 #'   width if no word breaks are detected within a line.
 #' @param pad.end character(1L), a single character to use as padding at the
@@ -97,13 +98,21 @@
 
 strwrap_esc <- function(
   x, width = 0.9 * getOption("width"), indent = 0,
-  exdent = 0, prefix = "", simplify = TRUE, initial = prefix
+  exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
+  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
 ) {
   if(!is.character(x)) x <- as.character(x)
   vetr(
     x=character(), width=NUM.1.POS && . >= 1, indent=INT.1.POS,
-    exdent=INT.1.POS, prefix=character(1), simplify=LGL.1, initial=character(1)
+    exdent=INT.1.POS, prefix=character(1), simplify=LGL.1, initial=character(1),
+    warn=LGL.1, term.cap=CHR
   )
+  if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
+    stop(
+      "Argument `term.cap` may only contain values in ",
+      deparse(VALID.TERM.CAP)
+    )
+
   width <- as.integer(width) - 1L
   indent <- as.integer(indent)
   exdent <- as.integer(exdent)
@@ -114,7 +123,8 @@ strwrap_esc <- function(
     prefix, initial,
     FALSE, "",
     TRUE,
-    FALSE, 8L
+    FALSE, 8L,
+    warn, term.cap.int
   )
   if(simplify) unlist(res) else res
 }
@@ -125,7 +135,8 @@ strwrap2_esc <- function(
   x, width = 0.9 * getOption("width"), indent = 0,
   exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
   wrap.always=FALSE, pad.end="",
-  strip.spaces=!tabs.as.spaces, tabs.as.spaces=FALSE, tab.stops=8L
+  strip.spaces=!tabs.as.spaces, tabs.as.spaces=FALSE, tab.stops=8L,
+  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
 ) {
   if(!is.character(x)) x <- as.character(x)
   vetr(
@@ -134,9 +145,15 @@ strwrap2_esc <- function(
     pad.end=CHR.1 && nchar(.) < 2, wrap.always=LGL.1, strip.spaces=LGL.1,
     tabs.as.spaces=LGL.1,
     tab.stops=INT.POS.STR && length(.) > 0
+    warn=LGL.1, term.cap=CHR
   )
   if(tabs.as.spaces && strip.spaces)
     stop("`tabs.as.spaces` and `strip.spaces` should not both be TRUE.")
+  if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
+    stop(
+      "Argument `term.cap` may only contain values in ",
+      deparse(VALID.TERM.CAP)
+    )
 
   width <- as.integer(width) - 1L
   indent <- as.integer(indent)
@@ -150,7 +167,8 @@ strwrap2_esc <- function(
     prefix, initial,
     wrap.always, pad.end,
     strip.spaces,
-    tabs.as.spaces, tab.stops
+    tabs.as.spaces, tab.stops,
+    warn, term.cap.int
   )
   if(simplify) unlist(res) else res
 }

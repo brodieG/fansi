@@ -14,7 +14,7 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-#' Checks Whether Character Vector Contains ANSI CSI Sequences
+#' Checks Whether Character Vector Contains Escape Sequences
 #'
 #' ...CSI definition...
 #'

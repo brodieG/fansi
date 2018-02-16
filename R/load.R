@@ -26,7 +26,8 @@
   # function runtime
 
   .default.opts <- list(
-    fansi.tab.stops=8L
+    fansi.tab.stops=8L,
+    fansi.term.cap=c('bright', '256')
   )
   # Scheme defaults are fairly complex...
 

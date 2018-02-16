@@ -21,14 +21,24 @@
 #'
 #' @export
 #' @param x character vector
+#' @inheritParams substr_esc
 #' @return a character vector with all escape sequences removed and any basic
 #'   ANSI CSI SGR escape sequences applied via SPAN html objects with specified
 #'   css styles.
 #' @examples
 #' esc_to_html("hello\033[31;42;1mworld\033[m")
 
-esc_to_html <- function(x) {
-  vetr(character())
-  .Call(FANSI_esc_to_html, x)
+esc_to_html <- function(
+  x,
+  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+) {
+  vetr(character(), LGL.1, CHR)
+  if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
+    stop(
+      "Argument `term.cap` may only contain values in ",
+      deparse(VALID.TERM.CAP)
+    )
+
+  .Call(FANSI_esc_to_html, x, warn, term.cap)
 }
 
