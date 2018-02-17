@@ -23,7 +23,10 @@
 #'   stripped
 #' @export
 
-strip_esc <- function(x) .Call(FANSI_strip_csi, x)
+strip_esc <- function(x, warn=getOption('fansi.warn')) {
+  vetr(warn=LGL.1)
+  .Call(FANSI_strip_csi, x, warn)
+}
 
 ## Process String by Removing Unwanted Characters
 ##

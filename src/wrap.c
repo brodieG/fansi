@@ -30,6 +30,7 @@ struct FANSI_prefix_dat {
   // how many indent/exdent bytes are included in string, width, and bytes
   int indent;
   int has_utf8;         // whether utf8 contains value > 127
+  int warn;             // warning issued while stripping
 };
 /*
  * Generate data related to prefix / initial
@@ -40,18 +41,20 @@ static struct FANSI_prefix_dat make_pre(SEXP x) {
   // ideally we would IS_ASCII(x), but that's not available to extensions
   int x_has_utf8 = FANSI_has_utf8(x_utf8);
 
-  SEXP x_strip = PROTECT(FANSI_strip(x));
+  SEXP warn = PROTECT(ScalarInteger(2));
+  SEXP x_strip = PROTECT(FANSI_strip(x, warn));
   int x_width = R_nchar(
     asChar(x_strip), Width, FALSE, FALSE, "when computing display width"
   );
   // wish we could get this directly from R_nchar, grr
 
   int x_bytes = strlen(x_utf8);
+  int warn_int = getAttrib(x_strip, FANSI_warn_sym) != R_NilValue;
 
-  UNPROTECT(1);
+  UNPROTECT(2);
   return (struct FANSI_prefix_dat) {
     .string=x_utf8, .width=x_width, .bytes=x_bytes, .has_utf8=x_has_utf8,
-    .indent=0
+    .indent=0, .warn=warn_int
   };
 }
 /*
@@ -244,6 +247,7 @@ SEXP FANSI_strwrap(
   int strip_spaces,
   SEXP term_cap
 ) {
+  Rprintf("start\n");
   struct FANSI_state state = FANSI_state_init(x, term_cap);
 
   int width_1 = FANSI_add_int(width, -pre_first.width);
@@ -407,7 +411,8 @@ SEXP FANSI_strwrap_ext(
     TYPEOF(indent) != INTSXP || TYPEOF(exdent) != INTSXP ||
     TYPEOF(prefix) != STRSXP || TYPEOF(initial) != STRSXP ||
     TYPEOF(wrap_always) != LGLSXP ||
-    TYPEOF(pad_end) != STRSXP
+    TYPEOF(pad_end) != STRSXP ||
+    TYPEOF(warn) != LGLSXP || TYPEOF(term_cap) != INTSXP
   ) {
     error("Internal Error: arg type error 1; contact maintainer.");
   }
@@ -462,13 +467,18 @@ SEXP FANSI_strwrap_ext(
 
   int indent_int = asInteger(indent);
   int exdent_int = asInteger(exdent);
+  int warn_int = asInteger(warn);
 
   if(indent_int < 0 || exdent_int < 0)
     error("Internal Error: illegal indent/exdent values.");  // nocov
 
   pre_dat_raw = make_pre(prefix);
+  const char * warn_base =
+    "`%s` contains illegal escape sequences (see `?illegal_esc`).";
+  if(warn_int && pre_dat_raw.warn) warning(warn_base, "prefix");
   if(prefix != initial) {
     ini_dat_raw = make_pre(initial);
+    if(warn_int && ini_dat_raw.warn) warning(warn_base, "initial");
   } else ini_dat_raw = pre_dat_raw;
 
   ini_first_dat = pad_pre(ini_dat_raw, indent_int);

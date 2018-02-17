@@ -234,7 +234,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   // External funs
 
   SEXP FANSI_has(SEXP x);
-  SEXP FANSI_strip(SEXP input);
+  SEXP FANSI_strip(SEXP x, SEXP warn);
   SEXP FANSI_state_at_pos_ext(
     SEXP text, SEXP pos, SEXP type, SEXP lag, SEXP ends,
     SEXP tabs_as_spaces, SEXP tab_stops,
@@ -292,5 +292,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_add_int(int x, int y);
   int FANSI_has_utf8(const char * x);
   void FANSI_interrupt(int i);
+
+  // symbols
+
+  SEXP FANSI_warn_sym;
 
 #endif
