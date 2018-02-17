@@ -94,7 +94,8 @@ SEXP FANSI_tabs_as_spaces(
       }
       FANSI_size_buff(buff, new_buff_size);
 
-      struct FANSI_state state = FANSI_state_init(buff_utf8.buff, term_cap);
+      struct FANSI_state state =
+        FANSI_state_init(buff_utf8.buff, warn, term_cap);
       char cur_chr;
 
       char * buff_track, * buff_start;

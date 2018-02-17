@@ -311,8 +311,8 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
   R_xlen_t x_len = XLENGTH(x);
   struct FANSI_buff buff = {.len=0};
-  struct FANSI_state state = FANSI_state_init("", term_cap);
-  struct FANSI_state state_prev = FANSI_state_init("", term_cap);
+  struct FANSI_state state, state_prev, state_init;
+  state = state_prev = state_init = FANSI_state_init("", warn, term_cap);
 
   int is_utf8_loc = 0;
 
@@ -376,7 +376,8 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
       FANSI_size_buff(&buff, bytes_final);
       string = string_start;
-      state = state_prev = FANSI_state_init(string, term_cap);
+      state_init.warn = state.warn;
+      state = state_prev = state_init;
 
       int first_esc = 1;
       char * buff_track = buff.buff;

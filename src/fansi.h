@@ -211,8 +211,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int term_cap;
     // Whether at end of a CSI escape sequence
     int last;
-    // Whether to issue warnings if err_code is non-zero
-    int warn
+    // Whether to issue warnings if err_code is non-zero, if -1 means that the
+    // warning was issued at least once so may not need to be re-issued
+    int warn;
   };
   /*
    * Need to keep track of fallback state, so we need ability to return two
@@ -279,7 +280,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_utf8clen(char c);
   int FANSI_digits_in_int(int x);
   struct FANSI_buff_const FANSI_string_as_utf8(SEXP x);
-  struct FANSI_state FANSI_state_init(const char * string, SEXP term_cap);
+  struct FANSI_state FANSI_state_init(
+    const char * string, SEXP warn, SEXP term_cap
+  );
   int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current);
   int FANSI_state_comp_basic(
     struct FANSI_state target, struct FANSI_state current

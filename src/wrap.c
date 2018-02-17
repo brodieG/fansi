@@ -237,7 +237,7 @@ SEXP FANSI_writeline(
  * @param is_utf8_loc whether the current locale is UTF8
  */
 
-SEXP FANSI_strwrap(
+static SEXP strwrap(
   const char * x, int width,
   struct FANSI_prefix_dat pre_first,
   struct FANSI_prefix_dat pre_next,
@@ -245,9 +245,9 @@ SEXP FANSI_strwrap(
   struct FANSI_buff * buff,
   const char * pad_chr,
   int strip_spaces,
-  SEXP term_cap
+  SEXP warn, SEXP term_cap
 ) {
-  struct FANSI_state state = FANSI_state_init(x, term_cap);
+  struct FANSI_state state = FANSI_state_init(x, warn, term_cap);
 
   int width_1 = FANSI_add_int(width, -pre_first.width);
   int width_2 = FANSI_add_int(width, -pre_next.width);
@@ -523,14 +523,14 @@ SEXP FANSI_strwrap_ext(
     SEXP chr = STRING_ELT(x, i);
     if(chr == NA_STRING) continue;
     SEXP str_i = PROTECT(
-      FANSI_strwrap(
+      strwrap(
         CHAR(chr), width_int,
         i ? pre_first_dat : ini_first_dat,
         pre_next_dat,
         wrap_always_int, &buff,
         CHAR(asChar(pad_end)),
         strip_spaces_int,
-        term_cap
+        warn, term_cap
     ) );
     SET_VECTOR_ELT(res, i, str_i);
     UNPROTECT(1);

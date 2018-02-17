@@ -23,8 +23,11 @@
  *
  * We rely on struct initialization to set everything else to zero.
  */
-struct FANSI_state FANSI_state_init(const char * string, SEXP term_cap) {
+struct FANSI_state FANSI_state_init(
+  const char * string, SEXP warn, SEXP term_cap
+) {
   int * term_int = INTEGER(term_cap);
+  int warn_int = asInteger(warn);
   int term_cap_int = 0;
 
   R_xlen_t i_len = XLENGTH(term_cap);
@@ -40,6 +43,7 @@ struct FANSI_state FANSI_state_init(const char * string, SEXP term_cap) {
     .string = string,
     .color = -1,
     .bg_color = -1,
+    .warn = warn_int,
     .term_cap = term_cap_int
   };
 }
@@ -342,10 +346,13 @@ static struct FANSI_state parse_esc(struct FANSI_state state) {
     );
     // nocov end
 
+  int err_code = 0;  // track worst error code
+
   // consume all ESC sequences
 
   while(state.string[state.pos_byte] == 27) {
     int pos_byte_prev = state.pos_byte;
+
     state.pos_byte = FANSI_add_int(state.pos_byte, 1);  // advance ESC
 
     if(!state.string[state.pos_byte]) {
@@ -366,8 +373,6 @@ static struct FANSI_state parse_esc(struct FANSI_state state) {
 
       // Loop through the SGR; each token we process successfully modifies state
       // and advances to the next token
-
-      int err_code = 0;  // track worst error code
 
       do {
         tok_res = FANSI_parse_token(&state.string[state.pos_byte]);
@@ -502,7 +507,7 @@ static struct FANSI_state parse_esc(struct FANSI_state state) {
   if(err_code) {
     // All errors are zero width
     state.last_char_width = 0;
-    if(state.warn) {
+    if(state.warn > 0) {
       const char * err_msg;
       if(err_code < 3) {
         err_msg = "contains unknown CSI SGR substrings";
@@ -514,13 +519,14 @@ static struct FANSI_state parse_esc(struct FANSI_state state) {
         err_msg = "contains a non-CSI escape sequence";
       } else {
         // nocov start
-        error("Internal Error: unknown ESC parse error; contact maintainer.")
+        error("Internal Error: unknown ESC parse error; contact maintainer.");
         // nocov 3nd
       }
       warning(
         "Encountered invalid escape sequence (%s), %s", err_msg,
         "see `?illegal_esc` for more details."
       );
+      state.warn = -state.warn; // only warn once
     }
     state.err_code = 0;
   } else {
@@ -1119,8 +1125,8 @@ SEXP FANSI_state_at_pos_ext(
 
   string = FANSI_string_as_utf8(text_chr).buff;
 
-  struct FANSI_state state = FANSI_state_init(string, term_cap);
-  struct FANSI_state state_prev = FANSI_state_init(string, term_cap);
+  struct FANSI_state state = FANSI_state_init(string, warn, term_cap);
+  struct FANSI_state state_prev = FANSI_state_init(string, warn, term_cap);
 
   state.string = state_prev.string = string;
   state_pair.cur = state;
