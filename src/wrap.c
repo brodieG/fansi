@@ -366,13 +366,6 @@ static SEXP strwrap(
   }
   // Write last bit of string
 
-  /*
-  Rprintf(
-    "Do we have extra %d %d %s", written_through , state.pos_byte,
-    state.string + state_start.pos_byte
-  );
-  */
-
   SEXP res = PROTECT(allocVector(STRSXP, size));
   char_list = char_list_start;
   for(R_xlen_t i = 0; i < size; ++i) {

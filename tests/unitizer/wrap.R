@@ -84,6 +84,16 @@ unitizer_sect("Other Escapes", {
   # c0 escapes should be treated as zero width
 
   strwrap_esc("hello\x1F\x1F\x1F\x1F\x1F\x1F world yohoo", 12)
+
+  # Various different types of warnings
+
+  strwrap_esc("hello \033[999mworld", 6)
+  strwrap_esc("hello \033[31#31mworld", 6)
+  strwrap_esc("hello \033[999nworld", 6)
+
+  strwrap_esc("hello \033[999mworld", 6, warn=FALSE)
+  strwrap_esc("hello \033[31#31mworld", 6, warn=FALSE)
+  strwrap_esc("hello \033[999nworld", 6, warn=FALSE)
 })
 unitizer_sect("prefix / initial simple", {
   # a version of lorem with paragraphs
@@ -233,6 +243,7 @@ unitizer_sect("term cap and bright", {
   strwrap_esc(hello.tru, 13, term.cap='truecolor')
   strwrap_esc(hello.tru, 13)
 })
+
 # Things to test:
 #
 # * Special/control characters

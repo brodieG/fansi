@@ -46,6 +46,11 @@
 #'
 #' ELABORATE ON WHAT HAPPENS WHEN HIT AN ILLEGAL SEQUENCE.
 #'
+#' * We do not consider things like 48;6 illegal
+#' * We do not consider sequences that are illegal because lack of `term.cap`
+#'   but otherwise would be illegal; we just ignore the single SGR sequence that
+#'   initiated the illegal sequences
+#'
 #' We chose to interpret ANSI CSI SGR sequences because this reduces how
 #' much string transcription we need to do.  If we do not interpret the
 #' sequences then we need to record all of them from the beginning of the

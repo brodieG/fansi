@@ -145,14 +145,14 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
   }
   // check for final byte
 
+  last = 1;
   if((*string == ';' || *string == 'm') && !len_intermediate) {
-    // valid end of parameter substring
+    // valid end of SGR parameter substring
 
     if(non_standard) err_code = 1;
-    last = (*string == 'm');
-  } else if(*string >= 0x40 && *string <= 0x7E && len_intermediate == 1) {
+    if(*string == ';') last = 0;
+  } else if(*string >= 0x40 && *string <= 0x7E && len_intermediate <= 1) {
     // valid final byte
-    last = 1;
     err_code = 3;
   } else {
     // invalid end
@@ -174,7 +174,7 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
       val += (FANSI_as_num(--string) * mult);
       mult *= 10;
   } }
-  if(val > 255) err_code = 2;
+  if(err_code < 2 && val > 255) err_code = 2;
 
   // If the string didn't end, then we consume one extra character for the
   // ending
@@ -222,7 +222,6 @@ static struct FANSI_state FANSI_parse_colors(
       // the prior 38 or 48 just gets tossed (at least this happens on OSX
       // terminal and iTerm)
 
-      state.err_code = 2;
       state.pos_byte -= (res.len);
     } else if (
       // terminal doesn't have 256 or true color capability
@@ -231,7 +230,6 @@ static struct FANSI_state FANSI_parse_colors(
     ) {
       // right now this is same as when not 2/5 following a 38, but maybe in the
       // future we want different treatment?
-      state.err_code = 2;
       state.pos_byte -= (res.len);
     } else {
       int colors = res.val;
@@ -256,8 +254,8 @@ static struct FANSI_state FANSI_parse_colors(
           if(res.val < 256 && !early_end) {
             rgb[i + 1] = res.val;
           } else {
-            // Not a valid color; doesn't break parsing so that we end up with the
-            // cursor at the right place
+            // Not a valid color; doesn't break parsing so that we end up with
+            // the cursor at the right place
 
             valid_col = 0;
             break;
@@ -333,7 +331,7 @@ static struct FANSI_state FANSI_parse_colors(
  *   other position info moved to the first char after the sequence.  See
  *   details for failure modes.
  */
-static struct FANSI_state parse_esc(struct FANSI_state state) {
+static struct FANSI_state read_esc(struct FANSI_state state) {
   /***************************************************\
   | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_find_esc  |
   \***************************************************/
@@ -379,7 +377,6 @@ static struct FANSI_state parse_esc(struct FANSI_state state) {
         state.pos_byte = FANSI_add_int(state.pos_byte, tok_res.len);
         state.last = tok_res.last;
         state.err_code = tok_res.err_code;
-        if(tok_res.err_code > err_code) err_code = tok_res.err_code;
 
         // Note we use `state.err_code` instead of `tok_res.err_code` as
         // FANSI_parse_colors internally calls FANSI_parse_token
@@ -455,15 +452,15 @@ static struct FANSI_state parse_esc(struct FANSI_state state) {
             (tok_res.val >= 90 && tok_res.val <= 97) ||
             (tok_res.val >= 100 && tok_res.val <= 107)
           ) {
-            // Does terminal support bright colors?
+            // Does terminal support bright colors? We do not consider it an
+            // error if it doesn't.
 
-            if(!(state.term_cap & 1)) {
-              state.err_code = 2;
-            } else if (tok_res.val < 100) {
-              state.color = tok_res.val;
-            } else {
-              state.bg_color = tok_res.val;
-            }
+            if(state.term_cap & 1) {
+              if (tok_res.val < 100) {
+                state.color = tok_res.val;
+              } else {
+                state.bg_color = tok_res.val;
+            } }
           } else if(tok_res.val == 50) {
             // Turn off 26
             state.style &= ~(1U << 12U);
@@ -498,9 +495,11 @@ static struct FANSI_state parse_esc(struct FANSI_state state) {
         // FANSI_parse_colors can change the corresponding value in the `state`
         // struct, so better to deal with that directly
 
+        if(state.err_code > err_code) err_code = state.err_code;
         if(state.last) break;
       } while(1);
     }
+    if(state.err_code > err_code) err_code = state.err_code;
     int byte_offset = state.pos_byte - pos_byte_prev;
     state.pos_ansi += byte_offset;
   }
@@ -510,21 +509,22 @@ static struct FANSI_state parse_esc(struct FANSI_state state) {
     if(state.warn > 0) {
       const char * err_msg;
       if(err_code < 3) {
-        err_msg = "contains unknown CSI SGR substrings";
+        err_msg = "a CSI SGR sequence with unknown substrings";
       } else if (err_code == 3) {
-        err_msg = "contains a non-SGR CSI sequence";
+        err_msg = "a non-SGR CSI sequence";
       } else if (err_code == 4) {
-        err_msg = "contains a malformed CSI sequence";
+        err_msg = "a malformed CSI sequence";
       } else if (err_code == 5) {
-        err_msg = "contains a non-CSI escape sequence";
+        err_msg = "a non-CSI escape sequence";
       } else {
         // nocov start
         error("Internal Error: unknown ESC parse error; contact maintainer.");
         // nocov 3nd
       }
       warning(
-        "Encountered invalid escape sequence (%s), %s", err_msg,
-        "see `?illegal_esc` for more details."
+        "Encountered %s, %s%s", err_msg,
+        "see `?unhandled_esc`; you can use `warn=FALSE` to turn ",
+        "off these warnings."
       );
       state.warn = -state.warn; // only warn once
     }
@@ -602,7 +602,7 @@ struct FANSI_state FANSI_read_next(struct FANSI_state state) {
   // UTF8 characters (chr_val is signed, so > 0x7f will be negative)
   else if (chr_val < 0) state = read_utf8(state);
   // ESC sequences
-  else if (chr_val == 0x1b) state = parse_esc(state);
+  else if (chr_val == 0x1b) state = read_esc(state);
   // C0 escapes (e.g. \t, \n, etc)
   else if(chr_val) state = read_c0(state);
 
