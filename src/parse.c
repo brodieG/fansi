@@ -211,68 +211,69 @@ static struct FANSI_state FANSI_parse_colors(
   state.last = res.last;
   state.err_code = res.err_code;
 
-  if(
-    !state.err_code && (
-      ((res.val != 2 && res.val != 5) || state.last) ||
+  if(!state.err_code) {
+    if((res.val != 2 && res.val != 5) || state.last) {
+      // weird case, we don't want to advance the position here because
+      // `res.val` needs to be interpreted as potentially a non-color style and
+      // the prior 38 or 48 just gets tossed (at least this happens on OSX
+      // terminal and iTerm)
+
+      state.err_code = 2;
+      state.pos_byte -= (res.len);
+    } else if (
       // terminal doesn't have 256 or true color capability
       (res.val == 2 && !(state.term_cap & (1 << 2))) ||
       (res.val == 5 && !(state.term_cap & (1 << 1)))
-    )
-  ) {
-    // weird case, we don't want to advance the position here because `res.val`
-    // needs to be interpreted as potentially a non-color style and the prior
-    // 38 or 48 just gets tossed (at least this happens on OSX terminal and
-    // iTerm)
+    ) {
+      // right now this is same as when not 2/5 following a 38, but maybe in the
+      // future we want different treatment?
+      state.err_code = 2;
+      state.pos_byte -= (res.len);
+    } else {
+      int colors = res.val;
+      if(colors == 2) {
+        i_max = 3;
+      } else if (colors == 5) {
+        i_max = 1;
+      } else error("Internal Error: 1301341"); // nocov
 
-    state.pos_byte -= (res.len);
-    state.err_code = 2;
-  } else if(!state.err_code) {
-    int colors = res.val;
-    if(colors == 2) {
-      i_max = 3;
-    } else if (colors == 5) {
-      i_max = 1;
-    } else error("Internal Error: 1301341"); // nocov
+      rgb[0] = colors;
 
-    rgb[0] = colors;
+      // Parse through the subsequent tokens
 
-    // Parse through the subsequent tokens
+      for(int i = 0; i < i_max; ++i) {
+        res = FANSI_parse_token(&state.string[state.pos_byte]);
+        state.pos_byte = FANSI_add_int(state.pos_byte, res.len);
+        state.last = res.last;
+        state.err_code = res.err_code;
 
-    for(int i = 0; i < i_max; ++i) {
-      res = FANSI_parse_token(&state.string[state.pos_byte]);
-      state.pos_byte = FANSI_add_int(state.pos_byte, res.len);
-      state.last = res.last;
-      state.err_code = res.err_code;
+        if(!state.err_code) {
+          int early_end = res.last && i < (i_max - 1);
+          if(res.val < 256 && !early_end) {
+            rgb[i + 1] = res.val;
+          } else {
+            // Not a valid color; doesn't break parsing so that we end up with the
+            // cursor at the right place
+
+            valid_col = 0;
+            break;
+      } } }
+      // Failure handling happens in the main loop, we just need to ensure the
+      // byte position and state is correct
 
       if(!state.err_code) {
-        int early_end = res.last && i < (i_max - 1);
-        if(res.val < 256 && !early_end) {
-          rgb[i + 1] = res.val;
-        } else {
-          // Not a valid color; doesn't break parsing so that we end up with the
-          // cursor at the right place
-
-          valid_col = 0;
-          break;
-    } } }
-    // Failure handling happens in the main loop, we just need to ensure the
-    // byte position and state is correct
-
-    if(!state.err_code) {
-      if(!valid_col) {
-        for(int i = 0; i < 4; i++) rgb[i] = 0;
-        col = -1;
-        state.err_code = 2;  // invalid substring
-      }
-      if(mode == 3) {
-        state.color = col;
-        for(int i = 0; i < 4; i++) state.color_extra[i] = rgb[i];
-      } else if (mode == 4) {
-        state.bg_color = col;
-        for(int i = 0; i < 4; i++) state.bg_color_extra[i] = rgb[i];
-      }
-    }
-  }
+        if(!valid_col) {
+          for(int i = 0; i < 4; i++) rgb[i] = 0;
+          col = -1;
+          state.err_code = 2;  // invalid substring
+        }
+        if(mode == 3) {
+          state.color = col;
+          for(int i = 0; i < 4; i++) state.color_extra[i] = rgb[i];
+        } else if (mode == 4) {
+          state.bg_color = col;
+          for(int i = 0; i < 4; i++) state.bg_color_extra[i] = rgb[i];
+  } } } }
   return state;
 }
 /*
@@ -432,14 +433,16 @@ struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
             int col_code = tok_res.val - (foreground ? 30 : 40);
 
             if(col_code == 9) col_code = -1;
-            if(foreground) state.color = col_code;
-            else state.bg_color = col_code;
-
             // Handle the special color codes, need to parse some subsequent
             // tokens
 
             if(col_code == 8) {
               state = FANSI_parse_colors(state, foreground ? 3 : 4);
+            } else {
+              // It's possible for col_code = 8 to not actually change color if
+              // the parsing fails, so wait until end to set the color
+              if(foreground) state.color = col_code;
+              else state.bg_color = col_code;
             }
           } else if(
             (tok_res.val >= 90 && tok_res.val <= 97) ||
