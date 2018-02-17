@@ -1033,7 +1033,9 @@ int FANSI_state_has_style_basic(struct FANSI_state state) {
  */
 
 SEXP FANSI_state_at_pos_ext(
-  SEXP text, SEXP pos, SEXP type, SEXP lag, SEXP ends,
+  SEXP text, SEXP pos, SEXP type,
+  SEXP lag, SEXP ends,
+  SEXP tabs_as_spaces, SEXP tab_stops,
   SEXP warn, SEXP term_cap
 ) {
   if(TYPEOF(text) != STRSXP && XLENGTH(text) != 1)

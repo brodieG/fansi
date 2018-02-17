@@ -72,7 +72,7 @@ state_esc <- function(
 #' @export
 
 substr_esc <- function(
-  x, start, stop, 
+  x, start, stop,
   warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap')
 ) substr2_esc(x=x, start=start, stop=stop, warn=warn, term.cap=term.cap)
@@ -134,7 +134,9 @@ substr2_esc <- function(
 
     state <- .Call(
       FANSI_state_at_pos_ext,
-      u, e.sort - 1L, type.m - 1L, e.lag, e.ends, tabs.as.spaces, tab.stops,
+      u, e.sort - 1L, type.m - 1L,
+      e.lag, e.ends,
+      tabs.as.spaces, tab.stops,
       warn, term.cap.int
     )
     # Recover the matching values for e.sort
