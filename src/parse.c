@@ -329,7 +329,7 @@ static struct FANSI_state FANSI_parse_colors(
  *   other position info moved to the first char after the sequence.  See
  *   details for failure modes.
  */
-struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
+static struct FANSI_state parse_esc(struct FANSI_state state) {
   /***************************************************\
   | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_find_esc  |
   \***************************************************/
@@ -575,7 +575,7 @@ struct FANSI_state FANSI_read_next(struct FANSI_state state) {
   // UTF8 characters (chr_val is signed, so > 0x7f will be negative)
   else if (chr_val < 0) state = FANSI_read_utf8(state);
   // ESC sequences
-  else if (chr_val == 0x1b) state = FANSI_parse_esc(state);
+  else if (chr_val == 0x1b) state = parse_esc(state);
   // C0 escapes (e.g. \t, \n, etc)
   else if(chr_val) state = FANSI_read_c0(state);
 

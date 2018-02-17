@@ -271,7 +271,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   struct FANSI_state FANSI_inc_width(struct FANSI_state state, int inc);
   struct FANSI_state FANSI_reset_pos(struct FANSI_state state);
   struct FANSI_state FANSI_reset_width(struct FANSI_state state);
-  struct FANSI_state FANSI_parse_esc(struct FANSI_state state);
 
   void FANSI_size_buff(struct FANSI_buff * buff, int size);
   int FANSI_is_utf8_loc();

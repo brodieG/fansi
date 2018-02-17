@@ -3,7 +3,6 @@ library(fansi)
 
 unitizer_sect("Basic wrap", {
   hello.0 <- "hello world this is a lovely day"
-
   identical(strwrap_esc(hello.0, width=10), strwrap(hello.0, width=10))
 
   hello.1 <- "hello  world  this  is.  a lovely day."

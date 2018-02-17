@@ -16,8 +16,12 @@ unitizer_sect("Corner cases", {
   # should this be stripped?  Not 100% clear since terminal seems to be waiting
   # for input after it is cated
   strip_esc("hello\033[")
-})
 
+  # illegal sequence
+
+  strip_esc("hello\033[31##3m illegal")
+  strip_esc("hello\033[31##m legal")
+})
 unitizer_sect("Whitespace", {
   fansi:::process('hello     world')
   fansi:::process('hello.    world')

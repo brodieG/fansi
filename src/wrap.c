@@ -247,7 +247,6 @@ SEXP FANSI_strwrap(
   int strip_spaces,
   SEXP term_cap
 ) {
-  Rprintf("start\n");
   struct FANSI_state state = FANSI_state_init(x, term_cap);
 
   int width_1 = FANSI_add_int(width, -pre_first.width);
