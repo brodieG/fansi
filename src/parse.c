@@ -445,7 +445,12 @@ struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
             (tok_res.val >= 90 && tok_res.val <= 97) ||
             (tok_res.val >= 100 && tok_res.val <= 107)
           ) {
-            error("bright colors not implemented yet");
+            // Does terminal support bright colors?
+
+            if(!state.term_cap & 1) {
+              state.err_code = 2;
+            } else {
+            }
           } else if(tok_res.val == 50) {
             // Turn off 26
             state.style &= ~(1U << 12U);
