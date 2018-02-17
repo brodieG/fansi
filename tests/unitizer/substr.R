@@ -12,20 +12,21 @@ unitizer_sect("Simple", {
     "%shello world %sit's a %scrazy world%s out there %sisn't it%s%s right?",
     grn.bg, red, end, rgb.und, inv, end, rgb.256
   )
+  # enable truecolor as not enabled by default
+  term.cap <- c('bright', '256', 'truecolor')
+
   substr_esc(str02, 1, 7)
   substr_esc(str02, 10, 20)
-  substr_esc(str02, 15, 40)
-  substr_esc(str02, 35, 60)
+  substr_esc(str02, 15, 40, term.cap=term.cap)
+  substr_esc(str02, 35, 60, term.cap=term.cap)
 
   str03 <-sprintf("hello %sworld", rgb.und)
 
-  substr_esc(str03, 1, 12)
+  substr_esc(str03, 1, 12, term.cap=term.cap)
 
   str04 <- sprintf("hello%s%s world%s%s yowza", red, inv, grn.bg, rgb.und)
 
-  substr_esc(str04, 5, 7)
-  substr_esc(str04, 5, 13)
-
-  # single character
+  substr_esc(str04, 5, 7, term.cap=term.cap)
+  substr_esc(str04, 5, 13, term.cap=term.cap)
 })
 
