@@ -447,9 +447,12 @@ struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
           ) {
             // Does terminal support bright colors?
 
-            if(!state.term_cap & 1) {
+            if(!(state.term_cap & 1)) {
               state.err_code = 2;
+            } else if (tok_res.val < 100) {
+              state.color = tok_res.val;
             } else {
+              state.bg_color = tok_res.val;
             }
           } else if(tok_res.val == 50) {
             // Turn off 26
@@ -772,8 +775,12 @@ int FANSI_color_size(int color, int * color_extra) {
     error("Internal Error: unexpected compound color format");   // nocov
   } else if (color >= 0 && color < 10) {
     size = 3;
-  } else if (color >= 0) {
-    error("Internal Error: unexpected compound color format 2"); // nocov
+  } else if (color >= 90 && color <= 97) {
+    size = 3;
+  } else if (color >= 100 && color <= 107) {
+    size = 4;
+  } else if (color > 0) {
+    error("Internal Error: unexpected color format"); // nocov
   }
   return size;
 }
@@ -843,7 +850,7 @@ unsigned int FANSI_color_write(
     error("Internal Error: color mode must be 3 or 4");  // nocov
 
   unsigned int str_off = 0;
-  if(color >= 0) {
+  if(color >= 0 & color < 10) {
     string[str_off++] = mode == 3 ? '3' : '4';
 
     if(color != 8) {
@@ -866,6 +873,18 @@ unsigned int FANSI_color_write(
       if(write_chrs < 0) error("Internal Error: failed writing color code.");
       str_off += write_chrs;
     }
+  } else if(color >= 100 && color <= 107) {
+    // bright colors, we don't actually need to worry about bg vs fg since the
+    // actual color values are different
+
+    string[str_off++] = '1';
+    string[str_off++] = '0';
+    string[str_off++] = '0' + color - 100;
+    string[str_off++] = ';';
+  } else if(color >= 90 && color <= 97) {
+    string[str_off++] = '9';
+    string[str_off++] = '0' + color - 90;
+    string[str_off++] = ';';
   }
   return str_off;
 }

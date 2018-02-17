@@ -138,10 +138,13 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * A number in 0-9, corrsponds to the ansi codes in the [3-4][0-9] range, if
      * less than zero or 9 means no color is active.  If 8 (i.e. corresponding
      * to the `38` code), then `color_extra` contains additional color info.
+     *
+     * If > 9 then for color in 90-97, the bright color, for bg_color, in
+     * 100-107 the bright bg color.
      */
 
-    int color;           // the number follwing the 3 in 3[0-9]
-    int bg_color;        // the number follwing the 4 in 4[0-9]
+    int color;           // the number following the 3 in 3[0-9]
+    int bg_color;        // the number following the 4 in 4[0-9]
 
     /*
      * Position markers (all zero index), we use int because these numbers
