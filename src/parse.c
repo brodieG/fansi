@@ -211,7 +211,14 @@ static struct FANSI_state FANSI_parse_colors(
   state.last = res.last;
   state.err_code = res.err_code;
 
-  if(!state.err_code && ((res.val != 2 && res.val != 5) || state.last)) {
+  if(
+    !state.err_code && (
+      ((res.val != 2 && res.val != 5) || state.last) ||
+      // terminal doesn't have 256 or true color capability
+      (res.val == 2 && !(state.term_cap & (1 << 2))) ||
+      (res.val == 5 && !(state.term_cap & (1 << 1)))
+    )
+  ) {
     // weird case, we don't want to advance the position here because `res.val`
     // needs to be interpreted as potentially a non-color style and the prior
     // 38 or 48 just gets tossed (at least this happens on OSX terminal and
@@ -434,6 +441,11 @@ struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
             if(col_code == 8) {
               state = FANSI_parse_colors(state, foreground ? 3 : 4);
             }
+          } else if(
+            (tok_res.val >= 90 && tok_res.val <= 97) ||
+            (tok_res.val >= 100 && tok_res.val <= 107)
+          ) {
+            error("bright colors not implemented yet");
           } else if(tok_res.val == 50) {
             // Turn off 26
             state.style &= ~(1U << 12U);
