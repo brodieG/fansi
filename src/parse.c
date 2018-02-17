@@ -29,12 +29,12 @@ struct FANSI_state FANSI_state_init(const char * string, SEXP term_cap) {
 
   R_xlen_t i_len = XLENGTH(term_cap);
   for(R_xlen_t i = 0; i < i_len; ++i) {
-    if(term_int[i] > 32 || term_int[i] < 0)
+    if(term_int[i] > 32 || term_int[i] < 1)
       // nocov start
       error("Internal Error: bit flag value for term_cap illegal.");
       // nocov end
 
-    term_cap_int &= 1 << term_int[i];
+    term_cap_int |= 1 << (term_int[i] - 1);
   }
   return (struct FANSI_state) {
     .string = string,
