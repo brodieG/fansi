@@ -133,7 +133,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     /* Alternative fonts, 10-19, where 0 is the primary font */
 
     int font;
-
     /*
      * A number in 0-9, corrsponds to the ansi codes in the [3-4][0-9] range, if
      * less than zero or 9 means no color is active.  If 8 (i.e. corresponding
@@ -210,7 +209,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      *
      */
     int term_cap;
+    // Whether at end of a CSI escape sequence
     int last;
+    // Whether to issue warnings if err_code is non-zero
+    int warn
   };
   /*
    * Need to keep track of fallback state, so we need ability to return two

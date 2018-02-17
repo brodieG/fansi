@@ -367,12 +367,14 @@ static struct FANSI_state parse_esc(struct FANSI_state state) {
       // Loop through the SGR; each token we process successfully modifies state
       // and advances to the next token
 
+      int err_code = 0;  // track worst error code
+
       do {
         tok_res = FANSI_parse_token(&state.string[state.pos_byte]);
-        state.pos_byte =
-          FANSI_add_int(state.pos_byte, tok_res.len);
+        state.pos_byte = FANSI_add_int(state.pos_byte, tok_res.len);
         state.last = tok_res.last;
         state.err_code = tok_res.err_code;
+        if(tok_res.err_code > err_code) err_code = tok_res.err_code;
 
         // Note we use `state.err_code` instead of `tok_res.err_code` as
         // FANSI_parse_colors internally calls FANSI_parse_token
@@ -497,13 +499,32 @@ static struct FANSI_state parse_esc(struct FANSI_state state) {
     int byte_offset = state.pos_byte - pos_byte_prev;
     state.pos_ansi += byte_offset;
   }
-  if(state.err_code) {
+  if(err_code) {
+    // All errors are zero width
     state.last_char_width = 0;
-    warning(
-      "Encountered invalid escape sequence with err code %d.", state.err_code
-    );
+    if(state.warn) {
+      const char * err_msg;
+      if(err_code < 3) {
+        err_msg = "contains unknown CSI SGR substrings";
+      } else if (err_code == 3) {
+        err_msg = "contains a non-SGR CSI sequence";
+      } else if (err_code == 4) {
+        err_msg = "contains a malformed CSI sequence";
+      } else if (err_code == 5) {
+        err_msg = "contains a non-CSI escape sequence";
+      } else {
+        // nocov start
+        error("Internal Error: unknown ESC parse error; contact maintainer.")
+        // nocov 3nd
+      }
+      warning(
+        "Encountered invalid escape sequence (%s), %s", err_msg,
+        "see `?illegal_esc` for more details."
+      );
+    }
     state.err_code = 0;
   } else {
+    // Not 100% sure this is right...
     state.last_char_width = 1;
   }
   return state;
