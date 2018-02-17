@@ -74,7 +74,6 @@ unitizer_sect("substr", {
   substr2_esc(
     lor.cn.c.1.5, starts, ends, type='width', round='stop', term.cap=term.cap
   )
-
 })
 unitizer_sect("rounding", {
   # handling of subsetting when we end up in middle of wide display characters
