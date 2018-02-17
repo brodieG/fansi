@@ -72,7 +72,7 @@ tabs_as_spaces <- function(
       "Argument `term.cap` may only contain values in ",
       deparse(VALID.TERM.CAP)
     )
-  .Call(FANSI_tabs_as_spaces, x, as.integer(tab.stops))
+  .Call(FANSI_tabs_as_spaces, x, as.integer(tab.stops), warn, term.cap.int)
 }
 ## Testing interface for color code to HTML conversion
 
