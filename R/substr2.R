@@ -14,20 +14,21 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-state_esc <- function(
-  text, pos, type='chars', lag, ends, tabs.as.spaces=FALSE, tab.stops=8L
-) {
-  stopifnot(
-    is.character(text), length(text) == 1L,
-    is.numeric(pos), min(pos, 0L, na.rm=TRUE) >= 0L,
-    is.character(type),
-    !is.na(type.match <- match(type, c('chars', 'width', 'bytes')))
-  )
-  .Call(
-    FANSI_state_at_pos_ext, text, as.integer(pos) - 1L, type.match - 1L,
-    lag, ends, tabs.as.spaces, tab.stops
-  )
-}
+## state_esc <- function(
+##   text, pos, type='chars', lag, ends, tabs.as.spaces=FALSE, tab.stops=8L
+## ) {
+##   stopifnot(
+##     is.character(text), length(text) == 1L,
+##     is.numeric(pos), min(pos, 0L, na.rm=TRUE) >= 0L,
+##     is.character(type),
+##     !is.na(type.match <- match(type, c('chars', 'width', 'bytes')))
+##   )
+##   .Call(
+##     FANSI_state_at_pos_ext, text, as.integer(pos) - 1L, type.match - 1L,
+##     lag, ends, tabs.as.spaces, tab.stops
+##   )
+## }
+
 #' ANSI Escape Sequence Aware Version of `substr`
 #'
 #' `substr_esc` is a drop-in replacement for `substr`.  Performance is
