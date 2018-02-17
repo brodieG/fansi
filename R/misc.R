@@ -30,6 +30,7 @@ digits_in_int <- function(x) .Call(FANSI_digits_in_int, x)
 #' @seealso [string-parsing] for important details on how strings are
 #'   interpreted
 #' @export
+#' @inheritParams substr_esc
 #' @param x character vector to replace tabs in.
 #' @param tab.stops integer(1:n) indicating position of tab stops to use when
 #'   converting tabs to spaces.  If there are more tabs in a line than defined
@@ -57,11 +58,20 @@ digits_in_int <- function(x) .Call(FANSI_digits_in_int, x)
 #'     tabs_as_spaces(string, tab.stops=c(2, 3, 8))
 #' ) )
 
-tabs_as_spaces <- function(x, tab.stops=getOption('fansi.tab.stops')) {
+tabs_as_spaces <- function(
+  x, tab.stops=getOption('fansi.tab.stops'), warn=getOption('fansi.warn'),
+  term.cap=getOption('fansi.term.cap')
+) {
   vetr(
     character(),
-    tab.stops=INT.POS.STR && length(.) > 0
+    tab.stops=INT.POS.STR && length(.) > 0,
+    warn=LGL.1, term.cap=CHR
   )
+  if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
+    stop(
+      "Argument `term.cap` may only contain values in ",
+      deparse(VALID.TERM.CAP)
+    )
   .Call(FANSI_tabs_as_spaces, x, as.integer(tab.stops))
 }
 ## Testing interface for color code to HTML conversion

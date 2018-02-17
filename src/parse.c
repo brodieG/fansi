@@ -23,8 +23,25 @@
  *
  * We rely on struct initialization to set everything else to zero.
  */
-struct FANSI_state FANSI_state_init() {
-  return (struct FANSI_state) {.color = -1, .bg_color = -1};
+struct FANSI_state FANSI_state_init(const char * string, SEXP term_cap) {
+  int * term_int = INTEGER(term_cap);
+  int term_cap_int = 0;
+
+  R_xlen_t i_len = XLENGTH(term_cap);
+  for(R_xlen_t i = 0; i < i_len; ++i) {
+    if(term_int[i] > 32 || term_int[i] < 0)
+      // nocov start
+      error("Internal Error: bit flag value for term_cap illegal.");
+      // nocov end
+
+    term_cap_int &= 1 << term_int[i];
+  }
+  return (struct FANSI_state) {
+    .string = string,
+    .color = -1,
+    .bg_color = -1,
+    .term_cap = term_cap_int
+  };
 }
 /*
  * Reset all the display attributes, but not the position ones
@@ -980,7 +997,8 @@ int FANSI_state_has_style_basic(struct FANSI_state state) {
  */
 
 SEXP FANSI_state_at_pos_ext(
-  SEXP text, SEXP pos, SEXP type, SEXP lag, SEXP ends
+  SEXP text, SEXP pos, SEXP type, SEXP lag, SEXP ends,
+  SEXP warn, SEXP term_cap
 ) {
   if(TYPEOF(text) != STRSXP && XLENGTH(text) != 1)
     error("Argument `text` must be character(1L)");
@@ -992,6 +1010,10 @@ SEXP FANSI_state_at_pos_ext(
     error("Argument `lag` must be the same length as `pos`");
   if(XLENGTH(pos) != XLENGTH(ends))
     error("Argument `ends` must be the same length as `pos`");
+  if(TYPEOF(warn) != LGLSXP)
+    error("Argument `warn` must be integer");
+  if(TYPEOF(term_cap) != INTSXP)
+    error("Argument `term.cap` must be integer");
 
   R_xlen_t len = XLENGTH(pos);
 
@@ -1001,8 +1023,6 @@ SEXP FANSI_state_at_pos_ext(
   }
   SEXP text_chr = asChar(text);
   const char * string = CHAR(text_chr);
-  struct FANSI_state state = FANSI_state_init();
-  struct FANSI_state state_prev = FANSI_state_init();
 
   struct FANSI_state_pair state_pair, state_pair_old;
 
@@ -1035,8 +1055,10 @@ SEXP FANSI_state_at_pos_ext(
   SEXP res_str = PROTECT(allocVector(STRSXP, len));
   SEXP res_chr, res_chr_prev = PROTECT(mkChar(""));
 
-  int is_utf8_loc = FANSI_is_utf8_loc();
-  string = FANSI_string_as_utf8(text_chr, is_utf8_loc).buff;
+  string = FANSI_string_as_utf8(text_chr).buff;
+
+  struct FANSI_state state = FANSI_state_init(string, term_cap);
+  struct FANSI_state state_prev = FANSI_state_init(string, term_cap);
 
   state.string = state_prev.string = string;
   state_pair.cur = state;

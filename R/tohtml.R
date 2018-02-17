@@ -29,8 +29,7 @@
 #' esc_to_html("hello\033[31;42;1mworld\033[m")
 
 esc_to_html <- function(
-  x,
-  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+  x, warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
 ) {
   vetr(character(), LGL.1, CHR)
   if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
@@ -38,7 +37,6 @@ esc_to_html <- function(
       "Argument `term.cap` may only contain values in ",
       deparse(VALID.TERM.CAP)
     )
-
   .Call(FANSI_esc_to_html, x, warn, term.cap)
 }
 

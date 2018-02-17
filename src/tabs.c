@@ -43,7 +43,7 @@ int FANSI_tab_width(struct FANSI_state state, SEXP tab_stops) {
 }
 
 SEXP FANSI_tabs_as_spaces(
-  SEXP vec, SEXP tab_stops, struct FANSI_buff * buff, int is_utf8_loc
+  SEXP vec, SEXP tab_stops, struct FANSI_buff * buff,  SEXP warn, SEXP term_cap
 ) {
   if(TYPEOF(vec) != STRSXP)
     error("Argument 'vec' should be a character vector");
@@ -82,7 +82,7 @@ SEXP FANSI_tabs_as_spaces(
       // Need to convert to UTF8 so width calcs work
 
       struct FANSI_buff_const buff_utf8 =
-        FANSI_string_as_utf8(STRING_ELT(vec, i), is_utf8_loc);
+        FANSI_string_as_utf8(STRING_ELT(vec, i));
 
       // Figure out possible size of buffer, allowing max_tab_stop for every
       // tab, which should over-allocate
@@ -94,8 +94,7 @@ SEXP FANSI_tabs_as_spaces(
       }
       FANSI_size_buff(buff, new_buff_size);
 
-      struct FANSI_state state = FANSI_state_init();
-      state.string = buff_utf8.buff;
+      struct FANSI_state state = FANSI_state_init(buff_utf8.buff, term_cap);
       char cur_chr;
 
       char * buff_track, * buff_start;
@@ -155,10 +154,11 @@ SEXP FANSI_tabs_as_spaces(
   UNPROTECT(1);
   return res_sxp;
 }
-SEXP FANSI_tabs_as_spaces_ext(SEXP vec, SEXP tab_stops) {
-  int is_utf8_loc = FANSI_is_utf8_loc();
+SEXP FANSI_tabs_as_spaces_ext(
+  SEXP vec, SEXP tab_stops, SEXP warn, SEXP term_cap
+) {
   struct FANSI_buff buff = {.len = 0};
 
-  return FANSI_tabs_as_spaces(vec, tab_stops, &buff, is_utf8_loc);
+  return FANSI_tabs_as_spaces(vec, tab_stops, &buff, warn, term_cap);
 }
 

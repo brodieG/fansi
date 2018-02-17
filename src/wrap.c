@@ -35,8 +35,8 @@ struct FANSI_prefix_dat {
  * Generate data related to prefix / initial
  */
 
-static struct FANSI_prefix_dat make_pre(SEXP x, int is_utf8_loc) {
-  const char * x_utf8 = FANSI_string_as_utf8(asChar(x), is_utf8_loc).buff;
+static struct FANSI_prefix_dat make_pre(SEXP x) {
+  const char * x_utf8 = FANSI_string_as_utf8(asChar(x)).buff;
   // ideally we would IS_ASCII(x), but that's not available to extensions
   int x_has_utf8 = FANSI_has_utf8(x_utf8);
 
@@ -109,7 +109,7 @@ static struct FANSI_prefix_dat drop_pre_indent(struct FANSI_prefix_dat dat) {
 SEXP FANSI_writeline(
   struct FANSI_state state_bound, struct FANSI_state state_start,
   struct FANSI_buff * buff,
-  struct FANSI_prefix_dat pre_dat, int is_utf8_loc,
+  struct FANSI_prefix_dat pre_dat,
   int tar_width, const char * pad_chr
 ) {
   // Rprintf("  Writeline start with buff %p\n", *buff);
@@ -240,12 +240,11 @@ SEXP FANSI_strwrap(
   struct FANSI_prefix_dat pre_next,
   int wrap_always,
   struct FANSI_buff * buff,
-  int is_utf8_loc,
   const char * pad_chr,
-  int strip_spaces
+  int strip_spaces,
+  SEXP term_cap
 ) {
-  struct FANSI_state state = FANSI_state_init();
-  state.string = x;
+  struct FANSI_state state = FANSI_state_init(x, term_cap);
 
   int width_1 = FANSI_add_int(width, -pre_first.width);
   int width_2 = FANSI_add_int(width, -pre_next.width);
@@ -325,7 +324,7 @@ SEXP FANSI_strwrap(
         FANSI_writeline(
           state_bound, state_start, buff,
           para_start ? pre_first : pre_next,
-          is_utf8_loc, width_tar, pad_chr
+          width_tar, pad_chr
         )
       );
       if(cur_chr == '\n') prev_newline = 1;
@@ -400,7 +399,8 @@ SEXP FANSI_strwrap_ext(
   SEXP prefix, SEXP initial,
   SEXP wrap_always, SEXP pad_end,
   SEXP strip_spaces,
-  SEXP tabs_as_spaces, SEXP tab_stops
+  SEXP tabs_as_spaces, SEXP tab_stops,
+  SEXP warn, SEXP term_cap
 ) {
   if(
     TYPEOF(x) != STRSXP || TYPEOF(width) != INTSXP ||
@@ -425,7 +425,6 @@ SEXP FANSI_strwrap_ext(
       "Argument `pad.end` must be an empty string or a single ",
       "printable ASCII character."
     );
-  int is_utf8_loc = FANSI_is_utf8_loc();
 
   // Set up the buffer, this will be created in FANSI_strwrap, but we want a
   // handle for it here so we can re-use
@@ -443,12 +442,12 @@ SEXP FANSI_strwrap_ext(
   // and tabs
 
   if(asInteger(tabs_as_spaces)) {
-    x = PROTECT(FANSI_tabs_as_spaces(x, tab_stops, &buff, is_utf8_loc));
+    x = PROTECT(FANSI_tabs_as_spaces(x, tab_stops, &buff, warn, term_cap));
     prefix = PROTECT(
-      FANSI_tabs_as_spaces(prefix, tab_stops, &buff, is_utf8_loc)
+      FANSI_tabs_as_spaces(prefix, tab_stops, &buff, warn, term_cap)
     );
     initial = PROTECT(
-      FANSI_tabs_as_spaces(initial, tab_stops, &buff, is_utf8_loc)
+      FANSI_tabs_as_spaces(initial, tab_stops, &buff, warn, term_cap)
     );
   }
   else x = PROTECT(PROTECT(PROTECT(x)));  // PROTECT stack balance
@@ -467,9 +466,9 @@ SEXP FANSI_strwrap_ext(
   if(indent_int < 0 || exdent_int < 0)
     error("Internal Error: illegal indent/exdent values.");  // nocov
 
-  pre_dat_raw = make_pre(prefix, is_utf8_loc);
+  pre_dat_raw = make_pre(prefix);
   if(prefix != initial) {
-    ini_dat_raw = make_pre(initial, is_utf8_loc);
+    ini_dat_raw = make_pre(initial);
   } else ini_dat_raw = pre_dat_raw;
 
   ini_first_dat = pad_pre(ini_dat_raw, indent_int);
@@ -519,9 +518,10 @@ SEXP FANSI_strwrap_ext(
         CHAR(chr), width_int,
         i ? pre_first_dat : ini_first_dat,
         pre_next_dat,
-        wrap_always_int, &buff, is_utf8_loc,
+        wrap_always_int, &buff,
         CHAR(asChar(pad_end)),
-        strip_spaces_int
+        strip_spaces_int,
+        term_cap
     ) );
     SET_VECTOR_ELT(res, i, str_i);
     UNPROTECT(1);

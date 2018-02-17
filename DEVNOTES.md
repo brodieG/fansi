@@ -2,6 +2,16 @@
 
 These are internal developer notes.
 
+## SGR Capabilities
+
+* 256 colors
+* Bright Colors
+* Truecolor
+
+* Border
+* Ideogram
+* Fonts
+
 ## To HTML
 
 One of the problems is that we won't know the size of our target buffer until

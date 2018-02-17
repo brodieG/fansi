@@ -2,7 +2,7 @@
 % Please edit documentation in R/has.R
 \name{has_esc}
 \alias{has_esc}
-\title{Checks Whether Character Vector Contains ANSI CSI Sequences}
+\title{Checks Whether Character Vector Contains Escape Sequences}
 \usage{
 has_esc(x)
 }

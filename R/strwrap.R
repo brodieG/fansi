@@ -144,7 +144,7 @@ strwrap2_esc <- function(
     exdent=INT.1.POS, prefix=character(1), simplify=LGL.1, initial=character(1),
     pad.end=CHR.1 && nchar(.) < 2, wrap.always=LGL.1, strip.spaces=LGL.1,
     tabs.as.spaces=LGL.1,
-    tab.stops=INT.POS.STR && length(.) > 0
+    tab.stops=INT.POS.STR && length(.) > 0,
     warn=LGL.1, term.cap=CHR
   )
   if(tabs.as.spaces && strip.spaces)

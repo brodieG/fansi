@@ -6,12 +6,14 @@
 \title{ANSI Escape Sequence Aware Versions of strwrap}
 \usage{
 strwrap_esc(x, width = 0.9 * getOption("width"), indent = 0, exdent = 0,
-  prefix = "", simplify = TRUE, initial = prefix)
+  prefix = "", simplify = TRUE, initial = prefix,
+  warn = getOption("fansi.warn"), term.cap = getOption("fansi.term.cap"))
 
 strwrap2_esc(x, width = 0.9 * getOption("width"), indent = 0, exdent = 0,
   prefix = "", simplify = TRUE, initial = prefix, wrap.always = FALSE,
   pad.end = "", strip.spaces = !tabs.as.spaces, tabs.as.spaces = FALSE,
-  tab.stops = 8L)
+  tab.stops = 8L, warn = getOption("fansi.warn"),
+  term.cap = getOption("fansi.term.cap"))
 }
 \arguments{
 \item{x}{a character vector, or an object which can be converted to a
@@ -38,6 +40,18 @@ strwrap2_esc(x, width = 0.9 * getOption("width"), indent = 0, exdent = 0,
 
 \item{initial}{a character string to be used as prefix for
     each line except the first, for which \code{initial} is used.}
+
+\item{warn}{TRUE (default) or FALSE, whether to warn whether potentially
+problematic escape sequences are encountered.  These could cause the
+assumptions \code{fansi} is makes about how strings are rendered on your display
+to be incorrect, for example by moving the cursor (see \link{string-parsing}).}
+
+\item{term.cap}{character a vector of the capabilities of the terminal, can
+be any combination "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
+starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
+"38;2" or "48;2"). Defaults to \code{c("bright", "256")}.  Changing this
+parameter changes how \code{fansi} interprets escape sequences, so you should
+ensure that it matches your terminal capabilities.}
 
 \item{wrap.always}{TRUE or FALSE (default), whether to hard wrap at requested
 width if no word breaks are detected within a line.}

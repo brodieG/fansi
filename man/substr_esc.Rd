@@ -5,10 +5,12 @@
 \alias{substr2_esc}
 \title{ANSI Escape Sequence Aware Version of \code{substr}}
 \usage{
-substr_esc(x, start, stop)
+substr_esc(x, start, stop, warn = getOption("fansi.warn"),
+  term.cap = getOption("fansi.term.cap"))
 
 substr2_esc(x, start, stop, type = "chars", round = "start",
-  tabs.as.spaces = FALSE, tab.stops = getOption("fansi.tab.stops"))
+  tabs.as.spaces = FALSE, tab.stops = getOption("fansi.tab.stops"),
+  warn = getOption("fansi.warn"), term.cap = getOption("fansi.term.cap"))
 }
 \arguments{
 \item{x}{a character vector.}
@@ -16,6 +18,18 @@ substr2_esc(x, start, stop, type = "chars", round = "start",
 \item{start}{integer.  The first element to be replaced.}
 
 \item{stop}{integer.  The last element to be replaced.}
+
+\item{warn}{TRUE (default) or FALSE, whether to warn whether potentially
+problematic escape sequences are encountered.  These could cause the
+assumptions \code{fansi} is makes about how strings are rendered on your display
+to be incorrect, for example by moving the cursor (see \link{string-parsing}).}
+
+\item{term.cap}{character a vector of the capabilities of the terminal, can
+be any combination "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
+starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
+"38;2" or "48;2"). Defaults to \code{c("bright", "256")}.  Changing this
+parameter changes how \code{fansi} interprets escape sequences, so you should
+ensure that it matches your terminal capabilities.}
 
 \item{type}{character(1L) in \code{c("char", "width", "bytes")}}
 
@@ -36,14 +50,16 @@ slightly slower than \code{substr}.
 }
 \details{
 \code{substr2_esc} adds the ability to retrieve substrings based on display width,
-and byte width in addition to the normal character width.  #'
-\code{substr2_esc} also provides the option to convert tabs to spaces with
-\link{tabs_as_spaces} prior to taking substrings.
+and byte width in addition to the normal character width.  \code{substr2_esc} also
+provides the option to convert tabs to spaces with \link{tabs_as_spaces} prior to
+taking substrings.
 Because exact substrings on anything other than character width cannot be
 guaranteed (e.g.  because of multi-byte encodings, or double display-width
 characters) \code{substr2_esc} must make assumptions on how to resolve provided
 \code{start}/\code{stop} values that are infeasible and does so via the \code{round}
-parameter.  If we use "start" as the \code{round} value, then any time the \code{start}
+parameter.
+
+If we use "start" as the \code{round} value, then any time the \code{start}
 value corresponds to the middle of a multi-byte or a wide character, then
 that character is included in the substring, while any similar partially
 included character via the \code{stop} is left out.  The converse is true if we
