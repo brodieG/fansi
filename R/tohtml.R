@@ -37,6 +37,6 @@ esc_to_html <- function(
       "Argument `term.cap` may only contain values in ",
       deparse(VALID.TERM.CAP)
     )
-  .Call(FANSI_esc_to_html, x, warn, term.cap)
+  .Call(FANSI_esc_to_html, x, warn, term.cap.int)
 }
 
