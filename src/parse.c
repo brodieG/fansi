@@ -511,7 +511,7 @@ static struct FANSI_state parse_esc(struct FANSI_state state) {
 /*
  * Read UTF8 character
  */
-static struct FANSI_state FANSI_read_utf8(struct FANSI_state state) {
+static struct FANSI_state read_utf8(struct FANSI_state state) {
   int byte_size = FANSI_utf8clen(state.string[state.pos_byte]);
 
   // In order to compute char display width, we need to create a charsxp
@@ -545,7 +545,7 @@ static struct FANSI_state FANSI_read_utf8(struct FANSI_state state) {
  * Read a Character Off when we know it is an ascii char, this is so we have a
  * consistent way of advancing state.
  */
-struct FANSI_state FANSI_read_ascii(struct FANSI_state state) {
+static struct FANSI_state read_ascii(struct FANSI_state state) {
   ++state.pos_byte;
   ++state.pos_ansi;
   ++state.pos_raw;
@@ -557,8 +557,8 @@ struct FANSI_state FANSI_read_ascii(struct FANSI_state state) {
 /*
  * C0 ESC sequences treated as zero width
  */
-struct FANSI_state FANSI_read_c0(struct FANSI_state state) {
-  state = FANSI_read_ascii(state);
+static struct FANSI_state read_c0(struct FANSI_state state) {
+  state = read_ascii(state);
   --state.pos_width;
   --state.pos_width_target;
   return state;
@@ -571,13 +571,13 @@ struct FANSI_state FANSI_read_c0(struct FANSI_state state) {
 struct FANSI_state FANSI_read_next(struct FANSI_state state) {
   const char chr_val = state.string[state.pos_byte];
   // Normal ASCII characters
-  if(chr_val >= 0x20 & chr_val < 0x7f) state = FANSI_read_ascii(state);
+  if(chr_val >= 0x20 & chr_val < 0x7f) state = read_ascii(state);
   // UTF8 characters (chr_val is signed, so > 0x7f will be negative)
-  else if (chr_val < 0) state = FANSI_read_utf8(state);
+  else if (chr_val < 0) state = read_utf8(state);
   // ESC sequences
   else if (chr_val == 0x1b) state = parse_esc(state);
   // C0 escapes (e.g. \t, \n, etc)
-  else if(chr_val) state = FANSI_read_c0(state);
+  else if(chr_val) state = read_c0(state);
 
   return state;
 }
