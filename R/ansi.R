@@ -42,6 +42,10 @@
 #'   "38" and "48" do.
 #' * "22" is interpreted as double underline, not bold-off
 #'
+#' ELABORATE ON THE TERM CAPABILITY DEPENDENCE OF THE GENERATED SEQUENCES.
+#'
+#' ELABORATE ON WHAT HAPPENS WHEN HIT AN ILLEGAL SEQUENCE.
+#'
 #' We chose to interpret ANSI CSI SGR sequences because this reduces how
 #' much string transcription we need to do.  If we do not interpret the
 #' sequences then we need to record all of them from the beginning of the
