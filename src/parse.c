@@ -491,7 +491,7 @@ struct FANSI_state FANSI_parse_esc(struct FANSI_state state) {
         // FANSI_parse_colors can change the corresponding value in the `state`
         // struct, so better to deal with that directly
 
-        if(state.last || state.err_code) break;
+        if(state.last) break;
       } while(1);
     }
     int byte_offset = state.pos_byte - pos_byte_prev;
