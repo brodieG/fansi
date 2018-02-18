@@ -344,7 +344,8 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
     );
     // nocov end
 
-  int err_code = 0;  // track worst error code
+  int err_code = 0;    // track worst error code
+  state.err_code = 0;  // reset prior to each read
 
   // consume all ESC sequences
 
@@ -528,7 +529,6 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       );
       state.warn = -state.warn; // only warn once
     }
-    state.err_code = 0;
   } else {
     // Not 100% sure this is right...
     state.last_char_width = 1;
@@ -1123,7 +1123,7 @@ SEXP FANSI_state_at_pos_ext(
   SEXP res_str = PROTECT(allocVector(STRSXP, len));
   SEXP res_chr, res_chr_prev = PROTECT(mkChar(""));
 
-  string = FANSI_string_as_utf8(text_chr).buff;
+  string = FANSI_string_as_utf8(text_chr).string;
 
   struct FANSI_state state = FANSI_state_init(string, warn, term_cap);
   struct FANSI_state state_prev = FANSI_state_init(string, warn, term_cap);
