@@ -81,7 +81,7 @@ SEXP FANSI_tabs_as_spaces(
     if(tab_count) {
       // Need to convert to UTF8 so width calcs work
 
-      struct FANSI_buff_const buff_utf8 =
+      struct FANSI_string_as_utf8 buff_utf8 =
         FANSI_string_as_utf8(STRING_ELT(vec, i));
 
       // Figure out possible size of buffer, allowing max_tab_stop for every
@@ -95,7 +95,7 @@ SEXP FANSI_tabs_as_spaces(
       FANSI_size_buff(buff, new_buff_size);
 
       struct FANSI_state state =
-        FANSI_state_init(buff_utf8.buff, warn, term_cap);
+        FANSI_state_init(buff_utf8.string, warn, term_cap);
       char cur_chr;
 
       char * buff_track, * buff_start;

@@ -76,7 +76,7 @@ int FANSI_is_utf8_loc() {
  * Translates a CHARSXP to a UTF8 char if necessary, otherwise returns
  * the char
  */
-struct FANSI_buff_const FANSI_string_as_utf8(SEXP x) {
+struct FANSI_string_as_utf8 FANSI_string_as_utf8(SEXP x) {
   if(TYPEOF(x) != CHARSXP)
     error("Internal Error: expect CHARSXP."); // nocov
 
@@ -90,17 +90,20 @@ struct FANSI_buff_const FANSI_string_as_utf8(SEXP x) {
   int translate = enc_type != CE_UTF8;
   const char * string;
   int len = 0;
+  int translated = 0;
   if(translate) {
     // would be nice to know if `x` is ASCII only, but at least translate will
     // just return string if that's what it is
     string = translateCharUTF8(x);
-    if(string == CHAR(x)) len = LENGTH(x);
+    if(string == CHAR(x)) len = LENGTH(x); else translated = 1;
     else len = strlen(string);
   } else {
     string = CHAR(x);
     len = strlen(string);
   }
-  return (struct FANSI_buff_const) {.buff=string, .len=len};
+  return (struct FANSI_string_as_utf8) {
+    .buff=string, .len=len, .translated=translated
+  };
 }
 
 /*
