@@ -95,14 +95,17 @@ struct FANSI_string_as_utf8 FANSI_string_as_utf8(SEXP x) {
     // would be nice to know if `x` is ASCII only, but at least translate will
     // just return string if that's what it is
     string = translateCharUTF8(x);
-    if(string == CHAR(x)) len = LENGTH(x); else translated = 1;
-    else len = strlen(string);
+    if(string == CHAR(x)) len = LENGTH(x);
+    else {
+      translated = 1;
+      len = strlen(string);
+    }
   } else {
     string = CHAR(x);
     len = strlen(string);
   }
   return (struct FANSI_string_as_utf8) {
-    .buff=string, .len=len, .translated=translated
+    .string=string, .len=len, .translated=translated
   };
 }
 

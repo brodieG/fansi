@@ -37,7 +37,7 @@ struct FANSI_prefix_dat {
  */
 
 static struct FANSI_prefix_dat make_pre(SEXP x) {
-  const char * x_utf8 = FANSI_string_as_utf8(asChar(x)).buff;
+  const char * x_utf8 = FANSI_string_as_utf8(asChar(x)).string;
   // ideally we would IS_ASCII(x), but that's not available to extensions
   int x_has_utf8 = FANSI_has_utf8(x_utf8);
 
