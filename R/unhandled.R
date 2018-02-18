@@ -10,20 +10,28 @@
 #' characters and it is in a different encoding.  This function will warn you if
 #' it encounters such strings.
 #'
+#' The return value is a data frame with five columns:
+#'
+#' * index: integer the index in `x` with the unhandled sequence
+#' * esc: character the unhandled escape sequence
+#' * start: integer the start position of the sequence (in characters)
+#' * stop: integer the start position of the sequence (in characters)
+#' * error: the reason why the sequence was not handled:
+#'     * special: contains uncommon characters in ":<=>"
+#'     * unknown: a substring with a value that does not correspond to a known
+#'       SGR code
+#'     * non-SGR: a non-SGR CSI sequence
+#'     * malformed: a malformed CSI sequence
+#'     * non-CSI: a non-CSI escape sequence, i.e. one where the ESC is
+#'       followed by something other than "["
+#'
 #' @export
 #' @seealso [string-parsing] for details of how `fansi` interprets escape
 #'   sequences, [iconv] for how to translate strings across encodings.
 #' @param x character vector
-#' @return list of same length as `x` containing either a zero length vector,
-#'   or a two row integer matrix for row one has the 1-indexed byte location of
-#'   the beginning of the problematic sequence, and row two an integer code
-#'   describing the type of problem where the codes are:
-#'
-#'   * 1: Valid CSI SGR with uncommon characters ":<=>".
-#'   * 2: Valid CSI SGR with an unknown SGR substring.
-#'   * 3: Valid non-SGR CSI sequence
-#'   * 4: Malformed CSI sequences
-#'   * 5: Other type of escape sequence
+#' @return data frame with as many rows as there are unhandled escape
+#'   sequences and columns containing useful information for debugging the
+#'   problem.  See details.
 #'
 #' @examples
 #' string <- c(
@@ -31,8 +39,12 @@
 #'   "baz \033[31#3m", "a\033[31k", "hello\033m world"
 #' )
 #' unhandled_esc(string)
-#' which(lengths(unhandled_esc(string)) == 0) # valid escapes
 
 unhandled_esc <- function(x) {
+  res <- .Call(FANSI_unhandled_esc, x)
+  names(res) <- c("index", "start", "stop", "error", "translated")
+  errors <- c('special', 'unknown', 'non-SGR', 'malformed', 'non-CSI')
+  res[['error']] <- errors[res[['error']]]
+  as.data.frame(res, stringsAsFactors=FALSE)
 }
 
