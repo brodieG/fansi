@@ -14,20 +14,67 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-#' `fansi` String Parsing
+#' `fansi` String Parsing and Interpretation
 #'
-#' @section ANSI Escape Sequences:
+#' @section Control Characters and Sequences:
 #'
-#' `fansi` parses and **interprets** ANSI CSI SGR sequences.  ANSI CSI SGR
-#' sequences start with 'ESC[' and end in 'm' and will affect the display of
-#' text on screen, for example by changing its color.  `fansi` also parses
-#' other valid ANSI escape sequences but only so that they are excluded from
-#' string width calculations.
+#' Control characters and sequences are non-printing inline characters that can
+#' be used to modify terminal/display behavior.  `fansi` seeks to handle
+#' a particular class of control sequences called [ANSI CSI SGR
+#' sequences](https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_sequences).
+#' These can be used to modify the appearance of text, for example by changing
+#' the text color or style.
+#'
+#'
+#' can be used to alter the appearance of text.
+#'
+#' by
+#'
+#' `fansi` considers three types of escape sequences / control characters:
+#'
+#' * C0 control characters, like tabs, newlines, etc.
+#' * .
+#' * Other Escape Sequences.
+#'
+#' All control characters / sequences are considered to be zero display width.
+#' Escape sequences starting with ESC are assumed to be two characters long
+#' (including the ESC) unless they are of the CSI variety (i.e. starting in
+#' "ESC[").  This means that any other longer-than-two-character escape
+#' sequences will be misinterpreted.
+#'
+#' Because control characters / sequences can affect the display of text `fansi`
+#' will warn if it encounters any that it does not know how to interpret.
+#' `fansi` currently can only interpret known ANSI CSI SGR sequences and
+#' newlines.  Tabs can also be handled if you convert them first to spaces with
+#' the `tabs.as.spaces` parameter, or with [tabs_as_spaces].
+#'
+#'
+#'
+#' `fansi` parses and **interprets**
+#' .  #' ANSI CSI SGR sequences start with 'ESC[' and end in 'm' and will affect the
+#' display of text on screen, for example by changing its color.  `fansi` also
+#' parses other valid ANSI escape sequences but only so that they are excluded
+#' from string width calculations.
 #'
 #' In most cases `fansi`'s parsing and interpretation should be transparent to
 #' the user, but in some cases a mismatch between how `fansi` interprets escape
 #' sequences and how the display interprets them may cause artifacts (e.g.
-#' string wrapping at the wrong column).  The most likely source of mismatches
+#' string wrapping at the wrong column).
+#'
+#' By default `fansi` will warn when it encounters sequences that _could_ cause
+#' display artifacts, and errs on the verbose side.  In particular, `fansi` will
+#' warn if it encounters any escape sequence it does not explicitly know how to
+#' handle under the assumption that it _could_ cause display artifacts.  You may
+#' turn off the default warning behavior via the `warn` parameter or via the
+#' `fansi.warn` global option.
+#'
+#' "C0" escape sequences, such as "\t", "\r", etc. can also cause `fansi` to
+#' incorrectly manipulate strings.  `fansi` will not warn about those.  If
+#' desirable you can convert tabs to spaces with [tabs_as_spaces] or with the
+#' `tabs.as.spaces` parameter.
+#'
+#' All escape characters or sequences are considered zero lenght.
+#' The most likely source of mismatches
 #' are obscure or invalid ANSI CSI SGR sequences, and ANSI/other escape
 #' sequences that move the cursor or delete screen output.  Keep in mind that
 #' these things will also affect normal R string manipulation functions.
