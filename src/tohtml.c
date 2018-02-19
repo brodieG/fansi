@@ -377,6 +377,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
       FANSI_size_buff(&buff, bytes_final);
       string = string_start;
       state_init.warn = state.warn;
+      state_init.string = string_start;
       state = state_prev = state_init;
 
       int first_esc = 1;
