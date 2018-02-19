@@ -1092,7 +1092,15 @@ SEXP FANSI_state_at_pos_ext(
   SEXP text_chr = asChar(text);
   const char * string = CHAR(text_chr);
 
+  // Tabs as spaces
+
+  struct FANSI_buff buff = (struct FANSI_buff) {.len=0};
+  if(asInteger(tabs_as_spaces)) {
+    text = PROTECT(FANSI_tabs_as_spaces(text, tab_stops, &buff, warn, term_cap));
+  } else PROTECT(text);
+
   struct FANSI_state_pair state_pair, state_pair_old;
+
 
   // Allocate result, will be a res_cols x n matrix.  A bit wasteful to record
   // all the color values given we'll rarely use them, but variable width
@@ -1186,6 +1194,6 @@ SEXP FANSI_state_at_pos_ext(
   SET_VECTOR_ELT(res_list, 0, res_str);
   SET_VECTOR_ELT(res_list, 1, res_mx);
 
-  UNPROTECT(7);
+  UNPROTECT(8);
   return(res_list);
 }
