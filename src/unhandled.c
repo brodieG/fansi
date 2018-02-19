@@ -53,11 +53,9 @@ SEXP FANSI_unhandled_esc(SEXP x) {
       struct FANSI_state state = FANSI_state_init(string, no_warn, zero_vec);
       int has_errors = 0;
 
-      while(*string && (string = strchr(string, 0x1b))) {
+      while(state.string[state.pos_byte]) {
         // Since we don't care about width, etc, we only use the state objects to
         // parse the ESC sequences
-
-        state.pos_byte = (string - string_start);
 
         int esc_start = state.pos_ansi;
         state = FANSI_read_next(state);
@@ -98,7 +96,6 @@ SEXP FANSI_unhandled_esc(SEXP x) {
           ++err_count;
           UNPROTECT(2);
         }
-        string += state.pos_byte;
       }
       if(break_early) break;
     }

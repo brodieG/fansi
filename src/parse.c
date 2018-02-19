@@ -345,7 +345,6 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
     // nocov end
 
   int err_code = 0;    // track worst error code
-  state.err_code = 0;  // reset prior to each read
 
   // consume all ESC sequences
 
@@ -597,6 +596,7 @@ static struct FANSI_state read_c0(struct FANSI_state state) {
  */
 struct FANSI_state FANSI_read_next(struct FANSI_state state) {
   const char chr_val = state.string[state.pos_byte];
+  if(state.err_code) state.err_code = 0; // reset err code after each char
   // Normal ASCII characters
   if(chr_val >= 0x20 & chr_val < 0x7f) state = read_ascii(state);
   // UTF8 characters (chr_val is signed, so > 0x7f will be negative)
