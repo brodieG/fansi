@@ -36,7 +36,7 @@ digits_in_int <- function(x) .Call(FANSI_digits_in_int, x)
 #'   converting tabs to spaces.  If there are more tabs in a line than defined
 #'   tab stops the last tab stop is re-used.  For the purposes of applying tab
 #'   stops, each input line is considered a line and the character count begins
-#'   from the beginning of the input line.  
+#'   from the beginning of the input line.
 #' @return character, `x` with tabs replaced by spaces, with elements
 #'   possibly converted to UTF-8.
 #' @examples
@@ -74,6 +74,40 @@ tabs_as_spaces <- function(
     )
   .Call(FANSI_tabs_as_spaces, x, as.integer(tab.stops), warn, term.cap.int)
 }
+#' Test Terminal Capabilities
+#'
+#' Outputs ANSI CSI SGR formatted text to screen so that you may visually
+#' inspect what color capabilities your terminal supports.  The three tested
+#' terminal capabilities are:
+#'
+#' * "bright" for bright colors with SGR codes in 90-97 and 100-107
+#' * "256" for colors defined by "38;5;x" and "48;5;x" where x is in 0-255
+#' * "truecolor" for colors defined by "38;2;x;y;z" and "48;x;y;x" where x, y,
+#'   and z are in 0-255
+#'
+#' Each of the color capabilities your terminal supports should be displayed
+#' with a blue background and a red foreground.
+#'
+#' @export
+#' @return character the test vector, invisibly
+#' @examples
+#' term_cap_test()
+
+term_cap_test <- function() {
+  types <- format(c("bright", "256", "truecolor"))
+  res <- paste0(
+    c(
+      "\033[91;104m",
+      "\033[38;5;196;48;5;21m",
+      "\033[38;2;255;0;0;48;2;0;0;255m"
+    ),
+    types,
+    "\033[0m"
+  )
+  res.esc <- gsub("\033", "\\033", res, fixed=TRUE)
+  writeLines(paste0(res, "  ->  ", format(res.esc)))
+}
+
 ## Testing interface for color code to HTML conversion
 
 esc_color_code_to_html <- function(x) {
