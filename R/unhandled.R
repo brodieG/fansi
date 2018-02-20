@@ -2,7 +2,7 @@
 #'
 #' Will return position and types of unhandled sequences in a character vector.
 #' Unhandled sequences may cause `fansi` to interpret strings in a way
-#' different to your display.  See [string-parsing] for details.
+#' different to your display.  See [fansi] for details.
 #'
 #' This is a debugging function and as such is not optimized for speed.
 #'
@@ -26,8 +26,8 @@
 #' * esc: character the unhandled escape sequence
 #'
 #' @export
-#' @seealso [string-parsing] for details of how `fansi` interprets escape
-#'   sequences
+#' @seealso [fansi] for important details on how strings are interpreted,
+#'   particularly if you are getting unexpected results.
 #' @param x character vector
 #' @return data frame with as many rows as there are unhandled escape
 #'   sequences and columns containing useful information for debugging the

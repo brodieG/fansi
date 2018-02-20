@@ -28,7 +28,11 @@
   .default.opts <- list(
     fansi.tab.stops=8L,
     fansi.warn=TRUE,
-    fansi.term.cap=c('bright', '256')
+    fansi.term.cap=c(
+      if(isTRUE(Sys.getenv('COLORTERM') %in% c('truecolor', '24bit')))
+      'truecolor',
+      'bright', '256'
+    )
   )
   # Scheme defaults are fairly complex...
 

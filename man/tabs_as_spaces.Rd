@@ -61,6 +61,6 @@ writeLines(
 ) )
 }
 \seealso{
-\link{string-parsing} for important details on how strings are
-interpreted
+\link{fansi} for important details on how strings are interpreted,
+particularly if you are getting unexpected results.
 }

@@ -67,3 +67,7 @@ use "stop" as the \code{round} value.  "neither" would cause all partial
 characters to be dropped irrespective whether they correspond to \code{start} or
 \code{stop}, and "both" could cause all of them to be included.
 }
+\seealso{
+\link{string-parsing} for important details on how strings are
+interpreted and how character width is computed.
+}

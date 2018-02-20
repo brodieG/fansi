@@ -32,8 +32,8 @@
 #' Additionally,`indent`, `exdent`, `initial`, and `prefix` will be ignored when
 #' computing tab positions.
 #'
-#' @seealso [string-parsing] for important details on how strings are
-#'   interpreted and how character width is computed.
+#' @seealso [fansi] for important details on how strings are interpreted,
+#'   particularly if you are getting unexpected results.
 #' @inheritParams base::strwrap
 #' @inheritParams tabs_as_spaces
 #' @inheritParams substr_esc

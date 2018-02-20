@@ -17,7 +17,7 @@ problem.  See details.
 \description{
 Will return position and types of unhandled sequences in a character vector.
 Unhandled sequences may cause \code{fansi} to interpret strings in a way
-different to your display.  See \link{string-parsing} for details.
+different to your display.  See \link{fansi} for details.
 }
 \details{
 This is a debugging function and as such is not optimized for speed.
@@ -52,6 +52,6 @@ string <- c(
 unhandled_esc(string)
 }
 \seealso{
-\link{string-parsing} for details of how \code{fansi} interprets escape
-sequences
+\link{fansi} for important details on how strings are interpreted,
+particularly if you are getting unexpected results.
 }

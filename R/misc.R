@@ -27,8 +27,8 @@ digits_in_int <- function(x) .Call(FANSI_digits_in_int, x)
 #' stops you will need to provide them yourself if you are using anything
 #' outside of the standard tab stop every 8 characters that is the default.
 #'
-#' @seealso [string-parsing] for important details on how strings are
-#'   interpreted
+#' @seealso [fansi] for important details on how strings are interpreted,
+#'   particularly if you are getting unexpected results.
 #' @export
 #' @inheritParams substr_esc
 #' @param x character vector to replace tabs in.
@@ -86,8 +86,11 @@ tabs_as_spaces <- function(
 #'   and z are in 0-255
 #'
 #' Each of the color capabilities your terminal supports should be displayed
-#' with a blue background and a red foreground.
+#' with a blue background and a red foreground.  For reference the corresponding
+#' CSI SGR sequences are displayed as well.
 #'
+#' @seealso [fansi] for important details on how strings are interpreted,
+#'   particularly if you are getting unexpected results.
 #' @export
 #' @return character the test vector, invisibly
 #' @examples
@@ -105,7 +108,9 @@ term_cap_test <- function() {
     "\033[0m"
   )
   res.esc <- gsub("\033", "\\033", res, fixed=TRUE)
-  writeLines(paste0(res, "  ->  ", format(res.esc)))
+  res.fin <- paste0(res, "  ->  ", format(res.esc))
+  writeLines(res.fin)
+  invisible(res)
 }
 
 ## Testing interface for color code to HTML conversion
