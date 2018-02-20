@@ -19,91 +19,69 @@
 #' @section Control Characters and Sequences:
 #'
 #' Control characters and sequences are non-printing inline characters that can
-#' be used to modify terminal/display behavior.  `fansi` seeks to handle
-#' a particular class of control sequences called [ANSI CSI SGR
-#' sequences](https://en.wikipedia.org/wiki/ANSI_escape_code#CSI_sequences).
-#' These can be used to modify the appearance of text, for example by changing
-#' the text color or style.
+#' be used to modify terminal display and behavior, for example by changing text
+#' color or cursor position.  There are three types of control characters and
+#' sequences that `fansi` treats specially:
 #'
+#' * "C0" control characters, such as tabs and carriage returns.
+#' * Sequences starting in "ESC[", also known as ANSI CSI sequences.
+#' * Sequences starting in "ESC" and followed by something other than "[".
 #'
-#' can be used to alter the appearance of text.
+#' All of these are considered zero display width for purposes of string width
+#' calculations.
 #'
-#' by
+#' Escape sequences starting with ESC are assumed to be two characters
+#' long (including the ESC) unless they are of the CSI variety, in which case
+#' their length is computed as per the ANSI CSI spec.  There are non-CSI escape
+#' sequences that may be longer than two characters, but `fansi` will treat them
+#' as if they were two characters wide.
 #'
-#' `fansi` considers three types of escape sequences / control characters:
+#' In theory it is possible to encode ANSI CSI escape sequences with single byte
+#' introducing character in the 0x40-0x5F range instead of the traditional
+#' "ESC[".  Since this is rare and it conflicts with UTF-8 encoding, we do not
+#' support it.
 #'
-#' * C0 control characters, like tabs, newlines, etc.
-#' * .
-#' * Other Escape Sequences.
+#' @section ANSI CSI SGR Control Sequences
 #'
-#' All control characters / sequences are considered to be zero display width.
-#' Escape sequences starting with ESC are assumed to be two characters long
-#' (including the ESC) unless they are of the CSI variety (i.e. starting in
-#' "ESC[").  This means that any other longer-than-two-character escape
-#' sequences will be misinterpreted.
+#' ANSI CSI SGR control sequences are the subset of CSI sequences that can be
+#' used to change text appearance (e.g. color).  These sequences begin with
+#' "ESC[" and end in "m".  `fansi` interprets these sequences and writes new
+#' ones to the output strings in such a way that the original formatting is
+#' preserved.  In most cases this should be transparent to the user.
 #'
-#' Because control characters / sequences can affect the display of text `fansi`
-#' will warn if it encounters any that it does not know how to interpret.
-#' `fansi` currently can only interpret known ANSI CSI SGR sequences and
-#' newlines.  Tabs can also be handled if you convert them first to spaces with
-#' the `tabs.as.spaces` parameter, or with [tabs_as_spaces].
+#' Occasionally there may be mismatches between how `fansi` and a
+#' display interprets the CSI SGR sequences.  The most likely source of
+#' artifacts are control characters or sequences that `fansi` does not
+#' interpret, including unknown SGR substrings, "C0" control characters like
+#' tabs and carriage returns, and other escape sequence.
 #'
+#' Another possible source of problems is that different terminals may interpret
+#' the same valid CSI SGR sequence differently.  For example, a 24-bit color
+#' sequences such as "ESC[38;2;31;42;4" is a single foreground color to a
+#' terminal that supports it, or separate foreground, background, and underline
+#' specifications for one that does not.
 #'
+#' `fansi` will will warn if it encounters control sequences or characters
+#' that it cannot interpret or that might conflict with terminal capabilities.
+#' You can turn off warnings via the `warn` parameter or via the "fansi.warn"
+#' global option.  
 #'
-#' `fansi` parses and **interprets**
-#' .  #' ANSI CSI SGR sequences start with 'ESC[' and end in 'm' and will affect the
-#' display of text on screen, for example by changing its color.  `fansi` also
-#' parses other valid ANSI escape sequences but only so that they are excluded
-#' from string width calculations.
+#' You can also tell `fansi` what your terminal capabilities are
+#' via the `term.cap` parameter or the "fansi.term.cap" global option (by
+#' default, we assume your terminal supports bright and 256 color modes).  See
+#' [term_cap_test].
 #'
-#' In most cases `fansi`'s parsing and interpretation should be transparent to
-#' the user, but in some cases a mismatch between how `fansi` interprets escape
-#' sequences and how the display interprets them may cause artifacts (e.g.
-#' string wrapping at the wrong column).
-#'
-#' By default `fansi` will warn when it encounters sequences that _could_ cause
-#' display artifacts, and errs on the verbose side.  In particular, `fansi` will
-#' warn if it encounters any escape sequence it does not explicitly know how to
-#' handle under the assumption that it _could_ cause display artifacts.  You may
-#' turn off the default warning behavior via the `warn` parameter or via the
-#' `fansi.warn` global option.
-#'
-#' "C0" escape sequences, such as "\t", "\r", etc. can also cause `fansi` to
-#' incorrectly manipulate strings.  `fansi` will not warn about those.  If
-#' desirable you can convert tabs to spaces with [tabs_as_spaces] or with the
-#' `tabs.as.spaces` parameter.
-#'
-#' All escape characters or sequences are considered zero lenght.
-#' The most likely source of mismatches
-#' are obscure or invalid ANSI CSI SGR sequences, and ANSI/other escape
-#' sequences that move the cursor or delete screen output.  Keep in mind that
-#' these things will also affect normal R string manipulation functions.
-#'
-#' Some SGR codes that may cause problems:
-#'
-#' * "[34]8;2;..." if your system does not support it as this can cause a
-#'   frame-shift due to subsequent parameters being interpreted on a stand alone
-#'   basis instead of the rgb color spec.
-#' * "26" is assumed to be a single number code, which could cause problems if
-#'   the correct interpretation changes the meaning of subsequent numbers as
-#'   "38" and "48" do.
-#' * "22" is interpreted as double underline, not bold-off
-#'
-#' ELABORATE ON THE TERM CAPABILITY DEPENDENCE OF THE GENERATED SEQUENCES.
-#'
-#' ELABORATE ON WHAT HAPPENS WHEN HIT AN ILLEGAL SEQUENCE.
-#'
-#' * We do not consider things like 48;6 illegal
-#' * We do not consider sequences that are illegal because lack of `term.cap`
-#'   but otherwise would be illegal; we just ignore the single SGR sequence that
-#'   initiated the illegal sequences
+#' `fansi` can work around "C0" tab control characters by turning them into
+#' spaces first with [tabs_as_spaces] or with the `tabs.as.spaces` parameters.
+#' For the special case of tab "C0" control characters
 #'
 #' We chose to interpret ANSI CSI SGR sequences because this reduces how
-#' much string transcription we need to do.  If we do not interpret the
-#' sequences then we need to record all of them from the beginning of the
-#' string and prepend all the accumulated tags up to beginning of a substring
-#' to the substring.  In many case the bulk of those accumulated tags will be
-#' irrelevant as their effects will have been superseded by subsequent tags.
+#' much string transcription we need to do during string manipulation.  If we do
+#' not interpret the sequences then we need to record all of them from the
+#' beginning of the string and prepend all the accumulated tags up to beginning
+#' of a substring to the substring.  In many case the bulk of those accumulated
+#' tags will be irrelevant as their effects will have been superseded by
+#' subsequent tags.
 #'
 #' `fansi` assumes that ANSI CSI SGR sequences should be interpreted in
 #' cumulative "Graphic Rendition Combination Mode".  This means new SGR
@@ -111,25 +89,21 @@
 #' the effect is the same as replacement (e.g. if you have a color active and
 #' pick another one).
 #'
-#' In theory it is possible to encode ANSI escape sequences with single byte
-#' introducing character in the 0x40-0x5F range, but since this is rare and it
-#' conflicts with UTF-8 encoding, we ignore it.
-#'
 #' @section Encodings / UTF-8:
 #'
 #' `fansi` will convert any non-ASCII strings to UTF-8.  These strings are
-#' interpreted in a manner intended to be consistent with how R does things.
-#' There are three ways things may not work out exactly as desired:
+#' interpreted in a manner intended to be consistent with base R.  There are
+#' three ways things may not work out exactly as desired:
 #'
 #' 1. `fansi` fails to treat a UTF-8 sequence the same way as R does
 #' 2. R incorrectly treats a UTF-8 sequences
-#' 3. Your display incorrectly treats a UTF-8 sequences
+#' 3. Your display incorrectly handles a UTF-8 sequences
 #'
 #' These issues are most likely to occur with invalid UTF-8 sequences, with
 #' combining character sequences, and emoji.  For example, as of this writing R
-#' (and my terminal) consider emojis to be one wide characters, when in reality
-#' they are two wide.  Do not expect the `fansi` functions to work correctly
-#' with strings containing emoji.
+#' (and the OSX terminal) consider emojis to be one wide characters, when in
+#' reality they are two wide.  Do not expect the `fansi` width
+#' calculations to to work correctly with strings containing emoji.
 #'
 #' Internally, `fansi` computes the width of every UTF-8 character sequence
 #' outside of the ASCII range using the native `R_nchar` function.  This will
@@ -141,8 +115,6 @@
 #' sum of the character widths.  In informal testing we have found this to be
 #' rare because in the most common multi-character graphemes the combining
 #' characters are computed as zero width.
-#'
-#' @section Roadmap:
 #'
 #' Ultimately we would like to adopt a proper UTF-8 library like
 #' [r-utf8](https://github.com/patperry/r-utf8/) or
