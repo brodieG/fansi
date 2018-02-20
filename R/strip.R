@@ -18,13 +18,19 @@
 #'
 #' ...explain exactly what gets striped...
 #'
-#' @param x character vector
+#' @inheritParams substr_esc
+#' @param what character(1L) in:
+#'   * "most": strip all "C0" control characters except newlines, and all
+#'     other escape sequences.
+#'   * "all": strip all "C0" control characters and other other escape
+#'     sequences.
+#'   * "esc": strip escape sequences.
 #' @return character vector of same length as x with ANSI escape sequences
 #'   stripped
 #' @export
 
-strip_esc <- function(x, warn=getOption('fansi.warn')) {
-  vetr(warn=LGL.1)
+strip_esc <- function(x, what='most', warn=getOption('fansi.warn')) {
+  vetr(warn=LGL.1, what=CHR.1 && . %in% c("most", "all", "esc"))
   .Call(FANSI_strip_csi, x, warn)
 }
 
