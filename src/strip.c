@@ -30,13 +30,15 @@
  */
 
 SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
-  if(TYPEOF(x) != STRSXP) error("Argument `x` should be a character vector.");
-  if(TYPEOF(what) != INTSXP) error("Argument `what` should integer.");
+  if(TYPEOF(x) != STRSXP)
+    error("Argument `x` should be a character vector.");
+  if(TYPEOF(what) != INTSXP)
+    error("Internal Error: `what` should integer.");
   if(
     (TYPEOF(warn) != LGLSXP && TYPEOF(warn) != INTSXP) || XLENGTH(warn) != 1 ||
     INTEGER(warn)[0] == NA_INTEGER
   )
-    error("Argument `warn` should be TRUE or FALSE");
+    error("Internal Error: `warn` should be TRUE or FALSE");
 
   int warn_int = asInteger(warn);
   if(warn_int < 0 || warn_int > 2)
@@ -47,6 +49,7 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
   int what_int = 0;
   for(R_xlen_t i = 0; i < XLENGTH(what); ++i) {
     what_int |= 1 << (INTEGER(what)[i] - 1);
+    Rprintf("what_int %d what orig %d\n", what_int, INTEGER(what)[i]);
   }
 
   R_xlen_t i, len = xlength(x);
@@ -85,11 +88,11 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
     const char * chr = CHAR(x_chr);
     const char * chr_track = chr;
     char * chr_buff;
-    char * res_track, * res_start;
+    char * res_track = NULL, * res_start = NULL;
 
-    // note that csi.start is the NULL pointer if an escape is not found
-
-    while((csi = FANSI_find_esc(chr_track, warn_int)).start) {
+    while(*(csi = FANSI_find_esc(chr_track, what_int)).start) {
+      Rprintf("Found csi %d len %d\n", csi.start - chr_track, csi.len);
+      error("die");
       if(csi.start - chr >= INT_MAX - csi.len)
         // nocov start
         error(

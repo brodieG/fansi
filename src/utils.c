@@ -42,26 +42,34 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
   | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_read_esc  |
   \***************************************************/
   int valid = 0;
-  int strip = 0;
+  int found = 0;
   const char * x_track = x;
-  const char * x_strip = x;
+  const char * x_found = x;
+  const char * x_found_start;
 
   struct FANSI_csi_pos res;
+
   while(*x_track) {
+    Rprintf("track %d\n", x_track - x);
     const char x_val = *(x_track++);
-    // use strip & strip_this in conjunction so that we can allow multiple
-    // strippable adjacent elements to be stripped in one go
+    // use found & found_this in conjunction so that we can allow multiple
+    // adjacent elements to be found in one go
 
-    int strip_this = 0;
+    int found_this = 0;
 
-    // If not normal ASCII or UTF8, examine whether we need to strip
+    // If not normal ASCII or UTF8, examine whether we need to found
     if(!((x_val > 31 && x_val < 127) || x_val < 0)) {
-      strip_this = 1;
+      if(!found) {
+        x_found_start = x_track - 1;
+        Rprintf("Set print start %d with what %d\n", x_found_start - x, what);
+      }
+      found_this = 1;
       if(x_val == 27) {
-        // If not stripping CSI or SGR, skip (12 = 2^2 + 2^3), where ^2
+        // If not founding CSI or SGR, skip (12 = 2^2 + 2^3), where ^2
         // corresponds to SGR and ^3 CSI
 
         if(x_val == '[' && (what & 12)) {
+          Rprintf("CSI start %d\n", x_track - x);
           // This is a CSI sequence, so it has multiple characters that we need to
           // skip.  The final character is processed outside of here since it has
           // the same logic for CSI and non CSI sequences
@@ -89,14 +97,17 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
 
           if(!valid)
             while(*x_track >= 0x20 && *x_track <= 0x3F) ++x_track;
+
+          if(what & 4 && *x_track != 'm') found_this = 0;
         } else if (what & 1 << 4) {
+          Rprintf("ESC start %d\n", x_track - x);
           valid = (*x_track >= 0x40 && *x_track <= 0x5f);
         } else {
-          strip_this = 0;
+          Rprintf("ESC but no found %d\n", x_track - x);
+          found_this = 0;
         }
         // In all escape sequences the last character should be normal to be
         // valid (is this actually true for generic escape?)
-
 
         if(*x_track && *x_track != 27) ++x_track;
       } else if (
@@ -105,16 +116,21 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
           (x_val > 0 && (what & 2))         // other C0
         )
       ) {
-        strip_this = 0;                     // don't strip
+        Rprintf("C0 but no found %d\n", x_track - x);
+        found_this = 0;                     // don't found
       }
-      if(!strip && strip_this) strip = 1;
-      x_strip = x_track;
+      if(!found && found_this) found = 1;
+      x_found = x_track;
     }
-    if(strip && !strip_this) break;
+    if(found && !found_this) break;
   }
-  res = (struct FANSI_csi_pos){
-    .start=x, .len=(x_strip - x), .valid=valid
-  };
+  if(found) {
+    res = (struct FANSI_csi_pos){
+      .start=x_found_start, .len=(x_found - x_found_start), .valid=valid
+    };
+  } else {
+    res = (struct FANSI_csi_pos){.start=x, .len=0, .valid=valid};
+  }
   return res;
 }
 /*

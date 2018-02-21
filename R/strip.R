@@ -43,11 +43,11 @@
 strip_esc <- function(x, what='sgr', warn=getOption('fansi.warn')) {
   vetr(warn=LGL.1, what=CHR)
   if(length(what)) {
-    if(anyNA(warn.int <- match(warn, VALID.WHAT)))
+    if(anyNA(what.int <- match(what, VALID.WHAT)))
       stop(
-        "Argument `warn` may contain only values in `", deparse(VALID.WHAT), "`"
+        "Argument `what` may contain only values in `", deparse(VALID.WHAT), "`"
       )
-    .Call(FANSI_strip_csi, x, what, warn.int)
+    .Call(FANSI_strip_csi, x, what.int, warn)
   } else x
 }
 
