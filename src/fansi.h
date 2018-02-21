@@ -233,7 +233,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     cetype_t type;
   };
 
-  struct FANSI_csi_pos FANSI_find_esc(const char * x);
+  struct FANSI_csi_pos FANSI_find_esc(const char * x, int what);
 
   // External funs
 

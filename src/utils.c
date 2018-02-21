@@ -33,55 +33,76 @@
  * The true length may actually be different depending on your terminal,
  * (e.g. OSX terminal spits out illegal characters to screen but keeps
  * processing the sequence).
+ *
+ * @param what is a bit flag to line up against VALID.WHAT index values
  */
 
-struct FANSI_csi_pos FANSI_find_esc(const char * x) {
+struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
   /***************************************************\
   | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_parse_esc |
   \***************************************************/
   int valid = 0;
+  int strip = 0;
   const char * x_track = x;
-  const char * x_start = x;
-
-  // Note there is a potentially unncessary call to `strchr` here in the case
-  // the ESC is the last thing in a string, but handling it explicitly adds a
-  // bit of complexity and it should be rare
+  const char * x_strip_end = x;
+  const char * x_strip_start = x;
 
   struct FANSI_csi_pos res;
+  while(*x_track) {
+    const char x_val = *(x_track++);
+    // use strip & strip_this in conjunction so that we can allow multiple
+    // strippable adjacent elements to be stripped in one go
+
+    int strip_this = 0;
+
+    // If not normal ASCII or UTF8, examine whether we need to strip
+    if(!(x_val > 31 && x_val < 127 || x_val < 0)) {
+      strip_this = 1;
+      if(x_val == 27) {
+        // If not stripping CSI or SGR, skip (12 = 2^2 + 2^3), where ^2
+        // corresponds to SGR and ^3 CSI
+
+        if(x_val == '[' && (what & 12)) {
+          // This is a CSI sequence, so it has multiple characters that we need to
+          // skip.  The final character is processed outside of here since it has
+          // the same logic for CSI and non CSI sequences
+
+          // skip [
+
+          ++x_track;
+
+          // Skip all the valid parameters tokens
+
+          while(*x_track >= 0x30 && *x_track <= 0x3F) ++x_track;
+
+          // And all the valid intermediates
+
+          while(*x_track >= 0x20 && *x_track <= 0x2F) ++x_track;
+        } else if (what & 1 << 4) {
+        } else strip_this = 0;
+
+        // In either normal or CSI sequence, there needs to be a final character:
+
+        valid = *x_track >= 0x40 && *x_track <= 0x7E;
+        x_strip = x_track;
+        if(*x_track) ++x_track;
+        if(*x_track == 27) continue;
+      } else if (x_val == '\n' && (what & 1)) {
+        // Strip newlines
+        strip = 1;
+        if(*x_track == '\n') continue;
+      } else if (x_val > 0 && (what & 2)) {
+        // Strip all other C0,
+        strip = 1;
+        if(*x_track > 0 && *x_track < 31 '\n') continue;
+      }
+      if(!strip && strip_this) strip = 1;
+    }
+    if(strip && !strip_this) break;
+  }
+
   if((x_start = x_track = strchr(x, 27))) {
     while(*x_track == 27) {
-      ++x_track;
-      if(*x_track == '[') {
-        // This is a CSI sequence, so it has multiple characters that we need to
-        // skip.  The final character is processed outside of here since it has
-        // the same logic for CSI and non CSI sequences
-
-        // skip [
-
-        ++x_track;
-
-        // Skip all the valid parameters tokens
-
-        while(*x_track >= 0x30 && *x_track <= 0x3F) ++x_track;
-
-        // And all the valid intermediates
-
-        while(*x_track >= 0x20 && *x_track <= 0x2F) ++x_track;
-      }
-      // In either normal or CSI sequence, there needs to be a final character:
-
-      valid = *x_track >= 0x40 && *x_track <= 0x7E;
-      if(*x_track) ++x_track;
-
-      if(x_track - x > INT_MAX - 1)
-        // nocov start
-        error(
-          "%s%s",
-          "Interal Error: encountered CSI seq that is too long; ",
-          "contact maintianer."
-        );
-        // nocov end
-    }
     res = (struct FANSI_csi_pos){
       .start=x_start, .len=(x_track - x_start), .valid=valid
     };

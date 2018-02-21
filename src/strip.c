@@ -29,8 +29,9 @@
  *   actually throwing the warning
  */
 
-SEXP FANSI_strip(SEXP x, SEXP warn) {
+SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
   if(TYPEOF(x) != STRSXP) error("Argument `x` should be a character vector.");
+  if(TYPEOF(what) != INTSXP) error("Argument `what` should integer.");
   if(
     (TYPEOF(warn) != LGLSXP && TYPEOF(warn) != INTSXP) || XLENGTH(warn) != 1 ||
     INTEGER(warn)[0] == NA_INTEGER
@@ -41,13 +42,20 @@ SEXP FANSI_strip(SEXP x, SEXP warn) {
   if(warn_int < 0 || warn_int > 2)
     error("Argument `warn` must be between 0 and 2 if an integer.");
 
+  // Compress `what` into a single integer using bit flags
+
+  int what_int = 0;
+  for(R_xlen_t i = 0; i < XLENGTH(what); ++i) {
+    what_int |= 1 << (INTEGER(what)[i] - 1)
+  }
+
   R_xlen_t i, len = xlength(x);
   PROTECT_INDEX ipx;
   PROTECT_WITH_INDEX(x, &ipx);  // reserve spot if we need to alloc later
   SEXP res_fin = x;
 
   int any_ansi = 0;
-  R_len_t mem_req = 0;         // how much memory we need for each ansi
+  R_len_t mem_req = 0;          // how much memory we need for each ansi
 
   struct FANSI_csi_pos csi;
 
@@ -81,7 +89,7 @@ SEXP FANSI_strip(SEXP x, SEXP warn) {
 
     // note that csi.start is the NULL pointer if an escape is not found
 
-    while((csi = FANSI_find_esc(chr_track)).start) {
+    while((csi = FANSI_find_esc(chr_track, warn_int)).start) {
       if(csi.start - chr >= INT_MAX - csi.len)
         // nocov start
         error(
