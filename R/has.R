@@ -19,8 +19,8 @@
 #' ...CSI definition...
 #'
 #' @export
-#' @param x character
+#' @inheritParams strip_esc
 #' @return logical of same length as `x`; NA values in `x` result in NA values
 #'   in return
 
-has_esc <- function(x) .Call(FANSI_has_csi, x)
+has_esc <- function(x, what) .Call(FANSI_has_csi, x)
