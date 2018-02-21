@@ -46,7 +46,7 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
 
   int what_int = 0;
   for(R_xlen_t i = 0; i < XLENGTH(what); ++i) {
-    what_int |= 1 << (INTEGER(what)[i] - 1)
+    what_int |= 1 << (INTEGER(what)[i] - 1);
   }
 
   R_xlen_t i, len = xlength(x);

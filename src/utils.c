@@ -39,13 +39,12 @@
 
 struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
   /***************************************************\
-  | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_parse_esc |
+  | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_read_esc  |
   \***************************************************/
   int valid = 0;
   int strip = 0;
   const char * x_track = x;
-  const char * x_strip_end = x;
-  const char * x_strip_start = x;
+  const char * x_strip = x;
 
   struct FANSI_csi_pos res;
   while(*x_track) {
@@ -56,7 +55,7 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
     int strip_this = 0;
 
     // If not normal ASCII or UTF8, examine whether we need to strip
-    if(!(x_val > 31 && x_val < 127 || x_val < 0)) {
+    if(!((x_val > 31 && x_val < 127) || x_val < 0)) {
       strip_this = 1;
       if(x_val == 27) {
         // If not stripping CSI or SGR, skip (12 = 2^2 + 2^3), where ^2
@@ -78,37 +77,44 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
           // And all the valid intermediates
 
           while(*x_track >= 0x20 && *x_track <= 0x2F) ++x_track;
+
+          // Check validity
+
+          valid = *x_track >= 0x40 && *x_track <= 0x7E;
+
+          // If not valid, consume all subsequent parameter tokens  as that
+          // seems to be terminal.osx and iterm behavior (though terminal.osx
+          // seems pretty picky about what it considers intermediate or even
+          // parameter characters).
+
+          if(!valid)
+            while(*x_track >= 0x20 && *x_track <= 0x3F) ++x_track;
         } else if (what & 1 << 4) {
-        } else strip_this = 0;
+          valid = (*x_track >= 0x40 && *x_track <= 0x5f);
+        } else {
+          strip_this = 0;
+        }
+        // In all escape sequences the last character should be normal to be
+        // valid (is this actually true for generic escape?)
 
-        // In either normal or CSI sequence, there needs to be a final character:
 
-        valid = *x_track >= 0x40 && *x_track <= 0x7E;
-        x_strip = x_track;
-        if(*x_track) ++x_track;
-        if(*x_track == 27) continue;
-      } else if (x_val == '\n' && (what & 1)) {
-        // Strip newlines
-        strip = 1;
-        if(*x_track == '\n') continue;
-      } else if (x_val > 0 && (what & 2)) {
-        // Strip all other C0,
-        strip = 1;
-        if(*x_track > 0 && *x_track < 31 '\n') continue;
+        if(*x_track && *x_track != 27) ++x_track;
+      } else if (
+        !(                                  // if not
+          (x_val == '\n' && (what & 1)) ||  // newlines
+          (x_val > 0 && (what & 2))         // other C0
+        )
+      ) {
+        strip_this = 0;                     // don't strip
       }
       if(!strip && strip_this) strip = 1;
+      x_strip = x_track;
     }
     if(strip && !strip_this) break;
   }
-
-  if((x_start = x_track = strchr(x, 27))) {
-    while(*x_track == 27) {
-    res = (struct FANSI_csi_pos){
-      .start=x_start, .len=(x_track - x_start), .valid=valid
-    };
-  } else {
-    res = (struct FANSI_csi_pos){.start=x_start, .len=0, .valid=0};
-  }
+  res = (struct FANSI_csi_pos){
+    .start=x, .len=(x_strip - x), .valid=valid
+  };
   return res;
 }
 /*

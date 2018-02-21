@@ -66,7 +66,8 @@
 #' the same valid CSI SGR sequence differently.  For example, a 24-bit color
 #' sequences such as "ESC&#91;38;2;31;42;4" is a single foreground color to a
 #' terminal that supports it, or separate foreground, background, faint, and
-#' underline specifications for one that does not.
+#' underline specifications for one that does not.  Additionally, not all
+#' terminals appear to implement the CSI spec completely.
 #'
 #' `fansi` will will warn if it encounters control sequences or characters
 #' that it cannot interpret or that might conflict with terminal capabilities.

@@ -115,9 +115,9 @@ struct FANSI_tok_res {
 
 struct FANSI_tok_res FANSI_parse_token(const char * string) {
   unsigned int mult, val;
-  int len, len_intermediate, last, non_standard, private, err_code,
+  int len, len_intermediate, len_tail, last, non_standard, private, err_code,
     leading_zeros, not_zero;
-  len = len_intermediate = val = last = non_standard = private =
+  len = len_intermediate = len_tail = val = last = non_standard = private =
     err_code = leading_zeros = not_zero = 0;
   mult = 1;
 
@@ -148,14 +148,17 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
   last = 1;
   if((*string == ';' || *string == 'm') && !len_intermediate) {
     // valid end of SGR parameter substring
-
     if(non_standard) err_code = 1;
     if(*string == ';') last = 0;
   } else if(*string >= 0x40 && *string <= 0x7E && len_intermediate <= 1) {
     // valid final byte
     err_code = 3;
   } else {
-    // invalid end
+    // invalid end, consume all subsequent parameter substrings
+    while(*string >= 0x20 && *string <= 0x3F) {
+      ++string;
+      len_tail = FANSI_add_int(len_tail, 1);
+    }
     err_code = 4;
   }
   // Final interpretations; note that anything over 255 cannot be part of a
@@ -182,7 +185,8 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
   if(*string) ++len;
 
   return (struct FANSI_tok_res) {
-    .val=val, .len=len + len_intermediate,
+    .val=val,
+    .len=FANSI_add_int(FANSI_add_int(len, len_intermediate), len_tail),
     .err_code=err_code, .last=last
   };
 }
@@ -584,6 +588,14 @@ static struct FANSI_state read_ascii(struct FANSI_state state) {
  * C0 ESC sequences treated as zero width
  */
 static struct FANSI_state read_c0(struct FANSI_state state) {
+  if(state.warn && state.string[state.pos_byte] != '\n') {
+    warning(
+      "Encountered a C0 control character, %s%s",
+      "see `?unhandled_esc`; you can use `warn=FALSE` to turn ",
+      "off these warnings."
+    );
+    state.err_code = 6;
+  }
   state = read_ascii(state);
   --state.pos_width;
   --state.pos_width_target;

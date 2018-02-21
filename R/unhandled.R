@@ -19,6 +19,7 @@
 #'     * malformed: a malformed CSI sequence
 #'     * non-CSI: a non-CSI escape sequence, i.e. one where the ESC is
 #'       followed by something other than "["
+#'     * C0: a "C0" control character (e.g. tab, bell, etc.)
 #' * translated: whether the string was translated to UTF-8, might be helpful in
 #'   odd cases were character offsets change depending on encoding.  You should
 #'   only worry about this if you cannot tie out the `start`/`stop` values to
@@ -43,7 +44,7 @@
 unhandled_esc <- function(x) {
   res <- .Call(FANSI_unhandled_esc, x)
   names(res) <- c("index", "start", "stop", "error", "translated")
-  errors <- c('special', 'unknown', 'non-SGR', 'malformed', 'non-CSI')
+  errors <- c('special', 'unknown', 'non-SGR', 'malformed', 'non-CSI', 'C0')
   res[['error']] <- errors[res[['error']]]
   res[['esc']] <- substring(
     x[res[['index']]],

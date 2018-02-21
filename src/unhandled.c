@@ -54,8 +54,8 @@ SEXP FANSI_unhandled_esc(SEXP x) {
       int has_errors = 0;
 
       while(state.string[state.pos_byte]) {
-        // Since we don't care about width, etc, we only use the state objects to
-        // parse the ESC sequences
+        // Since we don't care about width, etc, we only use the state objects
+        // to parse the ESC sequences
 
         int esc_start = state.pos_ansi;
         state = FANSI_read_next(state);
