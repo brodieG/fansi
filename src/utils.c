@@ -102,8 +102,9 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
 
           // CSI SGR only found if ends in m
 
-          if(what & (1 << 2)) found_this = *x_track == 'm';
-          else if(what & (1 << 3)) found_this = 1;
+          found_this =
+            (*x_track == 'm' && (what & (1 << 2))) ||  // SGR
+            (*x_track != 'm' && what & (1 << 3));      // CSI
         } else {
           // Includes both the C1 set and "controls strings"
           found_this = what & (1 << 4);
