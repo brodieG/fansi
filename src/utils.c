@@ -34,7 +34,8 @@
  * (e.g. OSX terminal spits out illegal characters to screen but keeps
  * processing the sequence).
  *
- * @param what is a bit flag to line up against VALID.WHAT index values
+ * @param what is a bit flag to line up against VALID.WHAT index values, so
+ *   (what & (1 << 0)) is newlines, (what & (1 << 1)) is C0, etc
  */
 
 struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
@@ -69,7 +70,6 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
           // If not finding CSI or SGR, skip (12 = 2^2 + 2^3), where ^2
           // corresponds to SGR and ^3 CSI
 
-          Rprintf("CSI start %d\n", x_track - x);
           // This is a CSI sequence, so it has multiple characters that we
           // need to skip.  The final character is processed outside of here
           // since it has the same logic for CSI and non CSI sequences
@@ -106,7 +106,6 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
           else if(what & (1 << 3)) found_this = 1;
         } else {
           // Includes both the C1 set and "controls strings"
-          Rprintf("ESC start %d\n", x_track - x);
           found_this = what & (1 << 4);
           valid = valid && (*x_track >= 0x40 && *x_track <= 0x7E);
         }
@@ -128,18 +127,11 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
     }
     if(found && !found_this) break;
   }
-  if(!valid) Rprintf("Invalid\n");
   if(found) {
-    Rprintf(
-      "Found last '%c' len:%d\n    x:%p\n  end:%p\nstart:%p\ntrack:%p\n",
-      *x_track, x_found_end - x_found_start, x, x_found_end, x_found_start,
-      x_track
-    );
     res = (struct FANSI_csi_pos){
       .start=x_found_start, .len=(x_found_end - x_found_start), .valid=valid
     };
   } else {
-    Rprintf("Not Found\n");
     res = (struct FANSI_csi_pos){.start=x, .len=0, .valid=valid};
   }
   return res;

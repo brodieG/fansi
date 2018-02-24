@@ -49,7 +49,6 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
   int what_int = 0;
   for(R_xlen_t i = 0; i < XLENGTH(what); ++i) {
     what_int |= 1 << (INTEGER(what)[i] - 1);
-    Rprintf("what_int %d what orig %d\n", what_int, INTEGER(what)[i]);
   }
 
   R_xlen_t i, len = xlength(x);
@@ -88,60 +87,56 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
     const char * chr_track = chr;
     char * chr_buff;
     char * res_track = NULL, * res_start = NULL;
-    // int tmp_count = 0;
 
-    while((csi = FANSI_find_esc(chr_track, what_int)).len) {
-      Rprintf(
-        "Found csi %d len %d at %p initial %p\n",
-        csi.start - chr_track, csi.len, chr_track
-      );
-      // if(tmp_count++ > 1) error("die");
-      if(csi.start - chr >= INT_MAX - csi.len)
-        // nocov start
-        error(
-          "%s%s",
-          "Internal Error: string longer than INT_MAX encountered, should ",
-          "not be possible."
-        );
-        // nocov end
-
-      // As soon as we encounter ansi, allocate vector to track what has ansi
-      if(!any_ansi) {
-        any_ansi = 1;
-
-        // We need to allocate a result vector since we'll be stripping ANSI
-        // CSI, and also the buffer we'll use to re-write the CSI less strings
-
-        REPROTECT(res_fin = duplicate(x), ipx);
-
-        // Note the is guaranteed to be an over-allocation
-
-        if(mem_req == R_LEN_T_MAX)
-          // nocov start
-          error(
-            "%s%s",
-            "Internal error, string should be shorter than R_LEN_T_MAX, ",
-            "contact maintainer."
-          );
-          // nocov end
-
-        chr_buff = (char *) R_alloc(mem_req + 1, sizeof(char));
-      }
-      if(!has_ansi) {
-        has_ansi = 1;
-        res_start = res_track = chr_buff;
-      }
-      // Is memcpy going to cause problems again by reading past end of
-      // block?  Didn't in first valgrind check.
-
-      memcpy(res_track, chr_track, csi.start - chr_track);
-      res_track += csi.start - chr_track;
-
+    while(1) {
+      csi = FANSI_find_esc(chr_track, what_int);
       if(!invalid_ansi && !csi.valid) {
         invalid_ansi = 1;
         invalid_idx = i + 1;
       }
-      chr_track = csi.start + csi.len;
+      if(csi.len) {
+        if(csi.start - chr >= INT_MAX - csi.len)
+          // nocov start
+          error(
+            "%s%s",
+            "Internal Error: string longer than INT_MAX encountered, should ",
+            "not be possible."
+          );
+          // nocov end
+
+        // As soon as we encounter ansi, allocate vector to track what has ansi
+        if(!any_ansi) {
+          any_ansi = 1;
+
+          // We need to allocate a result vector since we'll be stripping ANSI
+          // CSI, and also the buffer we'll use to re-write the CSI less strings
+
+          REPROTECT(res_fin = duplicate(x), ipx);
+
+          // Note the is guaranteed to be an over-allocation
+
+          if(mem_req == R_LEN_T_MAX)
+            // nocov start
+            error(
+              "%s%s",
+              "Internal error, string should be shorter than R_LEN_T_MAX, ",
+              "contact maintainer."
+            );
+            // nocov end
+
+          chr_buff = (char *) R_alloc(mem_req + 1, sizeof(char));
+        }
+        if(!has_ansi) {
+          has_ansi = 1;
+          res_start = res_track = chr_buff;
+        }
+        // Is memcpy going to cause problems again by reading past end of
+        // block?  Didn't in first valgrind check.
+
+        memcpy(res_track, chr_track, csi.start - chr_track);
+        res_track += csi.start - chr_track;
+        chr_track = csi.start + csi.len;
+      } else break;
     }
     // Update string
 

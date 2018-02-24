@@ -21,5 +21,7 @@ unitizer_sect("unhandled", {
   )
   unhandled_esc(string.1)
 
-  unhandled_esc("hello\033\033\033[45p")
+  # A malformed ESCape
+
+  unhandled_esc("hello\033\033\033[45p wor\ald")
 })
