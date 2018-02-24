@@ -77,7 +77,6 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
 
   int invalid_ansi = 0;
   int invalid_idx = 0;
-  int invalid_byte = 0;
 
   for(i = 0; i < len; ++i) {
     FANSI_interrupt(i);
@@ -141,7 +140,6 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
       if(!invalid_ansi && !csi.valid) {
         invalid_ansi = 1;
         invalid_idx = i + 1;
-        invalid_byte =  csi.start - chr + 1;
       }
       chr_track = csi.start + csi.len;
     }
@@ -178,8 +176,10 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
     switch(warn_int) {
       case 1: {
         warning(
-          "Invalid ESC sequence at index [%.0f], byte %d.",
-          (double) invalid_idx, invalid_byte
+          "Encountered invalid ESC sequence at index [%.0f], %s%s",
+          (double) invalid_idx,
+          "see `?unhandled_esc`; you can use `warn=FALSE` to turn ",
+          "off these warnings."
         );
         break;
       }
