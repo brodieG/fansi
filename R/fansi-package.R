@@ -26,7 +26,8 @@
 #' color or cursor position.  There are three types of control characters and
 #' sequences that `fansi` treats specially:
 #'
-#' * "C0" control characters, such as tabs and carriage returns.
+#' * "C0" control characters, such as tabs and carriage returns (we include
+#'   delete in this set, even though technically it is not part of it).
 #' * Sequences starting in "ESC&#91;", also known as ANSI CSI sequences.
 #' * Sequences starting in "ESC" and followed by something other than "&#91;".
 #'
@@ -37,7 +38,7 @@
 #' long (including the ESC) unless they are of the CSI variety, in which case
 #' their length is computed as per the ANSI CSI spec.  There are non-CSI escape
 #' sequences that may be longer than two characters, but `fansi` will treat them
-#' as if they were two characters wide.
+#' as if they were two characters long.
 #'
 #' In theory it is possible to encode ANSI CSI escape sequences with single byte
 #' introducing character in the 0x40-0x5F range instead of the traditional
@@ -62,24 +63,27 @@
 #' * "C0" control characters like tabs and carriage returns.
 #' * Other escape sequences.
 #'
-#' Another possible source of problems is that different terminals may interpret
-#' the same valid CSI SGR sequence differently.  For example, a 24-bit color
-#' sequences such as "ESC&#91;38;2;31;42;4" is a single foreground color to a
-#' terminal that supports it, or separate foreground, background, faint, and
-#' underline specifications for one that does not.  Additionally, not all
-#' terminals appear to implement the CSI spec completely.
+#' Another possible source of problems is that different displays parse
+#' and interpret control sequences differently.  The common sequences that
+#' you are likely to encounter in CSI SGR formatted text tend to be treated
+#' consistently, but less common ones are not.  `fansi` tries to hew by the
+#' ECMA-48 specification **for CSI control sequences**, but not all terminals
+#' do.
+#'
+#' The most likely source of problems will be 24-bit CSI SGR sequences.
+#' For example, a 24-bit color sequences such as "ESC&#91;38;2;31;42;4" is a
+#' single foreground color to a terminal that supports it, or separate
+#' foreground, background, faint, and underline specifications for one that does
+#' not.  To mitigate this particular problem you tell `fansi` what your terminal
+#' capabilities are via the `term.cap` parameter or the "fansi.term.cap" global
+#' option, although `fansi` does try to detect them by default.
 #'
 #' `fansi` will will warn if it encounters control sequences or characters
 #' that it cannot interpret or that might conflict with terminal capabilities.
 #' You can turn off warnings via the `warn` parameter or via the "fansi.warn"
 #' global option.
 #'
-#' You can also tell `fansi` what your terminal capabilities are
-#' via the `term.cap` parameter or the "fansi.term.cap" global option.  By
-#' default `fansi` assumes terminals support bright and 256 color modes, and
-#' also tests for truecolor support via the $COLORTERM system variable.  You can
-#' visually test your terminal capabilities with [term_cap_test].
-#'
+#' You can also #'
 #' `fansi` can work around "C0" tab control characters by turning them into
 #' spaces first with [tabs_as_spaces] or with the `tabs.as.spaces` parameter.
 #'

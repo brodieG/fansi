@@ -89,6 +89,14 @@ tabs_as_spaces <- function(
 #' with a blue background and a red foreground.  For reference the corresponding
 #' CSI SGR sequences are displayed as well.
 #'
+#' You should compare the screen output from this function to
+#' `getOption('fansi.term.cap')` to ensure that they are self consistent.
+#'
+#' By default `fansi` assumes terminals support bright and 256 color
+#' modes, and also tests for truecolor support via the $COLORTERM system
+#' variable.  You can visually test your terminal capabilities with
+#' [term_cap_test].
+#'
 #' @seealso [fansi] for important details on how strings are interpreted,
 #'   particularly if you are getting unexpected results.
 #' @export

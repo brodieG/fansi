@@ -56,7 +56,8 @@
 #' @inheritParams base::substr
 #' @inheritParams tabs_as_spaces
 #' @seealso [string-parsing] for important details on how strings are
-#'   interpreted and how character width is computed.
+#'   interpreted and how character width is computed, [term_cap_test] to ensure
+#'   `fansi` is correctly interpreting your terminal capabilities.
 #' @param type character(1L) in `c("char", "width", "bytes")`
 #' @param round character(1L) in `c("start", "stop", "both", "neither")`,
 #'   controls how to resolve ambiguities when a `start` or `stop` value in

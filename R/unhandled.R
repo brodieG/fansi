@@ -27,8 +27,9 @@
 #' * esc: character the unhandled escape sequence
 #'
 #' @export
-#' @seealso [fansi] for important details on how strings are interpreted,
-#'   particularly if you are getting unexpected results.
+#' @seealso [string-parsing] for important details on how strings are
+#'   interpreted and how character width is computed, [term_cap_test] to ensure
+#'   `fansi` is correctly interpreting your terminal capabilities.
 #' @param x character vector
 #' @return data frame with as many rows as there are unhandled escape
 #'   sequences and columns containing useful information for debugging the
