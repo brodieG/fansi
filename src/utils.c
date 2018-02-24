@@ -44,13 +44,12 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
   int valid = 0;
   int found = 0;
   const char * x_track = x;
-  const char * x_found = x;
   const char * x_found_start;
+  const char * x_found_end;
 
   struct FANSI_csi_pos res;
 
   while(*x_track) {
-    Rprintf("track %d\n", x_track - x);
     const char x_val = *(x_track++);
     // use found & found_this in conjunction so that we can allow multiple
     // adjacent elements to be found in one go
@@ -60,19 +59,21 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
     // If not normal ASCII or UTF8, examine whether we need to found
     if(!((x_val > 31 && x_val < 127) || x_val < 0)) {
       if(!found) {
-        x_found_start = x_track - 1;
+        // Keep resetting strip start point until we find something we want to
+        // mark
+        x_found_start = x_found_end = x_track - 1;
         Rprintf("Set print start %d with what %d\n", x_found_start - x, what);
       }
-      found_this = 1;
+      found_this = 0;
       if(x_val == 27) {
-        // If not founding CSI or SGR, skip (12 = 2^2 + 2^3), where ^2
-        // corresponds to SGR and ^3 CSI
+        if(*x_track == '[') {
+          // If not finding CSI or SGR, skip (12 = 2^2 + 2^3), where ^2
+          // corresponds to SGR and ^3 CSI
 
-        if(x_val == '[' && (what & 12)) {
           Rprintf("CSI start %d\n", x_track - x);
-          // This is a CSI sequence, so it has multiple characters that we need to
-          // skip.  The final character is processed outside of here since it has
-          // the same logic for CSI and non CSI sequences
+          // This is a CSI sequence, so it has multiple characters that we
+          // need to skip.  The final character is processed outside of here
+          // since it has the same logic for CSI and non CSI sequences
 
           // skip [
 
@@ -98,37 +99,45 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
           if(!valid)
             while(*x_track >= 0x20 && *x_track <= 0x3F) ++x_track;
 
-          if(what & 4 && *x_track != 'm') found_this = 0;
-        } else if (what & 1 << 4) {
-          Rprintf("ESC start %d\n", x_track - x);
-          valid = (*x_track >= 0x40 && *x_track <= 0x5f);
-        } else {
-          Rprintf("ESC but no found %d\n", x_track - x);
-          found_this = 0;
-        }
-        // In all escape sequences the last character should be normal to be
-        // valid (is this actually true for generic escape?)
+          // CSI SGR only found if ends in m
 
-        if(*x_track && *x_track != 27) ++x_track;
-      } else if (
-        !(                                  // if not
-          (x_val == '\n' && (what & 1)) ||  // newlines
-          (x_val > 0 && (what & 2))         // other C0
-        )
-      ) {
-        Rprintf("C0 but no found %d\n", x_track - x);
-        found_this = 0;                     // don't found
+          if(what & (1 << 2)) found_this = *x_track == 'm';
+          else if(what & (1 << 3)) found_this = 1;
+
+        } else {
+          Rprintf("ESC start %d\n", x_track - x);
+          found_this = what & (1 << 4);
+          valid = (*x_track >= 0x40 && *x_track <= 0x5F);
+        }
+        // Advance unless next char is ESC, in which case we want to keep
+        // looping
+
+        if(*x_track && *x_track != 27) x_track++;
+      } else {
+        // x01-x1F, x7F, all the C0 codes
+
+        found_this =
+          (x_val == '\n' && (what & 1)) ||
+          (what & (1 << 1));
       }
-      if(!found && found_this) found = 1;
-      x_found = x_track;
+      if(found_this) {
+        x_found_end = x_track;
+        if(!found) found = 1;
+      }
     }
     if(found && !found_this) break;
   }
   if(found) {
+    Rprintf(
+      "Found last '%c' len:%d\n    x:%p\nend:%p\nstart:%p\ntrack:%p\n",
+      *x_track, x_found_end - x_found_start, x, x_found_end, x_found_start,
+      x_track
+    );
     res = (struct FANSI_csi_pos){
-      .start=x_found_start, .len=(x_found - x_found_start), .valid=valid
+      .start=x_found_start, .len=(x_found_end - x_found_start), .valid=valid
     };
   } else {
+    Rprintf("Not Found\n");
     res = (struct FANSI_csi_pos){.start=x, .len=0, .valid=valid};
   }
   return res;
