@@ -368,11 +368,14 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
 
       if(
         state.string[state.pos_byte] >= 0x40 &&
-        state.string[state.pos_byte] <= 0x5F)
+        state.string[state.pos_byte] <= 0x7E)
       )
         state.err_code = 5; else state.err_code = 6;
 
-      state.pos_byte = FANSI_add_int(state.pos_byte, 1);
+      // Don't process additional ESC if it is there so we keep looping
+
+      if(state.string[state.pos_byte] != 27)
+        state.pos_byte = FANSI_add_int(state.pos_byte, 1);
     } else {
       // CSI sequence
 
