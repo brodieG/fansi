@@ -26,7 +26,7 @@ int FANSI_has_int(SEXP x, int what) {
   if(TYPEOF(x) != CHARSXP) error("Argument `x` must be CHRSXP.");
   if(x == NA_STRING) return NA_LOGICAL;
   else {
-    struct FANSI_csi_pos pos = FANSI_find_esc(CHAR(x), what_int);
+    struct FANSI_csi_pos pos = FANSI_find_esc(CHAR(x), what);
     return pos.len != 0;
   }
 }

@@ -41,8 +41,11 @@ static struct FANSI_prefix_dat make_pre(SEXP x) {
   // ideally we would IS_ASCII(x), but that's not available to extensions
   int x_has_utf8 = FANSI_has_utf8(x_utf8);
 
+  // ideally would have an internal interface to strip so we don't need to
+  // generate these SEXPs here
   SEXP warn = PROTECT(ScalarInteger(2));
-  SEXP x_strip = PROTECT(FANSI_strip(x, warn));
+  SEXP what = PROTECT(ScalarInteger(1 + 2 + 4 + 8 + 16));
+  SEXP x_strip = PROTECT(FANSI_strip(x, what, warn));
   int x_width = R_nchar(
     asChar(x_strip), Width, FALSE, FALSE, "when computing display width"
   );
@@ -51,7 +54,7 @@ static struct FANSI_prefix_dat make_pre(SEXP x) {
   int x_bytes = strlen(x_utf8);
   int warn_int = getAttrib(x_strip, FANSI_warn_sym) != R_NilValue;
 
-  UNPROTECT(2);
+  UNPROTECT(3);
   return (struct FANSI_prefix_dat) {
     .string=x_utf8, .width=x_width, .bytes=x_bytes, .has_utf8=x_has_utf8,
     .indent=0, .warn=warn_int
