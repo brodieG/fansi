@@ -41,7 +41,7 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
   /***************************************************\
   | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_read_esc  |
   \***************************************************/
-  int valid = 0;
+  int valid = 1;
   int found = 0;
   const char * x_track = x;
   const char * x_found_start;
@@ -62,7 +62,6 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
         // Keep resetting strip start point until we find something we want to
         // mark
         x_found_start = x_found_end = x_track - 1;
-        Rprintf("Set print start %d with what %d\n", x_found_start - x, what);
       }
       found_this = 0;
       if(x_val == 27) {
@@ -89,25 +88,27 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
 
           // Check validity
 
-          valid = *x_track >= 0x40 && *x_track <= 0x7E;
+          int valid_tmp = *x_track >= 0x40 && *x_track <= 0x7E;
 
           // If not valid, consume all subsequent parameter tokens  as that
           // seems to be terminal.osx and iterm behavior (though terminal.osx
           // seems pretty picky about what it considers intermediate or even
           // parameter characters).
 
-          if(!valid)
+          if(!valid_tmp)
             while(*x_track >= 0x20 && *x_track <= 0x3F) ++x_track;
+
+          valid = valid && valid_tmp;
 
           // CSI SGR only found if ends in m
 
           if(what & (1 << 2)) found_this = *x_track == 'm';
           else if(what & (1 << 3)) found_this = 1;
-
         } else {
+          // Includes both the C1 set and "controls strings"
           Rprintf("ESC start %d\n", x_track - x);
           found_this = what & (1 << 4);
-          valid = (*x_track >= 0x40 && *x_track <= 0x5F);
+          valid = valid && (*x_track >= 0x40 && *x_track <= 0x7E);
         }
         // Advance unless next char is ESC, in which case we want to keep
         // looping
@@ -127,9 +128,10 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
     }
     if(found && !found_this) break;
   }
+  if(!valid) Rprintf("Invalid\n");
   if(found) {
     Rprintf(
-      "Found last '%c' len:%d\n    x:%p\nend:%p\nstart:%p\ntrack:%p\n",
+      "Found last '%c' len:%d\n    x:%p\n  end:%p\nstart:%p\ntrack:%p\n",
       *x_track, x_found_end - x_found_start, x, x_found_end, x_found_start,
       x_track
     );
