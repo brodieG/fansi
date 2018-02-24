@@ -365,8 +365,14 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       // sequences but we ignore them here.  There is also the possibility that
       // we mess up a utf-8 sequence if it starts right after the ESC, but oh
       // well...
+
+      if(
+        state.string[state.pos_byte] >= 0x40 &&
+        state.string[state.pos_byte] <= 0x5F)
+      )
+        state.err_code = 5; else state.err_code = 6;
+
       state.pos_byte = FANSI_add_int(state.pos_byte, 1);
-      state.err_code = 5;
     } else {
       // CSI sequence
 
@@ -520,6 +526,8 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
         err_msg = "a malformed CSI sequence";
       } else if (err_code == 5) {
         err_msg = "a non-CSI escape sequence";
+      } else if (err_code == 6) {
+        err_msg = "a malformed escape sequence";
       } else {
         // nocov start
         error("Internal Error: unknown ESC parse error; contact maintainer.");
