@@ -368,7 +368,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
 
       if(
         state.string[state.pos_byte] >= 0x40 &&
-        state.string[state.pos_byte] <= 0x7E)
+        state.string[state.pos_byte] <= 0x7E
       )
         state.err_code = 5; else state.err_code = 6;
 
