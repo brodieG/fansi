@@ -48,9 +48,13 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
 
   int what_int = 0;
   for(R_xlen_t i = 0; i < XLENGTH(what); ++i) {
-    what_int |= 1 << (INTEGER(what)[i] - 1);
+    int what_val = INTEGER(what)[i] - 2;
+    if(what_val < 0) {
+      what_int = 1 + 2 + 4 + 8 + 16; // strip all
+      break;
+    }
+    what_int |= 1 << what_val;
   }
-
   R_xlen_t i, len = xlength(x);
   PROTECT_INDEX ipx;
   PROTECT_WITH_INDEX(x, &ipx);  // reserve spot if we need to alloc later

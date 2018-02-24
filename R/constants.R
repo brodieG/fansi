@@ -7,4 +7,4 @@ VALID.TERM.CAP <- c('bright', '256', 'truecolor')
 
 ## Valid values for the `what` argument
 
-VALID.WHAT <- c("nl", "c0", "sgr", "csi", "esc")
+VALID.WHAT <- c("all", "nl", "c0", "sgr", "csi", "esc")

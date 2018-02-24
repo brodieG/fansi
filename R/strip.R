@@ -24,7 +24,10 @@
 #'   particularly if you are getting unexpected results.
 #' @inheritParams substr_esc
 #' @export
-#' @param what character with values in:
+#' @param what character, any combination of the following values, where each
+#'   value represents a distinct set of control characters/sequences to strip,
+#'   except for "all" which is the equivalent to specifying all the others:
+#'
 #'   * "nl": strip newlines
 #'   * "c0": strip all other "C0" control characters (i.e. x01-x1f), except for
 #'     newlines and the actual ESC character
@@ -32,12 +35,14 @@
 #'   * "csi": strip all non-SGR csi sequences
 #'   * "esc": strip all other escape sequences, including invalid SGR/CSI
 #'     sequences
+#'   * "all": all of the above
 #' @return character vector of same length as x with ANSI escape sequences
 #'   stripped
 #' @examples
 #' string <- "hello\033k\033[45p world\n\033[31mgoodbye\a moon"
 #' strip_esc(string)
 #' strip_esc(string, c("nl", "c0", "sgr", "csi", "esc"))
+#' strip_esc(string, "all")  # equivalently
 #' strip_esc(string, c("c0", "esc"))
 
 strip_esc <- function(x, what='sgr', warn=getOption('fansi.warn')) {
