@@ -48,8 +48,8 @@ unhandled_esc <- function(x) {
   res <- .Call(FANSI_unhandled_esc, x)
   names(res) <- c("index", "start", "stop", "error", "translated")
   errors <- c(
-    'special', 'unknown', 'non-SGR', 'malformed-CSI', 'non-CSI', 'C0',
-    'malformed-ESC'
+    'special', 'unknown', 'non-SGR', 'malformed-CSI', 'non-CSI',
+    'malformed-ESC', 'C0'
   )
   res[['error']] <- errors[res[['error']]]
   res[['esc']] <- substring(

@@ -20,4 +20,6 @@ unitizer_sect("unhandled", {
     "foo\033[22>mhello\033[9999m", "a\033[31k", "hello\033m world \033"
   )
   unhandled_esc(string.1)
+
+  unhandled_esc("hello\033\033\033[45p")
 })

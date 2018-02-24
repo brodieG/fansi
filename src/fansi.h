@@ -84,6 +84,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * `state.string[state.pos_byte]` to access the current position.
      */
     const char * string;
+    /*
+     * Any error associated with err_code
+     */
+    const char * err_msg;
 
     /*
      * should be interpreted as bit mask where with 2^n., 1-9 match to the

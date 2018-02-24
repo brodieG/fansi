@@ -359,7 +359,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
 
     if(!state.string[state.pos_byte]) {
       // String ends in ESC
-      state.err_code = 5;
+      state.err_code = 6;
     } else if(state.string[state.pos_byte] != '[') {
       // Other ESC sequence; note there are technically multi character
       // sequences but we ignore them here.  There is also the possibility that
@@ -518,34 +518,27 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
   }
   if(err_code) {
     // All errors are zero width
+    state.err_code = err_code;  // b/c we want the worst err code
     state.last_char_width = 0;
-    if(state.warn > 0) {
-      const char * err_msg;
-      if(err_code < 3) {
-        err_msg = "a CSI SGR sequence with unknown substrings";
-      } else if (err_code == 3) {
-        err_msg = "a non-SGR CSI sequence";
-      } else if (err_code == 4) {
-        err_msg = "a malformed CSI sequence";
-      } else if (err_code == 5) {
-        err_msg = "a non-CSI escape sequence";
-      } else if (err_code == 6) {
-        err_msg = "a malformed escape sequence";
-      } else {
-        // nocov start
-        error("Internal Error: unknown ESC parse error; contact maintainer.");
-        // nocov 3nd
-      }
-      warning(
-        "Encountered %s, %s%s", err_msg,
-        "see `?unhandled_esc`; you can use `warn=FALSE` to turn ",
-        "off these warnings."
-      );
-      state.warn = -state.warn; // only warn once
+    if(err_code < 3) {
+      state.err_msg = "a CSI SGR sequence with unknown substrings";
+    } else if (err_code == 3) {
+      state.err_msg = "a non-SGR CSI sequence";
+    } else if (err_code == 4) {
+      state.err_msg = "a malformed CSI sequence";
+    } else if (err_code == 5) {
+      state.err_msg = "a non-CSI escape sequence";
+    } else if (err_code == 6) {
+      state.err_msg = "a malformed escape sequence";
+    } else {
+      // nocov start
+      error("Internal Error: unknown ESC parse error; contact maintainer.");
+      // nocov 3nd
     }
   } else {
     // Not 100% sure this is right...
     state.last_char_width = 1;
+    state.err_msg = "";
   }
   return state;
 }
@@ -599,13 +592,9 @@ static struct FANSI_state read_ascii(struct FANSI_state state) {
  * C0 ESC sequences treated as zero width
  */
 static struct FANSI_state read_c0(struct FANSI_state state) {
-  if(state.warn && state.string[state.pos_byte] != '\n') {
-    warning(
-      "Encountered a C0 control character, %s%s",
-      "see `?unhandled_esc`; you can use `warn=FALSE` to turn ",
-      "off these warnings."
-    );
-    state.err_code = 6;
+  if(state.string[state.pos_byte] != '\n') {
+    state.err_msg = "a C0 control character";
+    state.err_code = 7;
   }
   state = read_ascii(state);
   --state.pos_width;
@@ -620,15 +609,24 @@ static struct FANSI_state read_c0(struct FANSI_state state) {
 struct FANSI_state FANSI_read_next(struct FANSI_state state) {
   const char chr_val = state.string[state.pos_byte];
   if(state.err_code) state.err_code = 0; // reset err code after each char
+
   // Normal ASCII characters
-  if(chr_val >= 0x20 & chr_val < 0x7f) state = read_ascii(state);
+  if(chr_val >= 0x20 & chr_val < 0x7F) state = read_ascii(state);
   // UTF8 characters (chr_val is signed, so > 0x7f will be negative)
   else if (chr_val < 0) state = read_utf8(state);
   // ESC sequences
-  else if (chr_val == 0x1b) state = read_esc(state);
+  else if (chr_val == 0x1B) state = read_esc(state);
   // C0 escapes (e.g. \t, \n, etc)
   else if(chr_val) state = read_c0(state);
 
+  if(state.warn > 0 && state.err_code) {
+    warning(
+      "Encountered %s, %s%s", state.err_msg,
+      "see `?unhandled_esc`; you can use `warn=FALSE` to turn ",
+      "off these warnings."
+    );
+    state.warn = -state.warn; // only warn once
+  }
   return state;
 }
 
