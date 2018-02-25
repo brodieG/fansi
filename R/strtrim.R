@@ -14,7 +14,7 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-#' ANSI CSI SGR aware version of `strtrim`
+#' ANSI CSI SGR Aware Version of strtrim
 #'
 #' One difference with [base::strtrim] is that all C0 control characters such as
 #' newlines, carriage returns, etc., are treated as zero width.

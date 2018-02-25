@@ -325,7 +325,6 @@ static SEXP strwrap(
       )
     ) {
       if(string_over || (wrap_always && !has_boundary) || first_only) {
-        Rprintf("reset state wrap_always\n");
         state_bound = state;
       }
       res_sxp = PROTECT(

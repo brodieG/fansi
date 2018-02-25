@@ -2,10 +2,13 @@
 % Please edit documentation in R/strtrim.R
 \name{strtrim_esc}
 \alias{strtrim_esc}
+\alias{strtrim2_esc}
 \title{ANSI CSI SGR aware version of \code{strtrim}}
 \usage{
-strtrim_esc(x, width, warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"))
+strtrim_esc(x, width, warn = getOption("fansi.warn"))
+
+strtrim2_esc(x, width, warn = getOption("fansi.warn"),
+  tabs.as.spaces = FALSE, tab.stops = 8L)
 }
 \arguments{
 \item{x}{a character vector, or an object which can be coerced to a
@@ -18,15 +21,22 @@ problematic escape sequences are encountered.  These could cause the
 assumptions \code{fansi} is makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{string-parsing}).}
 
-\item{term.cap}{character a vector of the capabilities of the terminal, can
-be any combination "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
-starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
-"38;2" or "48;2"). Defaults to \code{c("bright", "256")}.  Changing this
-parameter changes how \code{fansi} interprets escape sequences, so you should
-ensure that it matches your terminal capabilities.}
+\item{tabs.as.spaces}{FALSE (default) or TRUE, whether to convert tabs to
+spaces.  This can only be set to TRUE if \code{strip.spaces} is FALSE.}
+
+\item{tab.stops}{integer(1:n) indicating position of tab stops to use when
+converting tabs to spaces.  If there are more tabs in a line than defined
+tab stops the last tab stop is re-used.  For the purposes of applying tab
+stops, each input line is considered a line and the character count begins
+from the beginning of the input line.}
 }
 \description{
-ANSI CSI SGR aware version of \code{strtrim}
+One difference with \link[base:strtrim]{base::strtrim} is that all C0 control characters such as
+newlines, carriage returns, etc., are treated as zero width.
+}
+\details{
+\code{strtrim2_esc} adds the option of converting tabs to spaces before trimming.
+This is the only difference between \code{strtrim_esc} and \code{strtrim2_esc}.
 }
 \examples{
 strtrim_esc("\\033[42mHello world\\033[m", 6)
