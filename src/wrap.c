@@ -44,7 +44,7 @@ static struct FANSI_prefix_dat make_pre(SEXP x) {
   // ideally would have an internal interface to strip so we don't need to
   // generate these SEXPs here
   SEXP warn = PROTECT(ScalarInteger(2));
-  SEXP what = PROTECT(ScalarInteger(1 + 2 + 4 + 8 + 16));
+  SEXP what = PROTECT(ScalarInteger(1));
   SEXP x_strip = PROTECT(FANSI_strip(x, what, warn));
   int x_width = R_nchar(
     asChar(x_strip), Width, FALSE, FALSE, "when computing display width"
@@ -468,6 +468,7 @@ SEXP FANSI_strwrap_ext(
     error("Internal Error: illegal indent/exdent values.");  // nocov
 
   pre_dat_raw = make_pre(prefix);
+
   const char * warn_base =
     "`%s` contains illegal escape sequences (see `?illegal_esc`).";
   if(warn_int && pre_dat_raw.warn) warning(warn_base, "prefix");
