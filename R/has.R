@@ -23,4 +23,13 @@
 #' @return logical of same length as `x`; NA values in `x` result in NA values
 #'   in return
 
-has_esc <- function(x, what) .Call(FANSI_has_csi, x)
+has_esc <- function(x, what='sgr', warn=getOption('fansi.warn')) {
+  vetr(warn=LGL.1, what=CHR)
+  if(length(what)) {
+    if(anyNA(what.int <- match(what, VALID.WHAT)))
+      stop(
+        "Argument `what` may contain only values in `", deparse(VALID.WHAT), "`"
+      )
+    .Call(FANSI_has_csi, x, what.int, warn)
+  } else rep(FALSE, length(x))
+}

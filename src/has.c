@@ -27,27 +27,44 @@ int FANSI_has_int(SEXP x, int what) {
   if(x == NA_STRING) return NA_LOGICAL;
   else {
     struct FANSI_csi_pos pos = FANSI_find_esc(CHAR(x), what);
-    return pos.len != 0;
+    return (pos.valid ? 1 : -1) * (pos.len != 0);
   }
 }
 /*
  * Check if a CHARSXP contains ANSI esc sequences
  */
-SEXP FANSI_has(SEXP x, SEXP what) {
+SEXP FANSI_has(SEXP x, SEXP what, SEXP warn) {
   if(TYPEOF(x) != STRSXP) error("Argument `x` must be character.");
   if(TYPEOF(what) != INTSXP) error("Internal Error: `what` must be INTSXP.");
   R_xlen_t len = XLENGTH(x);
 
   SEXP res = PROTECT(allocVector(LGLSXP, len));
   int * res_int = LOGICAL(res);
+  int warn_int = asLogical(warn);
 
   int what_int = 0;
   for(R_xlen_t i = 0; i < XLENGTH(what); ++i) {
-    what_int |= 1 << (INTEGER(what)[i] - 1);
+    int what_val = INTEGER(what)[i] - 2;
+    if(what_val < 0) {
+      what_int = 1 + 2 + 4 + 8 + 16; // strip all
+      break;
+    }
+    what_int |= 1 << what_val;
   }
-  for(R_xlen_t i = 0; i < len; ++i)
-    res_int[i] = FANSI_has_int(STRING_ELT(x, i), what_int);
-
+  for(R_xlen_t i = 0; i < len; ++i) {
+    int res_tmp = FANSI_has_int(STRING_ELT(x, i), what_int);
+    // no great, but need to watch out for NA_LOGICAL == INT_MIN
+    if(res_tmp == -1 && warn_int) {
+      res_tmp = -res_tmp;
+      warning(
+        "Encountered invalid ESC sequence at index [%.0f], %s%s",
+        (double) i + 1,
+        "see `?unhandled_esc`; you can use `warn=FALSE` to turn ",
+        "off these warnings."
+      );
+    }
+    res_int[i] = res_tmp;
+  }
   UNPROTECT(1);
   return res;
 }
