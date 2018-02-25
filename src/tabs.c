@@ -102,6 +102,7 @@ SEXP FANSI_tabs_as_spaces(
       buff_track = buff_start = buff->buff;
 
       int last_byte = state.pos_byte;
+      int warn_old = state.warn;
 
       while(1) {
         cur_chr = state.string[state.pos_byte];
@@ -122,7 +123,9 @@ SEXP FANSI_tabs_as_spaces(
 
           // consume tab and advance
 
+          state.warn = 0;
           state = FANSI_read_next(state);
+          state.warn = warn_old;
           cur_chr = state.string[state.pos_byte];
           state = FANSI_inc_width(state, extra_spaces);
           last_byte = state.pos_byte;
@@ -130,7 +133,6 @@ SEXP FANSI_tabs_as_spaces(
           // actually write the extra spaces
 
           while(extra_spaces) {
-            if(extra_spaces > 10) error("too many spaces");
             --extra_spaces;
             *buff_track = ' ';
             ++buff_track;
