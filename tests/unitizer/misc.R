@@ -25,3 +25,9 @@ unitizer_sect("unhandled", {
 
   unhandled_esc("hello\033\033\033[45p wor\ald")
 })
+unitizer_sect("strtrim", {
+  " hello world"
+  " hello\nworld"
+  "\nhello\nworld"
+  "\thello\rworld"
+})

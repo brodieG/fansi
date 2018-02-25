@@ -25,6 +25,14 @@ and z are in 0-255
 Each of the color capabilities your terminal supports should be displayed
 with a blue background and a red foreground.  For reference the corresponding
 CSI SGR sequences are displayed as well.
+
+You should compare the screen output from this function to
+\code{getOption('fansi.term.cap')} to ensure that they are self consistent.
+
+By default \code{fansi} assumes terminals support bright and 256 color
+modes, and also tests for truecolor support via the $COLORTERM system
+variable.  You can visually test your terminal capabilities with
+\link{term_cap_test}.
 }
 \examples{
 term_cap_test()

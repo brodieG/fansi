@@ -4,10 +4,29 @@
 \alias{has_esc}
 \title{Checks Whether Character Vector Contains Escape Sequences}
 \usage{
-has_esc(x)
+has_esc(x, what = "sgr", warn = getOption("fansi.warn"))
 }
 \arguments{
-\item{x}{character}
+\item{x}{a character vector.}
+
+\item{what}{character, any combination of the following values, where each
+value represents a distinct set of control characters/sequences to strip,
+except for "all" which is the equivalent to specifying all the others:
+\itemize{
+\item "nl": strip newlines
+\item "c0": strip all other "C0" control characters (i.e. x01-x1f), except for
+newlines and the actual ESC character
+\item "sgr": strip ANSI CSI SGR sequences
+\item "csi": strip all non-SGR csi sequences
+\item "esc": strip all other escape sequences, including invalid SGR/CSI
+sequences
+\item "all": all of the above
+}}
+
+\item{warn}{TRUE (default) or FALSE, whether to warn whether potentially
+problematic escape sequences are encountered.  These could cause the
+assumptions \code{fansi} is makes about how strings are rendered on your display
+to be incorrect, for example by moving the cursor (see \link{string-parsing}).}
 }
 \value{
 logical of same length as \code{x}; NA values in \code{x} result in NA values

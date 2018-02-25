@@ -27,3 +27,15 @@ Suggests:
     covr
 RoxygenNote: 6.0.1
 Roxygen: list(markdown = TRUE)
+Collate: 
+    'constants.R'
+    'fansi-package.R'
+    'has.R'
+    'load.R'
+    'misc.R'
+    'strip.R'
+    'strwrap.R'
+    'strtrim.R'
+    'substr2.R'
+    'tohtml.R'
+    'unhandled.R'

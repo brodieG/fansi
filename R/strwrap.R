@@ -125,7 +125,8 @@ strwrap_esc <- function(
     FALSE, "",
     TRUE,
     FALSE, 8L,
-    warn, term.cap.int
+    warn, term.cap.int,
+    FALSE   # first_only
   )
   if(simplify) unlist(res) else res
 }
@@ -169,7 +170,8 @@ strwrap2_esc <- function(
     wrap.always, pad.end,
     strip.spaces,
     tabs.as.spaces, tab.stops,
-    warn, term.cap.int
+    warn, term.cap.int,
+    FALSE   # first_only
   )
   if(simplify) unlist(res) else res
 }

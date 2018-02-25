@@ -3,6 +3,7 @@
 export(esc_to_html)
 export(has_esc)
 export(strip_esc)
+export(strtrim_esc)
 export(strwrap2_esc)
 export(strwrap_esc)
 export(substr2_esc)

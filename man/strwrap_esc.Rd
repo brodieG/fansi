@@ -140,6 +140,7 @@ W <- strwrap2_esc(NEWS.C, 25, pad.end=" ", wrap.always=TRUE)
 writeLines(c("", paste(W[1:40], W[200:240], W[410:450]), ""))
 }
 \seealso{
-\link{fansi} for important details on how strings are interpreted,
-particularly if you are getting unexpected results.
+\link{string-parsing} for important details on how strings are
+interpreted and how character width is computed, \link{term_cap_test} to ensure
+\code{fansi} is correctly interpreting your terminal capabilities.
 }

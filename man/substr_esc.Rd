@@ -69,5 +69,6 @@ characters to be dropped irrespective whether they correspond to \code{start} or
 }
 \seealso{
 \link{string-parsing} for important details on how strings are
-interpreted and how character width is computed.
+interpreted and how character width is computed, \link{term_cap_test} to ensure
+\code{fansi} is correctly interpreting your terminal capabilities.
 }
