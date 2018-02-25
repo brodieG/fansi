@@ -305,14 +305,14 @@ static int html_check_overflow(
   }
   return bytes_final;
 }
-SEXP FANSI_esc_to_html(SEXP x) {
+SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
   if(TYPEOF(x) != STRSXP)
     error("Argument `x` must be a character vector");
 
   R_xlen_t x_len = XLENGTH(x);
   struct FANSI_buff buff = {.len=0};
-  struct FANSI_state state = FANSI_state_init();
-  struct FANSI_state state_prev = FANSI_state_init();
+  struct FANSI_state state, state_prev, state_init;
+  state = state_prev = state_init = FANSI_state_init("", warn, term_cap);
 
   int is_utf8_loc = 0;
 
@@ -375,8 +375,10 @@ SEXP FANSI_esc_to_html(SEXP x) {
       // Allocate buffer and do second pass
 
       FANSI_size_buff(&buff, bytes_final);
-      state = state_prev = FANSI_state_init();
-      state.string = state_prev.string = string = string_start;
+      string = string_start;
+      state_init.warn = state.warn;
+      state_init.string = string_start;
+      state = state_prev = state_init;
 
       int first_esc = 1;
       char * buff_track = buff.buff;

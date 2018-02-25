@@ -30,28 +30,34 @@ struct FANSI_prefix_dat {
   // how many indent/exdent bytes are included in string, width, and bytes
   int indent;
   int has_utf8;         // whether utf8 contains value > 127
+  int warn;             // warning issued while stripping
 };
 /*
  * Generate data related to prefix / initial
  */
 
-static struct FANSI_prefix_dat make_pre(SEXP x, int is_utf8_loc) {
-  const char * x_utf8 = FANSI_string_as_utf8(asChar(x), is_utf8_loc).buff;
+static struct FANSI_prefix_dat make_pre(SEXP x) {
+  const char * x_utf8 = FANSI_string_as_utf8(asChar(x)).string;
   // ideally we would IS_ASCII(x), but that's not available to extensions
   int x_has_utf8 = FANSI_has_utf8(x_utf8);
 
-  SEXP x_strip = PROTECT(FANSI_strip(x));
+  // ideally would have an internal interface to strip so we don't need to
+  // generate these SEXPs here
+  SEXP warn = PROTECT(ScalarInteger(2));
+  SEXP what = PROTECT(ScalarInteger(1));
+  SEXP x_strip = PROTECT(FANSI_strip(x, what, warn));
   int x_width = R_nchar(
     asChar(x_strip), Width, FALSE, FALSE, "when computing display width"
   );
   // wish we could get this directly from R_nchar, grr
 
   int x_bytes = strlen(x_utf8);
+  int warn_int = getAttrib(x_strip, FANSI_warn_sym) != R_NilValue;
 
-  UNPROTECT(1);
+  UNPROTECT(3);
   return (struct FANSI_prefix_dat) {
     .string=x_utf8, .width=x_width, .bytes=x_bytes, .has_utf8=x_has_utf8,
-    .indent=0
+    .indent=0, .warn=warn_int
   };
 }
 /*
@@ -109,7 +115,7 @@ static struct FANSI_prefix_dat drop_pre_indent(struct FANSI_prefix_dat dat) {
 SEXP FANSI_writeline(
   struct FANSI_state state_bound, struct FANSI_state state_start,
   struct FANSI_buff * buff,
-  struct FANSI_prefix_dat pre_dat, int is_utf8_loc,
+  struct FANSI_prefix_dat pre_dat,
   int tar_width, const char * pad_chr
 ) {
   // Rprintf("  Writeline start with buff %p\n", *buff);
@@ -234,18 +240,17 @@ SEXP FANSI_writeline(
  * @param is_utf8_loc whether the current locale is UTF8
  */
 
-SEXP FANSI_strwrap(
+static SEXP strwrap(
   const char * x, int width,
   struct FANSI_prefix_dat pre_first,
   struct FANSI_prefix_dat pre_next,
   int wrap_always,
   struct FANSI_buff * buff,
-  int is_utf8_loc,
   const char * pad_chr,
-  int strip_spaces
+  int strip_spaces,
+  SEXP warn, SEXP term_cap
 ) {
-  struct FANSI_state state = FANSI_state_init();
-  state.string = x;
+  struct FANSI_state state = FANSI_state_init(x, warn, term_cap);
 
   int width_1 = FANSI_add_int(width, -pre_first.width);
   int width_2 = FANSI_add_int(width, -pre_next.width);
@@ -325,7 +330,7 @@ SEXP FANSI_strwrap(
         FANSI_writeline(
           state_bound, state_start, buff,
           para_start ? pre_first : pre_next,
-          is_utf8_loc, width_tar, pad_chr
+          width_tar, pad_chr
         )
       );
       if(cur_chr == '\n') prev_newline = 1;
@@ -364,13 +369,6 @@ SEXP FANSI_strwrap(
   }
   // Write last bit of string
 
-  /*
-  Rprintf(
-    "Do we have extra %d %d %s", written_through , state.pos_byte,
-    state.string + state_start.pos_byte
-  );
-  */
-
   SEXP res = PROTECT(allocVector(STRSXP, size));
   char_list = char_list_start;
   for(R_xlen_t i = 0; i < size; ++i) {
@@ -400,14 +398,16 @@ SEXP FANSI_strwrap_ext(
   SEXP prefix, SEXP initial,
   SEXP wrap_always, SEXP pad_end,
   SEXP strip_spaces,
-  SEXP tabs_as_spaces, SEXP tab_stops
+  SEXP tabs_as_spaces, SEXP tab_stops,
+  SEXP warn, SEXP term_cap
 ) {
   if(
     TYPEOF(x) != STRSXP || TYPEOF(width) != INTSXP ||
     TYPEOF(indent) != INTSXP || TYPEOF(exdent) != INTSXP ||
     TYPEOF(prefix) != STRSXP || TYPEOF(initial) != STRSXP ||
     TYPEOF(wrap_always) != LGLSXP ||
-    TYPEOF(pad_end) != STRSXP
+    TYPEOF(pad_end) != STRSXP ||
+    TYPEOF(warn) != LGLSXP || TYPEOF(term_cap) != INTSXP
   ) {
     error("Internal Error: arg type error 1; contact maintainer.");
   }
@@ -425,7 +425,6 @@ SEXP FANSI_strwrap_ext(
       "Argument `pad.end` must be an empty string or a single ",
       "printable ASCII character."
     );
-  int is_utf8_loc = FANSI_is_utf8_loc();
 
   // Set up the buffer, this will be created in FANSI_strwrap, but we want a
   // handle for it here so we can re-use
@@ -443,12 +442,12 @@ SEXP FANSI_strwrap_ext(
   // and tabs
 
   if(asInteger(tabs_as_spaces)) {
-    x = PROTECT(FANSI_tabs_as_spaces(x, tab_stops, &buff, is_utf8_loc));
+    x = PROTECT(FANSI_tabs_as_spaces(x, tab_stops, &buff, warn, term_cap));
     prefix = PROTECT(
-      FANSI_tabs_as_spaces(prefix, tab_stops, &buff, is_utf8_loc)
+      FANSI_tabs_as_spaces(prefix, tab_stops, &buff, warn, term_cap)
     );
     initial = PROTECT(
-      FANSI_tabs_as_spaces(initial, tab_stops, &buff, is_utf8_loc)
+      FANSI_tabs_as_spaces(initial, tab_stops, &buff, warn, term_cap)
     );
   }
   else x = PROTECT(PROTECT(PROTECT(x)));  // PROTECT stack balance
@@ -463,13 +462,19 @@ SEXP FANSI_strwrap_ext(
 
   int indent_int = asInteger(indent);
   int exdent_int = asInteger(exdent);
+  int warn_int = asInteger(warn);
 
   if(indent_int < 0 || exdent_int < 0)
     error("Internal Error: illegal indent/exdent values.");  // nocov
 
-  pre_dat_raw = make_pre(prefix, is_utf8_loc);
+  pre_dat_raw = make_pre(prefix);
+
+  const char * warn_base =
+    "`%s` contains illegal escape sequences (see `?illegal_esc`).";
+  if(warn_int && pre_dat_raw.warn) warning(warn_base, "prefix");
   if(prefix != initial) {
-    ini_dat_raw = make_pre(initial, is_utf8_loc);
+    ini_dat_raw = make_pre(initial);
+    if(warn_int && ini_dat_raw.warn) warning(warn_base, "initial");
   } else ini_dat_raw = pre_dat_raw;
 
   ini_first_dat = pad_pre(ini_dat_raw, indent_int);
@@ -515,13 +520,14 @@ SEXP FANSI_strwrap_ext(
     SEXP chr = STRING_ELT(x, i);
     if(chr == NA_STRING) continue;
     SEXP str_i = PROTECT(
-      FANSI_strwrap(
+      strwrap(
         CHAR(chr), width_int,
         i ? pre_first_dat : ini_first_dat,
         pre_next_dat,
-        wrap_always_int, &buff, is_utf8_loc,
+        wrap_always_int, &buff,
         CHAR(asChar(pad_end)),
-        strip_spaces_int
+        strip_spaces_int,
+        warn, term_cap
     ) );
     SET_VECTOR_ELT(res, i, str_i);
     UNPROTECT(1);

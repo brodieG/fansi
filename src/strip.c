@@ -22,24 +22,46 @@
  *
  * Assumes input is NULL terminated.
  *
- * Freaks out if ANSI escape sequence contains stuff outside of 1-127.  Observed
- * behavior is that that stuff gets spat out to screen but ANSI tag continues to
- * be processed...  Probably undefined behavior?
  *
- * Really should have tried to harmonize this and strip white?
+ * @param warn normally TRUE or FALSE, but internally we allow it to be an
+ *   integer so that we can use a special mode where if == 2 then we return the
+ *   fact that there was a warning as an attached attributed, as opposed to
+ *   actually throwing the warning
  */
 
-SEXP FANSI_strip(SEXP input) {
-  if(TYPEOF(input) != STRSXP) error("`input` should be STRSXP");
+SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
+  if(TYPEOF(x) != STRSXP)
+    error("Argument `x` should be a character vector.");
+  if(TYPEOF(what) != INTSXP)
+    error("Internal Error: `what` should integer.");
+  if(
+    (TYPEOF(warn) != LGLSXP && TYPEOF(warn) != INTSXP) || XLENGTH(warn) != 1 ||
+    INTEGER(warn)[0] == NA_INTEGER
+  )
+    error("Internal Error: `warn` should be TRUE or FALSE");
 
-  R_xlen_t i, len = xlength(input);
+  int warn_int = asInteger(warn);
+  if(warn_int < 0 || warn_int > 2)
+    error("Argument `warn` must be between 0 and 2 if an integer.");
+
+  // Compress `what` into a single integer using bit flags
+
+  int what_int = 0;
+  for(R_xlen_t i = 0; i < XLENGTH(what); ++i) {
+    int what_val = INTEGER(what)[i] - 2;
+    if(what_val < 0) {
+      what_int = 1 + 2 + 4 + 8 + 16; // strip all
+      break;
+    }
+    what_int |= 1 << what_val;
+  }
+  R_xlen_t i, len = xlength(x);
   PROTECT_INDEX ipx;
-  PROTECT_WITH_INDEX(input, &ipx);  // reserve spot if we need to alloc later
-  SEXP res_fin = input;
+  PROTECT_WITH_INDEX(x, &ipx);  // reserve spot if we need to alloc later
+  SEXP res_fin = x;
 
   int any_ansi = 0;
-  R_len_t mem_req = 0;         // how much memory we need for each ansi
-  int invalid_ansi = 0;
+  R_len_t mem_req = 0;          // how much memory we need for each ansi
 
   struct FANSI_csi_pos csi;
 
@@ -51,34 +73,41 @@ SEXP FANSI_strip(SEXP input) {
 
   for(i = 0; i < len; ++i) {
     FANSI_interrupt(i);
-    R_len_t chr_len = LENGTH(STRING_ELT(input, i));
+    R_len_t chr_len = LENGTH(STRING_ELT(x, i));
     if(chr_len > mem_req) mem_req = chr_len;
   }
   // Now strip
 
+  int invalid_ansi = 0;
+  int invalid_idx = 0;
+
   for(i = 0; i < len; ++i) {
     FANSI_interrupt(i);
-    SEXP input_chr = STRING_ELT(input, i);
-    if(input_chr == NA_STRING) continue;
+    SEXP x_chr = STRING_ELT(x, i);
+    if(x_chr == NA_STRING) continue;
 
     int has_ansi = 0;
-    const char * chr = CHAR(input_chr);
+    const char * chr = CHAR(x_chr);
     const char * chr_track = chr;
     char * chr_buff;
-    char * res_track, * res_start;
+    char * res_track = NULL, * res_start = NULL;
 
-    // note that csi.start is the NULL pointer if an escape is not found
+    while(1) {
+      csi = FANSI_find_esc(chr_track, what_int);
+      if(!invalid_ansi && !csi.valid) {
+        invalid_ansi = 1;
+        invalid_idx = i + 1;
+      }
+      if(csi.len) {
+        if(csi.start - chr >= INT_MAX - csi.len)
+          // nocov start
+          error(
+            "%s%s",
+            "Internal Error: string longer than INT_MAX encountered, should ",
+            "not be possible."
+          );
+          // nocov end
 
-    while((csi = FANSI_find_esc(chr_track)).start) {
-      if(csi.start - chr >= INT_MAX - csi.len)
-        // nocov start
-        error(
-          "%s%s",
-          "Internal Error: string longer than INT_MAX encountered, should ",
-          "not be possible."
-        );
-        // nocov end
-      if(csi.valid) {
         // As soon as we encounter ansi, allocate vector to track what has ansi
         if(!any_ansi) {
           any_ansi = 1;
@@ -86,7 +115,7 @@ SEXP FANSI_strip(SEXP input) {
           // We need to allocate a result vector since we'll be stripping ANSI
           // CSI, and also the buffer we'll use to re-write the CSI less strings
 
-          REPROTECT(res_fin = duplicate(input), ipx);
+          REPROTECT(res_fin = duplicate(x), ipx);
 
           // Note the is guaranteed to be an over-allocation
 
@@ -108,18 +137,10 @@ SEXP FANSI_strip(SEXP input) {
         // Is memcpy going to cause problems again by reading past end of
         // block?  Didn't in first valgrind check.
 
-        if(csi.len) {
-          memcpy(res_track, chr_track, csi.start - chr_track);
-          res_track += csi.start - chr_track;
-        }
-      } else if(!invalid_ansi) {
-        invalid_ansi = 1;
-        warning(
-          "Invalid ESC sequence at index %.0f, byte %d.",
-          (double) i + 1, csi.start - chr + 1
-        );
-      }
-      chr_track = csi.start + csi.len;
+        memcpy(res_track, chr_track, csi.start - chr_track);
+        res_track += csi.start - chr_track;
+        chr_track = csi.start + csi.len;
+      } else break;
     }
     // Update string
 
@@ -128,7 +149,7 @@ SEXP FANSI_strip(SEXP input) {
       // encounter the tag
 
       if(*chr_track) {
-        const char * chr_end = chr + LENGTH(input_chr);
+        const char * chr_end = chr + LENGTH(x_chr);
         if(!chr_end) {
           // nocov start
           error(
@@ -144,12 +165,29 @@ SEXP FANSI_strip(SEXP input) {
       *res_track = '\0';
       SEXP chr_sexp = PROTECT(
         mkCharLenCE(
-          res_start, res_track - res_start, getCharCE(input_chr)
+          res_start, res_track - res_start, getCharCE(x_chr)
       ) );
       SET_STRING_ELT(res_fin, i, chr_sexp);
       UNPROTECT(1);
     }
   }
+  if(invalid_ansi) {
+    switch(warn_int) {
+      case 1: {
+        warning(
+          "Encountered invalid ESC sequence at index [%.0f], %s%s",
+          (double) invalid_idx,
+          "see `?unhandled_esc`; you can use `warn=FALSE` to turn ",
+          "off these warnings."
+        );
+        break;
+      }
+      case 2: {
+        SEXP attrib_val = PROTECT(ScalarLogical(1));
+        setAttrib(res_fin, FANSI_warn_sym, attrib_val);
+        UNPROTECT(1);
+        break;
+  } } }
   UNPROTECT(1);
   return res_fin;
 }

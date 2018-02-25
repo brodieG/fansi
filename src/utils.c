@@ -33,60 +33,107 @@
  * The true length may actually be different depending on your terminal,
  * (e.g. OSX terminal spits out illegal characters to screen but keeps
  * processing the sequence).
+ *
+ * @param what is a bit flag to line up against VALID.WHAT index values, so
+ *   (what & (1 << 0)) is newlines, (what & (1 << 1)) is C0, etc
  */
 
-struct FANSI_csi_pos FANSI_find_esc(const char * x) {
+struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
   /***************************************************\
-  | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_parse_esc |
+  | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_read_esc  |
   \***************************************************/
-  int valid = 0;
+  int valid = 1;
+  int found = 0;
   const char * x_track = x;
-  const char * x_start = x;
-
-  // Note there is a potentially unncessary call to `strchr` here in the case
-  // the ESC is the last thing in a string, but handling it explicitly adds a
-  // bit of complexity and it should be rare
+  const char * x_found_start;
+  const char * x_found_end;
 
   struct FANSI_csi_pos res;
-  if((x_start = x_track = strchr(x, 27))) {
-    while(*x_track == 27) {
-      ++x_track;
-      if(*x_track == '[') {
-        // This is a CSI sequence, so it has multiple characters that we need to
-        // skip.  The final character is processed outside of here since it has
-        // the same logic for CSI and non CSI sequences
 
-        // skip [
+  while(*x_track) {
+    const char x_val = *(x_track++);
+    // use found & found_this in conjunction so that we can allow multiple
+    // adjacent elements to be found in one go
 
-        ++x_track;
+    int found_this = 0;
 
-        // Skip all the valid parameters tokens
-
-        while(*x_track >= 0x30 && *x_track <= 0x3F) ++x_track;
-
-        // And all the valid intermediates
-
-        while(*x_track >= 0x20 && *x_track <= 0x2F) ++x_track;
+    // If not normal ASCII or UTF8, examine whether we need to found
+    if(!((x_val > 31 && x_val < 127) || x_val < 0)) {
+      if(!found) {
+        // Keep resetting strip start point until we find something we want to
+        // mark
+        x_found_start = x_found_end = x_track - 1;
       }
-      // In either normal or CSI sequence, there needs to be a final character:
+      found_this = 0;
+      if(x_val == 27) {
+        if(*x_track == '[') {
+          // If not finding CSI or SGR, skip (12 = 2^2 + 2^3), where ^2
+          // corresponds to SGR and ^3 CSI
 
-      valid = *x_track >= 0x40 && *x_track <= 0x7E;
-      if(*x_track) ++x_track;
+          // This is a CSI sequence, so it has multiple characters that we
+          // need to skip.  The final character is processed outside of here
+          // since it has the same logic for CSI and non CSI sequences
 
-      if(x_track - x > INT_MAX - 1)
-        // nocov start
-        error(
-          "%s%s",
-          "Interal Error: encountered CSI seq that is too long; ",
-          "contact maintianer."
-        );
-        // nocov end
+          // skip [
+
+          ++x_track;
+
+          // Skip all the valid parameters tokens
+
+          while(*x_track >= 0x30 && *x_track <= 0x3F) ++x_track;
+
+          // And all the valid intermediates
+
+          while(*x_track >= 0x20 && *x_track <= 0x2F) ++x_track;
+
+          // Check validity
+
+          int valid_tmp = *x_track >= 0x40 && *x_track <= 0x7E;
+
+          // If not valid, consume all subsequent parameter tokens  as that
+          // seems to be terminal.osx and iterm behavior (though terminal.osx
+          // seems pretty picky about what it considers intermediate or even
+          // parameter characters).
+
+          if(!valid_tmp)
+            while(*x_track >= 0x20 && *x_track <= 0x3F) ++x_track;
+
+          valid = valid && valid_tmp;
+
+          // CSI SGR only found if ends in m
+
+          found_this =
+            (*x_track == 'm' && (what & (1 << 2))) ||  // SGR
+            (*x_track != 'm' && what & (1 << 3));      // CSI
+        } else {
+          // Includes both the C1 set and "controls strings"
+          found_this = what & (1 << 4);
+          valid = valid && (*x_track >= 0x40 && *x_track <= 0x7E);
+        }
+        // Advance unless next char is ESC, in which case we want to keep
+        // looping
+
+        if(*x_track && *x_track != 27) x_track++;
+      } else {
+        // x01-x1F, x7F, all the C0 codes
+
+        found_this =
+          (x_val == '\n' && (what & 1)) ||
+          (what & (1 << 1));
+      }
+      if(found_this) {
+        x_found_end = x_track;
+        if(!found) found = 1;
+      }
     }
+    if(found && !found_this) break;
+  }
+  if(found) {
     res = (struct FANSI_csi_pos){
-      .start=x_start, .len=(x_track - x_start), .valid=valid
+      .start=x_found_start, .len=(x_found_end - x_found_start), .valid=valid
     };
   } else {
-    res = (struct FANSI_csi_pos){.start=x_start, .len=0, .valid=0};
+    res = (struct FANSI_csi_pos){.start=x, .len=0, .valid=valid};
   }
   return res;
 }

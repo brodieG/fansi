@@ -3,6 +3,7 @@
 library(fansi)
 
 unitizer_sect("substr", {
+  term.cap <- c('bright', '256', 'truecolor')
   lorem.cn.pieces <-
     substr(rep(lorem.cn, 5), c(1, 11, 21, 31), c(10, 15, 22, 45))
 
@@ -14,7 +15,7 @@ unitizer_sect("substr", {
 
   starts <- seq(1, 17, 4)
   ends <- starts + 3
-  substr2_esc(lor.cn.c.1.5, starts, ends)
+  substr2_esc(lor.cn.c.1.5, starts, ends, term.cap=term.cap)
 
   # These are all six chars wide, but look different due to different width
   # characters
@@ -26,11 +27,11 @@ unitizer_sect("substr", {
   lor.cn.c.2.5 <- rep(lorem.cn.col.2, 5)
   starts <- seq(1, by=6, len=5)
   ends <- starts + 5
-  substr2_esc(lor.cn.c.2.5, starts, ends)
+  substr2_esc(lor.cn.c.2.5, starts, ends, term.cap=term.cap)
 
   starts <- seq(1, by=12, len=5)
   ends <- starts + 11
-  substr2_esc(lor.cn.c.2.5, starts, ends, type='width')
+  substr2_esc(lor.cn.c.2.5, starts, ends, type='width', term.cap=term.cap)
 
   # with colors that actually work on an OSX terminal
 
@@ -57,19 +58,22 @@ unitizer_sect("substr", {
   # second line has two extra single width characters because all the others are
   # losing the last character b/c we're ending in the middle, width wise
 
-  substr2_esc(lor.cn.c.3.5, starts, ends, type='width')
+  substr2_esc(lor.cn.c.3.5, starts, ends, type='width', term.cap=term.cap)
 
   # and now we grab those missing chars by allowing the round to happen
 
-  substr2_esc(lor.cn.c.3.5, starts, ends, type='width', round='both')
+  substr2_esc(
+    lor.cn.c.3.5, starts, ends, type='width', round='both', term.cap=term.cap
+  )
 
   # jagged first one leads short, second long
 
   starts <- seq(1, by=7, length.out=5)
   ends <- starts + 8
-  substr2_esc(lor.cn.c.1.5, starts, ends, type='width')
-  substr2_esc(lor.cn.c.1.5, starts, ends, type='width', round='stop')
-
+  substr2_esc(lor.cn.c.1.5, starts, ends, type='width', term.cap=term.cap)
+  substr2_esc(
+    lor.cn.c.1.5, starts, ends, type='width', round='stop', term.cap=term.cap
+  )
 })
 unitizer_sect("rounding", {
   # handling of subsetting when we end up in middle of wide display characters

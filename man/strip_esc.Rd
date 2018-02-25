@@ -4,7 +4,7 @@
 \alias{strip_esc}
 \title{Strip Ansi Escape Sequences}
 \usage{
-strip_esc(x)
+strip_esc(x, warn = getOption("fansi.warn"))
 }
 \arguments{
 \item{x}{character vector}

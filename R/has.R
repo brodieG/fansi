@@ -14,13 +14,22 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-#' Checks Whether Character Vector Contains ANSI CSI Sequences
+#' Checks Whether Character Vector Contains Escape Sequences
 #'
 #' ...CSI definition...
 #'
 #' @export
-#' @param x character
+#' @inheritParams strip_esc
 #' @return logical of same length as `x`; NA values in `x` result in NA values
 #'   in return
 
-has_esc <- function(x) .Call(FANSI_has_csi, x)
+has_esc <- function(x, what='sgr', warn=getOption('fansi.warn')) {
+  vetr(warn=LGL.1, what=CHR)
+  if(length(what)) {
+    if(anyNA(what.int <- match(what, VALID.WHAT)))
+      stop(
+        "Argument `what` may contain only values in `", deparse(VALID.WHAT), "`"
+      )
+    .Call(FANSI_has_csi, x, what.int, warn)
+  } else rep(FALSE, length(x))
+}

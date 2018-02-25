@@ -16,8 +16,12 @@ unitizer_sect("Corner cases", {
   # should this be stripped?  Not 100% clear since terminal seems to be waiting
   # for input after it is cated
   strip_esc("hello\033[")
-})
 
+  # illegal sequence
+
+  strip_esc("hello\033[31##3m illegal")
+  strip_esc("hello\033[31##m legal")
+})
 unitizer_sect("Whitespace", {
   fansi:::process('hello     world')
   fansi:::process('hello.    world')
@@ -64,4 +68,34 @@ unitizer_sect("Whitespace", {
   fansi:::process('hello.\n\nworld\n\n  ')
   fansi:::process('\n\nhello.\n\t\n\tworld\n\t\n woohoo\n ')
   fansi:::process('\n \t\nhello.\n\t\n\tworld\n\t\n woohoo\n ')
+})
+unitizer_sect("Selective stripping", {
+ string.0 <- "hello\033k\033[45p world\n\033[31mgoodbye\a moon"
+
+ strip_esc(string.0)
+ strip_esc(string.0, c("nl", "c0", "sgr", "csi", "esc"))
+ strip_esc(string.0, "all")  # equivalently
+ strip_esc(string.0, c("c0", "esc"))
+
+ # add some illegal sequences
+
+ string.1 <- "hello\033\033[45p world\n\033[31#3mgoodbye\a moon"
+
+ strip_esc(string.1, c("nl", "sgr", "esc"))
+ strip_esc(string.1, "all")  # equivalently
+ strip_esc(string.1, c("c0", "nl"))
+
+ # longer vec
+
+ strip_esc(c(string.0, string.1, "hello"), warn=FALSE)
+
+ # possible corner cases
+
+ string.2 <- "\033k\033[45p\a\n\033[31mgoodbye moon"
+ strip_esc(string.2)
+ strip_esc(string.2, "all")
+
+ string.3 <- "hello world\033k\033[45p\a\n\033[31m"
+ strip_esc(string.3)
+ strip_esc(string.3, "all")
 })

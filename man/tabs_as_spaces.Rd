@@ -4,7 +4,8 @@
 \alias{tabs_as_spaces}
 \title{Replace Tabs With Corresponding Spaces}
 \usage{
-tabs_as_spaces(x, tab.stops = getOption("fansi.tab.stops"))
+tabs_as_spaces(x, tab.stops = getOption("fansi.tab.stops"),
+  warn = getOption("fansi.warn"), term.cap = getOption("fansi.term.cap"))
 }
 \arguments{
 \item{x}{character vector to replace tabs in.}
@@ -14,6 +15,18 @@ converting tabs to spaces.  If there are more tabs in a line than defined
 tab stops the last tab stop is re-used.  For the purposes of applying tab
 stops, each input line is considered a line and the character count begins
 from the beginning of the input line.}
+
+\item{warn}{TRUE (default) or FALSE, whether to warn whether potentially
+problematic escape sequences are encountered.  These could cause the
+assumptions \code{fansi} is makes about how strings are rendered on your display
+to be incorrect, for example by moving the cursor (see \link{string-parsing}).}
+
+\item{term.cap}{character a vector of the capabilities of the terminal, can
+be any combination "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
+starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
+"38;2" or "48;2"). Defaults to \code{c("bright", "256")}.  Changing this
+parameter changes how \code{fansi} interprets escape sequences, so you should
+ensure that it matches your terminal capabilities.}
 }
 \value{
 character, \code{x} with tabs replaced by spaces, with elements
@@ -48,6 +61,6 @@ writeLines(
 ) )
 }
 \seealso{
-\link{string-parsing} for important details on how strings are
-interpreted
+\link{fansi} for important details on how strings are interpreted,
+particularly if you are getting unexpected results.
 }

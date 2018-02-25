@@ -2,6 +2,26 @@
 
 These are internal developer notes.
 
+## SGR Capabilities
+
+* 256 colors     (yes)
+* Bright Colors  (yes)
+* Truecolor      (no)
+
+* Border
+* Ideogram
+* Fonts
+
+Mostly we need to worry about capabilities in the case were not having them
+causes stuff to be interpreted differently.  In particular, with 256 and true
+color, not having capabilities changes the interpretation of the next character.
+
+Also with alternate color schemes like 90-100 if we don't support them then they
+won't interfere with existing colors.
+
+All the other codes don't really interfere with each other so we don't have to
+worry too much about them.
+
 ## To HTML
 
 One of the problems is that we won't know the size of our target buffer until

@@ -14,35 +14,38 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-state_esc <- function(
-  text, pos, type='chars', lag, ends, tabs.as.spaces=FALSE, tab.stops=8L
-) {
-  stopifnot(
-    is.character(text), length(text) == 1L,
-    is.numeric(pos), min(pos, 0L, na.rm=TRUE) >= 0L,
-    is.character(type),
-    !is.na(type.match <- match(type, c('chars', 'width', 'bytes')))
-  )
-  .Call(
-    FANSI_state_at_pos_ext, text, as.integer(pos) - 1L, type.match - 1L,
-    lag, ends, tabs.as.spaces, tab.stops
-  )
-}
+## state_esc <- function(
+##   text, pos, type='chars', lag, ends, tabs.as.spaces=FALSE, tab.stops=8L
+## ) {
+##   stopifnot(
+##     is.character(text), length(text) == 1L,
+##     is.numeric(pos), min(pos, 0L, na.rm=TRUE) >= 0L,
+##     is.character(type),
+##     !is.na(type.match <- match(type, c('chars', 'width', 'bytes')))
+##   )
+##   .Call(
+##     FANSI_state_at_pos_ext, text, as.integer(pos) - 1L, type.match - 1L,
+##     lag, ends, tabs.as.spaces, tab.stops
+##   )
+## }
+
 #' ANSI Escape Sequence Aware Version of `substr`
 #'
 #' `substr_esc` is a drop-in replacement for `substr`.  Performance is
 #' slightly slower than `substr`.
 #'
 #' `substr2_esc` adds the ability to retrieve substrings based on display width,
-#' and byte width in addition to the normal character width.  #'
-#' `substr2_esc` also provides the option to convert tabs to spaces with
-#' [tabs_as_spaces] prior to taking substrings.
+#' and byte width in addition to the normal character width.  `substr2_esc` also
+#' provides the option to convert tabs to spaces with [tabs_as_spaces] prior to
+#' taking substrings.
 #
 #' Because exact substrings on anything other than character width cannot be
 #' guaranteed (e.g.  because of multi-byte encodings, or double display-width
 #' characters) `substr2_esc` must make assumptions on how to resolve provided
 #' `start`/`stop` values that are infeasible and does so via the `round`
-#' parameter.  If we use "start" as the `round` value, then any time the `start`
+#' parameter.
+#'
+#' If we use "start" as the `round` value, then any time the `start`
 #' value corresponds to the middle of a multi-byte or a wide character, then
 #' that character is included in the substring, while any similar partially
 #' included character via the `stop` is left out.  The converse is true if we
@@ -52,29 +55,54 @@ state_esc <- function(
 #'
 #' @inheritParams base::substr
 #' @inheritParams tabs_as_spaces
+#' @seealso [string-parsing] for important details on how strings are
+#'   interpreted and how character width is computed, [term_cap_test] to ensure
+#'   `fansi` is correctly interpreting your terminal capabilities.
 #' @param type character(1L) in `c("char", "width", "bytes")`
 #' @param round character(1L) in `c("start", "stop", "both", "neither")`,
 #'   controls how to resolve ambiguities when a `start` or `stop` value in
 #'   "bytes" or "width" `type` mode falls within a multi-byte character or a
 #'   wide display character.  See details.
+#' @param warn TRUE (default) or FALSE, whether to warn whether potentially
+#'   problematic escape sequences are encountered.  These could cause the
+#'   assumptions `fansi` is makes about how strings are rendered on your display
+#'   to be incorrect, for example by moving the cursor (see [string-parsing]).
+#' @param term.cap character a vector of the capabilities of the terminal, can
+#'   be any combination "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
+#'   starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
+#'   "38;2" or "48;2"). Defaults to `c("bright", "256")`.  Changing this
+#'   parameter changes how `fansi` interprets escape sequences, so you should
+#'   ensure that it matches your terminal capabilities.
 #' @export
 
-substr_esc <- function(x, start, stop) substr2_esc(x=x, start=start, stop=stop)
+substr_esc <- function(
+  x, start, stop,
+  warn=getOption('fansi.warn'),
+  term.cap=getOption('fansi.term.cap')
+) substr2_esc(x=x, start=start, stop=stop, warn=warn, term.cap=term.cap)
 
 #' @rdname substr_esc
 #' @export
 
 substr2_esc <- function(
   x, start, stop, type='chars', round='start', tabs.as.spaces=FALSE,
-  tab.stops=getOption('fansi.tab.stops')
+  tab.stops=getOption('fansi.tab.stops'),
+  warn=getOption('fansi.warn'),
+  term.cap=getOption('fansi.term.cap')
 ) {
   x <- as.character(x)
   vetr(
     character(), integer(), integer(),
     type=CHR.1 && . %in% c('chars', 'bytes', 'width'),
     round=CHR.1 && . %in% c('start', 'stop', 'both', 'neither'),
-    tabs.as.spaces=LGL.1, tab.stops=INT && length(.) >= 1L
+    tabs.as.spaces=LGL.1, tab.stops=INT && length(.) >= 1L,
+    warn=LGL.1, term.cap=CHR
   )
+  if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
+    stop(
+      "Argument `term.cap` may only contain values in ",
+      deparse(VALID.TERM.CAP)
+    )
   x.len <- length(x)
 
   # Add special case for length(x) == 1
@@ -110,7 +138,10 @@ substr2_esc <- function(
 
     state <- .Call(
       FANSI_state_at_pos_ext,
-      u, e.sort - 1L, type.m - 1L, e.lag, e.ends, tabs.as.spaces, tab.stops
+      u, e.sort - 1L, type.m - 1L,
+      e.lag, e.ends,
+      tabs.as.spaces, tab.stops,
+      warn, term.cap.int
     )
     # Recover the matching values for e.sort
 

@@ -33,9 +33,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     char * buff; // Buffer
     int len;     // How many bytes the buffer has been allocated to
   };
-  struct FANSI_buff_const {
-    const char * buff; // buffer
-    int len;           // size of buffer
+  struct FANSI_string_as_utf8 {
+    const char * string;  // buffer
+    int len;              // size of buffer
+    int translated;       // whether translation was required
   };
   /*
    * Used when computing position and size of ANSI tag with FANSI_loc
@@ -83,6 +84,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * `state.string[state.pos_byte]` to access the current position.
      */
     const char * string;
+    /*
+     * Any error associated with err_code
+     */
+    const char * err_msg;
 
     /*
      * should be interpreted as bit mask where with 2^n., 1-9 match to the
@@ -133,15 +138,17 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     /* Alternative fonts, 10-19, where 0 is the primary font */
 
     int font;
-
     /*
      * A number in 0-9, corrsponds to the ansi codes in the [3-4][0-9] range, if
      * less than zero or 9 means no color is active.  If 8 (i.e. corresponding
      * to the `38` code), then `color_extra` contains additional color info.
+     *
+     * If > 9 then for color in 90-97, the bright color, for bg_color, in
+     * 100-107 the bright bg color.
      */
 
-    int color;           // the number follwing the 3 in 3[0-9]
-    int bg_color;        // the number follwing the 4 in 4[0-9]
+    int color;           // the number following the 3 in 3[0-9]
+    int bg_color;        // the number following the 4 in 4[0-9]
 
     /*
      * Position markers (all zero index), we use int because these numbers
@@ -198,7 +205,20 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * * 5: other escape sequence
      */
     int err_code;
+    /*
+     * Terminal capabilities
+     *
+     * term_cap & 1        // bright colors
+     * term_cap & (1 << 1) // 256 colors
+     * term_cap & (1 << 2) // true color
+     *
+     */
+    int term_cap;
+    // Whether at end of a CSI escape sequence
     int last;
+    // Whether to issue warnings if err_code is non-zero, if -1 means that the
+    // warning was issued at least once so may not need to be re-issued
+    int warn;
   };
   /*
    * Need to keep track of fallback state, so we need ability to return two
@@ -217,32 +237,39 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     cetype_t type;
   };
 
-  struct FANSI_csi_pos FANSI_find_esc(const char * x);
+  struct FANSI_csi_pos FANSI_find_esc(const char * x, int what);
 
   // External funs
 
-  SEXP FANSI_has(SEXP x);
-  SEXP FANSI_strip(SEXP input);
+  SEXP FANSI_has(SEXP x, SEXP what, SEXP warn);
+  SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn);
   SEXP FANSI_state_at_pos_ext(
-    SEXP text, SEXP pos, SEXP type, SEXP lag, SEXP ends
+    SEXP text, SEXP pos, SEXP type, SEXP lag, SEXP ends,
+    SEXP tabs_as_spaces, SEXP tab_stops,
+    SEXP warn, SEXP term_cap
   );
   SEXP FANSI_strwrap_ext(
     SEXP x, SEXP width,
     SEXP indent, SEXP exdent, SEXP prefix, SEXP initial,
     SEXP wrap_always, SEXP pad_end,
     SEXP strip_spaces,
-    SEXP tabs_as_spaces, SEXP tab_stops
+    SEXP tabs_as_spaces, SEXP tab_stops,
+    SEXP warn, SEXP term_cap
   );
   SEXP FANSI_process(SEXP input, struct FANSI_buff * buff);
   SEXP FANSI_process_ext(SEXP input);
-  SEXP FANSI_tabs_as_spaces_ext(SEXP vec, SEXP tab_stops);
+  SEXP FANSI_tabs_as_spaces_ext(
+    SEXP vec, SEXP tab_stops, SEXP warn, SEXP term_cap
+  );
   SEXP FANSI_color_to_html_ext(SEXP x);
-  SEXP FANSI_esc_to_html(SEXP x);
+  SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap);
+  SEXP FANSI_unhandled_esc(SEXP x);
 
   // Internal
 
   SEXP FANSI_tabs_as_spaces(
-    SEXP vec, SEXP tab_stops, struct FANSI_buff * buff, int is_utf8_loc
+    SEXP vec, SEXP tab_stops, struct FANSI_buff * buff, SEXP warn,
+    SEXP term_cap
   );
 
   // Utilities
@@ -253,14 +280,15 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   struct FANSI_state FANSI_inc_width(struct FANSI_state state, int inc);
   struct FANSI_state FANSI_reset_pos(struct FANSI_state state);
   struct FANSI_state FANSI_reset_width(struct FANSI_state state);
-  struct FANSI_state FANSI_parse_esc(struct FANSI_state state);
 
   void FANSI_size_buff(struct FANSI_buff * buff, int size);
   int FANSI_is_utf8_loc();
   int FANSI_utf8clen(char c);
   int FANSI_digits_in_int(int x);
-  struct FANSI_buff_const FANSI_string_as_utf8(SEXP x, int is_utf8_loc);
-  struct FANSI_state FANSI_state_init();
+  struct FANSI_string_as_utf8 FANSI_string_as_utf8(SEXP x);
+  struct FANSI_state FANSI_state_init(
+    const char * string, SEXP warn, SEXP term_cap
+  );
   int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current);
   int FANSI_state_comp_basic(
     struct FANSI_state target, struct FANSI_state current
@@ -269,10 +297,13 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_state_has_style_basic(struct FANSI_state state);
   int FANSI_state_size(struct FANSI_state state);
   int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len);
-  struct FANSI_state FANSI_read_ascii(struct FANSI_state state);
   struct FANSI_state FANSI_read_next(struct FANSI_state state);
   int FANSI_add_int(int x, int y);
   int FANSI_has_utf8(const char * x);
   void FANSI_interrupt(int i);
+
+  // symbols
+
+  SEXP FANSI_warn_sym;
 
 #endif

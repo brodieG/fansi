@@ -3,7 +3,6 @@ library(fansi)
 
 unitizer_sect("Basic wrap", {
   hello.0 <- "hello world this is a lovely day"
-
   identical(strwrap_esc(hello.0, width=10), strwrap(hello.0, width=10))
 
   hello.1 <- "hello  world  this  is.  a lovely day."
@@ -85,6 +84,16 @@ unitizer_sect("Other Escapes", {
   # c0 escapes should be treated as zero width
 
   strwrap_esc("hello\x1F\x1F\x1F\x1F\x1F\x1F world yohoo", 12)
+
+  # Various different types of warnings
+
+  strwrap_esc("hello \033[999mworld", 6)
+  strwrap_esc("hello \033[31#31mworld", 6)
+  strwrap_esc("hello \033[999nworld", 6)
+
+  strwrap_esc("hello \033[999mworld", 6, warn=FALSE)
+  strwrap_esc("hello \033[31#31mworld", 6, warn=FALSE)
+  strwrap_esc("hello \033[999nworld", 6, warn=FALSE)
 })
 unitizer_sect("prefix / initial simple", {
   # a version of lorem with paragraphs
@@ -217,6 +226,24 @@ unitizer_sect("rare escapes", {
   )
   strwrap_esc(hello.font, 12)
 })
+unitizer_sect("term cap and bright", {
+  # default term cap should recognize bright and 256, but not true color.
+
+  getOption('fansi.term.cap')
+  hello.bright <- '\033[42mhello \033[103mworld wowza\033[49m'
+
+  strwrap_esc(hello.bright, 13)
+  strwrap_esc(hello.bright, 13, term.cap=character())
+
+  hello.255 <- '\033[42mhello \033[48;5;47mworld wowza\033[49m'
+  strwrap_esc(hello.255, 13)
+  strwrap_esc(hello.255, 13, term.cap=character())
+
+  hello.tru <- '\033[42mhello \033[48;2;7;41;4mworld wowza\033[m'
+  strwrap_esc(hello.tru, 13, term.cap='truecolor')
+  strwrap_esc(hello.tru, 13)
+})
+
 # Things to test:
 #
 # * Special/control characters
