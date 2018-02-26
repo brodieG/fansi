@@ -12,6 +12,8 @@
 #' * start: integer the start position of the sequence (in characters)
 #' * stop: integer the start position of the sequence (in characters)
 #' * error: the reason why the sequence was not handled:
+#'     * exceed-term-cap: contains color codes not supported by the terminal
+#'       (see [term_cap_test]).
 #'     * special: contains uncommon characters in ":<=>".
 #'     * unknown: a substring with a value that does not correspond to a known
 #'       SGR code.
@@ -49,8 +51,8 @@ unhandled_esc <- function(x) {
   res <- .Call(FANSI_unhandled_esc, x)
   names(res) <- c("index", "start", "stop", "error", "translated")
   errors <- c(
-    'special', 'unknown', 'non-SGR', 'malformed-CSI', 'non-CSI',
-    'malformed-ESC', 'C0'
+    'exceed-term-cap', 'special', 'unknown', 'non-SGR', 'malformed-CSI',
+    'non-CSI', 'malformed-ESC', 'C0'
   )
   res[['error']] <- errors[res[['error']]]
   res[['esc']] <- substring(
