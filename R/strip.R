@@ -20,8 +20,8 @@
 #' strips valid ANSI CSI SGR sequences, but can be made to strip C0 control
 #' characters and all escape sequences.
 #'
-#' @seealso [fansi] for important details on how strings are interpreted,
-#'   particularly if you are getting unexpected results.
+#' @seealso [fansi] for details on how control characters and sequences are
+#'   interpreted, particularly if you are getting unexpected results.
 #' @inheritParams substr_esc
 #' @export
 #' @param what character, any combination of the following values, where each
@@ -33,8 +33,7 @@
 #'     newlines and the actual ESC character
 #'   * "sgr": strip ANSI CSI SGR sequences
 #'   * "csi": strip all non-SGR csi sequences
-#'   * "esc": strip all other escape sequences, including invalid SGR/CSI
-#'     sequences
+#'   * "esc": strip all other escape sequences
 #'   * "all": all of the above
 #' @return character vector of same length as x with ANSI escape sequences
 #'   stripped

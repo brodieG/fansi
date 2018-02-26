@@ -4,10 +4,11 @@
 \name{fansi}
 \alias{fansi}
 \alias{fansi-package}
-\title{ANSI CSI SGR Aware String Functions}
+\title{ANSI Control Sequence Aware String Functions}
 \description{
 Counterparts to R string manipulation functions that preserve ANSI
-CSI SGR escape sequences while treating them as zero width.
+CSI SGR control sequences and treat them along with other control characters
+and sequences as zero display-width.
 }
 \section{Control Characters and Sequences}{
 

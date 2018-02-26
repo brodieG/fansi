@@ -3,7 +3,7 @@
 \name{strtrim_esc}
 \alias{strtrim_esc}
 \alias{strtrim2_esc}
-\title{ANSI CSI SGR aware version of \code{strtrim}}
+\title{ANSI Control Sequence Aware Version of strtrim}
 \usage{
 strtrim_esc(x, width, warn = getOption("fansi.warn"))
 
@@ -19,7 +19,7 @@ strtrim2_esc(x, width, warn = getOption("fansi.warn"),
 \item{warn}{TRUE (default) or FALSE, whether to warn whether potentially
 problematic escape sequences are encountered.  These could cause the
 assumptions \code{fansi} is makes about how strings are rendered on your display
-to be incorrect, for example by moving the cursor (see \link{string-parsing}).}
+to be incorrect, for example by moving the cursor (see \link{fansi}).}
 
 \item{tabs.as.spaces}{FALSE (default) or TRUE, whether to convert tabs to
 spaces.  This can only be set to TRUE if \code{strip.spaces} is FALSE.}

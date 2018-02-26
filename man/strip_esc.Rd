@@ -26,7 +26,7 @@ sequences
 \item{warn}{TRUE (default) or FALSE, whether to warn whether potentially
 problematic escape sequences are encountered.  These could cause the
 assumptions \code{fansi} is makes about how strings are rendered on your display
-to be incorrect, for example by moving the cursor (see \link{string-parsing}).}
+to be incorrect, for example by moving the cursor (see \link{fansi}).}
 }
 \value{
 character vector of same length as x with ANSI escape sequences
@@ -45,6 +45,6 @@ strip_esc(string, "all")  # equivalently
 strip_esc(string, c("c0", "esc"))
 }
 \seealso{
-\link{fansi} for important details on how strings are interpreted,
-particularly if you are getting unexpected results.
+\link{fansi} for details on how control characters and sequences are
+interpreted, particularly if you are getting unexpected results.
 }

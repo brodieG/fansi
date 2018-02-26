@@ -3,7 +3,7 @@
 \name{strwrap_esc}
 \alias{strwrap_esc}
 \alias{strwrap2_esc}
-\title{ANSI Escape Sequence Aware Versions of strwrap}
+\title{ANSI Control Sequence Aware Version of strwrap}
 \usage{
 strwrap_esc(x, width = 0.9 * getOption("width"), indent = 0, exdent = 0,
   prefix = "", simplify = TRUE, initial = prefix,
@@ -44,7 +44,7 @@ strwrap2_esc(x, width = 0.9 * getOption("width"), indent = 0, exdent = 0,
 \item{warn}{TRUE (default) or FALSE, whether to warn whether potentially
 problematic escape sequences are encountered.  These could cause the
 assumptions \code{fansi} is makes about how strings are rendered on your display
-to be incorrect, for example by moving the cursor (see \link{string-parsing}).}
+to be incorrect, for example by moving the cursor (see \link{fansi}).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
@@ -140,7 +140,8 @@ W <- strwrap2_esc(NEWS.C, 25, pad.end=" ", wrap.always=TRUE)
 writeLines(c("", paste(W[1:40], W[200:240], W[410:450]), ""))
 }
 \seealso{
-\link{string-parsing} for important details on how strings are
-interpreted and how character width is computed, \link{term_cap_test} to ensure
-\code{fansi} is correctly interpreting your terminal capabilities.
+\link{fansi} for details on how control characters and sequences are
+interpreted, and \link{term_cap_test} to ensure \code{fansi} is correctly
+interpreting your terminal capabilities, particularly if you are getting
+unexpected results.
 }

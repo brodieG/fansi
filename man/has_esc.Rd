@@ -2,7 +2,7 @@
 % Please edit documentation in R/has.R
 \name{has_esc}
 \alias{has_esc}
-\title{Checks Whether Character Vector Contains Escape Sequences}
+\title{Checks for Control Characters or Sequences}
 \usage{
 has_esc(x, what = "sgr", warn = getOption("fansi.warn"))
 }
@@ -26,12 +26,16 @@ sequences
 \item{warn}{TRUE (default) or FALSE, whether to warn whether potentially
 problematic escape sequences are encountered.  These could cause the
 assumptions \code{fansi} is makes about how strings are rendered on your display
-to be incorrect, for example by moving the cursor (see \link{string-parsing}).}
+to be incorrect, for example by moving the cursor (see \link{fansi}).}
 }
 \value{
 logical of same length as \code{x}; NA values in \code{x} result in NA values
 in return
 }
 \description{
-...CSI definition...
+By default, checks for ANSI CSI SGR sequences only.
+}
+\seealso{
+\link{fansi} for details on how control characters and sequences are
+interpreted, particularly if you are getting unexpected results.
 }

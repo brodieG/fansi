@@ -55,7 +55,8 @@ string <- c(
 unhandled_esc(string)
 }
 \seealso{
-\link{string-parsing} for important details on how strings are
-interpreted and how character width is computed, \link{term_cap_test} to ensure
-\code{fansi} is correctly interpreting your terminal capabilities.
+\link{fansi} for details on how control characters and sequences are
+interpreted, and \link{term_cap_test} to ensure \code{fansi} is correctly
+interpreting your terminal capabilities, particularly if you are getting
+unexpected results.
 }

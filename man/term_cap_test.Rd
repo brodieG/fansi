@@ -38,6 +38,6 @@ variable.  You can visually test your terminal capabilities with
 term_cap_test()
 }
 \seealso{
-\link{fansi} for important details on how strings are interpreted,
-particularly if you are getting unexpected results.
+\link{fansi} for details on how control characters and sequences are
+interpreted, particularly if you are getting unexpected results.
 }
