@@ -657,7 +657,7 @@ struct FANSI_state FANSI_read_next(struct FANSI_state state) {
  *   parameters).
  */
 struct FANSI_state_pair FANSI_state_at_position(
-    int pos, struct FANSI_state_pair state_pair, int type, int lag, int end
+  int pos, struct FANSI_state_pair state_pair, int type, int lag, int end
 ) {
   struct FANSI_state state = state_pair.cur;
   if(pos < state.pos_raw)
@@ -700,7 +700,6 @@ struct FANSI_state_pair FANSI_state_at_position(
     switch(type) {
       case 0: cond = pos - state.pos_raw; break;
       case 1: cond = pos - state.pos_width; break;
-      case 2: cond = pos - state.pos_byte; break;
       default:
         // nocov start
         error("Internal Error: Illegal offset type; contact maintainer.");

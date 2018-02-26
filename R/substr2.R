@@ -14,21 +14,6 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-## state_esc <- function(
-##   text, pos, type='chars', lag, ends, tabs.as.spaces=FALSE, tab.stops=8L
-## ) {
-##   stopifnot(
-##     is.character(text), length(text) == 1L,
-##     is.numeric(pos), min(pos, 0L, na.rm=TRUE) >= 0L,
-##     is.character(type),
-##     !is.na(type.match <- match(type, c('chars', 'width', 'bytes')))
-##   )
-##   .Call(
-##     FANSI_state_at_pos_ext, text, as.integer(pos) - 1L, type.match - 1L,
-##     lag, ends, tabs.as.spaces, tab.stops
-##   )
-## }
-
 #' ANSI Control Sequence Aware Version of substr
 #'
 #' `substr_esc` is a drop-in replacement for `substr`.  Performance is
@@ -60,11 +45,11 @@
 #'   interpreted, and [term_cap_test] to ensure `fansi` is correctly
 #'   interpreting your terminal capabilities, particularly if you are getting
 #'   unexpected results.
-#' @param type character(1L) in `c("char", "width", "bytes")`
+#' @param type character(1L) in `c("char", "width")`
 #' @param round character(1L) in `c("start", "stop", "both", "neither")`,
 #'   controls how to resolve ambiguities when a `start` or `stop` value in
-#'   "bytes" or "width" `type` mode falls within a multi-byte character or a
-#'   wide display character.  See details.
+#'   "width" `type` mode falls within a multi-byte character or a wide display
+#'   character.  See details.
 #' @param warn TRUE (default) or FALSE, whether to warn when potentially
 #'   problematic escape sequences are encountered.  These could cause the
 #'   assumptions `fansi` makes about how strings are rendered on your display
@@ -78,17 +63,17 @@
 #' @examples
 #' substr_esc("\033[42mhello\033[m world", 1, 9)
 #' substr_esc("\033[42mhello\033[m world", 3, 9)
-#' cn.string <- paste0("\033[42m", "\u4E00\u4E01\u4E03", "\033[m")
 #'
 #' ## Width 2 and 3 are in the middle of an ideogram as
 #' ## start and stop positions respectively, so we control
 #' ## what we get with `round`
+#'
+#' cn.string <- paste0("\033[42m", "\u4E00\u4E01\u4E03", "\033[m")
+#'
 #' substr2_esc(cn.string, 2, 3, type='width')
 #' substr2_esc(cn.string, 2, 3, type='width', round='both')
 #' substr2_esc(cn.string, 2, 3, type='width', round='start')
 #' substr2_esc(cn.string, 2, 3, type='width', round='stop')
-#'
-#' substr2_esc(cn.string, 2, 3, type='bytes', round='both')
 
 substr_esc <- function(
   x, start, stop,
@@ -109,7 +94,7 @@ substr2_esc <- function(
   x <- as.character(x)
   vetr(
     character(), integer(), integer(),
-    type=CHR.1 && . %in% c('chars', 'bytes', 'width'),
+    type=CHR.1 && . %in% c('chars', 'width'),
     round=CHR.1 && . %in% c('start', 'stop', 'both', 'neither'),
     tabs.as.spaces=LGL.1, tab.stops=INT && length(.) >= 1L,
     warn=LGL.1, term.cap=CHR
@@ -133,7 +118,7 @@ substr2_esc <- function(
 
   res <- character(length(x))
   x.u <- unique(x)
-  type.m <- match(type, c('chars', 'width', 'bytes'))
+  type.m <- match(type, c('chars', 'width'))
 
   for(u in x.u) {
     elems <- which(x == u)
