@@ -93,7 +93,7 @@ substr2_esc <- function(
 ) {
   x <- as.character(x)
   vetr(
-    character(), integer(), integer(),
+    character(), NUM, NUM,
     type=CHR.1 && . %in% c('chars', 'width'),
     round=CHR.1 && . %in% c('start', 'stop', 'both', 'neither'),
     tabs.as.spaces=LGL.1, tab.stops=INT && length(.) >= 1L,
