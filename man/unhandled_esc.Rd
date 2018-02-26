@@ -29,13 +29,16 @@ The return value is a data frame with five columns:
 \item stop: integer the start position of the sequence (in characters)
 \item error: the reason why the sequence was not handled:
 \itemize{
-\item special: contains uncommon characters in ":<=>"
+\item special: contains uncommon characters in ":<=>".
 \item unknown: a substring with a value that does not correspond to a known
-SGR code
-\item non-SGR: a non-SGR CSI sequence
-\item malformed: a malformed CSI sequence
+SGR code.
+\item non-SGR: a non-SGR CSI sequence.
 \item non-CSI: a non-CSI escape sequence, i.e. one where the ESC is
-followed by something other than "["
+followed by something other than "[".
+\item malformed-CSI: a malformed CSI sequence.
+\item malformed-ESC: a malformed ESC sequence (i.e. one not ending in
+0x40-0x7e).
+\item C0: a "C0" control character (e.g. tab, bell, etc.).
 }
 \item translated: whether the string was translated to UTF-8, might be helpful in
 odd cases were character offsets change depending on encoding.  You should
@@ -52,6 +55,8 @@ string <- c(
 unhandled_esc(string)
 }
 \seealso{
-\link{fansi} for important details on how strings are interpreted,
-particularly if you are getting unexpected results.
+\link{fansi} for details on how control characters and sequences are
+interpreted, and \link{term_cap_test} to ensure \code{fansi} is correctly
+interpreting your terminal capabilities, particularly if you are getting
+unexpected results.
 }

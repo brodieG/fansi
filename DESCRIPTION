@@ -1,8 +1,8 @@
 Package: fansi
-Title: ANSI CSI-aware String Functions
-Description: Counterparts to R string manipulation functions that preserve ANSI
-    CSI escape sequences while treating them as zero width.
-Version: 0.0.1.9004
+Title: ANSI Control Sequence Aware String Functions
+Description: Counterparts to R string manipulation functions that account for
+   the effects of ANSI text formatting control sequences.
+Version: 0.0.1.9005
 Authors@R: c(
     person("Brodie", "Gaslam", email="brodie.gaslam@yahoo.com",
     role=c("aut", "cre")),
@@ -27,3 +27,15 @@ Suggests:
     covr
 RoxygenNote: 6.0.1
 Roxygen: list(markdown = TRUE)
+Collate: 
+    'constants.R'
+    'fansi-package.R'
+    'has.R'
+    'load.R'
+    'misc.R'
+    'strip.R'
+    'strwrap.R'
+    'strtrim.R'
+    'substr2.R'
+    'tohtml.R'
+    'unhandled.R'

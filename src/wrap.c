@@ -237,7 +237,6 @@ SEXP FANSI_writeline(
  *   depending whether we're at the very first line of the external input or not
  * @param strict whether to hard wrap at width or not (not is what strwrap does
  *   by default)
- * @param is_utf8_loc whether the current locale is UTF8
  */
 
 static SEXP strwrap(
@@ -248,7 +247,8 @@ static SEXP strwrap(
   struct FANSI_buff * buff,
   const char * pad_chr,
   int strip_spaces,
-  SEXP warn, SEXP term_cap
+  SEXP warn, SEXP term_cap,
+  int first_only
 ) {
   struct FANSI_state state = FANSI_state_init(x, warn, term_cap);
 
@@ -262,10 +262,12 @@ static SEXP strwrap(
     error("Internal Error: incompatible width/indent/prefix.");
 
   // Use LISTSXP so we don't have to do a two pass process to determine how many
-  // items we're going to have
+  // items we're going to have, unless we're in first only in which case we know
+  // we only need one element per and don't actually use these
 
   SEXP char_list_start, char_list;
   char_list_start = char_list = PROTECT(list1(R_NilValue));
+
   int prev_newline = 0;     // tracks if last non blank character was newline
   int prev_boundary = 0;    // tracks if previous char was a boundary
   int has_boundary = 0;     // tracks if at least one boundary in a line
@@ -277,6 +279,7 @@ static SEXP strwrap(
   struct FANSI_state state_start, state_bound;
   state_start = state_bound = state;
   R_xlen_t size = 0;
+  SEXP res_sxp;
 
   while(1) {
     const char cur_chr = state.string[state.pos_byte];
@@ -314,16 +317,14 @@ static SEXP strwrap(
 
     if(
       string_over ||
-      (cur_chr == '\n') ||
+      (cur_chr == '\n' && !first_only) ||  // newlines kept in strtrim mode
       (
         state.pos_width >= width_tar &&
         state_next.pos_width > state.pos_width &&  // keep going w/ zero width
         (has_boundary || wrap_always)
       )
     ) {
-      SEXP res_sxp;
-
-      if(string_over || (wrap_always && !has_boundary)) {
+      if(string_over || (wrap_always && !has_boundary) || first_only) {
         state_bound = state;
       }
       res_sxp = PROTECT(
@@ -333,10 +334,15 @@ static SEXP strwrap(
           width_tar, pad_chr
         )
       );
+      // first_only for `strtrim`
+
+      if(!first_only) {
+        SETCDR(char_list, list1(res_sxp));
+        char_list = CDR(char_list);
+        UNPROTECT(1);
+      } else break;
+
       if(cur_chr == '\n') prev_newline = 1;
-      SETCDR(char_list, list1(res_sxp));
-      char_list = CDR(char_list);
-      UNPROTECT(1);
 
       // overflow should be impossible here since string is at most int long
 
@@ -367,19 +373,27 @@ static SEXP strwrap(
       state = state_next;
     }
   }
-  // Write last bit of string
+  // Convert to string and return; this is a little inefficient for the
+  // `first_only` mode as ideally we would just return a CHARSXP, but for now we
+  // are just trying to keep it simple
 
-  SEXP res = PROTECT(allocVector(STRSXP, size));
-  char_list = char_list_start;
-  for(R_xlen_t i = 0; i < size; ++i) {
-    char_list = CDR(char_list); // first element is NULL
-    if(char_list == R_NilValue)
-      error("Internal Error: wrapped element count mismatch");  // nocov
-    // Rprintf("string: '%s'\n", CHAR(CAR(char_list)));
-    SET_STRING_ELT(res, i, CAR(char_list));
+  SEXP res;
+
+  if(!first_only) {
+    res = PROTECT(allocVector(STRSXP, size));
+    char_list = char_list_start;
+    for(R_xlen_t i = 0; i < size; ++i) {
+      char_list = CDR(char_list); // first element is NULL
+      if(char_list == R_NilValue)
+        error("Internal Error: wrapped element count mismatch");  // nocov
+      SET_STRING_ELT(res, i, CAR(char_list));
+    }
+    if(CDR(char_list) != R_NilValue)
+      error("Internal Error: wrapped element count mismatch 2");  // nocov
+  } else {
+    // recall there is an extra open PROTECT in first_only mode
+    res = res_sxp;
   }
-  if(CDR(char_list) != R_NilValue)
-    error("Internal Error: wrapped element count mismatch 2");  // nocov
   UNPROTECT(2);
   return res;
 }
@@ -390,6 +404,9 @@ static SEXP strwrap(
  *
  * @param strict whether to force a hard cut in-word when a full word violates
  *   the width limit on its own
+ * @param first_only whether we only want the first line of a wrapped element,
+ *   this is to support strtrim. If this is true then the return value becomes a
+ *   character vector (STRSXP) rather than a VECSXP
  */
 
 SEXP FANSI_strwrap_ext(
@@ -399,7 +416,8 @@ SEXP FANSI_strwrap_ext(
   SEXP wrap_always, SEXP pad_end,
   SEXP strip_spaces,
   SEXP tabs_as_spaces, SEXP tab_stops,
-  SEXP warn, SEXP term_cap
+  SEXP warn, SEXP term_cap,
+  SEXP first_only
 ) {
   if(
     TYPEOF(x) != STRSXP || TYPEOF(width) != INTSXP ||
@@ -407,17 +425,15 @@ SEXP FANSI_strwrap_ext(
     TYPEOF(prefix) != STRSXP || TYPEOF(initial) != STRSXP ||
     TYPEOF(wrap_always) != LGLSXP ||
     TYPEOF(pad_end) != STRSXP ||
-    TYPEOF(warn) != LGLSXP || TYPEOF(term_cap) != INTSXP
+    TYPEOF(warn) != LGLSXP || TYPEOF(term_cap) != INTSXP ||
+    TYPEOF(strip_spaces) != LGLSXP ||
+    TYPEOF(tabs_as_spaces) != LGLSXP ||
+    TYPEOF(tab_stops) != INTSXP ||
+    TYPEOF(first_only) != LGLSXP
   ) {
     error("Internal Error: arg type error 1; contact maintainer.");
   }
-  if(
-    TYPEOF(strip_spaces) != LGLSXP ||
-    TYPEOF(tabs_as_spaces) != LGLSXP ||
-    TYPEOF(tab_stops) != INTSXP
-  ) {
-    error("Internal Error: arg type error 2; contact maintainer.");
-  }
+
   const char * pad = CHAR(asChar(pad_end));
   if(*pad != 0 && (*pad < 0x20 || *pad > 0x7e))
     error(
@@ -463,6 +479,7 @@ SEXP FANSI_strwrap_ext(
   int indent_int = asInteger(indent);
   int exdent_int = asInteger(exdent);
   int warn_int = asInteger(warn);
+  int first_only_int = asInteger(first_only);
 
   if(indent_int < 0 || exdent_int < 0)
     error("Internal Error: illegal indent/exdent values.");  // nocov
@@ -508,11 +525,17 @@ SEXP FANSI_strwrap_ext(
 
   // Could be a little faster avoiding this allocation if it turns out nothing
   // needs to be wrapped and we're in simplify=TRUE, but that seems like a lot
-  // of work for a rare vent
+  // of work for a rare event
 
   R_xlen_t i, x_len = XLENGTH(x);
-  SEXP res = PROTECT(allocVector(VECSXP, x_len));
+  SEXP res;
 
+  if(first_only_int) {
+    // this is to support trim mode
+    res = PROTECT(allocVector(STRSXP, x_len));
+  } else {
+    res = PROTECT(allocVector(VECSXP, x_len));
+  }
   // Wrap each element
 
   for(i = 0; i < x_len; ++i) {
@@ -527,9 +550,14 @@ SEXP FANSI_strwrap_ext(
         wrap_always_int, &buff,
         CHAR(asChar(pad_end)),
         strip_spaces_int,
-        warn, term_cap
+        warn, term_cap,
+        first_only_int
     ) );
-    SET_VECTOR_ELT(res, i, str_i);
+    if(first_only_int) {
+      SET_STRING_ELT(res, i, str_i);
+    } else {
+      SET_VECTOR_ELT(res, i, str_i);
+    }
     UNPROTECT(1);
   }
   UNPROTECT(5);

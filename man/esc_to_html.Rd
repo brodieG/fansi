@@ -13,7 +13,7 @@ esc_to_html(x, warn = getOption("fansi.warn"),
 \item{warn}{TRUE (default) or FALSE, whether to warn whether potentially
 problematic escape sequences are encountered.  These could cause the
 assumptions \code{fansi} is makes about how strings are rendered on your display
-to be incorrect, for example by moving the cursor (see \link{string-parsing}).}
+to be incorrect, for example by moving the cursor (see \link{fansi}).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
@@ -33,4 +33,10 @@ translated.  Others are ignored.
 }
 \examples{
 esc_to_html("hello\\033[31;42;1mworld\\033[m")
+}
+\seealso{
+\link{fansi} for details on how control characters and sequences are
+interpreted, and \link{term_cap_test} to ensure \code{fansi} is correctly
+interpreting your terminal capabilities, particularly if you are getting
+unexpected results.
 }

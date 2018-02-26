@@ -12,6 +12,8 @@
 #' * start: integer the start position of the sequence (in characters)
 #' * stop: integer the start position of the sequence (in characters)
 #' * error: the reason why the sequence was not handled:
+#'     * exceed-term-cap: contains color codes not supported by the terminal
+#'       (see [term_cap_test]).
 #'     * special: contains uncommon characters in ":<=>".
 #'     * unknown: a substring with a value that does not correspond to a known
 #'       SGR code.
@@ -29,9 +31,10 @@
 #' * esc: character the unhandled escape sequence
 #'
 #' @export
-#' @seealso [string-parsing] for important details on how strings are
-#'   interpreted and how character width is computed, [term_cap_test] to ensure
-#'   `fansi` is correctly interpreting your terminal capabilities.
+#' @seealso [fansi] for details on how control characters and sequences are
+#'   interpreted, and [term_cap_test] to ensure `fansi` is correctly
+#'   interpreting your terminal capabilities, particularly if you are getting
+#'   unexpected results.
 #' @param x character vector
 #' @return data frame with as many rows as there are unhandled escape
 #'   sequences and columns containing useful information for debugging the
@@ -48,8 +51,8 @@ unhandled_esc <- function(x) {
   res <- .Call(FANSI_unhandled_esc, x)
   names(res) <- c("index", "start", "stop", "error", "translated")
   errors <- c(
-    'special', 'unknown', 'non-SGR', 'malformed-CSI', 'non-CSI',
-    'malformed-ESC', 'C0'
+    'exceed-term-cap', 'special', 'unknown', 'non-SGR', 'malformed-CSI',
+    'non-CSI', 'malformed-ESC', 'C0'
   )
   res[['error']] <- errors[res[['error']]]
   res[['esc']] <- substring(

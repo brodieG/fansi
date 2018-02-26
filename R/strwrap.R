@@ -14,7 +14,7 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-#' ANSI Escape Sequence Aware Versions of strwrap
+#' ANSI Control Sequence Aware Version of strwrap
 #'
 #' Wraps strings to a specified width accounting for zero display width ANSI
 #' escape sequences and control characters.  `strwrap_esc` is intended to
@@ -32,9 +32,10 @@
 #' Additionally,`indent`, `exdent`, `initial`, and `prefix` will be ignored when
 #' computing tab positions.
 #'
-#' @seealso [string-parsing] for important details on how strings are
-#'   interpreted and how character width is computed, [term_cap_test] to ensure
-#'   `fansi` is correctly interpreting your terminal capabilities.
+#' @seealso [fansi] for details on how control characters and sequences are
+#'   interpreted, and [term_cap_test] to ensure `fansi` is correctly
+#'   interpreting your terminal capabilities, particularly if you are getting
+#'   unexpected results.
 #' @inheritParams base::strwrap
 #' @inheritParams tabs_as_spaces
 #' @inheritParams substr_esc
@@ -60,8 +61,9 @@
 #' ## In default mode strwrap2_esc is the same as strwrap_esc
 #' strwrap2_esc(hello.2, 12)
 #'
-#' ## But you can leave whitespace unchanged
-#' strwrap2_esc(hello.2, 12, strip.spaces=FALSE)
+#' ## But you can leave whitespace unchanged, `warn`
+#' ## set to false as otherwise tabs causes warning
+#' strwrap2_esc(hello.2, 12, strip.spaces=FALSE, warn=FALSE)
 #'
 #' ## And convert tabs to spaces
 #' strwrap2_esc(hello.2, 12, tabs.as.spaces=TRUE)
@@ -85,6 +87,7 @@
 #' ## SGR sequences)
 #'
 #' NEWS <- readLines(file.path(R.home('doc'), 'NEWS'))
+#' length(NEWS) <- 450 # make sure at least 450 long
 #' bg <- ceiling((seq_along(NEWS)) %% 215 + 1) + 16
 #' fg <- ifelse((((bg - 16) %/% 18) %% 2), 30, 37)
 #' tpl <- "\033[%d;48;5;%dm%s\033[49m"
@@ -125,7 +128,8 @@ strwrap_esc <- function(
     FALSE, "",
     TRUE,
     FALSE, 8L,
-    warn, term.cap.int
+    warn, term.cap.int,
+    FALSE   # first_only
   )
   if(simplify) unlist(res) else res
 }
@@ -169,7 +173,8 @@ strwrap2_esc <- function(
     wrap.always, pad.end,
     strip.spaces,
     tabs.as.spaces, tab.stops,
-    warn, term.cap.int
+    warn, term.cap.int,
+    FALSE   # first_only
   )
   if(simplify) unlist(res) else res
 }

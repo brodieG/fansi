@@ -18,7 +18,7 @@ check_assumptions <- function() .Call(FANSI_check_assumptions)  # nocov
 
 digits_in_int <- function(x) .Call(FANSI_digits_in_int, x)
 
-#' Replace Tabs With Corresponding Spaces
+#' Replace Tabs With Spaces
 #'
 #' Finds horizontal tab characters (0x09) in a string and replaces them with the
 #' spaces that produce the same horizontal offset.
@@ -27,8 +27,8 @@ digits_in_int <- function(x) .Call(FANSI_digits_in_int, x)
 #' stops you will need to provide them yourself if you are using anything
 #' outside of the standard tab stop every 8 characters that is the default.
 #'
-#' @seealso [fansi] for important details on how strings are interpreted,
-#'   particularly if you are getting unexpected results.
+#' @seealso [fansi] for details on how control characters and sequences are
+#'   interpreted, particularly if you are getting unexpected results.
 #' @export
 #' @inheritParams substr_esc
 #' @param x character vector to replace tabs in.
@@ -59,19 +59,10 @@ digits_in_int <- function(x) .Call(FANSI_digits_in_int, x)
 #' ) )
 
 tabs_as_spaces <- function(
-  x, tab.stops=getOption('fansi.tab.stops'), warn=getOption('fansi.warn'),
-  term.cap=getOption('fansi.term.cap')
+  x, tab.stops=getOption('fansi.tab.stops'), warn=getOption('fansi.warn')
 ) {
-  vetr(
-    character(),
-    tab.stops=INT.POS.STR && length(.) > 0,
-    warn=LGL.1, term.cap=CHR
-  )
-  if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
-    stop(
-      "Argument `term.cap` may only contain values in ",
-      deparse(VALID.TERM.CAP)
-    )
+  vetr(character(), tab.stops=INT.POS.STR && length(.) > 0, warn=LGL.1)
+  term.cap.int <- seq_along(VALID.TERM.CAP)
   .Call(FANSI_tabs_as_spaces, x, as.integer(tab.stops), warn, term.cap.int)
 }
 #' Test Terminal Capabilities
@@ -97,8 +88,8 @@ tabs_as_spaces <- function(
 #' variable.  You can visually test your terminal capabilities with
 #' [term_cap_test].
 #'
-#' @seealso [fansi] for important details on how strings are interpreted,
-#'   particularly if you are getting unexpected results.
+#' @seealso [fansi] for details on how control characters and sequences are
+#'   interpreted, particularly if you are getting unexpected results.
 #' @export
 #' @return character the test vector, invisibly
 #' @examples

@@ -25,3 +25,15 @@ unitizer_sect("unhandled", {
 
   unhandled_esc("hello\033\033\033[45p wor\ald")
 })
+unitizer_sect("strtrim", {
+  strtrim_esc(" hello world", 7)
+  strtrim_esc("\033[42m hello world\033[m", 7)
+  strtrim_esc(" hello\nworld", 7)
+  strtrim_esc("\033[42m hello\nworld\033[m", 7)
+  strtrim_esc("\nhello\nworld", 7)
+  strtrim_esc("\033[42m\nhello\nworld\033[m", 7)
+  strtrim_esc("\thello\rworld foobar", 12)
+  strtrim_esc("\033[42m\thello\rworld\033[m foobar", 12)
+
+  strtrim2_esc("\033[42m\thello world\033[m foobar", 12, tabs.as.spaces=TRUE)
+})

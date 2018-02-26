@@ -2,17 +2,49 @@
 % Please edit documentation in R/strip.R
 \name{strip_esc}
 \alias{strip_esc}
-\title{Strip Ansi Escape Sequences}
+\title{Strip Control Characters and Sequences}
 \usage{
-strip_esc(x, warn = getOption("fansi.warn"))
+strip_esc(x, what = "sgr", warn = getOption("fansi.warn"))
 }
 \arguments{
-\item{x}{character vector}
+\item{x}{a character vector.}
+
+\item{what}{character, any combination of the following values, where each
+value represents a distinct set of control characters/sequences to strip,
+except for "all" which is the equivalent to specifying all the others:
+\itemize{
+\item "nl": strip newlines
+\item "c0": strip all other "C0" control characters (i.e. x01-x1f), except for
+newlines and the actual ESC character
+\item "sgr": strip ANSI CSI SGR sequences
+\item "csi": strip all non-SGR csi sequences
+\item "esc": strip all other escape sequences, including invalid SGR/CSI
+sequences
+\item "all": all of the above
+}}
+
+\item{warn}{TRUE (default) or FALSE, whether to warn whether potentially
+problematic escape sequences are encountered.  These could cause the
+assumptions \code{fansi} is makes about how strings are rendered on your display
+to be incorrect, for example by moving the cursor (see \link{fansi}).}
 }
 \value{
 character vector of same length as x with ANSI escape sequences
 stripped
 }
 \description{
-...explain exactly what gets striped...
+Removes control characters and sequences from strings.  By default only
+strips valid ANSI CSI SGR sequences, but can be made to strip C0 control
+characters and all escape sequences.
+}
+\examples{
+string <- "hello\\033k\\033[45p world\\n\\033[31mgoodbye\\a moon"
+strip_esc(string)
+strip_esc(string, c("nl", "c0", "sgr", "csi", "esc"))
+strip_esc(string, "all")  # equivalently
+strip_esc(string, c("c0", "esc"))
+}
+\seealso{
+\link{fansi} for details on how control characters and sequences are
+interpreted, particularly if you are getting unexpected results.
 }

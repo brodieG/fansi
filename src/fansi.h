@@ -196,13 +196,17 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * Type of failure
      *
      * * 0: no error
-     * * 1: well formed csi sgr, but contains uninterpretable characters [:<=>]
-     * * 2: well formed csi sgr, but contains uninterpretable sub-strings, if a
+     * * 1: well formed csi sgr, but contains color codes that
+     *      exceed terminal capabilities
+     * * 2: well formed csi sgr, but contains uninterpretable characters [:<=>]
+     * * 3: well formed csi sgr, but contains uninterpretable sub-strings, if a
      *      CSI sequence is not fully parsed yet (i.e. last char not read) it is
      *      assumed to be SGR until we read the final code.
-     * * 3: well formed csi, but not an SGR
-     * * 4: malformed csi
-     * * 5: other escape sequence
+     * * 4: well formed csi, but not an SGR
+     * * 5: malformed csi
+     * * 6: other escape sequence
+     * * 7: malformed escape
+     * * 8: c0 escapes
      */
     int err_code;
     /*
@@ -254,7 +258,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP wrap_always, SEXP pad_end,
     SEXP strip_spaces,
     SEXP tabs_as_spaces, SEXP tab_stops,
-    SEXP warn, SEXP term_cap
+    SEXP warn, SEXP term_cap,
+    SEXP first_only
   );
   SEXP FANSI_process(SEXP input, struct FANSI_buff * buff);
   SEXP FANSI_process_ext(SEXP input);

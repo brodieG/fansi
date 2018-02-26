@@ -3,7 +3,7 @@
 \name{substr_esc}
 \alias{substr_esc}
 \alias{substr2_esc}
-\title{ANSI Escape Sequence Aware Version of \code{substr}}
+\title{ANSI Control Sequence Aware Version of substr}
 \usage{
 substr_esc(x, start, stop, warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"))
@@ -22,7 +22,7 @@ substr2_esc(x, start, stop, type = "chars", round = "start",
 \item{warn}{TRUE (default) or FALSE, whether to warn whether potentially
 problematic escape sequences are encountered.  These could cause the
 assumptions \code{fansi} is makes about how strings are rendered on your display
-to be incorrect, for example by moving the cursor (see \link{string-parsing}).}
+to be incorrect, for example by moving the cursor (see \link{fansi}).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
@@ -68,6 +68,8 @@ characters to be dropped irrespective whether they correspond to \code{start} or
 \code{stop}, and "both" could cause all of them to be included.
 }
 \seealso{
-\link{string-parsing} for important details on how strings are
-interpreted and how character width is computed.
+\link{fansi} for details on how control characters and sequences are
+interpreted, and \link{term_cap_test} to ensure \code{fansi} is correctly
+interpreting your terminal capabilities, particularly if you are getting
+unexpected results.
 }

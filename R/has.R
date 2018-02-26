@@ -14,11 +14,13 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-#' Checks Whether Character Vector Contains Escape Sequences
+#' Checks for Control Characters or Sequences
 #'
-#' ...CSI definition...
+#' By default, checks for ANSI CSI SGR sequences only.
 #'
 #' @export
+#' @seealso [fansi] for details on how control characters and sequences are
+#'   interpreted, particularly if you are getting unexpected results.
 #' @inheritParams strip_esc
 #' @return logical of same length as `x`; NA values in `x` result in NA values
 #'   in return
