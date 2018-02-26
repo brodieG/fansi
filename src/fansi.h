@@ -281,6 +281,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   SEXP FANSI_check_assumptions();
   SEXP FANSI_digits_in_int_ext(SEXP y);
+  SEXP FANSI_unique_chr(SEXP x);
 
   struct FANSI_state FANSI_inc_width(struct FANSI_state state, int inc);
   struct FANSI_state FANSI_reset_pos(struct FANSI_state state);

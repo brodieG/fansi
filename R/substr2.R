@@ -117,7 +117,7 @@ substr2_esc <- function(
   # and re-map the positions to "ansi" space
 
   res <- character(length(x))
-  x.u <- unique(x)
+  x.u <- unique_chr(x)
   type.m <- match(type, c('chars', 'width'))
 
   for(u in x.u) {

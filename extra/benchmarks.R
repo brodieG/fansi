@@ -5,7 +5,7 @@ ulysses <- readLines(
 ulysses.c <- paste0(ulysses, collapse='\n')
 n <- 1e4
 starts <- 1:n
-stops <- starts + 80
+stops <- starts + 80L
 ulysses.c.r <- rep(ulysses.c, n)
 
 system.time(substr_esc(ulysses.c.r, starts, stops))
