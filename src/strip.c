@@ -18,22 +18,6 @@
 
 #include "fansi.h"
 /*
- * Compresses the what vector into a single integer
- */
-
-int FANSI_what_as_int(SEXP what) {
-  int what_int = 0;
-  for(R_xlen_t i = 0; i < XLENGTH(what); ++i) {
-    int what_val = INTEGER(what)[i] - 2;
-    if(what_val < 0) {
-      what_int = 1 + 2 + 4 + 8 + 16; // strip all
-      break;
-    }
-    what_int |= 1 << what_val;
-  }
-  return what_int;
-}
-/*
  * Strips ANSI tags from input
  *
  * Assumes input is NULL terminated.
