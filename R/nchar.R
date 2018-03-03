@@ -21,24 +21,28 @@
 #' chacater / sequence characters.  Pay attention to the `what` parameter as
 #' that will influence what is and is not counted.
 #'
-#' These functions should be faster than the semantically equivalent
-#' `nchar(strip_esc(...))`.
+#' These functions are faster than the semantically equivalent
+#' `nchar(strip_esc(x, what='all')).  If you wish to control which control
+#' characters and sequences are stripped you will need to use
+#' `nchar(strip_esc(x, what=...))`.
 #'
 #' @inheritParams nchar
-#' @param what character(1L), as in [strip_esc], except here it is what control
-#'   characters and sequences to exclude from the count.
-#'
+#' @seealso [strip_esc]
 
 nchar_esc <- function(
   x, type='chars', allowNA=FALSE, keepNA=NA, what=getOption('fansi.what'),
   warn=getOption('fansi.warn')
 ) {
-  vetr(warn=LGL.1, what=CHR)
+  # TODO IMPLEMENT PARTIAL MATCHING
+  vetr(
+    warn=LGL.1, type=CHR.1 && . %in% c('chars', 'width', 'bytes'), what=CHR
+  )
   if(anyNA(what.int <- match(what, VALID.WHAT)))
     stop(
       "Argument `what` may contain only values in `", deparse(VALID.WHAT), "`"
     )
-  .Call(FANSI_nchar, x, what.int, warn)
+  term.cap.int <- seq_along(VALID.TERM.CAP)
+  .Call(FANSI_nchar, x, type, allowNA, keepNA, warn, term.cap.int)
 
 }
 nzchar_esc <- function(x, keepNA=NA, what=getOption('fansi.what'))

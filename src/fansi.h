@@ -223,6 +223,12 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     // Whether to issue warnings if err_code is non-zero, if -1 means that the
     // warning was issued at least once so may not need to be re-issued
     int warn;
+
+    /*
+     * These support the arguments of the same names for nchar
+     */
+    int allowNA;
+    int keepNA;
   };
   /*
    * Need to keep track of fallback state, so we need ability to return two

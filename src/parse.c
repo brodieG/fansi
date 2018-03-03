@@ -562,7 +562,7 @@ static struct FANSI_state read_utf8(struct FANSI_state state) {
   SEXP str_chr =
     PROTECT(mkCharLenCE(state.string + state.pos_byte, byte_size, CE_UTF8));
   int disp_size = R_nchar(
-    str_chr, Width, FALSE, FALSE, "when computing display width"
+    str_chr, Width, state.allowNA, state.keepNA, "when computing display width"
   );
   UNPROTECT(1);
 
@@ -608,7 +608,7 @@ static struct FANSI_state read_c0(struct FANSI_state state) {
 /*
  * Read a Character Off and Update State
  *
- * This can probably use some pretty serious optimiation...
+ * This can probably use some pretty serious optimization...
  */
 struct FANSI_state FANSI_read_next(struct FANSI_state state) {
   const char chr_val = state.string[state.pos_byte];
