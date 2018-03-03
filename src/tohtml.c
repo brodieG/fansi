@@ -251,7 +251,7 @@ static int html_compute_size(
   int bytes_net = bytes_html - bytes_esc;
 
   if(bytes_net >= 0) {
-    if(bytes_extra > INT_MAX - bytes_net - 1) {
+    if(bytes_extra > INT_MAX - bytes_net) {
       error(
         "%s%s %.0f %s",
         "Expanding ESC sequences into CSS will create a string longer ",
@@ -277,15 +277,20 @@ static int html_compute_size(
   }
   return bytes_extra;
 }
-// Check for overall overflow, including allowing a terminating NULL,
+// Check for overall overflow, recall that R allows up to INT_MAX long strings
+// excluding the NULL
+//
+// However, need size_t return since including the NULL terminator we could need
+// over int size.
 
-static int html_check_overflow(
+static size_t html_check_overflow(
   int bytes_extra, int bytes_init, int span_extra, R_xlen_t i
 ) {
-  int bytes_final;
+  size_t bytes_final;
+  if(bytes_init < 0) error("Internal error: bytes_init must be positive.");
   if(
     bytes_extra >= 0 && (
-      bytes_init > INT_MAX - bytes_extra - 1 - span_extra
+      bytes_init > INT_MAX - bytes_extra - span_extra
     )
   ) {
     error(
@@ -294,15 +299,16 @@ static int html_check_overflow(
       "than INT_MAX at position", (double) (i + 1),
       "which is not allowed by R."
     );
+  } else if(bytes_extra < 0) {
+    int bytes_extra_extra = FANSI_add_int(bytes_extra, span_extra);
+    if(bytes_init + bytes_extra_extra < 0)
+      error(
+        "%s%s",
+        "Internal Error: CSS would translate to negative length string; ",
+        "this should not happen."
+      );
   }
-  bytes_final = bytes_init + bytes_extra + span_extra + 1;
-  if(bytes_final < 0) {
-    error(
-      "%s%s",
-      "Internal Error: css translated string -ve length; shouldn't happen, ",
-      "contact maintainer."
-    );
-  }
+  bytes_final = (size_t) bytes_init + bytes_extra + span_extra + 1;
   return bytes_final;
 }
 SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
@@ -329,7 +335,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
     R_len_t bytes_init = LENGTH(chrsxp);
 
     int bytes_extra = 0;   // Net bytes being add via tags (css - ESC)
-    int bytes_final = 0;
+    size_t bytes_final = 0;
     int has_esc = 0;
 
     // Process the strings in two passes, in pass 1 we compute how many bytes

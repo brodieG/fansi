@@ -31,11 +31,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
    */
   struct FANSI_buff {
     char * buff; // Buffer
-    int len;     // How many bytes the buffer has been allocated to
+    size_t len;     // How many bytes the buffer has been allocated to
   };
   struct FANSI_string_as_utf8 {
     const char * string;  // buffer
-    int len;              // size of buffer
+    size_t len;           // size of buffer
     int translated;       // whether translation was required
   };
   /*
@@ -288,7 +288,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   struct FANSI_state FANSI_reset_width(struct FANSI_state state);
 
   int FANSI_what_as_int(SEXP what);
-  void FANSI_size_buff(struct FANSI_buff * buff, int size);
+  void FANSI_size_buff(struct FANSI_buff * buff, size_t size);
+
   int FANSI_is_utf8_loc();
   int FANSI_utf8clen(char c);
   int FANSI_digits_in_int(int x);

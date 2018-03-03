@@ -144,12 +144,22 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
  * allocation is needed the buffer will be either twice as large as it was
  * before, or size `size` if that is greater than twice the size.
  */
-void FANSI_size_buff(struct FANSI_buff * buff, int size) {
+void FANSI_size_buff(struct FANSI_buff * buff, size_t size) {
   // Rprintf("  buff_len %d size %d\n", buff->len, size);
   if(size > buff->len) {
     if(size < 128) size = 128;  // in theory little penalty to ask this minimum
-    int tmp_double_size = FANSI_add_int(buff->len, buff->len);
+
+    size_t tmp_double_size = 0;
+    if(buff->len > (size_t) INT_MAX + 1 - buff->len) {
+      tmp_double_size = (size_t) INT_MAX + 1;
+    } else {
+      tmp_double_size = buff->len + buff->len;
+    }
     if(size > tmp_double_size) tmp_double_size = size;
+
+    if(tmp_double_size > (size_t) INT_MAX + 1)
+      error("Internal Error: max allowed buffer size is INT_MAX + 1."); // nocov
+
     buff->len = tmp_double_size;
     // Rprintf("  Alloc to %d\n", buff->len);
     buff->buff = R_alloc(buff->len, sizeof(char));

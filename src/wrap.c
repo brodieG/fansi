@@ -129,8 +129,16 @@ SEXP FANSI_writeline(
   // state_bound.pos_byte 1 past what we need, so this should include room
   // for NULL terminator
 
-  int target_size = state_bound.pos_byte - state_start.pos_byte;
-  int target_width = state_bound.pos_width - state_start.pos_width;
+  if(
+    (state_bound.pos_byte < state_start.pos_byte) ||
+    (state_bound.pos_width < state_start.pos_width)
+  )
+    // nocov start
+    error("Internal Error: boundary leading position; contact maintainer.");
+    // nocov end
+
+  size_t target_size = state_bound.pos_byte - state_start.pos_byte;
+  size_t target_width = state_bound.pos_width - state_start.pos_width;
   int target_pad = 0;
 
   if(!target_size) {
@@ -147,20 +155,41 @@ SEXP FANSI_writeline(
 
   if(target_width <= tar_width && *pad_chr) {
     target_pad = tar_width - target_width;
-    target_width = FANSI_add_int(tar_width, target_pad);
-    target_size = FANSI_add_int(target_size, target_pad);
+    if(
+      (tar_width > INT_MAX - target_pad) ||
+      (target_size > INT_MAX - target_pad)
+    ) {
+      error("Attempting to create string longer than INT_MAX while padding.");
+    }
+    target_width = tar_width + target_pad;
+    target_size = target_size + target_pad;
   }
-  target_size = FANSI_add_int(target_size, pre_dat.bytes);
+  if(target_size > INT_MAX - pre_dat.bytes) {
+    error(
+      "%%",
+      "Attempting to create string longer than INT_MAX when adding ",
+      "prefix/initial/indent/exdent."
+    );
+  }
+  target_size += pre_dat.bytes;
   int state_start_size = 0;
+  int start_close = 0;
 
-  if(needs_close) target_size = FANSI_add_int(target_size, 4);
+  if(needs_close) start_close += 4;
   if(needs_start) {
     state_start_size = FANSI_state_size(state_start);
-    target_size = FANSI_add_int(target_size, state_start_size);
+    start_close += state_start_size;  // this can't possibly overflow
   }
-  target_size = FANSI_add_int(target_size, 1); // for NULL terminator
+  if(target_size > INT_MAX - start_close) {
+    error(
+      "%s%s",
+      "Attempting to create string longer than INT_MAX while adding leading ",
+      "and trailing CSI SGR sequences."
+    );
+  }
+  target_size += start_close;
+  ++target_size; // for NULL terminator
 
-  // Rprintf("target size %d\n", target_size);
   // Make sure buffer is large enough
   FANSI_size_buff(buff, target_size);
 

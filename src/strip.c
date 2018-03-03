@@ -107,7 +107,7 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
         invalid_idx = i + 1;
       }
       if(csi.len) {
-        if(csi.start - chr >= INT_MAX - csi.len)
+        if(csi.start - chr > INT_MAX - csi.len)
           // nocov start
           error(
             "%s%s",
@@ -299,7 +299,7 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
         }
         // Make sure buffer is big enough
         if(!strip_this) {
-          FANSI_size_buff(buff, len_j + 1);
+          FANSI_size_buff(buff, (size_t) len_j + 1);
           buff_track = buff->buff;
           strip_this = 1;
         }

@@ -84,7 +84,7 @@ SEXP FANSI_check_assumptions() {
   if(SIZE_MAX <= R_LEN_T_MAX)
     warningcall(
       R_NilValue, err_base,
-      "SIZE_MAX smallre than or equal to R_LEN_T_MAX", ""
+      "SIZE_MAX smaller than or equal to R_LEN_T_MAX", ""
     );
 
   return ScalarLogical(1);

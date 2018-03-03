@@ -52,7 +52,7 @@ SEXP FANSI_tabs_as_spaces(
 
   const char * source;
   int tabs_in_str = 0;
-  int max_tab_stop = 0;
+  int max_tab_stop = 1;
 
   SEXP res_sxp = PROTECT(vec);
 
@@ -87,11 +87,20 @@ SEXP FANSI_tabs_as_spaces(
       // Figure out possible size of buffer, allowing max_tab_stop for every
       // tab, which should over-allocate
 
-      int new_buff_size = FANSI_add_int(buff_utf8.len, 1);
+      size_t new_buff_size = buff_utf8.len;
+      int tab_extra = max_tab_stop - 1;
 
       for(int k = 0; k < tab_count; ++k) {
-        new_buff_size = FANSI_add_int(new_buff_size, max_tab_stop - 1);
+        if(new_buff_size > INT_MAX - tab_extra)
+          error(
+            "%s%s",
+            "Converting tabs to spaces will cause string to be longer than ",
+            "allowed INT_MAX."
+          );
+        new_buff_size += tab_extra;
       }
+      ++new_buff_size;   // Room for NULL
+
       FANSI_size_buff(buff, new_buff_size);
 
       struct FANSI_state state =
