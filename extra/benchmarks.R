@@ -9,10 +9,11 @@ stops <- starts + 80L
 ulysses.c.r <- rep(ulysses.c, n)
 
 system.time(substr_esc(ulysses.c.r, starts, stops))
-system.time(substr(ulysses.c.r, starts, stops))
+system.time(xx <- substr(ulysses.c.r, starts, stops))
+system.time(zz <- stri_sub(ulysses.c.r, starts, stops))
 
-system.time(csi <- fansi::strwrap_esc(ulysses, 30))
-system.time(normal <- strwrap(ulysses, 30))
+system.time(csi <- fansi::strwrap_esc(ulysses.c, 30))
+system.time(normal <- strwrap(ulysses.c, 30))
 
 all.equal(normal, csi)
 
