@@ -296,6 +296,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_what_as_int(SEXP what);
   void FANSI_size_buff(struct FANSI_buff * buff, size_t size);
 
+  int FANSI_pmatch(
+    SEXP x, const char ** choices, int choice_count, const char * arg_name
+  );
+
   int FANSI_is_utf8_loc();
   int FANSI_utf8clen(char c);
   int FANSI_digits_in_int(int x);

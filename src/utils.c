@@ -220,6 +220,56 @@ int FANSI_what_as_int(SEXP what) {
   }
   return what_int;
 }
+/*
+ * Partial match a single string byte by byte
+ *
+ * @param x a scalar STRSXP
+ * @param choices an array of strings to match against
+ * @param choice_count how many elements there are in array
+ * @param arg_name the name of the argument to use in an error message if
+ *   the match fails.
+ * @return the position in choices that partial matches x, on a 0-index basis
+ *   (ie. 0 == 1st, 1 == 2nd, etc.)
+ */
+int FANSI_pmatch(
+  SEXP x, const char ** choices, int choice_count, const char * arg_name
+) {
+  if(TYPEOF(x) != STRSXP || XLENGTH(x) != 1)
+    error("Argument `%s` must be a length 1 character vector.", arg_name);
+
+  SEXP x_chrsxp = STRING_ELT(x, 0);
+  const char * x_chr = CHAR(x_chrsxp);
+
+  if(!LENGTH(x_chrsxp))
+    error("Argument `%s` may not be an empty string.", arg_name)
+
+  int match_count = choice_count;
+  int last_match_index = -1;
+
+  for(i = 0; i < choice_count; ++i) {
+    int match_last = 1;
+    for(R_len_t j = 0; j < LENGTH(x_chrsxp); ++j) {
+      const char choice_chr = *((choices + i) + j);
+      if(choice_char != *(x_chr + j)) {
+        match_last = 0;
+        --match_count;
+        break;
+    } }
+    if(match_last) last_match_index = i;
+  }
+  if(match_count == 1 && last_match_index >= 0) {
+  if(match_count > 1) {
+    error(
+      "Argument `%s` matches more than one of the possible choices.",
+      arg_name
+    );
+  } else if(!match_count) {
+    error("Argument `%s` does not match any of the valid choices.", arg_name);
+  }
+  // success
+
+  return last_match_index;
+}
 
 // concept borrowed from utf8-lite
 
