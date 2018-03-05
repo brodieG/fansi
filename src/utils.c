@@ -253,7 +253,7 @@ int FANSI_pmatch(
   int last_match_index = -1;
 
   for(int i = 0; i < choice_count; ++i) {
-    if(strncmp(x_chr, choices[i], LENGTH(x_chrsxp))) {
+    if(!strncmp(x_chr, choices[i], LENGTH(x_chrsxp))) {
       last_match_index = i;
       --match_count;
     }

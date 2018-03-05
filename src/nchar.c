@@ -29,7 +29,7 @@ SEXP FANSI_nchar(
     TYPEOF(allowNA) != LGLSXP ||
     TYPEOF(keepNA) != LGLSXP ||
     TYPEOF(warn) != LGLSXP ||
-    TYPEOF(type) != INTSXP || XLENGTH(type) != 1 ||
+    TYPEOF(type) != STRSXP || XLENGTH(type) != 1 ||
     TYPEOF(term_cap) != INTSXP
   )
     error("Internal error: input type error; contact maintainer");
