@@ -6,9 +6,8 @@
 \alias{fansi-package}
 \title{ANSI Control Sequence Aware String Functions}
 \description{
-Counterparts to R string manipulation functions that preserve ANSI
-CSI SGR control sequences and treat them along with other control characters
-and sequences as zero display-width.
+Counterparts to R string manipulation functions that account for
+the effects of ANSI text formatting control sequences.
 }
 \section{Control Characters and Sequences}{
 
@@ -24,23 +23,25 @@ delete in this set, even though technically it is not part of it).
 \item Sequences starting in "ESC" and followed by something other than "[".
 }
 
-All of these are considered zero display width for purposes of string width
+All of these are considered zero display-width for purposes of string width
 calculations.
 
 Escape sequences starting with ESC are assumed to be two characters
 long (including the ESC) unless they are of the CSI variety, in which case
 their length is computed as per the ANSI CSI spec.  There are non-CSI escape
-sequences that may be longer than two characters, but \code{fansi} will treat them
-as if they were two characters long.
+sequences that may be longer than two characters, but \code{fansi} will
+(incorrectly) treat them as if they were two characters long.
 
-In theory it is possible to encode ANSI CSI escape sequences with single byte
-introducing character in the 0x40-0x5F range instead of the traditional
+In theory it is possible to encode ANSI CSI escape sequences with a single
+byte introducing character in the 0x40-0x5F range instead of the traditional
 "ESC[".  Since this is rare and it conflicts with UTF-8 encoding, we do
 not support it.
 }
 
 \section{ANSI CSI SGR Control Sequences}{
 
+
+\strong{NOTE}: not all displays support ANSI CSI SGR sequences.
 
 ANSI CSI SGR control sequences are the subset of CSI sequences that can be
 used to change text appearance (e.g. color).  These sequences begin with
@@ -60,8 +61,8 @@ interpret such as:
 }
 
 Another possible source of problems is that different displays parse
-and interpret control sequences differently.  The common sequences that
-you are likely to encounter in CSI SGR formatted text tend to be treated
+and interpret control sequences differently.  The common CSI SGR sequences
+that you are likely to encounter in formatted text tend to be treated
 consistently, but less common ones are not.  \code{fansi} tries to hew by the
 ECMA-48 specification \strong{for CSI control sequences}, but not all terminals
 do.
@@ -70,16 +71,16 @@ The most likely source of problems will be 24-bit CSI SGR sequences.
 For example, a 24-bit color sequences such as "ESC[38;2;31;42;4" is a
 single foreground color to a terminal that supports it, or separate
 foreground, background, faint, and underline specifications for one that does
-not.  To mitigate this particular problem you tell \code{fansi} what your terminal
-capabilities are via the \code{term.cap} parameter or the "fansi.term.cap" global
-option, although \code{fansi} does try to detect them by default.
+not.  To mitigate this particular problem you can tell \code{fansi} what your
+terminal capabilities are via the \code{term.cap} parameter or the
+"fansi.term.cap" global option, although \code{fansi} does try to detect them by
+default.
 
 \code{fansi} will will warn if it encounters control sequences or characters
 that it cannot interpret or that might conflict with terminal capabilities.
 You can turn off warnings via the \code{warn} parameter or via the "fansi.warn"
 global option.
 
-You can also #'
 \code{fansi} can work around "C0" tab control characters by turning them into
 spaces first with \link{tabs_as_spaces} or with the \code{tabs.as.spaces} parameter.
 
@@ -105,12 +106,12 @@ pick another one).
 interpreted in a manner intended to be consistent with base R.  There are
 three ways things may not work out exactly as desired:
 \enumerate{
-\item \code{fansi} fails to treat a UTF-8 sequence the same way as R does
-\item R incorrectly treats a UTF-8 sequences
-\item Your display incorrectly handles a UTF-8 sequences
+\item \code{fansi} fails to treat a UTF-8 sequence the same way as R does.
+\item R incorrectly treats a UTF-8 sequence.
+\item Your display incorrectly handles a UTF-8 sequences.
 }
 
-These issues are most likely to occur with invalid UTF-8 sequences, with
+These issues are most likely to occur with invalid UTF-8 sequences,
 combining character sequences, and emoji.  For example, as of this writing R
 (and the OSX terminal) consider emojis to be one wide characters, when in
 reality they are two wide.  Do not expect the \code{fansi} width
@@ -128,9 +129,19 @@ rare because in the most common multi-character graphemes the combining
 characters are computed as zero width.
 
 Ultimately we would like to adopt a proper UTF-8 library like
+\itemize{
+\item \href{https://github.com/patperry/r-utf8/}{r-utf8} or
+\item \href{https://github.com/patperry/utf8lite}{utf8lite}
+}
+}
 
-\href{https://github.com/patperry/r-utf8/}{r-utf8} or
-\href{https://github.com/patperry/utf8lite}{utf8lite}, but that probably won't
-happen for a while.
+\section{Miscellaneous}{
+
+
+The native code in this package assumes that all strings are NULL terminated
+and no longer than INT_MAX (excluding the NULL).  This should be a safe
+assumption since the code is designed to work with STRSXPs and CHRSXPs.  Do
+not however expect it to be safe if you try to use it on other types of
+strings.
 }
 

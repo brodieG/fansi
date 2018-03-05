@@ -279,6 +279,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap);
   SEXP FANSI_unhandled_esc(SEXP x);
 
+  SEXP FANSI_nchar(
+    SEXP x, SEXP type, SEXP allowNA, SEXP keepNA, SEXP warn, SEXP term_cap
+  );
+  SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap);
+
   // Internal
 
   SEXP FANSI_tabs_as_spaces(

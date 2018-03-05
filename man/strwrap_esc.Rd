@@ -41,17 +41,17 @@ strwrap2_esc(x, width = 0.9 * getOption("width"), indent = 0, exdent = 0,
 \item{initial}{a character string to be used as prefix for
     each line except the first, for which \code{initial} is used.}
 
-\item{warn}{TRUE (default) or FALSE, whether to warn whether potentially
+\item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic escape sequences are encountered.  These could cause the
-assumptions \code{fansi} is makes about how strings are rendered on your display
+assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
 starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
-"38;2" or "48;2"). Defaults to \code{c("bright", "256")}.  Changing this
-parameter changes how \code{fansi} interprets escape sequences, so you should
-ensure that it matches your terminal capabilities.}
+"38;2" or "48;2"). Changing this parameter changes how \code{fansi} interprets
+escape sequences, so you should ensure that it matches your terminal
+capabilities. See \link{term_cap_test} for details.}
 
 \item{wrap.always}{TRUE or FALSE (default), whether to hard wrap at requested
 width if no word breaks are detected within a line.}
@@ -102,8 +102,9 @@ strwrap_esc(hello.2, 12)
 ## In default mode strwrap2_esc is the same as strwrap_esc
 strwrap2_esc(hello.2, 12)
 
-## But you can leave whitespace unchanged
-strwrap2_esc(hello.2, 12, strip.spaces=FALSE)
+## But you can leave whitespace unchanged, `warn`
+## set to false as otherwise tabs causes warning
+strwrap2_esc(hello.2, 12, strip.spaces=FALSE, warn=FALSE)
 
 ## And convert tabs to spaces
 strwrap2_esc(hello.2, 12, tabs.as.spaces=TRUE)
@@ -127,6 +128,7 @@ writeLines(strwrap2_esc("hello how are you today", 10, pad.end="."))
 ## SGR sequences)
 
 NEWS <- readLines(file.path(R.home('doc'), 'NEWS'))
+length(NEWS) <- 450 # make sure at least 450 long
 bg <- ceiling((seq_along(NEWS)) \%\% 215 + 1) + 16
 fg <- ifelse((((bg - 16) \%/\% 18) \%\% 2), 30, 37)
 tpl <- "\\033[\%d;48;5;\%dm\%s\\033[49m"

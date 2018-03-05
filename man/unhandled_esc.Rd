@@ -29,12 +29,17 @@ The return value is a data frame with five columns:
 \item stop: integer the start position of the sequence (in characters)
 \item error: the reason why the sequence was not handled:
 \itemize{
+\item exceed-term-cap: contains color codes not supported by the terminal
+(see \link{term_cap_test}).
 \item special: contains uncommon characters in ":<=>".
 \item unknown: a substring with a value that does not correspond to a known
 SGR code.
 \item non-SGR: a non-SGR CSI sequence.
 \item non-CSI: a non-CSI escape sequence, i.e. one where the ESC is
-followed by something other than "[".
+followed by something other than "[".  Since we assume all non-CSI
+sequences are only 2 characters long include the ESC, this type of
+sequence is the most likely to cause problems as many are not actually
+two characters long.
 \item malformed-CSI: a malformed CSI sequence.
 \item malformed-ESC: a malformed ESC sequence (i.e. one not ending in
 0x40-0x7e).
