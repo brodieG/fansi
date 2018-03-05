@@ -22,10 +22,20 @@
  * Create a state structure with everything set to zero
  *
  * We rely on struct initialization to set everything else to zero.
+ *
+ * FANSI_state_init_full is specifically to handle the allowNA case in nchar,
+ * for which we MUST check `state.nchar_err` after each `FANSI_read_next`.  In
+ * all other cases `R_nchar` shoudl be set to not `allowNA`.
  */
-struct FANSI_state FANSI_state_init(
-  const char * string, SEXP warn, SEXP term_cap
+struct FANSI_state FANSI_state_init_full(
+  const char * string, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA
 ) {
+  if(
+    TYPEOF(warn) != LGLSXP || TYPEOF(term_cap) != INTEGER ||
+    TYPEOF(allowNA) != LGLSXP || TYPEOF(keepNA) != LGLSXP
+  )
+    error("Internal error: state_init with bad types; contact maintainer.");
+
   int * term_int = INTEGER(term_cap);
   int warn_int = asInteger(warn);
   int term_cap_int = 0;
@@ -44,8 +54,23 @@ struct FANSI_state FANSI_state_init(
     .color = -1,
     .bg_color = -1,
     .warn = warn_int,
-    .term_cap = term_cap_int
+    .term_cap = term_cap_int,
+    .allowNA = asLogical(allowNA),
+    .keepNA = asLogical(keepNA)
   };
+}
+struct FANSI_state FANSI_state_init(
+  const char * string, SEXP warn, SEXP term_cap
+) {
+  SEXP R_false = PROTECT(ScalarLogical(0));
+  SEXP R_true = PROTECT(ScalarLogical(1));
+  struct FANSI_state res = FANSI_state_init_full(
+    string, warn, term_cap,
+    R_false, // Don't allowNA, fail instead
+    R_true
+  );
+  UNPROTECT(2);
+  return res;
 }
 /*
  * Reset all the display attributes, but not the position ones
@@ -562,7 +587,8 @@ static struct FANSI_state read_utf8(struct FANSI_state state) {
   SEXP str_chr =
     PROTECT(mkCharLenCE(state.string + state.pos_byte, byte_size, CE_UTF8));
   int disp_size = R_nchar(
-    str_chr, Width, state.allowNA, state.keepNA, "when computing display width"
+    str_chr, Width, state.allowNA, state.keepNA,
+    "use `is.na(nchar(x, allowNA=TRUE))` to find problem strings."
   );
   UNPROTECT(1);
 
@@ -573,6 +599,10 @@ static struct FANSI_state read_utf8(struct FANSI_state state) {
   state.pos_byte += byte_size;
   ++state.pos_ansi;
   ++state.pos_raw;
+  if(disp_size == NA_INTEGER) {
+    state.nchar_err = 1;
+    disp_size = 0;
+  }
   state.last_char_width = disp_size;
   state.pos_width += disp_size;
   state.pos_width_target += disp_size;

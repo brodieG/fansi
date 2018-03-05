@@ -231,6 +231,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      */
     int allowNA;
     int keepNA;
+    int nchar_err;  // invalid multi-byte char
   };
   /*
    * Need to keep track of fallback state, so we need ability to return two
@@ -308,6 +309,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   struct FANSI_string_as_utf8 FANSI_string_as_utf8(SEXP x);
   struct FANSI_state FANSI_state_init(
     const char * string, SEXP warn, SEXP term_cap
+  );
+  struct FANSI_state FANSI_state_init_full(
+    const char * string, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA
   );
   int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current);
   int FANSI_state_comp_basic(
