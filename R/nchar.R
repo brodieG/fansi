@@ -33,11 +33,12 @@
 #' character or width counts.
 #'
 #' @inheritParams base::nchar
+#' @export
 #' @param type character string, one of "chars", or "width".  For byte counts
 #'   use [base::nchar].
 #' @seealso [strip_esc]
 #' @examples
-#' nchar_esc("\033[31mone\a\r")
+#' nchar_esc("\033[31m123\a\r")
 #' ## with some wide characters
 #' cn.string <-  sprintf("\033[31m%s\a\r", "\u4E00\u4E01\u4E03")
 #' nchar_esc(cn.string)
@@ -46,13 +47,12 @@
 #' ## All of the following are control sequences
 #' nzchar_esc("\n\033[42;31m\033P\a")
 #' ## If we want to count newlines, this is a slower option
-#'
 
 nchar_esc <- function(
   x, type='chars', allowNA=FALSE, keepNA=NA, warn=getOption('fansi.warn')
 ) {
   if(!is.character(x)) x <- as.character(x)
-  vetr(warn=LGL.1, type=CHR.1, what=CHR, allowNA=logical(1), keepNA=logical(1))
+  vetr(warn=LGL.1, type=CHR.1, allowNA=LGL.1, keepNA=logical(1))
   term.cap.int <- seq_along(VALID.TERM.CAP)
   .Call(FANSI_nchar_esc, x, type, allowNA, keepNA, warn, term.cap.int)
 }
@@ -61,7 +61,7 @@ nchar_esc <- function(
 
 nzchar_esc <- function(x, keepNA=NA, warn=getOption('fansi.warn')) {
   if(!is.character(x)) x <- as.character(x)
-  vetr(warn=LGL.1, type=CHR.1, what=CHR, allowNA=logical(1), keepNA=logical(1))
+  vetr(warn=LGL.1, type=CHR.1, what=CHR, keepNA=logical(1))
   term.cap.int <- seq_along(VALID.TERM.CAP)
   .Call(FANSI_nzchar_esc, x, keepNA, warn, term.cap.int)
 }

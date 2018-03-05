@@ -2,6 +2,7 @@
 
 export(esc_to_html)
 export(has_esc)
+export(nchar_esc)
 export(nzchar_esc)
 export(strip_esc)
 export(strtrim2_esc)

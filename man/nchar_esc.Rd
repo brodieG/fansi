@@ -55,7 +55,6 @@ nchar_esc(cn.string, type='width')
 ## All of the following are control sequences
 nzchar_esc("\\n\\033[42;31m\\033P\\a")
 ## If we want to count newlines, this is a slower option
-
 }
 \seealso{
 \link{strip_esc}
