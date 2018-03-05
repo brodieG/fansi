@@ -46,7 +46,7 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
   \***************************************************/
   int valid = 1;
   int found = 0;
-  int what_found = 0;
+  int found_what = 0;
   const char * x_track = x;
   const char * x_found_start;
   const char * x_found_end;
@@ -138,7 +138,7 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
     };
   } else {
     res = (struct FANSI_csi_pos){
-      .start=x, .len=0, .valid=valid, .type=0, what=found_what
+      .start=x, .len=0, .valid=valid, what=found_what
     };
   }
   return res;
@@ -247,14 +247,13 @@ int FANSI_pmatch(
   const char * x_chr = CHAR(x_chrsxp);
 
   if(!LENGTH(x_chrsxp))
-    error("Argument `%s` may not be an empty string.", arg_name)
+    error("Argument `%s` may not be an empty string.", arg_name);
 
   int match_count = choice_count;
   int last_match_index = -1;
 
-  for(i = 0; i < choice_count; ++i) {
-    int match_last = 1;
-    if(strncmp(x_chr, choices, LENGTH(x_chrsxp))) {
+  for(int i = 0; i < choice_count; ++i) {
+    if(strncmp(x_chr, choices[i], LENGTH(x_chrsxp))) {
       last_match_index = i;
       --match_count;
     }

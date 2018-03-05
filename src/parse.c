@@ -31,7 +31,7 @@ struct FANSI_state FANSI_state_init_full(
   const char * string, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA
 ) {
   if(
-    TYPEOF(warn) != LGLSXP || TYPEOF(term_cap) != INTEGER ||
+    TYPEOF(warn) != LGLSXP || TYPEOF(term_cap) != INTSXP ||
     TYPEOF(allowNA) != LGLSXP || TYPEOF(keepNA) != LGLSXP
   )
     error("Internal error: state_init with bad types; contact maintainer.");

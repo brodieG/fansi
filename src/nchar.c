@@ -34,25 +34,28 @@ SEXP FANSI_nchar(
   )
     error("Internal error: input type error; contact maintainer");
 
-  int type_int = FANSI_pmatch(type, {"chars", "width"}, 2, "type");
-  int allowNA_int = asInteger(allowNA)
-  int keepNA_int = asInteger(keepNA)
+  const char * valid_types[2] = {"chars", "width"};
+  int type_int = FANSI_pmatch(type, valid_types, 2, "type");
+  int allowNA_int = asLogical(allowNA);
+  int keepNA_int = asLogical(keepNA);
+  int warn_int = asLogical(warn);
+  int warned = 0;
 
   R_xlen_t x_len = XLENGTH(x);
 
   SEXP res = PROTECT(allocVector(INTSXP, x_len));
   SEXP R_false = PROTECT(ScalarLogical(0));
 
-  for(R_len_t i, i < x_len; ++i) {
+  for(R_len_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
     SEXP string_elt = STRING_ELT(x, i);
 
     if(string_elt == R_NaString) {
-      if((keepNA_int == NA_LOGICAL && type != 1) || keepNA_int == 1) {
+      if((keepNA_int == NA_LOGICAL && type_int != 1) || keepNA_int == 1) {
         INTEGER(res)[i] = NA_INTEGER;
       } else INTEGER(res)[i] = 2;
     } else {
-      const char * string = FANSI_string_as_utf8(string_elt);
+      const char * string = FANSI_string_as_utf8(string_elt).string;
       struct FANSI_state state =
         FANSI_state_init_full(string, R_false, term_cap, allowNA, keepNA);
 
@@ -100,9 +103,9 @@ SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap) {
 
   R_xlen_t x_len = XLENGTH(x);
 
-  res = PROTECT(allocVector(INTSXP, x_len));
+  SEXP res = PROTECT(allocVector(INTSXP, x_len));
 
-  for(R_len_t i, i < x_len; ++i) {
+  for(R_len_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
     SEXP string_elt = STRING_ELT(x, i);
     if(string_elt == R_NaString) {
