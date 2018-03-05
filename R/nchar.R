@@ -24,10 +24,18 @@
 #' These functions are faster than the semantically equivalent
 #' `nchar(strip_esc(x, what='all')).  If you wish to control which control
 #' characters and sequences are stripped you will need to use
-#' `nchar(strip_esc(x, what=...))`.
+#' `nchar(strip_esc(x, what=...))`.  They will warn if either malformed or
+#' non-CSI escape sequences are encountered, as these may be incorrectly
+#' interpreted.
+#'
+#' Any non-ASCII non-UTF8 string will be converted to UTF8 prior to computing
+#' character or width counts.
 #'
 #' @inheritParams nchar
+#' @param type character string, one of "chars", or "width".  For byte counts
+#'   use [base::nchar].
 #' @seealso [strip_esc]
+#'
 
 nchar_esc <- function(
   x, type='chars', allowNA=FALSE, keepNA=NA, what=getOption('fansi.what'),
@@ -35,7 +43,7 @@ nchar_esc <- function(
 ) {
   # TODO IMPLEMENT PARTIAL MATCHING
   vetr(
-    warn=LGL.1, type=CHR.1 && . %in% c('chars', 'width', 'bytes'), what=CHR
+    warn=LGL.1, type=CHR.1 && . %in% c('chars', 'width'), what=CHR
   )
   if(anyNA(what.int <- match(what, VALID.WHAT)))
     stop(

@@ -17,25 +17,86 @@
  */
 
 #include "fansi.h"
-
+/*
+ * @param term_cap is expected to be provided in full by the R fun, this is just
+ *   purely for convenience and doesn't do anything.
+ */
 SEXP FANSI_nchar(
-  SEXP x, SEXP type, SEXP allowNA, SEXP keepNA, SEXP what, SEXP warn,
-  SEXP term_cap
+  SEXP x, SEXP type, SEXP allowNA, SEXP keepNA, SEXP warn, SEXP term_cap
 ) {
   if(
-    TYPEOF(x) != STRSXP || TYPEOF(type) != INTSXP ||
-    TYPEOF(allowNA) != LGLSXP || TYPEOF(keepNA) != LGLSXP ||
-    TYPEOF(what) != INTSXP || TYPEOF(warn) != LGLSXP ||
-    XLENGTH(type) != 1
+    TYPEOF(x) != STRSXP ||
+    TYPEOF(allowNA) != LGLSXP ||
+    TYPEOF(keepNA) != LGLSXP ||
+    TYPEOF(warn) != LGLSXP ||
+    TYPEOF(type) != INTSXP || XLENGTH(type) != 1 ||
+    TYPEOF(term_cap) != INTSXP
   )
     error("Internal error: input type error; contact maintainer");
 
-  const char * type_chr = CHAR(STRING_ELT(type, 0));
-  int type_int;
-  if(!strcomp(type_chr, "chars")) type_int = 1;
-  else if(!strcomp(type_chr, "width")) type_int = 2;
-  else if(!strcomp(type_chr, "bytes")) type_int = 3;
-  else error("Internal error: unknown type selection.");  // nocov
+  int type_int = FANSI_pmatch(type, {"chars", "width"}, 2, "type");
+  int allowNA_int = asInteger(allowNA)
+  int keepNA_int = asInteger(keepNA)
+
+  R_xlen_t x_len = XLENGTH(x);
+
+  SEXP res = PROTECT(allocVector(INTSXP, x_len));
+  SEXP R_false = PROTECT(ScalarLogical(0));
+
+  for(R_len_t i, i < x_len; ++i) {
+    FANSI_interrupt(i);
+    SEXP string_elt = STRING_ELT(x, i);
+
+    if(string_elt == R_NaString) {
+      if((keepNA_int == NA_LOGICAL && type != 1) || keepNA_int == 1) {
+        INTEGER(res)[i] = NA_INTEGER;
+      } else INTEGER(res)[i] = 2;
+    } else {
+      const char * string = FANSI_string_as_utf8(string_elt);
+      struct FANSI_state state =
+        FANSI_state_init_full(string, R_false, term_cap, allowNA, keepNA);
+
+      while(state.string[state.pos_byte]) {
+        int is_esc = state.string[state.pos_byte] == 27;
+        state = FANSI_read_next(state);
+        if(
+          is_esc && warn_int && !warned &&
+          (state.err_code >= 5 &&  state.err_code <= 7)
+        ) {
+          warned = 1;
+          warning(
+            "Encountered %s ESC sequence at index [%.0f], %s%s",
+            "invalid or possibly incorrectly handled",
+            (double) i + 1,
+            "see `?unhandled_esc`; you can use `warn=FALSE` to turn ",
+            "off these warnings."
+      );} }
+      if(allowNA_int && state.nchar_err) {
+        // We could consider breaking as soon as we hit nchar_err, but we let it
+        // continue since these should be rarely encountered and it would create
+        // one more command in the tight loop.
+        INTEGER(res)[i] = NA_INTEGER;
+      } else {
+        switch(type_int) {
+          case 0: INTEGER(res)[i] = state.pos_raw; break;
+          case 1: INTEGER(res)[i] = state.pos_width; break;
+          default:
+            error("Internal Error: unknown `type` value; contact maintainer.");
+  } } } }
+  UNPROTECT(2);
+  return res;
+}
+SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap) {
+  if(
+    TYPEOF(x) != STRSXP ||
+    TYPEOF(keepNA) != LGLSXP ||
+    TYPEOF(warn) != LGLSXP ||
+    TYPEOF(term_cap) != INTSXP
+  )
+    error("Internal error: input type error; contact maintainer");
+
+  int keepNA_int = asInteger(keepNA);
+  int warned = 0;
 
   R_xlen_t x_len = XLENGTH(x);
 
@@ -43,34 +104,31 @@ SEXP FANSI_nchar(
 
   for(R_len_t i, i < x_len; ++i) {
     FANSI_interrupt(i);
+    SEXP string_elt = STRING_ELT(x, i);
+    if(string_elt == R_NaString) {
+      if(keepNA_int == 1) {
+        LOGICAL(res)[i] = NA_LOGICAL;
+      } else LOGICAL(res)[i] = 1;
+    } else {
+      // Don't bother converting to UTF8
 
-    const char * string = FANSI_string_as_utf8(STRING_ELT(x, i));
-    struct FANSI_state state = FANSI_state_init(string, warn, term_cap);
-    int pos_width_prev = 0;
+      const char * string = CHAR(string_elt);
 
-    while(state.string[state.pos_byte]) {
-      state = FANSI_read_next(state);
-      if(type != 2 && state.pos_width == pos_width_prev) {
-        // We found a special character or sequence since all of them are
-        // zero width, and if we're not in width mode we want to exclude the
-        // associated characters from being counted
+      while((*string > 0 && *string < 32) || *string == 127) {
+        struct FANSI_csi_pos pos = FANSI_find_esc(string, FANSI_WHAT_ALL);
+        if(!warned && (!pos.valid || (pos.what & (1 << 4)))) {
+          warning(
+            "Encountered %s ESC sequence at index [%.0f], %s%s",
+            !pos.valid ? "invalid" : "possibly incorrectly handled",
+            (double) i + 1,
+            "see `?unhandled_esc`; you can use `warn=FALSE` to turn ",
+            "off these warnings."
+          );
+        }
+        string += pos.len;
       }
-
-      state_prev =
-    }
-    switch(type_int) {
-      case 1: INTEGER(res)[i] = state.pos_raw; break;
-      case 2: INTEGER(res)[i] = state.pos_width; break;
-      case 3: INTEGER(res)[i] = state.pos_byte; break;
-    }
-
-
-
-
-
-  }
-
-  int what_int = FANSI_what_as_int(what);
-
-  return R_NilValue;
+      LOGICAL(res)[i] = *string != 0;
+  } }
+  UNPROTECT(1);
+  return res;
 }

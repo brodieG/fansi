@@ -19,7 +19,10 @@
 #'       SGR code.
 #'     * non-SGR: a non-SGR CSI sequence.
 #'     * non-CSI: a non-CSI escape sequence, i.e. one where the ESC is
-#'       followed by something other than "[".
+#'       followed by something other than "[".  Since we assume all non-CSI
+#'       sequences are only 2 characters long include the ESC, this type of
+#'       sequence is the most likely to cause problems as many are not actually
+#'       two characters long.
 #'     * malformed-CSI: a malformed CSI sequence.
 #'     * malformed-ESC: a malformed ESC sequence (i.e. one not ending in
 #'       0x40-0x7e).

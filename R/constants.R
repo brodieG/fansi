@@ -5,6 +5,7 @@
 
 VALID.TERM.CAP <- c('bright', '256', 'truecolor')
 
-## Valid values for the `what` argument
+## Valid values for the `what` argument, REMEMBER TO UDPATE
+## FANSI_WHAT_ALL CONSTANT IF WE MODIFY THIS
 
 VALID.WHAT <- c("all", "nl", "c0", "sgr", "csi", "esc")
