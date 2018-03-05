@@ -254,16 +254,11 @@ int FANSI_pmatch(
 
   for(i = 0; i < choice_count; ++i) {
     int match_last = 1;
-    for(R_len_t j = 0; j < LENGTH(x_chrsxp); ++j) {
-      const char choice_chr = *((choices + i) + j);
-      if(choice_char != *(x_chr + j)) {
-        match_last = 0;
-        --match_count;
-        break;
-    } }
-    if(match_last) last_match_index = i;
+    if(strncmp(x_chr, choices, LENGTH(x_chrsxp))) {
+      last_match_index = i;
+      --match_count;
+    }
   }
-  if(match_count == 1 && last_match_index >= 0) {
   if(match_count > 1) {
     error(
       "Argument `%s` matches more than one of the possible choices.",
