@@ -623,7 +623,7 @@ static struct FANSI_state read_ascii(struct FANSI_state state) {
   return state;
 }
 /*
- * C0 ESC sequences treated as zero width
+ * C0 ESC sequences treated as zero width and do not count as characters either
  */
 static struct FANSI_state read_c0(struct FANSI_state state) {
   if(state.string[state.pos_byte] != '\n') {
@@ -631,6 +631,7 @@ static struct FANSI_state read_c0(struct FANSI_state state) {
     state.err_code = 8;
   }
   state = read_ascii(state);
+  --state.pos_raw;
   --state.pos_width;
   --state.pos_width_target;
   return state;
