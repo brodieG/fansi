@@ -35,7 +35,9 @@
  * processing the sequence).
  *
  * @param what is a bit flag to line up against VALID.WHAT index values, so
- *   (what & (1 << 0)) is newlines, (what & (1 << 1)) is C0, etc
+ *   (what & (1 << 0)) is newlines, (what & (1 << 1)) is C0, etc, though note
+ *   this does not act
+ *
  */
 
 struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
@@ -44,6 +46,7 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
   \***************************************************/
   int valid = 1;
   int found = 0;
+  int what_found = 0;
   const char * x_track = x;
   const char * x_found_start;
   const char * x_found_end;
@@ -67,9 +70,6 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
       found_this = 0;
       if(x_val == 27) {
         if(*x_track == '[') {
-          // If not finding CSI or SGR, skip (12 = 2^2 + 2^3), where ^2
-          // corresponds to SGR and ^3 CSI
-
           // This is a CSI sequence, so it has multiple characters that we
           // need to skip.  The final character is processed outside of here
           // since it has the same logic for CSI and non CSI sequences
@@ -102,12 +102,14 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
 
           // CSI SGR only found if ends in m
 
+          found_what |= *x_track == 'm' ? 1 << 2 : 1 <<3;
           found_this =
             (*x_track == 'm' && (what & (1 << 2))) ||  // SGR
             (*x_track != 'm' && what & (1 << 3));      // CSI
         } else {
           // Includes both the C1 set and "controls strings"
           found_this = what & (1 << 4);
+          found_what |= (1 << 4);
           valid = valid && (*x_track >= 0x40 && *x_track <= 0x7E);
         }
         // Advance unless next char is ESC, in which case we want to keep
@@ -117,6 +119,7 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
       } else {
         // x01-x1F, x7F, all the C0 codes
 
+        found_what |= (x_val == '\n' ?  1 : 1 << 1);
         found_this =
           (x_val == '\n' && (what & 1)) ||
           (what & (1 << 1));
@@ -130,10 +133,13 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
   }
   if(found) {
     res = (struct FANSI_csi_pos){
-      .start=x_found_start, .len=(x_found_end - x_found_start), .valid=valid
+      .start=x_found_start, .len=(x_found_end - x_found_start),
+      .valid=valid, .what=found_what
     };
   } else {
-    res = (struct FANSI_csi_pos){.start=x, .len=0, .valid=valid};
+    res = (struct FANSI_csi_pos){
+      .start=x, .len=0, .valid=valid, .type=0, what=found_what
+    };
   }
   return res;
 }
@@ -213,7 +219,7 @@ int FANSI_what_as_int(SEXP what) {
   for(R_xlen_t i = 0; i < XLENGTH(what); ++i) {
     int what_val = INTEGER(what)[i] - 2;
     if(what_val < 0) {
-      what_int = 1 + 2 + 4 + 8 + 16; // strip all
+      what_int = FANSI_WHAT_ALL; // strip all
       break;
     }
     what_int |= 1 << what_val;
