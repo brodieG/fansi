@@ -577,21 +577,36 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
 static struct FANSI_state read_utf8(struct FANSI_state state) {
   int byte_size = FANSI_utf8clen(state.string[state.pos_byte]);
 
-  // In order to compute char display width, we need to create a charsxp
-  // with the sequence in question.  Hopefully not too much overhead since
-  // at least we benefit from the global string hash table
-  //
-  // Note that we should probably not bother with computing this if display
-  // mode is not width as it's probably expensive.
+  // Make sure string doesn't end before UTF8 char supposedly does
 
-  SEXP str_chr =
-    PROTECT(mkCharLenCE(state.string + state.pos_byte, byte_size, CE_UTF8));
-  int disp_size = R_nchar(
-    str_chr, Width, state.allowNA, state.keepNA,
-    "use `is.na(nchar(x, allowNA=TRUE))` to find problem strings."
-  );
-  UNPROTECT(1);
+  int mb_err = 0;
+  int disp_size = 0;
+  const char * mb_err_str =
+    "use `is.na(nchar(x, allowNA=TRUE))` to find problem strings.";
 
+  for(int i = 1; i < byte_size; ++i) {
+    if(!state.string[state.pos_byte + i]) {
+      mb_err = 1;
+      break;
+  } }
+  if(mb_err) {
+    if(state.allowNA) disp_size = NA_INTEGER;
+    else error("invalid multiyte string, %s", mb_err_str);
+  } else {
+    // In order to compute char display width, we need to create a charsxp
+    // with the sequence in question.  Hopefully not too much overhead since
+    // at least we benefit from the global string hash table
+    //
+    // Note that we should probably not bother with computing this if display
+    // mode is not width as it's probably expensive.
+
+    SEXP str_chr =
+      PROTECT(mkCharLenCE(state.string + state.pos_byte, byte_size, CE_UTF8));
+    disp_size = R_nchar(
+      str_chr, Width, state.allowNA, state.keepNA, mb_err_str
+    );
+    UNPROTECT(1);
+  }
   // Need to check overflow?  Really only for pos_width?  Maybe that's not
   // even true because you need at least two bytes to encode a double wide
   // character, and there is nothing wider than 2?
