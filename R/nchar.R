@@ -45,7 +45,7 @@
 #' nchar_esc(cn.string, type='width')
 #'
 #' ## All of the following are control sequences
-#' nzchar_esc("\n\033[42;31m\033P\a")
+#' nzchar_esc("\n\033[42;31m\033[123P\a")
 #' ## If we want to count newlines, this is a slower option
 
 nchar_esc <- function(
@@ -61,7 +61,7 @@ nchar_esc <- function(
 
 nzchar_esc <- function(x, keepNA=NA, warn=getOption('fansi.warn')) {
   if(!is.character(x)) x <- as.character(x)
-  vetr(warn=LGL.1, type=CHR.1, what=CHR, keepNA=logical(1))
+  vetr(warn=LGL.1, keepNA=logical(1))
   term.cap.int <- seq_along(VALID.TERM.CAP)
   .Call(FANSI_nzchar_esc, x, keepNA, warn, term.cap.int)
 }

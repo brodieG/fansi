@@ -103,7 +103,7 @@ SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap) {
 
   R_xlen_t x_len = XLENGTH(x);
 
-  SEXP res = PROTECT(allocVector(INTSXP, x_len));
+  SEXP res = PROTECT(allocVector(LGLSXP, x_len));
 
   for(R_len_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);

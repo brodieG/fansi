@@ -10,7 +10,9 @@
 #'
 #' * index: integer the index in `x` with the unhandled sequence
 #' * start: integer the start position of the sequence (in characters)
-#' * stop: integer the start position of the sequence (in characters)
+#' * stop: integer the end of the sequence (in characters), but note that if
+#'   there are multiple ESC sequences abutting each other they will all be
+#'   treated as one, even if some of those sequences are valid.
 #' * error: the reason why the sequence was not handled:
 #'     * exceed-term-cap: contains color codes not supported by the terminal
 #'       (see [term_cap_test]).
