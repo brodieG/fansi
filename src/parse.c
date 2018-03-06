@@ -101,8 +101,8 @@ struct FANSI_state FANSI_reset_width(struct FANSI_state state) {
   return state;
 }
 struct FANSI_state FANSI_inc_width(struct FANSI_state state, int inc) {
-  state.pos_width = FANSI_add_int(state.pos_width, inc);
-  state.pos_width_target = FANSI_add_int(state.pos_width_target, inc);
+  state.pos_width += inc;
+  state.pos_width_target += inc;
   return state;
 }
 // Can a byte be interpreted as ASCII number?
@@ -158,15 +158,15 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
     if(!is_zero && !not_zero) not_zero = 1;
     if(is_zero && !not_zero) ++leading_zeros;
     non_standard |= *string > 0x39;
-    string++;
-    len = FANSI_add_int(len, 1);
+    ++string;
+    ++len;
   }
   // check for for intermediate bytes, we allow 'infinite' here even though in
   // practice more than one is likely a bad outcome
 
   while(*string >= 0x20 && *string <= 0x2F) {
     ++string;
-    len_intermediate = FANSI_add_int(len_intermediate, 1);
+    ++len_intermediate;
   }
   // check for final byte
 
@@ -182,7 +182,7 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
     // invalid end, consume all subsequent parameter substrings
     while(*string >= 0x20 && *string <= 0x3F) {
       ++string;
-      len_tail = FANSI_add_int(len_tail, 1);
+      ++len_tail;
     }
     err_code = 5;
   }
@@ -211,7 +211,7 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
 
   return (struct FANSI_tok_res) {
     .val=val,
-    .len=FANSI_add_int(FANSI_add_int(len, len_intermediate), len_tail),
+    .len=len + len_intermediate + len_tail,
     .err_code=err_code, .last=last
   };
 }
@@ -240,7 +240,7 @@ static struct FANSI_state parse_colors(
   // First, figure out if we are in true color or palette mode
 
   res = FANSI_parse_token(&state.string[state.pos_byte]);
-  state.pos_byte = FANSI_add_int(state.pos_byte, res.len);
+  state.pos_byte += res.len;
   state.last = res.last;
   state.err_code = res.err_code;
 
@@ -275,7 +275,7 @@ static struct FANSI_state parse_colors(
 
       for(int i = 0; i < i_max; ++i) {
         res = FANSI_parse_token(&state.string[state.pos_byte]);
-        state.pos_byte = FANSI_add_int(state.pos_byte, res.len);
+        state.pos_byte += res.len;
         state.last = res.last;
         state.err_code = res.err_code;
 
@@ -381,7 +381,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
   while(state.string[state.pos_byte] == 27) {
     int pos_byte_prev = state.pos_byte;
 
-    state.pos_byte = FANSI_add_int(state.pos_byte, 1);  // advance ESC
+    ++state.pos_byte;  // advance ESC
 
     if(!state.string[state.pos_byte]) {
       // String ends in ESC
@@ -401,11 +401,11 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       // Don't process additional ESC if it is there so we keep looping
 
       if(state.string[state.pos_byte] != 27)
-        state.pos_byte = FANSI_add_int(state.pos_byte, 1);
+        ++state.pos_byte;
     } else {
       // CSI sequence
 
-      state.pos_byte = FANSI_add_int(state.pos_byte, 1);  // consume '['
+      ++state.pos_byte;  // consume '['
       struct FANSI_tok_res tok_res = {.err_code = 0};
 
       // Loop through the SGR; each token we process successfully modifies state
@@ -413,7 +413,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
 
       do {
         tok_res = FANSI_parse_token(&state.string[state.pos_byte]);
-        state.pos_byte = FANSI_add_int(state.pos_byte, tok_res.len);
+        state.pos_byte += tok_res.len;
         state.last = tok_res.last;
         state.err_code = tok_res.err_code;
 
@@ -1188,7 +1188,7 @@ SEXP FANSI_state_at_pos_ext(
   // position as well as the various position translations in a matrix with as
   // many *columns* as the character vector has elements
 
-  SEXP res_mx = PROTECT(allocVector(INTSXP, res_cols * len));
+  SEXP res_mx = PROTECT(allocVector(REALSXP, res_cols * len));
   SEXP dim = PROTECT(allocVector(INTSXP, 2));
   SEXP dim_names = PROTECT(allocVector(VECSXP, 2));
   INTEGER(dim)[0] = res_cols;
@@ -1220,7 +1220,7 @@ SEXP FANSI_state_at_pos_ext(
     pos_i = INTEGER(pos)[i];
     if(text_chr == NA_STRING || pos_i == NA_INTEGER) {
       for(R_xlen_t j = 0; j < res_cols; j++)
-        INTEGER(res_mx)[i * res_cols + j] = NA_INTEGER;
+        REAL(res_mx)[i * res_cols + j] = NA_REAL;
     } else {
       if(pos_i < pos_prev)
         error("Internal Error: `pos` must be sorted %d %d.", pos_i, pos_prev);
@@ -1238,13 +1238,15 @@ SEXP FANSI_state_at_pos_ext(
       );
       state = state_pair.cur;
 
-      // Record position, but set them back to 1 index
+      // Record position, but set them back to 1 index, need to use double
+      // because INTEGER could overflow because of this + 1, although ironically
+      // `substr` probably can't subset the INTMAX character due to the 1
+      // indexing...
 
-      INTEGER(res_mx)[i * res_cols + 0] = FANSI_add_int(state.pos_byte, 1);
-      INTEGER(res_mx)[i * res_cols + 1] = FANSI_add_int(state.pos_raw, 1);
-      INTEGER(res_mx)[i * res_cols + 2] = FANSI_add_int(state.pos_ansi, 1);
-      INTEGER(res_mx)[i * res_cols + 3] =
-        FANSI_add_int(state.pos_width_target, 1);
+      REAL(res_mx)[i * res_cols + 0] = state.pos_byte + 1;
+      REAL(res_mx)[i * res_cols + 1] = state.pos_raw + 1;
+      REAL(res_mx)[i * res_cols + 2] = state.pos_ansi + 1;
+      REAL(res_mx)[i * res_cols + 3] = state.pos_width_target + 1;
 
       // Record color tag if state changed
 
