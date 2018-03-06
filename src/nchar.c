@@ -99,6 +99,7 @@ SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap) {
     error("Internal error: input type error; contact maintainer");
 
   int keepNA_int = asInteger(keepNA);
+  int warn_int = asInteger(warn);
   int warned = 0;
 
   R_xlen_t x_len = XLENGTH(x);
@@ -119,7 +120,8 @@ SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap) {
 
       while((*string > 0 && *string < 32) || *string == 127) {
         struct FANSI_csi_pos pos = FANSI_find_esc(string, FANSI_WHAT_ALL);
-        if(!warned && (!pos.valid || (pos.what & (1 << 4)))) {
+        if(warn_int && !warned && (!pos.valid || (pos.what & (1 << 4)))) {
+          warned = 1;
           warning(
             "Encountered %s ESC sequence at index [%.0f], %s%s",
             !pos.valid ? "invalid" : "possibly incorrectly handled",
