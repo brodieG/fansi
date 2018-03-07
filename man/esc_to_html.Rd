@@ -10,17 +10,17 @@ esc_to_html(x, warn = getOption("fansi.warn"),
 \arguments{
 \item{x}{character vector}
 
-\item{warn}{TRUE (default) or FALSE, whether to warn whether potentially
+\item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic escape sequences are encountered.  These could cause the
-assumptions \code{fansi} is makes about how strings are rendered on your display
+assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
 starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
-"38;2" or "48;2"). Defaults to \code{c("bright", "256")}.  Changing this
-parameter changes how \code{fansi} interprets escape sequences, so you should
-ensure that it matches your terminal capabilities.}
+"38;2" or "48;2"). Changing this parameter changes how \code{fansi} interprets
+escape sequences, so you should ensure that it matches your terminal
+capabilities. See \link{term_cap_test} for details.}
 }
 \value{
 a character vector with all escape sequences removed and any basic

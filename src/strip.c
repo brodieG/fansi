@@ -46,15 +46,7 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
 
   // Compress `what` into a single integer using bit flags
 
-  int what_int = 0;
-  for(R_xlen_t i = 0; i < XLENGTH(what); ++i) {
-    int what_val = INTEGER(what)[i] - 2;
-    if(what_val < 0) {
-      what_int = 1 + 2 + 4 + 8 + 16; // strip all
-      break;
-    }
-    what_int |= 1 << what_val;
-  }
+  int what_int = FANSI_what_as_int(what);
   R_xlen_t i, len = xlength(x);
   PROTECT_INDEX ipx;
   PROTECT_WITH_INDEX(x, &ipx);  // reserve spot if we need to alloc later
@@ -99,7 +91,7 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
         invalid_idx = i + 1;
       }
       if(csi.len) {
-        if(csi.start - chr >= INT_MAX - csi.len)
+        if(csi.start - chr > INT_MAX - csi.len)
           // nocov start
           error(
             "%s%s",
@@ -291,7 +283,7 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
         }
         // Make sure buffer is big enough
         if(!strip_this) {
-          FANSI_size_buff(buff, len_j + 1);
+          FANSI_size_buff(buff, (size_t) len_j + 1);
           buff_track = buff->buff;
           strip_this = 1;
         }
@@ -357,15 +349,15 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
         );
     }
     if(strip_this) {
-      /*
-      Rprintf(
-        "About to write n: %d %p %p\n",
-        buff->buff - buff_start, buff->buff,
-        buff_start
-      );
-      */
       *(buff_track) = 0;
-
+      if(buff_track - buff->buff > INT_MAX)
+        // nocov start
+        error(
+          "%s%s",
+          "Internal Error: attempting to write string longer than INT_MAX; ",
+          "contact maintainer."
+        );
+        // nocov end
       SEXP chrsxp = PROTECT(
         mkCharLenCE(
           buff->buff, buff_track - buff->buff, getCharCE(STRING_ELT(input, i))

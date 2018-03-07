@@ -52,7 +52,7 @@ int FANSI_is_utf8_loc() {
 
   size_t loc_len = strlen(loc_string);
 
-  if(loc_len >= INT_MAX)
+  if(loc_len > INT_MAX)
     // nocov start
     error(
       "%s%s",

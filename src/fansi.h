@@ -22,7 +22,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #ifndef _FANSI_H
 #define _FANSI_H
 
-
+  #define FANSI_WHAT_ALL 31 // 1 + 2 + 4 + 8 + 16
   /*
    * Buffer used for writing strings
    *
@@ -31,11 +31,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
    */
   struct FANSI_buff {
     char * buff; // Buffer
-    int len;     // How many bytes the buffer has been allocated to
+    size_t len;     // How many bytes the buffer has been allocated to
   };
   struct FANSI_string_as_utf8 {
     const char * string;  // buffer
-    int len;              // size of buffer
+    size_t len;           // size of buffer
     int translated;       // whether translation was required
   };
   /*
@@ -49,6 +49,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int len;
     // whether the sequnce is complete or not
     int valid;
+    // what types of escapes were found
+    int what;
   };
 
   /*
@@ -223,6 +225,13 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     // Whether to issue warnings if err_code is non-zero, if -1 means that the
     // warning was issued at least once so may not need to be re-issued
     int warn;
+
+    /*
+     * These support the arguments of the same names for nchar
+     */
+    int allowNA;
+    int keepNA;
+    int nchar_err;  // invalid multi-byte char
   };
   /*
    * Need to keep track of fallback state, so we need ability to return two
@@ -270,6 +279,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap);
   SEXP FANSI_unhandled_esc(SEXP x);
 
+  SEXP FANSI_nchar(
+    SEXP x, SEXP type, SEXP allowNA, SEXP keepNA, SEXP warn, SEXP term_cap
+  );
+  SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap);
+
   // Internal
 
   SEXP FANSI_tabs_as_spaces(
@@ -281,18 +295,28 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   SEXP FANSI_check_assumptions();
   SEXP FANSI_digits_in_int_ext(SEXP y);
+  SEXP FANSI_unique_chr(SEXP x);
 
   struct FANSI_state FANSI_inc_width(struct FANSI_state state, int inc);
   struct FANSI_state FANSI_reset_pos(struct FANSI_state state);
   struct FANSI_state FANSI_reset_width(struct FANSI_state state);
 
-  void FANSI_size_buff(struct FANSI_buff * buff, int size);
+  int FANSI_what_as_int(SEXP what);
+  void FANSI_size_buff(struct FANSI_buff * buff, size_t size);
+
+  int FANSI_pmatch(
+    SEXP x, const char ** choices, int choice_count, const char * arg_name
+  );
+
   int FANSI_is_utf8_loc();
   int FANSI_utf8clen(char c);
   int FANSI_digits_in_int(int x);
   struct FANSI_string_as_utf8 FANSI_string_as_utf8(SEXP x);
   struct FANSI_state FANSI_state_init(
     const char * string, SEXP warn, SEXP term_cap
+  );
+  struct FANSI_state FANSI_state_init_full(
+    const char * string, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA
   );
   int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current);
   int FANSI_state_comp_basic(

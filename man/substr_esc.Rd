@@ -19,24 +19,24 @@ substr2_esc(x, start, stop, type = "chars", round = "start",
 
 \item{stop}{integer.  The last element to be replaced.}
 
-\item{warn}{TRUE (default) or FALSE, whether to warn whether potentially
+\item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic escape sequences are encountered.  These could cause the
-assumptions \code{fansi} is makes about how strings are rendered on your display
+assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
 starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
-"38;2" or "48;2"). Defaults to \code{c("bright", "256")}.  Changing this
-parameter changes how \code{fansi} interprets escape sequences, so you should
-ensure that it matches your terminal capabilities.}
+"38;2" or "48;2"). Changing this parameter changes how \code{fansi} interprets
+escape sequences, so you should ensure that it matches your terminal
+capabilities. See \link{term_cap_test} for details.}
 
-\item{type}{character(1L) in \code{c("char", "width", "bytes")}}
+\item{type}{character(1L) in \code{c("char", "width")}}
 
 \item{round}{character(1L) in \code{c("start", "stop", "both", "neither")},
 controls how to resolve ambiguities when a \code{start} or \code{stop} value in
-"bytes" or "width" \code{type} mode falls within a multi-byte character or a
-wide display character.  See details.}
+"width" \code{type} mode falls within a multi-byte character or a wide display
+character.  See details.}
 
 \item{tab.stops}{integer(1:n) indicating position of tab stops to use when
 converting tabs to spaces.  If there are more tabs in a line than defined
@@ -66,6 +66,21 @@ included character via the \code{stop} is left out.  The converse is true if we
 use "stop" as the \code{round} value.  "neither" would cause all partial
 characters to be dropped irrespective whether they correspond to \code{start} or
 \code{stop}, and "both" could cause all of them to be included.
+}
+\examples{
+substr_esc("\\033[42mhello\\033[m world", 1, 9)
+substr_esc("\\033[42mhello\\033[m world", 3, 9)
+
+## Width 2 and 3 are in the middle of an ideogram as
+## start and stop positions respectively, so we control
+## what we get with `round`
+
+cn.string <- paste0("\\033[42m", "\\u4E00\\u4E01\\u4E03", "\\033[m")
+
+substr2_esc(cn.string, 2, 3, type='width')
+substr2_esc(cn.string, 2, 3, type='width', round='both')
+substr2_esc(cn.string, 2, 3, type='width', round='start')
+substr2_esc(cn.string, 2, 3, type='width', round='stop')
 }
 \seealso{
 \link{fansi} for details on how control characters and sequences are

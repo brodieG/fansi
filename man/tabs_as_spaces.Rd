@@ -16,9 +16,9 @@ tab stops the last tab stop is re-used.  For the purposes of applying tab
 stops, each input line is considered a line and the character count begins
 from the beginning of the input line.}
 
-\item{warn}{TRUE (default) or FALSE, whether to warn whether potentially
+\item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic escape sequences are encountered.  These could cause the
-assumptions \code{fansi} is makes about how strings are rendered on your display
+assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
 }
 \value{

@@ -40,7 +40,8 @@
 #' @inheritParams tabs_as_spaces
 #' @inheritParams substr_esc
 #' @param wrap.always TRUE or FALSE (default), whether to hard wrap at requested
-#'   width if no word breaks are detected within a line.
+#'   width if no word breaks are detected within a line.  If set to TRUE then
+#'   `width` must be at least 2.
 #' @param pad.end character(1L), a single character to use as padding at the
 #'   end of each line until the line is `width` wide.  This must be a printable
 #'   ASCII character or an empty string (default).  If you set it to an empty
@@ -107,7 +108,9 @@ strwrap_esc <- function(
 ) {
   if(!is.character(x)) x <- as.character(x)
   vetr(
-    x=character(), width=NUM.1.POS && . >= 1, indent=INT.1.POS,
+    x=character(),
+    width=NUM,
+    indent=INT.1.POS,
     exdent=INT.1.POS, prefix=character(1), simplify=LGL.1, initial=character(1),
     warn=LGL.1, term.cap=CHR
   )
@@ -117,7 +120,7 @@ strwrap_esc <- function(
       deparse(VALID.TERM.CAP)
     )
 
-  width <- as.integer(width) - 1L
+  width <- max(c(as.integer(width) - 1L, 1L))
   indent <- as.integer(indent)
   exdent <- as.integer(exdent)
 
@@ -145,7 +148,9 @@ strwrap2_esc <- function(
 ) {
   if(!is.character(x)) x <- as.character(x)
   vetr(
-    x=character(), width=NUM.1.POS && . >= 1, indent=INT.1.POS,
+    x=character(),
+    width=NUM.1 && I(. > 1 || !wrap.always),
+    indent=INT.1.POS,
     exdent=INT.1.POS, prefix=character(1), simplify=LGL.1, initial=character(1),
     pad.end=CHR.1 && nchar(.) < 2, wrap.always=LGL.1, strip.spaces=LGL.1,
     tabs.as.spaces=LGL.1,
@@ -160,7 +165,7 @@ strwrap2_esc <- function(
       deparse(VALID.TERM.CAP)
     )
 
-  width <- as.integer(width) - 1L
+  width <- max(c(as.integer(width) - 1L, 1L))
   indent <- as.integer(indent)
   exdent <- as.integer(exdent)
   tab.stops <- as.integer(tab.stops)

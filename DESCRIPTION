@@ -33,6 +33,7 @@ Collate:
     'has.R'
     'load.R'
     'misc.R'
+    'nchar.R'
     'strip.R'
     'strwrap.R'
     'strtrim.R'

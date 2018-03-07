@@ -16,9 +16,9 @@ strtrim2_esc(x, width, warn = getOption("fansi.warn"),
 
 \item{width}{Positive integer values: recycled to the length of \code{x}.}
 
-\item{warn}{TRUE (default) or FALSE, whether to warn whether potentially
+\item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic escape sequences are encountered.  These could cause the
-assumptions \code{fansi} is makes about how strings are rendered on your display
+assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
 
 \item{tabs.as.spaces}{FALSE (default) or TRUE, whether to convert tabs to

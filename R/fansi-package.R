@@ -135,6 +135,14 @@
 #' * [r-utf8](https://github.com/patperry/r-utf8/) or
 #' * [utf8lite](https://github.com/patperry/utf8lite)
 #'
+#' @section Miscellaneous:
+#'
+#' The native code in this package assumes that all strings are NULL terminated
+#' and no longer than INT_MAX (excluding the NULL).  This should be a safe
+#' assumption since the code is designed to work with STRSXPs and CHRSXPs.  Do
+#' not however expect it to be safe if you try to use it on other types of
+#' strings.
+#'
 #' @useDynLib fansi, .registration=TRUE, .fixes="FANSI_"
 #' @docType package
 #' @importFrom utils globalVariables

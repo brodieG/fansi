@@ -10,7 +10,9 @@
 #'
 #' * index: integer the index in `x` with the unhandled sequence
 #' * start: integer the start position of the sequence (in characters)
-#' * stop: integer the start position of the sequence (in characters)
+#' * stop: integer the end of the sequence (in characters), but note that if
+#'   there are multiple ESC sequences abutting each other they will all be
+#'   treated as one, even if some of those sequences are valid.
 #' * error: the reason why the sequence was not handled:
 #'     * exceed-term-cap: contains color codes not supported by the terminal
 #'       (see [term_cap_test]).
@@ -19,7 +21,10 @@
 #'       SGR code.
 #'     * non-SGR: a non-SGR CSI sequence.
 #'     * non-CSI: a non-CSI escape sequence, i.e. one where the ESC is
-#'       followed by something other than "[".
+#'       followed by something other than "[".  Since we assume all non-CSI
+#'       sequences are only 2 characters long include the ESC, this type of
+#'       sequence is the most likely to cause problems as many are not actually
+#'       two characters long.
 #'     * malformed-CSI: a malformed CSI sequence.
 #'     * malformed-ESC: a malformed ESC sequence (i.e. one not ending in
 #'       0x40-0x7e).

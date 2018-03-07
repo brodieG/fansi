@@ -18,14 +18,13 @@ except for "all" which is the equivalent to specifying all the others:
 newlines and the actual ESC character
 \item "sgr": strip ANSI CSI SGR sequences
 \item "csi": strip all non-SGR csi sequences
-\item "esc": strip all other escape sequences, including invalid SGR/CSI
-sequences
+\item "esc": strip all other escape sequences
 \item "all": all of the above
 }}
 
-\item{warn}{TRUE (default) or FALSE, whether to warn whether potentially
+\item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic escape sequences are encountered.  These could cause the
-assumptions \code{fansi} is makes about how strings are rendered on your display
+assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
 }
 \value{

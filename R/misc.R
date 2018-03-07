@@ -111,6 +111,10 @@ term_cap_test <- function() {
   writeLines(res.fin)
   invisible(res)
 }
+## A version of unique that isn't terrible for very long strings that are
+## actually the same
+
+unique_chr <- function(x) .Call(FANSI_unique_chr, sort.int(x))
 
 ## Testing interface for color code to HTML conversion
 

@@ -22,10 +22,20 @@
  * Create a state structure with everything set to zero
  *
  * We rely on struct initialization to set everything else to zero.
+ *
+ * FANSI_state_init_full is specifically to handle the allowNA case in nchar,
+ * for which we MUST check `state.nchar_err` after each `FANSI_read_next`.  In
+ * all other cases `R_nchar` shoudl be set to not `allowNA`.
  */
-struct FANSI_state FANSI_state_init(
-  const char * string, SEXP warn, SEXP term_cap
+struct FANSI_state FANSI_state_init_full(
+  const char * string, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA
 ) {
+  if(
+    TYPEOF(warn) != LGLSXP || TYPEOF(term_cap) != INTSXP ||
+    TYPEOF(allowNA) != LGLSXP || TYPEOF(keepNA) != LGLSXP
+  )
+    error("Internal error: state_init with bad types; contact maintainer.");
+
   int * term_int = INTEGER(term_cap);
   int warn_int = asInteger(warn);
   int term_cap_int = 0;
@@ -44,8 +54,23 @@ struct FANSI_state FANSI_state_init(
     .color = -1,
     .bg_color = -1,
     .warn = warn_int,
-    .term_cap = term_cap_int
+    .term_cap = term_cap_int,
+    .allowNA = asLogical(allowNA),
+    .keepNA = asLogical(keepNA)
   };
+}
+struct FANSI_state FANSI_state_init(
+  const char * string, SEXP warn, SEXP term_cap
+) {
+  SEXP R_false = PROTECT(ScalarLogical(0));
+  SEXP R_true = PROTECT(ScalarLogical(1));
+  struct FANSI_state res = FANSI_state_init_full(
+    string, warn, term_cap,
+    R_false, // Don't allowNA, fail instead
+    R_true
+  );
+  UNPROTECT(2);
+  return res;
 }
 /*
  * Reset all the display attributes, but not the position ones
@@ -76,8 +101,8 @@ struct FANSI_state FANSI_reset_width(struct FANSI_state state) {
   return state;
 }
 struct FANSI_state FANSI_inc_width(struct FANSI_state state, int inc) {
-  state.pos_width = FANSI_add_int(state.pos_width, inc);
-  state.pos_width_target = FANSI_add_int(state.pos_width_target, inc);
+  state.pos_width += inc;
+  state.pos_width_target += inc;
   return state;
 }
 // Can a byte be interpreted as ASCII number?
@@ -133,15 +158,15 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
     if(!is_zero && !not_zero) not_zero = 1;
     if(is_zero && !not_zero) ++leading_zeros;
     non_standard |= *string > 0x39;
-    string++;
-    len = FANSI_add_int(len, 1);
+    ++string;
+    ++len;
   }
   // check for for intermediate bytes, we allow 'infinite' here even though in
   // practice more than one is likely a bad outcome
 
   while(*string >= 0x20 && *string <= 0x2F) {
     ++string;
-    len_intermediate = FANSI_add_int(len_intermediate, 1);
+    ++len_intermediate;
   }
   // check for final byte
 
@@ -157,7 +182,7 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
     // invalid end, consume all subsequent parameter substrings
     while(*string >= 0x20 && *string <= 0x3F) {
       ++string;
-      len_tail = FANSI_add_int(len_tail, 1);
+      ++len_tail;
     }
     err_code = 5;
   }
@@ -186,7 +211,7 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
 
   return (struct FANSI_tok_res) {
     .val=val,
-    .len=FANSI_add_int(FANSI_add_int(len, len_intermediate), len_tail),
+    .len=len + len_intermediate + len_tail,
     .err_code=err_code, .last=last
   };
 }
@@ -215,7 +240,7 @@ static struct FANSI_state parse_colors(
   // First, figure out if we are in true color or palette mode
 
   res = FANSI_parse_token(&state.string[state.pos_byte]);
-  state.pos_byte = FANSI_add_int(state.pos_byte, res.len);
+  state.pos_byte += res.len;
   state.last = res.last;
   state.err_code = res.err_code;
 
@@ -250,7 +275,7 @@ static struct FANSI_state parse_colors(
 
       for(int i = 0; i < i_max; ++i) {
         res = FANSI_parse_token(&state.string[state.pos_byte]);
-        state.pos_byte = FANSI_add_int(state.pos_byte, res.len);
+        state.pos_byte += res.len;
         state.last = res.last;
         state.err_code = res.err_code;
 
@@ -356,7 +381,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
   while(state.string[state.pos_byte] == 27) {
     int pos_byte_prev = state.pos_byte;
 
-    state.pos_byte = FANSI_add_int(state.pos_byte, 1);  // advance ESC
+    ++state.pos_byte;  // advance ESC
 
     if(!state.string[state.pos_byte]) {
       // String ends in ESC
@@ -376,11 +401,11 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       // Don't process additional ESC if it is there so we keep looping
 
       if(state.string[state.pos_byte] != 27)
-        state.pos_byte = FANSI_add_int(state.pos_byte, 1);
+        ++state.pos_byte;
     } else {
       // CSI sequence
 
-      state.pos_byte = FANSI_add_int(state.pos_byte, 1);  // consume '['
+      ++state.pos_byte;  // consume '['
       struct FANSI_tok_res tok_res = {.err_code = 0};
 
       // Loop through the SGR; each token we process successfully modifies state
@@ -388,7 +413,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
 
       do {
         tok_res = FANSI_parse_token(&state.string[state.pos_byte]);
-        state.pos_byte = FANSI_add_int(state.pos_byte, tok_res.len);
+        state.pos_byte += tok_res.len;
         state.last = tok_res.last;
         state.err_code = tok_res.err_code;
 
@@ -552,20 +577,36 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
 static struct FANSI_state read_utf8(struct FANSI_state state) {
   int byte_size = FANSI_utf8clen(state.string[state.pos_byte]);
 
-  // In order to compute char display width, we need to create a charsxp
-  // with the sequence in question.  Hopefully not too much overhead since
-  // at least we benefit from the global string hash table
-  //
-  // Note that we should probably not bother with computing this if display
-  // mode is not width as it's probably expensive.
+  // Make sure string doesn't end before UTF8 char supposedly does
 
-  SEXP str_chr =
-    PROTECT(mkCharLenCE(state.string + state.pos_byte, byte_size, CE_UTF8));
-  int disp_size = R_nchar(
-    str_chr, Width, FALSE, FALSE, "when computing display width"
-  );
-  UNPROTECT(1);
+  int mb_err = 0;
+  int disp_size = 0;
+  const char * mb_err_str =
+    "use `is.na(nchar(x, allowNA=TRUE))` to find problem strings.";
 
+  for(int i = 1; i < byte_size; ++i) {
+    if(!state.string[state.pos_byte + i]) {
+      mb_err = 1;
+      break;
+  } }
+  if(mb_err) {
+    if(state.allowNA) disp_size = NA_INTEGER;
+    else error("invalid multiyte string, %s", mb_err_str);
+  } else {
+    // In order to compute char display width, we need to create a charsxp
+    // with the sequence in question.  Hopefully not too much overhead since
+    // at least we benefit from the global string hash table
+    //
+    // Note that we should probably not bother with computing this if display
+    // mode is not width as it's probably expensive.
+
+    SEXP str_chr =
+      PROTECT(mkCharLenCE(state.string + state.pos_byte, byte_size, CE_UTF8));
+    disp_size = R_nchar(
+      str_chr, Width, state.allowNA, state.keepNA, mb_err_str
+    );
+    UNPROTECT(1);
+  }
   // Need to check overflow?  Really only for pos_width?  Maybe that's not
   // even true because you need at least two bytes to encode a double wide
   // character, and there is nothing wider than 2?
@@ -573,6 +614,10 @@ static struct FANSI_state read_utf8(struct FANSI_state state) {
   state.pos_byte += byte_size;
   ++state.pos_ansi;
   ++state.pos_raw;
+  if(disp_size == NA_INTEGER) {
+    state.nchar_err = 1;
+    disp_size = 0;
+  }
   state.last_char_width = disp_size;
   state.pos_width += disp_size;
   state.pos_width_target += disp_size;
@@ -593,7 +638,7 @@ static struct FANSI_state read_ascii(struct FANSI_state state) {
   return state;
 }
 /*
- * C0 ESC sequences treated as zero width
+ * C0 ESC sequences treated as zero width and do not count as characters either
  */
 static struct FANSI_state read_c0(struct FANSI_state state) {
   if(state.string[state.pos_byte] != '\n') {
@@ -601,6 +646,7 @@ static struct FANSI_state read_c0(struct FANSI_state state) {
     state.err_code = 8;
   }
   state = read_ascii(state);
+  --state.pos_raw;
   --state.pos_width;
   --state.pos_width_target;
   return state;
@@ -608,7 +654,7 @@ static struct FANSI_state read_c0(struct FANSI_state state) {
 /*
  * Read a Character Off and Update State
  *
- * This can probably use some pretty serious optimiation...
+ * This can probably use some pretty serious optimization...
  */
 struct FANSI_state FANSI_read_next(struct FANSI_state state) {
   const char chr_val = state.string[state.pos_byte];
@@ -690,7 +736,7 @@ struct FANSI_state_pair FANSI_state_at_position(
     // Handle UTF-8, we need to record the byte size of the sequence as well as
     // the corresponding display width.
 
-    if(state.pos_byte == INT_MAX - 1)
+    if(state.pos_byte == INT_MAX)
       // nocov start
       // ... a bit tricky here, because we read ahead a few bytes in some
       // circumstances, but not all, so the furthest pos_byte should be allowed
@@ -1142,7 +1188,7 @@ SEXP FANSI_state_at_pos_ext(
   // position as well as the various position translations in a matrix with as
   // many *columns* as the character vector has elements
 
-  SEXP res_mx = PROTECT(allocVector(INTSXP, res_cols * len));
+  SEXP res_mx = PROTECT(allocVector(REALSXP, res_cols * len));
   SEXP dim = PROTECT(allocVector(INTSXP, 2));
   SEXP dim_names = PROTECT(allocVector(VECSXP, 2));
   INTEGER(dim)[0] = res_cols;
@@ -1174,7 +1220,7 @@ SEXP FANSI_state_at_pos_ext(
     pos_i = INTEGER(pos)[i];
     if(text_chr == NA_STRING || pos_i == NA_INTEGER) {
       for(R_xlen_t j = 0; j < res_cols; j++)
-        INTEGER(res_mx)[i * res_cols + j] = NA_INTEGER;
+        REAL(res_mx)[i * res_cols + j] = NA_REAL;
     } else {
       if(pos_i < pos_prev)
         error("Internal Error: `pos` must be sorted %d %d.", pos_i, pos_prev);
@@ -1192,13 +1238,15 @@ SEXP FANSI_state_at_pos_ext(
       );
       state = state_pair.cur;
 
-      // Record position, but set them back to 1 index
+      // Record position, but set them back to 1 index, need to use double
+      // because INTEGER could overflow because of this + 1, although ironically
+      // `substr` probably can't subset the INTMAX character due to the 1
+      // indexing...
 
-      INTEGER(res_mx)[i * res_cols + 0] = FANSI_add_int(state.pos_byte, 1);
-      INTEGER(res_mx)[i * res_cols + 1] = FANSI_add_int(state.pos_raw, 1);
-      INTEGER(res_mx)[i * res_cols + 2] = FANSI_add_int(state.pos_ansi, 1);
-      INTEGER(res_mx)[i * res_cols + 3] =
-        FANSI_add_int(state.pos_width_target, 1);
+      REAL(res_mx)[i * res_cols + 0] = state.pos_byte + 1;
+      REAL(res_mx)[i * res_cols + 1] = state.pos_raw + 1;
+      REAL(res_mx)[i * res_cols + 2] = state.pos_ansi + 1;
+      REAL(res_mx)[i * res_cols + 3] = state.pos_width_target + 1;
 
       // Record color tag if state changed
 

@@ -35,7 +35,9 @@
  * processing the sequence).
  *
  * @param what is a bit flag to line up against VALID.WHAT index values, so
- *   (what & (1 << 0)) is newlines, (what & (1 << 1)) is C0, etc
+ *   (what & (1 << 0)) is newlines, (what & (1 << 1)) is C0, etc, though note
+ *   this does not act
+ *
  */
 
 struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
@@ -44,6 +46,7 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
   \***************************************************/
   int valid = 1;
   int found = 0;
+  int found_what = 0;
   const char * x_track = x;
   const char * x_found_start;
   const char * x_found_end;
@@ -67,9 +70,6 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
       found_this = 0;
       if(x_val == 27) {
         if(*x_track == '[') {
-          // If not finding CSI or SGR, skip (12 = 2^2 + 2^3), where ^2
-          // corresponds to SGR and ^3 CSI
-
           // This is a CSI sequence, so it has multiple characters that we
           // need to skip.  The final character is processed outside of here
           // since it has the same logic for CSI and non CSI sequences
@@ -102,12 +102,14 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
 
           // CSI SGR only found if ends in m
 
+          found_what |= *x_track == 'm' ? 1 << 2 : 1 <<3;
           found_this =
             (*x_track == 'm' && (what & (1 << 2))) ||  // SGR
             (*x_track != 'm' && what & (1 << 3));      // CSI
         } else {
           // Includes both the C1 set and "controls strings"
           found_this = what & (1 << 4);
+          found_what |= (1 << 4);
           valid = valid && (*x_track >= 0x40 && *x_track <= 0x7E);
         }
         // Advance unless next char is ESC, in which case we want to keep
@@ -117,6 +119,7 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
       } else {
         // x01-x1F, x7F, all the C0 codes
 
+        found_what |= (x_val == '\n' ?  1 : 1 << 1);
         found_this =
           (x_val == '\n' && (what & 1)) ||
           (what & (1 << 1));
@@ -130,10 +133,13 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
   }
   if(found) {
     res = (struct FANSI_csi_pos){
-      .start=x_found_start, .len=(x_found_end - x_found_start), .valid=valid
+      .start=x_found_start, .len=(x_found_end - x_found_start),
+      .valid=valid, .what=found_what
     };
   } else {
-    res = (struct FANSI_csi_pos){.start=x, .len=0, .valid=valid};
+    res = (struct FANSI_csi_pos){
+      .start=x, .len=0, .valid=valid, what=found_what
+    };
   }
   return res;
 }
@@ -144,12 +150,22 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
  * allocation is needed the buffer will be either twice as large as it was
  * before, or size `size` if that is greater than twice the size.
  */
-void FANSI_size_buff(struct FANSI_buff * buff, int size) {
+void FANSI_size_buff(struct FANSI_buff * buff, size_t size) {
   // Rprintf("  buff_len %d size %d\n", buff->len, size);
   if(size > buff->len) {
     if(size < 128) size = 128;  // in theory little penalty to ask this minimum
-    int tmp_double_size = FANSI_add_int(buff->len, buff->len);
+
+    size_t tmp_double_size = 0;
+    if(buff->len > (size_t) INT_MAX + 1 - buff->len) {
+      tmp_double_size = (size_t) INT_MAX + 1;
+    } else {
+      tmp_double_size = buff->len + buff->len;
+    }
     if(size > tmp_double_size) tmp_double_size = size;
+
+    if(tmp_double_size > (size_t) INT_MAX + 1)
+      error("Internal Error: max allowed buffer size is INT_MAX + 1."); // nocov
+
     buff->len = tmp_double_size;
     // Rprintf("  Alloc to %d\n", buff->len);
     buff->buff = R_alloc(buff->len, sizeof(char));
@@ -193,6 +209,66 @@ int FANSI_add_int(int x, int y) {
   if((y >= 0 && (x > INT_MAX - y)) || (y < 0 && (x <= INT_MIN - y)))
     error ("Integer overflow");
   return x + y;
+}
+/*
+ * Compresses the what vector into a single integer
+ */
+
+int FANSI_what_as_int(SEXP what) {
+  int what_int = 0;
+  for(R_xlen_t i = 0; i < XLENGTH(what); ++i) {
+    int what_val = INTEGER(what)[i] - 2;
+    if(what_val < 0) {
+      what_int = FANSI_WHAT_ALL; // strip all
+      break;
+    }
+    what_int |= 1 << what_val;
+  }
+  return what_int;
+}
+/*
+ * Partial match a single string byte by byte
+ *
+ * @param x a scalar STRSXP
+ * @param choices an array of strings to match against
+ * @param choice_count how many elements there are in array
+ * @param arg_name the name of the argument to use in an error message if
+ *   the match fails.
+ * @return the position in choices that partial matches x, on a 0-index basis
+ *   (ie. 0 == 1st, 1 == 2nd, etc.)
+ */
+int FANSI_pmatch(
+  SEXP x, const char ** choices, int choice_count, const char * arg_name
+) {
+  if(TYPEOF(x) != STRSXP || XLENGTH(x) != 1)
+    error("Argument `%s` must be a length 1 character vector.", arg_name);
+
+  SEXP x_chrsxp = STRING_ELT(x, 0);
+  const char * x_chr = CHAR(x_chrsxp);
+
+  if(!LENGTH(x_chrsxp))
+    error("Argument `%s` may not be an empty string.", arg_name);
+
+  int match_count = choice_count;
+  int last_match_index = -1;
+
+  for(int i = 0; i < choice_count; ++i) {
+    if(!strncmp(x_chr, choices[i], LENGTH(x_chrsxp))) {
+      last_match_index = i;
+      --match_count;
+    }
+  }
+  if(match_count > 1) {
+    error(
+      "Argument `%s` matches more than one of the possible choices.",
+      arg_name
+    );
+  } else if(!match_count) {
+    error("Argument `%s` does not match any of the valid choices.", arg_name);
+  }
+  // success
+
+  return last_match_index;
 }
 
 // concept borrowed from utf8-lite
