@@ -54,7 +54,8 @@ escape sequences, so you should ensure that it matches your terminal
 capabilities. See \link{term_cap_test} for details.}
 
 \item{wrap.always}{TRUE or FALSE (default), whether to hard wrap at requested
-width if no word breaks are detected within a line.}
+width if no word breaks are detected within a line.  If set to TRUE then
+\code{width} must be at least 2.}
 
 \item{pad.end}{character(1L), a single character to use as padding at the
 end of each line until the line is \code{width} wide.  This must be a printable

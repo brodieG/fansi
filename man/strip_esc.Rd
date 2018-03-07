@@ -2,16 +2,17 @@
 % Please edit documentation in R/strip.R
 \name{strip_esc}
 \alias{strip_esc}
+\alias{strip_sgr}
 \title{Strip Control Characters and Sequences}
 \usage{
-strip_esc(x, what = "sgr", warn = getOption("fansi.warn"))
+strip_esc(x, what = "all", warn = getOption("fansi.warn"))
+
+strip_sgr(x, warn = getOption("fansi.warn"))
 }
 \arguments{
 \item{x}{a character vector.}
 
-\item{what}{character, any combination of the following values, where each
-value represents a distinct set of control characters/sequences to strip,
-except for "all" which is the equivalent to specifying all the others:
+\item{what}{character, any combination of the following values (see details):
 \itemize{
 \item "nl": strip newlines
 \item "c0": strip all other "C0" control characters (i.e. x01-x1f), except for
@@ -32,16 +33,31 @@ character vector of same length as x with ANSI escape sequences
 stripped
 }
 \description{
-Removes control characters and sequences from strings.  By default only
-strips valid ANSI CSI SGR sequences, but can be made to strip C0 control
-characters and all escape sequences.
+Removes control characters and sequences from strings.  By default it will
+strip all known control characters and sequences, including ANSI CSI
+sequences, two character sequences starting with ESC, and all C0 control
+characters, including newlines.  You can fine tune this behavior with the
+\code{what} parameter.
+}
+\details{
+The \code{what} value contains the names of \strong{non-overlapping} subsets of the
+strippable control characters of sequences (e.g. "csi" does not contain
+"sgr", and "c0" does not contain newlines).  The one exception is "all" which
+means strip every known sequence.  If you combine "all" with any other option
+then everything but that option will be stripped.
 }
 \examples{
 string <- "hello\\033k\\033[45p world\\n\\033[31mgoodbye\\a moon"
 strip_esc(string)
-strip_esc(string, c("nl", "c0", "sgr", "csi", "esc"))
-strip_esc(string, "all")  # equivalently
+strip_esc(string, c("nl", "c0", "sgr", "csi", "esc")) # equivalently
+strip_esc(string, "sgr")
 strip_esc(string, c("c0", "esc"))
+## everything but C0 controls (recall "nl" is not part of "c0")
+## as far as the `what` argument is concerned
+strip_esc(string, c("all", "nl", "c0"))
+
+## convenience function, same as `strip_esc(what='sgr')`
+strip_sgr(string)
 }
 \seealso{
 \link{fansi} for details on how control characters and sequences are

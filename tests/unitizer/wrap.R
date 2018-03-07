@@ -44,7 +44,8 @@ unitizer_sect("Basic Ansi", {
   strwrap_esc(hello2.0, 10)
 
   identical(
-    strwrap_esc(strip_esc(hello2.0), 10), strwrap(strip_esc(hello2.0), 10)
+    strwrap_esc(strip_esc(hello2.0, "sgr"), 10), 
+    strwrap(strip_esc(hello2.0, "sgr"), 10)
   )
   # turn off tag generic
 
@@ -70,11 +71,11 @@ unitizer_sect("Basic Ansi", {
   strwrap_esc(hello.blinky, 10)
 })
 unitizer_sect("Long Wrap", {
-  wrap.nrm <- strwrap(strip_esc(lorem.r.thanks), 40)
+  wrap.nrm <- strwrap(strip_esc(lorem.r.thanks, "sgr"), 40)
   wrap.csi <- strwrap_esc(lorem.r.thanks, 40)
 
-  identical(wrap.nrm, strip_esc(wrap.csi))
-  nchar(strip_esc(wrap.csi))
+  identical(wrap.nrm, strip_esc(wrap.csi, "sgr"))
+  nchar(strip_esc(wrap.csi, "sgr"))
   nchar(wrap.csi)
 })
 unitizer_sect("Other Escapes", {
@@ -124,14 +125,14 @@ unitizer_sect("prefix / initial with ESC", {
   wrap.csi.2 <- strwrap_esc(hello.8a, 14, prefix=pre, initial=ini)
   wrap.csi.2
   wrap.nrm.2 <- strwrap(hello.8a, 14, prefix="+ ", initial="> ")
-  identical(strip_esc(wrap.csi.2), wrap.nrm.2)
+  identical(strip_esc(wrap.csi.2, "sgr"), wrap.nrm.2)
 
   hello.8b <- c(hello.8a, "oh my this has 2 elements")
   wrap.csi.3 <- strwrap_esc(hello.8b, 14, prefix=pre, initial=ini)
   wrap.csi.3
   wrap.nrm.3 <- strwrap(hello.8b, 14, prefix="+ ", initial="> ")
 
-  identical(strip_esc(wrap.csi.3), wrap.nrm.3)
+  identical(strip_esc(wrap.csi.3, "sgr"), wrap.nrm.3)
 
   # With UTF8
 
@@ -147,12 +148,12 @@ unitizer_sect("prefix / initial with ESC", {
   wrap.csi.4
   wrap.nrm.4 <- strwrap(hello.8c, 15, prefix="\xd0\x9f ", initial="\xd1\x80 ")
 
-  identical(strip_esc(wrap.csi.4), wrap.nrm.4)
+  identical(strip_esc(wrap.csi.4, "sgr"), wrap.nrm.4)
 })
 unitizer_sect("wrap with wide UTF8 and ESC", {
   wrap.mix <- strwrap_esc(lorem.mix, 25)
   wrap.mix
-  identical(strwrap(strip_esc(lorem.mix), 25), strip_esc(wrap.mix))
+  identical(strwrap(strip_esc(lorem.mix, "sgr"), 25), strip_esc(wrap.mix, "sgr"))
 })
 unitizer_sect("wrap2", {
   # Examples

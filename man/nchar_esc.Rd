@@ -46,14 +46,14 @@ Any non-ASCII non-UTF8 string will be converted to UTF8 prior to computing
 character or width counts.
 }
 \examples{
-nchar_esc("\\033[31mone\\a\\r")
+nchar_esc("\\033[31m123\\a\\r")
 ## with some wide characters
 cn.string <-  sprintf("\\033[31m\%s\\a\\r", "\\u4E00\\u4E01\\u4E03")
 nchar_esc(cn.string)
 nchar_esc(cn.string, type='width')
 
 ## All of the following are control sequences
-nzchar_esc("\\n\\033[42;31m\\033P\\a")
+nzchar_esc("\\n\\033[42;31m\\033[123P\\a")
 ## If we want to count newlines, this is a slower option
 }
 \seealso{

@@ -26,7 +26,9 @@ The return value is a data frame with five columns:
 \itemize{
 \item index: integer the index in \code{x} with the unhandled sequence
 \item start: integer the start position of the sequence (in characters)
-\item stop: integer the start position of the sequence (in characters)
+\item stop: integer the end of the sequence (in characters), but note that if
+there are multiple ESC sequences abutting each other they will all be
+treated as one, even if some of those sequences are valid.
 \item error: the reason why the sequence was not handled:
 \itemize{
 \item exceed-term-cap: contains color codes not supported by the terminal

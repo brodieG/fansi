@@ -9,9 +9,7 @@ has_esc(x, what = "sgr", warn = getOption("fansi.warn"))
 \arguments{
 \item{x}{a character vector.}
 
-\item{what}{character, any combination of the following values, where each
-value represents a distinct set of control characters/sequences to strip,
-except for "all" which is the equivalent to specifying all the others:
+\item{what}{character, any combination of the following values (see details):
 \itemize{
 \item "nl": strip newlines
 \item "c0": strip all other "C0" control characters (i.e. x01-x1f), except for
