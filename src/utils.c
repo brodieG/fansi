@@ -43,6 +43,7 @@
 struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
   /***************************************************\
   | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_read_esc  |
+  | although now this also deals with c0              |
   \***************************************************/
   int valid = 1;
   int found = 0;
@@ -216,14 +217,13 @@ int FANSI_add_int(int x, int y) {
 
 int FANSI_what_as_int(SEXP what) {
   int what_int = 0;
+  int flip_bits = 0;
   for(R_xlen_t i = 0; i < XLENGTH(what); ++i) {
     int what_val = INTEGER(what)[i] - 2;
-    if(what_val < 0) {
-      what_int = FANSI_WHAT_ALL; // strip all
-      break;
-    }
-    what_int |= 1 << what_val;
+    if(what_val < 0) flip_bits = 1;
+    else what_int |= 1 << what_val;
   }
+  if(flip_bits) what_int ^= FANSI_WHAT_ALL;
   return what_int;
 }
 /*
