@@ -123,7 +123,7 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
         found_what |= (x_val == '\n' ?  1 : 1 << 1);
         found_this =
           (x_val == '\n' && (what & 1)) ||
-          (what & (1 << 1));
+          (x_val != '\n' && (what & (1 << 1)));
       }
       if(found_this) {
         x_found_end = x_track;
