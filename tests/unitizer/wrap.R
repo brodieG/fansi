@@ -156,7 +156,6 @@ unitizer_sect("wrap with wide UTF8 and ESC", {
 })
 unitizer_sect("wrap2", {
   # Examples
-
   hello.9a <- "hello\t\033[41mred\033[49m\tworld"
 
   strwrap2_esc(hello.9a, 12)
@@ -228,7 +227,6 @@ unitizer_sect("rare escapes", {
 })
 unitizer_sect("term cap and bright", {
   # default term cap should recognize bright and 256, but not true color.
-
   getOption('fansi.term.cap')
   hello.bright <- '\033[42mhello \033[103mworld wowza\033[49m'
 
@@ -242,6 +240,19 @@ unitizer_sect("term cap and bright", {
   hello.tru <- '\033[42mhello \033[48;2;7;41;4mworld wowza\033[m'
   strwrap_esc(hello.tru, 13, term.cap='truecolor')
   strwrap_esc(hello.tru, 13)
+})
+unitizer_sect("corner cases", {
+  strwrap_esc("a", -1)
+  strwrap2_esc("a", -1)
+  strwrap2_esc("a", -1, wrap.always=TRUE)
+  strwrap2_esc("a", 0, wrap.always=TRUE)
+  strwrap2_esc("a", 1, wrap.always=TRUE)
+  strwrap2_esc("\u76F4", 1, wrap.always=TRUE)
+  strwrap2_esc("\u76F4", 2, wrap.always=TRUE)
+  strwrap2_esc("\u76F4", 3, wrap.always=TRUE)
+
+  strwrap_esc("lovelyday.", 10)
+  strwrap2_esc("lovelyday.", 10, wrap.always=TRUE)
 })
 
 # Things to test:

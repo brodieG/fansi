@@ -304,38 +304,40 @@ static SEXP strwrap(
   int has_boundary = 0;     // tracks if at least one boundary in a line
   int para_start = 1;
 
+  // byte we previously wrote from, need to track to detect potential infinite
+  // loop when we wrap-always but the wrap width is narrower than a wide
+  // character
+
+  int first_line = 1;
+  int last_start = 0;
+
   // Need to keep track of where word boundaries start and end due to
   // possibility for multiple elements between words
 
-  struct FANSI_state state_start, state_bound;
-  state_start = state_bound = state;
+  struct FANSI_state state_start, state_bound, state_prev;
+  state_start = state_bound = state_prev = state;
   R_xlen_t size = 0;
   SEXP res_sxp;
 
   while(1) {
-    const char cur_chr = state.string[state.pos_byte];
     struct FANSI_state state_next;
 
     // Can no longer advance after we reach end, but we still need to assemble
     // strings so we assign `state` even though technically not correct
 
-    int string_over = !state.string[state.pos_byte];
-
-    if(string_over) state_next = state;
+    if(!state.string[state.pos_byte]) state_next = state;
     else state_next = FANSI_read_next(state);
 
-    /*
-    Rprintf(
-      "byte: %d width: %d chr: '%c'\n", state.pos_byte - state_start.pos_byte,
-      state.pos_width,  cur_chr
-    );
-    */
     // detect word boundaries and paragraph starts; we need to track
     // state_bound for the special case where we are in strip space mode
     // and we happen to hit the width in a two space sequence such as we might
     // get after [.!?].
 
-    if(cur_chr == ' ' || cur_chr == '\t' || cur_chr == '\n') {
+    if(
+      state.string[state.pos_byte] == ' ' ||
+      state.string[state.pos_byte] == '\t' ||
+      state.string[state.pos_byte] == '\n'
+    ) {
       if(strip_spaces && !prev_boundary) state_bound = state;
       else if(!strip_spaces) state_bound = state;
       has_boundary = prev_boundary = 1;
@@ -347,16 +349,37 @@ static SEXP strwrap(
     // Write the line
 
     if(
-      string_over ||
-      (cur_chr == '\n' && !first_only) ||  // newlines kept in strtrim mode
+      !state.string[state.pos_byte] ||
+      // newlines kept in strtrim mode
+      (state.string[state.pos_byte] == '\n' && !first_only) ||
       (
         state.pos_width >= width_tar &&
         state_next.pos_width > state.pos_width &&  // keep going w/ zero width
         (has_boundary || wrap_always)
       )
     ) {
-      if(string_over || (wrap_always && !has_boundary) || first_only) {
+      /*
+      Rprintf(
+        "so: %d width: %d tar: %d has_b: %d wa: %d fo: %d\n",
+        !state.string[state.pos_byte], state.pos_width, width_tar,
+        has_boundary, wrap_always, first_only
+      );
+      */
+      if(
+        !state.string[state.pos_byte] ||
+        (wrap_always && !has_boundary) || first_only
+      ) {
+        if(state.pos_width > width_tar && wrap_always) {
+          state = state_prev; // wide char overshoot
+        }
         state_bound = state;
+      }
+      if(!first_line && last_start >= state_start.pos_byte) {
+        error(
+          "%s%s",
+          "Wrap error: trying to wrap to width narrower than ",
+          "character width; set `wrap.always=FALSE` to resolve."
+        );
       }
       res_sxp = PROTECT(
         FANSI_writeline(
@@ -365,6 +388,8 @@ static SEXP strwrap(
           width_tar, pad_chr
         )
       );
+      first_line = 0;
+      last_start = state_start.pos_byte;
       // first_only for `strtrim`
 
       if(!first_only) {
@@ -373,16 +398,16 @@ static SEXP strwrap(
         UNPROTECT(1);
       } else break;
 
-      if(cur_chr == '\n') prev_newline = 1;
+      if(state.string[state.pos_byte] == '\n') prev_newline = 1;
 
       // overflow should be impossible here since string is at most int long
 
       ++size;
-      if(string_over) break;
+      if(!state.string[state.pos_byte]) break;
 
       // Next line will be the beginning of a paragraph
 
-      para_start = (cur_chr == '\n');
+      para_start = (state.string[state.pos_byte] == '\n');
 
       // Recreate what the state is at the wrap point, including skipping the
       // wrap character if there was one, and any subsequent leading spaces if
@@ -401,6 +426,7 @@ static SEXP strwrap(
       state_bound.pos_width = 0;
       state = state_start = state_bound;
     } else {
+      state_prev = state;
       state = state_next;
     }
   }
@@ -550,8 +576,8 @@ SEXP FANSI_strwrap_ext(
   )
     error(
       "%s%s",
-      "Width error: sum of `indent` and `initial` width or sum of `exdent` and",
-      "`prefix` width must be less than `width` when in `wrap.always`."
+      "Width error: sum of `indent` and `initial` width or sum of `exdent` ",
+      "and `prefix` width must be less than `width - 1` when in `wrap.always`."
     );
 
   // Could be a little faster avoiding this allocation if it turns out nothing

@@ -59,7 +59,14 @@ utf8.c <- colorize(utf8.big.small)
 ## Wrap and display in three columns
 
 txt <- utf8.c
-system.time(txt.w <- strwrap2_esc(txt, 25, pad.end=" ", wrap.always=TRUE, round='neither'))
+system.time(
+  txt.w1 <-
+    strwrap2_esc(ulysses.c, 25, pad.end=" ", wrap.always=TRUE, round='neither')
+)
+system.time(
+  txt.w2 <-
+    strwrap2_esc(utf8.c, 25, pad.end=" ", wrap.always=TRUE, round='neither')
+)
 
 
 txt.w <- tail(txt.w, -37)
