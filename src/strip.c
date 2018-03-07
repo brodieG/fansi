@@ -349,15 +349,15 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
         );
     }
     if(strip_this) {
-      /*
-      Rprintf(
-        "About to write n: %d %p %p\n",
-        buff->buff - buff_start, buff->buff,
-        buff_start
-      );
-      */
       *(buff_track) = 0;
-
+      if(buff_track - buff->buff > INT_MAX)
+        // nocov start
+        error(
+          "%s%s",
+          "Internal Error: attempting to write string longer than INT_MAX; ",
+          "contact maintainer."
+        );
+        // nocov end
       SEXP chrsxp = PROTECT(
         mkCharLenCE(
           buff->buff, buff_track - buff->buff, getCharCE(STRING_ELT(input, i))

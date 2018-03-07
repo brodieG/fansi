@@ -431,6 +431,14 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
       cetype_t chr_type = CE_NATIVE;
       if(state.has_utf8) chr_type = CE_UTF8;
+      if(buff_track - buff.buff > INT_MAX)
+        // nocov start
+        error(
+          "%s%s",
+          "Internal Error: attempting to write string longer than INT_MAX; ",
+          "contact maintainer (3)."
+        );
+        // nocov end
 
       SEXP chrsxp = PROTECT(
         mkCharLenCE(

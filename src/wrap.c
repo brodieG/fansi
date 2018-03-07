@@ -239,12 +239,14 @@ SEXP FANSI_writeline(
   cetype_t chr_type = CE_NATIVE;
   if((state_bound.has_utf8 || pre_dat.has_utf8)) chr_type = CE_UTF8;
 
-  /*
-  Rprintf(
-    "making string: '%s' len '%d' size '%d'\n",
-    buff->buff, (int) (buff_track - buff->buff), target_size
-  );
-  */
+  if(buff_track - buff->buff > INT_MAX)
+    // nocov start
+    error(
+      "%s%s",
+      "Internal Error: attempting to write string longer than INT_MAX; ",
+      "contact maintainer (4)."
+    );
+    // nocov end
   SEXP res_sxp = PROTECT(
     mkCharLenCE(
       buff->buff, (int) (buff_track - buff->buff), chr_type

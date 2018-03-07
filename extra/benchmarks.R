@@ -1,8 +1,18 @@
+
+# Make big UTF8 string
+
+utf8.big <- rep(c(lorem.ru, lorem.cn), 10000)
+system.time(utf8.big.wrap <- strwrap2_esc(utf8.big, 71, wrap.always=TRUE))
+utf8.big.wrap.2 <- unlist(utf8.big.wrap)
+utf8.big.small <- utf8.big.wrap.2[1:32710]
+
 library(fansi)
-ulysses <- readLines(
-  "http://www.gutenberg.org/files/4300/4300-0.txt", encoding='UTF-8'
-)
+# ulysses <- readLines(
+#   "http://www.gutenberg.org/files/4300/4300-0.txt", encoding='UTF-8'
+# )
+ulysses <- readLines("~/Downloads/ulysses.txt", encoding='UTF-8')
 ulysses.c <- paste0(ulysses, collapse='\n')
+
 n <- 1e4
 starts <- 1:n
 stops <- starts + 80L
@@ -24,24 +34,34 @@ ulysses.clr <- ulysses
 ulysses.clr[open] <- paste0('\033[41m', ulysses.clr[open])
 ulysses.clr[close] <- paste0(ulysses.clr[close], '\033[m')
 
+
 system.time(csi.clr <- fansi::strwrap_esc(ulysses.clr, 30))
 
-ulysses <- ulysses.c <- readLines(
-  "http://www.gutenberg.org/files/4300/4300-0.txt", encoding='UTF-8'
-)
-bg <- ceiling((seq_along(ulysses)) %% 215 + 1) + 16
-fg <- ifelse((((bg - 16) %/% 18) %% 2), 30, 37)
-tpl <- "\033[%d;48;5;%dm%s\033[49m"
+# ulysses <- ulysses.c <- readLines(
+#   "http://www.gutenberg.org/files/4300/4300-0.txt", encoding='UTF-8'
+# )
+colorize <- function(txt) {
+  txt.c <- txt
+  bg <- ceiling((seq_along(txt)) %% 215 + 1) + 16
+  fg <- ifelse((((bg - 16) %/% 18) %% 2), 30, 37)
+  tpl <- "\033[%d;48;5;%dm%s\033[49m"
 
-## Apply colors to strings and collapse
+  ## Apply colors to strings and collapse
 
-nz <- nzchar(ulysses)
-ulysses.c[nz] <- sprintf(tpl, fg[nz], bg[nz], ulysses[nz])
-txt <- paste0(ulysses.c, collapse="\n")
+  nz <- nzchar(txt)
+  txt.c[nz] <- sprintf(tpl, fg[nz], bg[nz], txt[nz])
+  res <- paste0(txt.c, collapse="\n")
+  res
+}
+ulysses.c <- colorize(ulysses)
+utf8.c <- colorize(utf8.big.small)
 
 ## Wrap and display in three columns
 
-system.time(txt.w <- strwrap2_esc(txt, 25, pad.end=" ", wrap.always=TRUE))
+txt <- utf8.c
+system.time(txt.w <- strwrap2_esc(txt, 25, pad.end=" ", wrap.always=TRUE, round='neither'))
+
+
 txt.w <- tail(txt.w, -37)
 mult.3.len <- (length(txt.w) %/% 3) * 3
 txt.w <- head(txt.w, mult.3.len)
