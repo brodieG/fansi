@@ -155,7 +155,14 @@ SEXP FANSI_tabs_as_spaces(
 
       cetype_t chr_type = CE_NATIVE;
       if(state.has_utf8) chr_type = CE_UTF8;
-
+      if(buff_track - buff_start > INT_MAX)
+        // nocov start
+        error(
+          "%s%s",
+          "Internal Error: attempting to write string longer than INT_MAX; ",
+          "contact maintainer (2)."
+        );
+        // nocov end
       SEXP chr_sxp = PROTECT(
         mkCharLenCE(buff_start, (int) (buff_track - buff_start), chr_type)
       );
