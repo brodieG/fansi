@@ -16,26 +16,24 @@
 
 #' ANSI Control Sequence Aware Version of strwrap
 #'
-#' Wraps strings to a specified width accounting for zero display width ANSI
-#' escape sequences and control characters.  `strwrap_esc` is intended to
-#' emulate `strwrap` exactly except with respect to the escape sequences, while
-#' `strwrap2_esc` adds features and changes the processing of whitespace.
+#' Wraps strings to a specified width accounting for zero display width _Control
+#' Sequences_.  `strwrap_esc` is intended to emulate `strwrap` exactly except
+#' with respect to the _Control Sequences_, while `strwrap2_esc` adds features
+#' and changes the processing of whitespace.
 #'
 #' `strwrap2_esc` can convert tabs to spaces, pad strings up to `width`, and
 #' hard-break words if single words are wider than `width`.
 #'
-#' Unlike [base::strwrap], both these functions will re-encode any non-ASCII
-#' strings to UTF8 if they are not encoded in UTF8.
+#' Unlike [base::strwrap], both these functions will translate any non-ASCII
+#' strings to UTF8 if they are not already encoded in UTF8.
 #'
 #' When replacing tabs with spaces the tabs are computed relative to the
 #' beginning of the input line, not the most recent wrap point.
 #' Additionally,`indent`, `exdent`, `initial`, and `prefix` will be ignored when
 #' computing tab positions.
 #'
-#' @seealso [fansi] for details on how control characters and sequences are
-#'   interpreted, and [term_cap_test] to ensure `fansi` is correctly
-#'   interpreting your terminal capabilities, particularly if you are getting
-#'   unexpected results.
+#' @seealso [fansi] for details on how _Control Sequences_ are
+#'   interpreted, particularly if you are getting unexpected results.
 #' @inheritParams base::strwrap
 #' @inheritParams tabs_as_spaces
 #' @inheritParams substr_esc

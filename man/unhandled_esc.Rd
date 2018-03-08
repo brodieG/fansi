@@ -2,7 +2,7 @@
 % Please edit documentation in R/unhandled.R
 \name{unhandled_esc}
 \alias{unhandled_esc}
-\title{Identify Unhandled Escape Sequences}
+\title{Identify Unhandled ANSI Control Sequences}
 \usage{
 unhandled_esc(x)
 }
@@ -15,12 +15,12 @@ sequences and columns containing useful information for debugging the
 problem.  See details.
 }
 \description{
-Will return position and types of unhandled sequences in a character vector.
-Unhandled sequences may cause \code{fansi} to interpret strings in a way
-different to your display.  See \link{fansi} for details.
+Will return position and types of unhandled \emph{Control Sequences} in a
+character vector.  Unhandled sequences may cause \code{fansi} to interpret strings
+in a way different to your display.  See \link{fansi} for details.
 }
 \details{
-This is a debugging function and as such is not optimized for speed.
+This is a debugging function that is not optimized for speed.
 
 The return value is a data frame with five columns:
 \itemize{
@@ -62,8 +62,6 @@ string <- c(
 unhandled_esc(string)
 }
 \seealso{
-\link{fansi} for details on how control characters and sequences are
-interpreted, and \link{term_cap_test} to ensure \code{fansi} is correctly
-interpreting your terminal capabilities, particularly if you are getting
-unexpected results.
+\link{fansi} for details on how \emph{Control Sequences} are
+interpreted, particularly if you are getting unexpected results.
 }

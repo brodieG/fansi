@@ -22,10 +22,8 @@
 #' @export
 #' @param x character vector
 #' @inheritParams substr_esc
-#' @seealso [fansi] for details on how control characters and sequences are
-#'   interpreted, and [term_cap_test] to ensure `fansi` is correctly
-#'   interpreting your terminal capabilities, particularly if you are getting
-#'   unexpected results.
+#' @seealso [fansi] for details on how _Control Sequences_ are
+#'   interpreted, particularly if you are getting unexpected results.
 #' @return a character vector with all escape sequences removed and any basic
 #'   ANSI CSI SGR escape sequences applied via SPAN html objects with specified
 #'   css styles.

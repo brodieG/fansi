@@ -16,15 +16,15 @@
 
 #' ANSI Control Sequence Aware Version of nchar
 #'
-#' `nchar_esc` counts all non control character / sequence characters.
-#' `nzchar_esc` returns TRUE for each input vector element that has non control
-#' charater / sequence characters.  By default newlines and other C0 control
+#' `nchar_esc` counts all non _Control Sequence_ characters.
+#' `nzchar_esc` returns TRUE for each input vector element that has non _Control
+#' Sequence_ sequence characters.  By default newlines and other C0 control
 #' characters are not counted.
 #'
 #' `nchar_esc` is just a wrapper around `nchar(strip_esc(...))`.  `nzchar_esc`
 #' is implemented in native code and is much faster than the otherwise
-#' equivalent `nzchar(strip_esc(...))`.  You cannot control which control
-#' characters and sequences count in `nzchar_esc`, but you can always resort to
+#' equivalent `nzchar(strip_esc(...))`.  You cannot change which _Control
+#' Sequences_ count in `nzchar_esc`, but you can always resort to
 #' `nzchar(strip_esc(..., strip='...'))` if you need that level of control.
 #'
 #' These functions will warn if either malformed or non-CSI escape sequences are
@@ -35,7 +35,10 @@
 #' @export
 #' @param type character string, one of "chars", or "width".  For byte counts
 #'   use [base::nchar].
-#' @seealso [strip_esc]
+#'
+#' @seealso [fansi] for details on how _Control Sequences_ are
+#'   interpreted, particularly if you are getting unexpected results,
+#'   [strip_esc] for removing _Control Sequences_.
 #' @examples
 #' nchar_esc("\033[31m123\a\r")
 #' ## with some wide characters
@@ -51,9 +54,8 @@
 #' nchar_esc("\t\n\r", strip="c0")
 #' nchar_esc("\t\n\r", strip=c("c0", "nl"))
 #'
-#' ## All of the following are control sequences
+#' ## All of the following are Control Sequences
 #' nzchar_esc("\n\033[42;31m\033[123P\a")
-#'
 
 nchar_esc <- function(
   x, type='chars', allowNA=FALSE, keepNA=NA, strip='all',

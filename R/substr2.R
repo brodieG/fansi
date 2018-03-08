@@ -41,10 +41,8 @@
 #' @inheritParams base::substr
 #' @inheritParams tabs_as_spaces
 #' @export
-#' @seealso [fansi] for details on how control characters and sequences are
-#'   interpreted, and [term_cap_test] to ensure `fansi` is correctly
-#'   interpreting your terminal capabilities, particularly if you are getting
-#'   unexpected results.
+#' @seealso [fansi] for details on how _Control Sequences_ are
+#'   interpreted, particularly if you are getting unexpected results.
 #' @param type character(1L) in `c("char", "width")`
 #' @param round character(1L) in `c("start", "stop", "both", "neither")`,
 #'   controls how to resolve ambiguities when a `start` or `stop` value in

@@ -2,23 +2,18 @@
 % Please edit documentation in R/has.R
 \name{has_esc}
 \alias{has_esc}
-\title{Checks for Control Characters or Sequences}
+\alias{has_sgr}
+\title{Checks for Presence of Control Sequences}
 \usage{
-has_esc(x, strip = "sgr", warn = getOption("fansi.warn"))
+has_esc(x, which = "all", warn = getOption("fansi.warn"))
+
+has_sgr(x, warn = getOption("fansi.warn"))
 }
 \arguments{
 \item{x}{a character vector.}
 
-\item{strip}{character, any combination of the following values (see details):
-\itemize{
-\item "nl": strip newlines
-\item "c0": strip all other "C0" control characters (i.e. x01-x1f), except for
-newlines and the actual ESC character
-\item "sgr": strip ANSI CSI SGR sequences
-\item "csi": strip all non-SGR csi sequences
-\item "esc": strip all other escape sequences
-\item "all": all of the above
-}}
+\item{which}{character, what Control Sequences to check for; see \code{strip}
+parameter for \link{strip_esc} for details.}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic escape sequences are encountered.  These could cause the
@@ -30,9 +25,11 @@ logical of same length as \code{x}; NA values in \code{x} result in NA values
 in return
 }
 \description{
-By default, checks for ANSI CSI SGR sequences only.
+\code{has_esc} checks for any \emph{Control Sequence}, whereas \code{has_sgr} checks only
+for ANSI CSI SGR sequences.  You can check for different types of sequences
+with the \code{which} parameter.
 }
 \seealso{
-\link{fansi} for details on how control characters and sequences are
+\link{fansi} for details on how \emph{Control Sequences} are
 interpreted, particularly if you are getting unexpected results.
 }

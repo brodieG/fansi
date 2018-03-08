@@ -23,6 +23,8 @@
 #' This is the only difference between `strtrim_esc` and `strtrim2_esc`.
 #'
 #' @export
+#' @seealso [fansi] for details on how _Control Sequences_ are
+#'   interpreted, particularly if you are getting unexpected results.
 #' @inheritParams base::strtrim
 #' @inheritParams strwrap_esc
 #' @examples

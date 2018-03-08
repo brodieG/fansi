@@ -14,21 +14,21 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-#' Strip Control Characters and Sequences
+#' Strip ANSI Control Sequences
 #'
-#' Removes control characters and sequences from strings.  By default it will
-#' strip all known control characters and sequences, including ANSI CSI
+#' Removes _Control Sequences_ from strings.  By default it will
+#' strip all known _Control Sequences_, including ANSI CSI
 #' sequences, two character sequences starting with ESC, and all C0 control
 #' characters, including newlines.  You can fine tune this behavior with the
 #' `strip` parameter.
 #'
 #' The `strip` value contains the names of **non-overlapping** subsets of the
-#' strippable control characters of sequences (e.g. "csi" does not contain
-#' "sgr", and "c0" does not contain newlines).  The one exception is "all" which
-#' means strip every known sequence.  If you combine "all" with any other option
-#' then everything but that option will be stripped.
+#' known _Control Sequences_ (e.g. "csi" does not contain "sgr", and "c0" does
+#' not contain newlines).  The one exception is "all" which means strip every
+#' known sequence.  If you combine "all" with any other option then everything
+#' **but** that option will be stripped.
 #'
-#' @seealso [fansi] for details on how control characters and sequences are
+#' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
 #' @inheritParams substr_esc
 #' @export
@@ -78,7 +78,7 @@ strip_sgr <- function(x, warn=getOption('fansi.warn')) {
 
 ## Process String by Removing Unwanted Characters
 ##
-## This is to simulate what `strwrap` does
+## This is to simulate what `strwrap` does, exposed for testing purposes.
 
 process <- function(x) .Call(FANSI_process, x)
 

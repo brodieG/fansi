@@ -46,16 +46,16 @@ assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
 }
 \description{
-\code{nchar_esc} counts all non control character / sequence characters.
-\code{nzchar_esc} returns TRUE for each input vector element that has non control
-charater / sequence characters.  By default newlines and other C0 control
+\code{nchar_esc} counts all non \emph{Control Sequence} characters.
+\code{nzchar_esc} returns TRUE for each input vector element that has non \emph{Control
+Sequence} sequence characters.  By default newlines and other C0 control
 characters are not counted.
 }
 \details{
 \code{nchar_esc} is just a wrapper around \code{nchar(strip_esc(...))}.  \code{nzchar_esc}
 is implemented in native code and is much faster than the otherwise
-equivalent \code{nzchar(strip_esc(...))}.  You cannot control which control
-characters and sequences count in \code{nzchar_esc}, but you can always resort to
+equivalent \code{nzchar(strip_esc(...))}.  You cannot change which \emph{Control
+Sequences} count in \code{nzchar_esc}, but you can always resort to
 \code{nzchar(strip_esc(..., strip='...'))} if you need that level of control.
 
 These functions will warn if either malformed or non-CSI escape sequences are
@@ -76,10 +76,11 @@ nchar_esc("\\t\\n\\r")
 nchar_esc("\\t\\n\\r", strip="c0")
 nchar_esc("\\t\\n\\r", strip=c("c0", "nl"))
 
-## All of the following are control sequences
+## All of the following are Control Sequences
 nzchar_esc("\\n\\033[42;31m\\033[123P\\a")
-
 }
 \seealso{
-\link{strip_esc}
+\link{fansi} for details on how \emph{Control Sequences} are
+interpreted, particularly if you are getting unexpected results,
+\link{strip_esc} for removing \emph{Control Sequences}.
 }

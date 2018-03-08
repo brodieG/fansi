@@ -3,7 +3,7 @@
 \name{strip_esc}
 \alias{strip_esc}
 \alias{strip_sgr}
-\title{Strip Control Characters and Sequences}
+\title{Strip ANSI Control Sequences}
 \usage{
 strip_esc(x, strip = "all", warn = getOption("fansi.warn"))
 
@@ -33,18 +33,18 @@ character vector of same length as x with ANSI escape sequences
 stripped
 }
 \description{
-Removes control characters and sequences from strings.  By default it will
-strip all known control characters and sequences, including ANSI CSI
+Removes \emph{Control Sequences} from strings.  By default it will
+strip all known \emph{Control Sequences}, including ANSI CSI
 sequences, two character sequences starting with ESC, and all C0 control
 characters, including newlines.  You can fine tune this behavior with the
 \code{strip} parameter.
 }
 \details{
 The \code{strip} value contains the names of \strong{non-overlapping} subsets of the
-strippable control characters of sequences (e.g. "csi" does not contain
-"sgr", and "c0" does not contain newlines).  The one exception is "all" which
-means strip every known sequence.  If you combine "all" with any other option
-then everything but that option will be stripped.
+known \emph{Control Sequences} (e.g. "csi" does not contain "sgr", and "c0" does
+not contain newlines).  The one exception is "all" which means strip every
+known sequence.  If you combine "all" with any other option then everything
+\strong{but} that option will be stripped.
 }
 \examples{
 string <- "hello\\033k\\033[45p world\\n\\033[31mgoodbye\\a moon"
@@ -60,6 +60,6 @@ strip_esc(string, c("all", "nl", "c0"))
 strip_sgr(string)
 }
 \seealso{
-\link{fansi} for details on how control characters and sequences are
+\link{fansi} for details on how \emph{Control Sequences} are
 interpreted, particularly if you are getting unexpected results.
 }

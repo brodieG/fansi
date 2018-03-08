@@ -15,4 +15,8 @@ unitizer_sect("has", {
   has_esc(in.start)
 
   has_esc(c(in.start, NA))
+
+  has_esc("hello\nworld")
+  has_sgr("hello\nworld")
+  has_sgr(in.end)
 })

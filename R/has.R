@@ -14,24 +14,34 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-#' Checks for Control Characters or Sequences
+#' Checks for Presence of Control Sequences
 #'
-#' By default, checks for ANSI CSI SGR sequences only.
+#' `has_esc` checks for any _Control Sequence_, whereas `has_sgr` checks only
+#' for ANSI CSI SGR sequences.  You can check for different types of sequences
+#' with the `which` parameter.
 #'
 #' @export
-#' @seealso [fansi] for details on how control characters and sequences are
+#' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
 #' @inheritParams strip_esc
+#' @param which character, what Control Sequences to check for; see `strip`
+#'   parameter for [strip_esc] for details.
 #' @return logical of same length as `x`; NA values in `x` result in NA values
 #'   in return
 
-has_esc <- function(x, strip='sgr', warn=getOption('fansi.warn')) {
-  vetr(warn=LGL.1, strip=CHR)
-  if(length(strip)) {
-    if(anyNA(strip.int <- match(strip, VALID.STRIP)))
+has_esc <- function(x, which='all', warn=getOption('fansi.warn')) {
+  vetr(warn=LGL.1, which=CHR)
+  if(length(which)) {
+    if(anyNA(which.int <- match(which, VALID.STRIP)))
       stop(
-        "Argument `strip` may contain only values in `", deparse(VALID.STRIP), "`"
+        "Argument `which` may contain only values in `",
+        deparse(VALID.STRIP), "`"
       )
-    .Call(FANSI_has_csi, x, strip.int, warn)
+    .Call(FANSI_has_csi, x, which.int, warn)
   } else rep(FALSE, length(x))
 }
+#' @export
+#' @rdname has_esc
+
+has_sgr <- function(x, warn=getOption('fansi.warn'))
+  has_esc(x, which="sgr", warn=warn)

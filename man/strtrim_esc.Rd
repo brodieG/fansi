@@ -41,3 +41,7 @@ This is the only difference between \code{strtrim_esc} and \code{strtrim2_esc}.
 \examples{
 strtrim_esc("\\033[42mHello world\\033[m", 6)
 }
+\seealso{
+\link{fansi} for details on how \emph{Control Sequences} are
+interpreted, particularly if you are getting unexpected results.
+}

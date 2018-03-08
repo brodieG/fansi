@@ -35,8 +35,6 @@ translated.  Others are ignored.
 esc_to_html("hello\\033[31;42;1mworld\\033[m")
 }
 \seealso{
-\link{fansi} for details on how control characters and sequences are
-interpreted, and \link{term_cap_test} to ensure \code{fansi} is correctly
-interpreting your terminal capabilities, particularly if you are getting
-unexpected results.
+\link{fansi} for details on how \emph{Control Sequences} are
+interpreted, particularly if you are getting unexpected results.
 }

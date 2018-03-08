@@ -76,17 +76,17 @@ stops, each input line is considered a line and the character count begins
 from the beginning of the input line.}
 }
 \description{
-Wraps strings to a specified width accounting for zero display width ANSI
-escape sequences and control characters.  \code{strwrap_esc} is intended to
-emulate \code{strwrap} exactly except with respect to the escape sequences, while
-\code{strwrap2_esc} adds features and changes the processing of whitespace.
+Wraps strings to a specified width accounting for zero display width \emph{Control
+Sequences}.  \code{strwrap_esc} is intended to emulate \code{strwrap} exactly except
+with respect to the \emph{Control Sequences}, while \code{strwrap2_esc} adds features
+and changes the processing of whitespace.
 }
 \details{
 \code{strwrap2_esc} can convert tabs to spaces, pad strings up to \code{width}, and
 hard-break words if single words are wider than \code{width}.
 
-Unlike \link[base:strwrap]{base::strwrap}, both these functions will re-encode any non-ASCII
-strings to UTF8 if they are not encoded in UTF8.
+Unlike \link[base:strwrap]{base::strwrap}, both these functions will translate any non-ASCII
+strings to UTF8 if they are not already encoded in UTF8.
 
 When replacing tabs with spaces the tabs are computed relative to the
 beginning of the input line, not the most recent wrap point.
@@ -143,8 +143,6 @@ W <- strwrap2_esc(NEWS.C, 25, pad.end=" ", wrap.always=TRUE)
 writeLines(c("", paste(W[1:40], W[200:240], W[410:450]), ""))
 }
 \seealso{
-\link{fansi} for details on how control characters and sequences are
-interpreted, and \link{term_cap_test} to ensure \code{fansi} is correctly
-interpreting your terminal capabilities, particularly if you are getting
-unexpected results.
+\link{fansi} for details on how \emph{Control Sequences} are
+interpreted, particularly if you are getting unexpected results.
 }
