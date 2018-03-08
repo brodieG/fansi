@@ -16,50 +16,68 @@
 
 #' ANSI Control Sequence Aware Version of nchar
 #'
-#' `nchar_esc` counts all non control character / sequence characters.
-#' `nzchar_esc` returns TRUE for each input vector element that has non control
-#' chacater / sequence characters.
+#' `nchar_ctl` counts all non _Control Sequence_ characters.
+#' `nzchar_ctl` returns TRUE for each input vector element that has non _Control
+#' Sequence_ sequence characters.  By default newlines and other C0 control
+#' characters are not counted.
 #'
-#' These functions are faster than the semantically equivalent
-#' `nchar(strip_esc(x, what='all')).  If you wish to control which control
-#' characters and sequences are stripped you will need to use
-#' `nchar(strip_esc(x, what=...))`.  In particular, note that newlines are
-#' treated as control characters and not counted.
+#' `nchar_ctl` is just a wrapper around `nchar(strip_ctl(...))`.  `nzchar_ctl`
+#' is implemented in native code and is much faster than the otherwise
+#' equivalent `nzchar(strip_ctl(...))`.  You cannot change which _Control
+#' Sequences_ count in `nzchar_ctl`, but you can always resort to
+#' `nzchar(strip_ctl(..., strip='...'))` if you need that level of control.
 #'
 #' These functions will warn if either malformed or non-CSI escape sequences are
 #' encountered, as these may be incorrectly interpreted.
 #'
-#' Any non-ASCII non-UTF8 string will be converted to UTF8 prior to computing
-#' character or width counts.
-#'
 #' @inheritParams base::nchar
+#' @inheritParams strip_ctl
 #' @export
 #' @param type character string, one of "chars", or "width".  For byte counts
 #'   use [base::nchar].
-#' @seealso [strip_esc]
+#'
+#' @seealso [fansi] for details on how _Control Sequences_ are
+#'   interpreted, particularly if you are getting unexpected results,
+#'   [strip_ctl] for removing _Control Sequences_.
 #' @examples
-#' nchar_esc("\033[31m123\a\r")
+#' nchar_ctl("\033[31m123\a\r")
 #' ## with some wide characters
 #' cn.string <-  sprintf("\033[31m%s\a\r", "\u4E00\u4E01\u4E03")
-#' nchar_esc(cn.string)
-#' nchar_esc(cn.string, type='width')
+#' nchar_ctl(cn.string)
+#' nchar_ctl(cn.string, type='width')
 #'
-#' ## All of the following are control sequences
-#' nzchar_esc("\n\033[42;31m\033[123P\a")
-#' ## If we want to count newlines, this is a slower option
+#' ## Remember newlines are not counted by default
+#' nchar_ctl("\t\n\r")
+#'
+#' ## The 'c0' value for the `strip` argument does
+#' ## not include newlines.
+#' nchar_ctl("\t\n\r", strip="c0")
+#' nchar_ctl("\t\n\r", strip=c("c0", "nl"))
+#'
+#' ## All of the following are Control Sequences
+#' nzchar_ctl("\n\033[42;31m\033[123P\a")
 
-nchar_esc <- function(
-  x, type='chars', allowNA=FALSE, keepNA=NA, warn=getOption('fansi.warn')
+nchar_ctl <- function(
+  x, type='chars', allowNA=FALSE, keepNA=NA, strip='all',
+  warn=getOption('fansi.warn')
 ) {
   if(!is.character(x)) x <- as.character(x)
-  vetr(warn=LGL.1, type=CHR.1, allowNA=LGL.1, keepNA=logical(1))
-  term.cap.int <- seq_along(VALID.TERM.CAP)
-  .Call(FANSI_nchar_esc, x, type, allowNA, keepNA, warn, term.cap.int)
+  vetr(
+    warn=LGL.1, type=CHR.1, allowNA=LGL.1, keepNA=logical(1), strip=CHR
+  )
+  if(!all(strip %in% VALID.STRIP))
+    stop(
+      "Argument `strip` may contain only values in `", deparse(VALID.STRIP), "`"
+    )
+  nchar(
+    strip_ctl(x, strip=strip, warn=warn), type=type, allowNA=allowNA,
+    keepNA=keepNA
+  )
 }
 #' @export
-#' @rdname nchar_esc
+#' @rdname nchar_ctl
 
-nzchar_esc <- function(x, keepNA=NA, warn=getOption('fansi.warn')) {
+nzchar_ctl <- function(x, keepNA=NA, warn=getOption('fansi.warn')) {
   if(!is.character(x)) x <- as.character(x)
   vetr(warn=LGL.1, keepNA=logical(1))
   term.cap.int <- seq_along(VALID.TERM.CAP)

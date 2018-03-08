@@ -21,18 +21,16 @@
 #'
 #' @export
 #' @param x character vector
-#' @inheritParams substr_esc
-#' @seealso [fansi] for details on how control characters and sequences are
-#'   interpreted, and [term_cap_test] to ensure `fansi` is correctly
-#'   interpreting your terminal capabilities, particularly if you are getting
-#'   unexpected results.
+#' @inheritParams substr_ctl
+#' @seealso [fansi] for details on how _Control Sequences_ are
+#'   interpreted, particularly if you are getting unexpected results.
 #' @return a character vector with all escape sequences removed and any basic
 #'   ANSI CSI SGR escape sequences applied via SPAN html objects with specified
 #'   css styles.
 #' @examples
-#' esc_to_html("hello\033[31;42;1mworld\033[m")
+#' sgr_to_html("hello\033[31;42;1mworld\033[m")
 
-esc_to_html <- function(
+sgr_to_html <- function(
   x, warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
 ) {
   vetr(character(), LGL.1, CHR)

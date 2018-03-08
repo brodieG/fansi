@@ -34,13 +34,16 @@
 #' All of these are considered zero display-width for purposes of string width
 #' calculations.
 #'
-#' Escape sequences starting with ESC are assumed to be two characters
+#' We will refer to ANSI control characters and sequences as "_Control Sequences_"
+#' hereafter.
+#'
+#' _Control Sequences_ starting with ESC are assumed to be two characters
 #' long (including the ESC) unless they are of the CSI variety, in which case
 #' their length is computed as per the ANSI CSI spec.  There are non-CSI escape
 #' sequences that may be longer than two characters, but `fansi` will
 #' (incorrectly) treat them as if they were two characters long.
 #'
-#' In theory it is possible to encode ANSI CSI escape sequences with a single
+#' In theory it is possible to encode _Control Sequences_ with a single
 #' byte introducing character in the 0x40-0x5F range instead of the traditional
 #' "ESC&#91;".  Since this is rare and it conflicts with UTF-8 encoding, we do
 #' not support it.
@@ -49,7 +52,7 @@
 #'
 #' **NOTE**: not all displays support ANSI CSI SGR sequences.
 #'
-#' ANSI CSI SGR control sequences are the subset of CSI sequences that can be
+#' ANSI CSI SGR Control Sequences are the subset of CSI sequences that can be
 #' used to change text appearance (e.g. color).  These sequences begin with
 #' "ESC&#91;" and end in "m".  `fansi` interprets these sequences and writes new
 #' ones to the output strings in such a way that the original formatting is
@@ -57,7 +60,7 @@
 #'
 #' Occasionally there may be mismatches between how `fansi` and a display
 #' interpret the CSI SGR sequences, which may produce display artifacts.  The
-#' most likely source of artifacts are control characters or sequences that move
+#' most likely source of artifacts are _Control Sequences_ that move
 #' the cursor or change the display, or CSI SGR sequences `fansi` does not
 #' interpret such as:
 #'
@@ -81,10 +84,9 @@
 #' "fansi.term.cap" global option, although `fansi` does try to detect them by
 #' default.
 #'
-#' `fansi` will will warn if it encounters control sequences or characters
-#' that it cannot interpret or that might conflict with terminal capabilities.
-#' You can turn off warnings via the `warn` parameter or via the "fansi.warn"
-#' global option.
+#' `fansi` will will warn if it encounters _Control Sequences_ that it cannot
+#' interpret or that might conflict with terminal capabilities.  You can turn
+#' off warnings via the `warn` parameter or via the "fansi.warn" global option.
 #'
 #' `fansi` can work around "C0" tab control characters by turning them into
 #' spaces first with [tabs_as_spaces] or with the `tabs.as.spaces` parameter.

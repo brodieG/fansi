@@ -86,7 +86,14 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
 
     while(1) {
       csi = FANSI_find_esc(chr_track, what_int);
-      if(!invalid_ansi && !csi.valid) {
+      // Currently we can't know for sure if a ESC seq that isn't a CSI is only
+      // two long so we should warn if we hit one, or otherwise and invalid seq
+      if(
+        !invalid_ansi && (
+          !csi.valid ||
+          ((csi.what & (1 << 4)) & what_int)
+        )
+      ) {
         invalid_ansi = 1;
         invalid_idx = i + 1;
       }
@@ -167,7 +174,8 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
     switch(warn_int) {
       case 1: {
         warning(
-          "Encountered invalid ESC sequence at index [%.0f], %s%s",
+          "Encountered %s index [%.0f], %s%s",
+          "invalid or possibly incorreclty handled ESC sequence at ",
           (double) invalid_idx,
           "see `?unhandled_esc`; you can use `warn=FALSE` to turn ",
           "off these warnings."

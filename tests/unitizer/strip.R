@@ -1,26 +1,26 @@
 library(fansi)
 
 unitizer_sect("Strip ansi", {
-  strip_esc(sprintf("hello %sworld%s", red, end))
-  strip_esc(sprintf("he%sllo %sworld", red, end))
-  strip_esc(sprintf("%shello %sworld%s", grn.bg, red, end))
-  strip_esc(sprintf("%s%shello %sworld%s", grn.bg, inv, red, end))
+  strip_ctl(sprintf("hello %sworld%s", red, end))
+  strip_ctl(sprintf("he%sllo %sworld", red, end))
+  strip_ctl(sprintf("%shello %sworld%s", grn.bg, red, end))
+  strip_ctl(sprintf("%s%shello %sworld%s", grn.bg, inv, red, end))
 
   string <- paste("string", format(1:10))
   string[c(2,4,6)] <- paste0(red, string[c(2,4,6)], end)
 
-  strip_esc(string)
+  strip_ctl(string)
 })
 unitizer_sect("Corner cases", {
-  strip_esc("hello\033")
+  strip_ctl("hello\033")
   # should this be stripped?  Not 100% clear since terminal seems to be waiting
   # for input after it is cated
-  strip_esc("hello\033[")
+  strip_ctl("hello\033[")
 
   # illegal sequence
 
-  strip_esc("hello\033[31##3m illegal")
-  strip_esc("hello\033[31##m legal")
+  strip_ctl("hello\033[31##3m illegal")
+  strip_ctl("hello\033[31##m legal")
 })
 unitizer_sect("Whitespace", {
   fansi:::process('hello     world')
@@ -70,32 +70,40 @@ unitizer_sect("Whitespace", {
   fansi:::process('\n \t\nhello.\n\t\n\tworld\n\t\n woohoo\n ')
 })
 unitizer_sect("Selective stripping", {
- string.0 <- "hello\033k\033[45p world\n\033[31mgoodbye\a moon"
+  string.0 <- "hello\033k\033[45p world\n\033[31mgoodbye\a moon"
 
- strip_esc(string.0)
- strip_esc(string.0, c("nl", "c0", "sgr", "csi", "esc"))
- strip_esc(string.0, "all")  # equivalently
- strip_esc(string.0, c("c0", "esc"))
+  strip_ctl(string.0)
+  strip_ctl(string.0, "sgr")
+  strip_ctl(string.0, c("nl", "c0", "sgr", "csi", "esc"))
+  strip_ctl(string.0, "all")  # equivalently
+  strip_ctl(string.0, c("c0", "esc"))
+  strip_ctl(string.0, c("nl"))
 
- # add some illegal sequences
+  # negations
 
- string.1 <- "hello\033\033[45p world\n\033[31#3mgoodbye\a moon"
+  strip_ctl(string.0, c("all", "c0", "esc"))
+  strip_ctl(string.0, c("all", "sgr"))
 
- strip_esc(string.1, c("nl", "sgr", "esc"))
- strip_esc(string.1, "all")  # equivalently
- strip_esc(string.1, c("c0", "nl"))
+  # add some illegal sequences
 
- # longer vec
+  string.1 <- "hello\033\033[45p world\n\033[31#3mgoodbye\a moon"
 
- strip_esc(c(string.0, string.1, "hello"), warn=FALSE)
+  strip_ctl(string.1, c("nl", "sgr", "esc"))
+  strip_ctl(string.1, "all")
+  strip_ctl(string.1, c("c0", "nl"))
+  strip_ctl(string.1, c("all", "sgr"))
 
- # possible corner cases
+  # longer vec
 
- string.2 <- "\033k\033[45p\a\n\033[31mgoodbye moon"
- strip_esc(string.2)
- strip_esc(string.2, "all")
+  strip_ctl(c(string.0, string.1, "hello"), warn=FALSE)
 
- string.3 <- "hello world\033k\033[45p\a\n\033[31m"
- strip_esc(string.3)
- strip_esc(string.3, "all")
+  # possible corner cases
+
+  string.2 <- "\033k\033[45p\a\n\033[31mgoodbye moon"
+  strip_ctl(string.2)
+  strip_ctl(string.2, "sgr")
+
+  string.3 <- "hello world\033k\033[45p\a\n\033[31m"
+  strip_ctl(string.3)
+  strip_ctl(string.3, "sgr")
 })

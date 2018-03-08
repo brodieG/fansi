@@ -14,10 +14,6 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-check_assumptions <- function() .Call(FANSI_check_assumptions)  # nocov
-
-digits_in_int <- function(x) .Call(FANSI_digits_in_int, x)
-
 #' Replace Tabs With Spaces
 #'
 #' Finds horizontal tab characters (0x09) in a string and replaces them with the
@@ -27,10 +23,10 @@ digits_in_int <- function(x) .Call(FANSI_digits_in_int, x)
 #' stops you will need to provide them yourself if you are using anything
 #' outside of the standard tab stop every 8 characters that is the default.
 #'
-#' @seealso [fansi] for details on how control characters and sequences are
+#' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
 #' @export
-#' @inheritParams substr_esc
+#' @inheritParams substr_ctl
 #' @param x character vector to replace tabs in.
 #' @param tab.stops integer(1:n) indicating position of tab stops to use when
 #'   converting tabs to spaces.  If there are more tabs in a line than defined
@@ -85,10 +81,9 @@ tabs_as_spaces <- function(
 #'
 #' By default `fansi` assumes terminals support bright and 256 color
 #' modes, and also tests for truecolor support via the $COLORTERM system
-#' variable.  You can visually test your terminal capabilities with
-#' [term_cap_test].
+#' variable.
 #'
-#' @seealso [fansi] for details on how control characters and sequences are
+#' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
 #' @export
 #' @return character the test vector, invisibly
@@ -122,3 +117,22 @@ esc_color_code_to_html <- function(x) {
   vetr(matrix(integer(), 5))
   .Call(FANSI_color_to_html, as.integer(x))
 }
+## For testing colored strings
+
+colorize <- function(txt) {
+  txt.c <- txt
+  bg <- ceiling((seq_along(txt)) %% 215 + 1) + 16
+  fg <- ifelse((((bg - 16) %/% 18) %% 2), 30, 37)
+  tpl <- "\033[%d;48;5;%dm%s\033[49m"
+
+  ## Apply colors to strings and collapse
+
+  nz <- nzchar(txt)
+  txt.c[nz] <- sprintf(tpl, fg[nz], bg[nz], txt[nz])
+  # res <- paste0(txt.c, collapse="\n")
+  txt.c
+}
+
+check_assumptions <- function() .Call(FANSI_check_assumptions)  # nocov
+digits_in_int <- function(x) .Call(FANSI_digits_in_int, x)
+

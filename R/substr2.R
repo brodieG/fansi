@@ -16,17 +16,17 @@
 
 #' ANSI Control Sequence Aware Version of substr
 #'
-#' `substr_esc` is a drop-in replacement for `substr`.  Performance is
+#' `substr_ctl` is a drop-in replacement for `substr`.  Performance is
 #' slightly slower than `substr`.
 #'
-#' `substr2_esc` adds the ability to retrieve substrings based on display width,
-#' and byte width in addition to the normal character width.  `substr2_esc` also
+#' `substr2_ctl` adds the ability to retrieve substrings based on display width,
+#' and byte width in addition to the normal character width.  `substr2_ctl` also
 #' provides the option to convert tabs to spaces with [tabs_as_spaces] prior to
 #' taking substrings.
 #
 #' Because exact substrings on anything other than character width cannot be
 #' guaranteed (e.g.  because of multi-byte encodings, or double display-width
-#' characters) `substr2_esc` must make assumptions on how to resolve provided
+#' characters) `substr2_ctl` must make assumptions on how to resolve provided
 #' `start`/`stop` values that are infeasible and does so via the `round`
 #' parameter.
 #'
@@ -41,10 +41,8 @@
 #' @inheritParams base::substr
 #' @inheritParams tabs_as_spaces
 #' @export
-#' @seealso [fansi] for details on how control characters and sequences are
-#'   interpreted, and [term_cap_test] to ensure `fansi` is correctly
-#'   interpreting your terminal capabilities, particularly if you are getting
-#'   unexpected results.
+#' @seealso [fansi] for details on how _Control Sequences_ are
+#'   interpreted, particularly if you are getting unexpected results.
 #' @param type character(1L) in `c("char", "width")`
 #' @param round character(1L) in `c("start", "stop", "both", "neither")`,
 #'   controls how to resolve ambiguities when a `start` or `stop` value in
@@ -61,8 +59,8 @@
 #'   escape sequences, so you should ensure that it matches your terminal
 #'   capabilities. See [term_cap_test] for details.
 #' @examples
-#' substr_esc("\033[42mhello\033[m world", 1, 9)
-#' substr_esc("\033[42mhello\033[m world", 3, 9)
+#' substr_ctl("\033[42mhello\033[m world", 1, 9)
+#' substr_ctl("\033[42mhello\033[m world", 3, 9)
 #'
 #' ## Width 2 and 3 are in the middle of an ideogram as
 #' ## start and stop positions respectively, so we control
@@ -70,22 +68,22 @@
 #'
 #' cn.string <- paste0("\033[42m", "\u4E00\u4E01\u4E03", "\033[m")
 #'
-#' substr2_esc(cn.string, 2, 3, type='width')
-#' substr2_esc(cn.string, 2, 3, type='width', round='both')
-#' substr2_esc(cn.string, 2, 3, type='width', round='start')
-#' substr2_esc(cn.string, 2, 3, type='width', round='stop')
+#' substr2_ctl(cn.string, 2, 3, type='width')
+#' substr2_ctl(cn.string, 2, 3, type='width', round='both')
+#' substr2_ctl(cn.string, 2, 3, type='width', round='start')
+#' substr2_ctl(cn.string, 2, 3, type='width', round='stop')
 
-substr_esc <- function(
+substr_ctl <- function(
   x, start, stop,
   warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap')
-) substr2_esc(x=x, start=start, stop=stop, warn=warn, term.cap=term.cap)
+) substr2_ctl(x=x, start=start, stop=stop, warn=warn, term.cap=term.cap)
 
 #' @importFrom utils head tail
-#' @rdname substr_esc
+#' @rdname substr_ctl
 #' @export
 
-substr2_esc <- function(
+substr2_ctl <- function(
   x, start, stop, type='chars', round='start', tabs.as.spaces=FALSE,
   tab.stops=getOption('fansi.tab.stops'),
   warn=getOption('fansi.warn'),

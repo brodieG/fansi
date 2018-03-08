@@ -54,6 +54,6 @@ writeLines(
 ) )
 }
 \seealso{
-\link{fansi} for details on how control characters and sequences are
+\link{fansi} for details on how \emph{Control Sequences} are
 interpreted, particularly if you are getting unexpected results.
 }

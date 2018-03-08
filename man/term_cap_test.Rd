@@ -31,13 +31,12 @@ You should compare the screen output from this function to
 
 By default \code{fansi} assumes terminals support bright and 256 color
 modes, and also tests for truecolor support via the $COLORTERM system
-variable.  You can visually test your terminal capabilities with
-\link{term_cap_test}.
+variable.
 }
 \examples{
 term_cap_test()
 }
 \seealso{
-\link{fansi} for details on how control characters and sequences are
+\link{fansi} for details on how \emph{Control Sequences} are
 interpreted, particularly if you are getting unexpected results.
 }

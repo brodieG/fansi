@@ -1,10 +1,10 @@
-
 # Make big UTF8 string
+
+source('tests/unitizer/_pre/lorem.R')
 
 utf8.big <- rep(c(lorem.ru, lorem.cn), 10000)
 system.time(utf8.big.wrap <- strwrap2_esc(utf8.big, 71, wrap.always=TRUE))
-utf8.big.wrap.2 <- unlist(utf8.big.wrap)
-utf8.big.small <- utf8.big.wrap.2[1:32710]
+utf8.big.small <- utf8.big.wrap[1:32710]
 
 library(fansi)
 # ulysses <- readLines(
@@ -50,23 +50,18 @@ colorize <- function(txt) {
 
   nz <- nzchar(txt)
   txt.c[nz] <- sprintf(tpl, fg[nz], bg[nz], txt[nz])
-  res <- paste0(txt.c, collapse="\n")
-  res
+  # res <- paste0(txt.c, collapse="\n")
+  txt.c
 }
 ulysses.c <- colorize(ulysses)
 utf8.c <- colorize(utf8.big.small)
+utf8.c <- colorize(utf8.big.wrap)
 
 ## Wrap and display in three columns
 
 txt <- utf8.c
-system.time(
-  txt.w1 <-
-    strwrap2_esc(ulysses.c, 25, pad.end=" ", wrap.always=TRUE, round='neither')
-)
-system.time(
-  txt.w2 <-
-    strwrap2_esc(utf8.c, 25, pad.end=" ", wrap.always=TRUE, round='neither')
-)
+system.time(txt.w1 <- strwrap2_esc(ulysses.c, 25, pad.end=" ", wrap.always=TRUE))
+system.time(txt.w2 <- strwrap2_esc(utf8.c, 25, pad.end=" ", wrap.always=TRUE))
 
 
 txt.w <- tail(txt.w, -37)

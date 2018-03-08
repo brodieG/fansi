@@ -1,10 +1,10 @@
-#' Identify Unhandled Escape Sequences
+#' Identify Unhandled ANSI Control Sequences
 #'
-#' Will return position and types of unhandled sequences in a character vector.
-#' Unhandled sequences may cause `fansi` to interpret strings in a way
-#' different to your display.  See [fansi] for details.
+#' Will return position and types of unhandled _Control Sequences_ in a
+#' character vector.  Unhandled sequences may cause `fansi` to interpret strings
+#' in a way different to your display.  See [fansi] for details.
 #'
-#' This is a debugging function and as such is not optimized for speed.
+#' This is a debugging function that is not optimized for speed.
 #'
 #' The return value is a data frame with five columns:
 #'
@@ -36,10 +36,8 @@
 #' * esc: character the unhandled escape sequence
 #'
 #' @export
-#' @seealso [fansi] for details on how control characters and sequences are
-#'   interpreted, and [term_cap_test] to ensure `fansi` is correctly
-#'   interpreting your terminal capabilities, particularly if you are getting
-#'   unexpected results.
+#' @seealso [fansi] for details on how _Control Sequences_ are
+#'   interpreted, particularly if you are getting unexpected results.
 #' @param x character vector
 #' @return data frame with as many rows as there are unhandled escape
 #'   sequences and columns containing useful information for debugging the

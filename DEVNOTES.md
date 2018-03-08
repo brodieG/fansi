@@ -207,7 +207,7 @@ Testing with the following:
 strings.all <- crayon::red(
   paste("hello ", crayon::green("green"), "world", 1:1000)
 )
-strings <- strings.raw <- strip_ansi(strings.all)
+strings <- strings.raw <- strip_esc(strings.all)
 strings.index <- sample(1:1000, 100)
 strings[strings.index] <- strings.all[strings.index]
 ```
@@ -288,3 +288,31 @@ Unit: microseconds
              strwrap(x.paste, width = 60) 1076.706 1107.804 1265.9602 1153.7485
            stri_wrap(x.paste, width = 60)  651.140  672.613 2847.7724  684.6655
 ```
+
+### nchar
+
+Seems like we wasted a lot of time writing dedicated code...:
+
+```
+source('tests/unitizer/_pre/lorem.R')
+
+utf8.big <- rep(c(lorem.ru, lorem.cn), 10000)
+system.time(utf8.big.wrap <- strwrap2_esc(utf8.big, 71, wrap.always=TRUE))
+utf8.c <- fansi:::colorize(utf8.big.wrap)
+utf8.c <- colorize(utf8.big.wrap)
+library(microbenchmark)
+microbenchmark(times=1,
+  nchar(utf8.big.wrap),
+  nchar(utf8.big.wrap, type='width'),
+  nchar_esc(utf8.c, type='width'),
+  nchar(strip_esc(utf8.c), type='width')
+)
+## Unit: milliseconds
+##                                      expr       min        lq      mean
+##                      nchar(utf8.big.wrap)  131.7149  131.7149  131.7149
+##      nchar(utf8.big.wrap, type = "width") 3749.5948 3749.5948 3749.5948
+##         nchar_esc(utf8.c, type = "width") 3930.9955 3930.9955 3930.9955
+##  nchar(strip_esc(utf8.c), type = "width") 3930.2643 3930.2643 3930.2643
+```
+
+Just doesn't seem worth the hassle even if we could get better.
