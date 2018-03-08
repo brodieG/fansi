@@ -19,18 +19,18 @@
 #' One difference with [base::strtrim] is that all C0 control characters such as
 #' newlines, carriage returns, etc., are treated as zero width.
 #'
-#' `strtrim2_esc` adds the option of converting tabs to spaces before trimming.
-#' This is the only difference between `strtrim_esc` and `strtrim2_esc`.
+#' `strtrim2_ctl` adds the option of converting tabs to spaces before trimming.
+#' This is the only difference between `strtrim_ctl` and `strtrim2_ctl`.
 #'
 #' @export
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
 #' @inheritParams base::strtrim
-#' @inheritParams strwrap_esc
+#' @inheritParams strwrap_ctl
 #' @examples
-#' strtrim_esc("\033[42mHello world\033[m", 6)
+#' strtrim_ctl("\033[42mHello world\033[m", 6)
 
-strtrim_esc <- function(x, width, warn=getOption('fansi.warn')){
+strtrim_ctl <- function(x, width, warn=getOption('fansi.warn')){
   if(!is.character(x)) x <- as.character(x)
   vetr(width=NUM.1.POS && . >= 1, warn=LGL.1)
 
@@ -55,9 +55,9 @@ strtrim_esc <- function(x, width, warn=getOption('fansi.warn')){
   res
 }
 #' @export
-#' @rdname strtrim_esc
+#' @rdname strtrim_ctl
 
-strtrim2_esc <- function(
+strtrim2_ctl <- function(
   x, width, warn=getOption('fansi.warn'), tabs.as.spaces=FALSE, tab.stops=8L
 ) {
   if(!is.character(x)) x <- as.character(x)

@@ -17,11 +17,11 @@
 #' ANSI Control Sequence Aware Version of strwrap
 #'
 #' Wraps strings to a specified width accounting for zero display width _Control
-#' Sequences_.  `strwrap_esc` is intended to emulate `strwrap` exactly except
-#' with respect to the _Control Sequences_, while `strwrap2_esc` adds features
+#' Sequences_.  `strwrap_ctl` is intended to emulate `strwrap` exactly except
+#' with respect to the _Control Sequences_, while `strwrap2_ctl` adds features
 #' and changes the processing of whitespace.
 #'
-#' `strwrap2_esc` can convert tabs to spaces, pad strings up to `width`, and
+#' `strwrap2_ctl` can convert tabs to spaces, pad strings up to `width`, and
 #' hard-break words if single words are wider than `width`.
 #'
 #' Unlike [base::strwrap], both these functions will translate any non-ASCII
@@ -36,7 +36,7 @@
 #'   interpreted, particularly if you are getting unexpected results.
 #' @inheritParams base::strwrap
 #' @inheritParams tabs_as_spaces
-#' @inheritParams substr_esc
+#' @inheritParams substr_ctl
 #' @param wrap.always TRUE or FALSE (default), whether to hard wrap at requested
 #'   width if no word breaks are detected within a line.  If set to TRUE then
 #'   `width` must be at least 2.
@@ -54,30 +54,30 @@
 #' hello.1 <- "hello \033[41mred\033[49m world"
 #' hello.2 <- "hello\t\033[41mred\033[49m\tworld"
 #'
-#' strwrap_esc(hello.1, 12)
-#' strwrap_esc(hello.2, 12)
+#' strwrap_ctl(hello.1, 12)
+#' strwrap_ctl(hello.2, 12)
 #'
-#' ## In default mode strwrap2_esc is the same as strwrap_esc
-#' strwrap2_esc(hello.2, 12)
+#' ## In default mode strwrap2_ctl is the same as strwrap_ctl
+#' strwrap2_ctl(hello.2, 12)
 #'
 #' ## But you can leave whitespace unchanged, `warn`
 #' ## set to false as otherwise tabs causes warning
-#' strwrap2_esc(hello.2, 12, strip.spaces=FALSE, warn=FALSE)
+#' strwrap2_ctl(hello.2, 12, strip.spaces=FALSE, warn=FALSE)
 #'
 #' ## And convert tabs to spaces
-#' strwrap2_esc(hello.2, 12, tabs.as.spaces=TRUE)
+#' strwrap2_ctl(hello.2, 12, tabs.as.spaces=TRUE)
 #'
 #' ## If your display has 8 wide tab stops the following two
 #' ## outputs should look the same
-#' writeLines(strwrap2_esc(hello.2, 80, tabs.as.spaces=TRUE))
+#' writeLines(strwrap2_ctl(hello.2, 80, tabs.as.spaces=TRUE))
 #' writeLines(hello.2)
 #'
 #' ## tab stops are NOT auto-detected, but you may provide
 #' ## your own
-#' strwrap2_esc(hello.2, 12, tabs.as.spaces=TRUE, tab.stops=c(6, 12))
+#' strwrap2_ctl(hello.2, 12, tabs.as.spaces=TRUE, tab.stops=c(6, 12))
 #'
 #' ## You can also force padding at the end to equal width
-#' writeLines(strwrap2_esc("hello how are you today", 10, pad.end="."))
+#' writeLines(strwrap2_ctl("hello how are you today", 10, pad.end="."))
 #'
 #' ## And a more involved example where we read the
 #' ## NEWS file, color it line by line, wrap it to
@@ -96,10 +96,10 @@
 #' NEWS[!nz] <- '\n\n'
 #' NEWS.C <- paste0(NEWS, collapse="")
 #'
-#' W <- strwrap2_esc(NEWS.C, 25, pad.end=" ", wrap.always=TRUE)
+#' W <- strwrap2_ctl(NEWS.C, 25, pad.end=" ", wrap.always=TRUE)
 #' writeLines(c("", paste(W[1:40], W[200:240], W[410:450]), ""))
 
-strwrap_esc <- function(
+strwrap_ctl <- function(
   x, width = 0.9 * getOption("width"), indent = 0,
   exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
@@ -135,9 +135,9 @@ strwrap_esc <- function(
   if(simplify) unlist(res) else res
 }
 #' @export
-#' @rdname strwrap_esc
+#' @rdname strwrap_ctl
 
-strwrap2_esc <- function(
+strwrap2_ctl <- function(
   x, width = 0.9 * getOption("width"), indent = 0,
   exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
   wrap.always=FALSE, pad.end="",

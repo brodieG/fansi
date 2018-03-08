@@ -16,20 +16,20 @@
 
 #' Checks for Presence of Control Sequences
 #'
-#' `has_esc` checks for any _Control Sequence_, whereas `has_sgr` checks only
+#' `has_ctl` checks for any _Control Sequence_, whereas `has_sgr` checks only
 #' for ANSI CSI SGR sequences.  You can check for different types of sequences
 #' with the `which` parameter.
 #'
 #' @export
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
-#' @inheritParams strip_esc
+#' @inheritParams strip_ctl
 #' @param which character, what Control Sequences to check for; see `strip`
-#'   parameter for [strip_esc] for details.
+#'   parameter for [strip_ctl] for details.
 #' @return logical of same length as `x`; NA values in `x` result in NA values
 #'   in return
 
-has_esc <- function(x, which='all', warn=getOption('fansi.warn')) {
+has_ctl <- function(x, which='all', warn=getOption('fansi.warn')) {
   vetr(warn=LGL.1, which=CHR)
   if(length(which)) {
     if(anyNA(which.int <- match(which, VALID.STRIP)))
@@ -41,7 +41,7 @@ has_esc <- function(x, which='all', warn=getOption('fansi.warn')) {
   } else rep(FALSE, length(x))
 }
 #' @export
-#' @rdname has_esc
+#' @rdname has_ctl
 
 has_sgr <- function(x, warn=getOption('fansi.warn'))
-  has_esc(x, which="sgr", warn=warn)
+  has_ctl(x, which="sgr", warn=warn)

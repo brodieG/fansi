@@ -26,7 +26,7 @@
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
 #' @export
-#' @inheritParams substr_esc
+#' @inheritParams substr_ctl
 #' @param x character vector to replace tabs in.
 #' @param tab.stops integer(1:n) indicating position of tab stops to use when
 #'   converting tabs to spaces.  If there are more tabs in a line than defined

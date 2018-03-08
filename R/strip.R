@@ -30,7 +30,7 @@
 #'
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
-#' @inheritParams substr_esc
+#' @inheritParams substr_ctl
 #' @export
 #' @param strip character, any combination of the following values (see details):
 #'   * "nl": strip newlines
@@ -44,18 +44,18 @@
 #'   stripped
 #' @examples
 #' string <- "hello\033k\033[45p world\n\033[31mgoodbye\a moon"
-#' strip_esc(string)
-#' strip_esc(string, c("nl", "c0", "sgr", "csi", "esc")) # equivalently
-#' strip_esc(string, "sgr")
-#' strip_esc(string, c("c0", "esc"))
+#' strip_ctl(string)
+#' strip_ctl(string, c("nl", "c0", "sgr", "csi", "esc")) # equivalently
+#' strip_ctl(string, "sgr")
+#' strip_ctl(string, c("c0", "esc"))
 #' ## everything but C0 controls (recall "nl" is not part of "c0")
 #' ## as far as the `strip` argument is concerned
-#' strip_esc(string, c("all", "nl", "c0"))
+#' strip_ctl(string, c("all", "nl", "c0"))
 #'
-#' ## convenience function, same as `strip_esc(strip='sgr')`
+#' ## convenience function, same as `strip_ctl(strip='sgr')`
 #' strip_sgr(string)
 
-strip_esc <- function(x, strip='all', warn=getOption('fansi.warn')) {
+strip_ctl <- function(x, strip='all', warn=getOption('fansi.warn')) {
   vetr(warn=LGL.1, strip=CHR)
   if(length(strip)) {
     if(anyNA(strip.int <- match(strip, VALID.STRIP)))
@@ -67,7 +67,7 @@ strip_esc <- function(x, strip='all', warn=getOption('fansi.warn')) {
   } else x
 }
 #' @export
-#' @rdname strip_esc
+#' @rdname strip_ctl
 
 strip_sgr <- function(x, warn=getOption('fansi.warn')) {
   vetr(warn=LGL.1)

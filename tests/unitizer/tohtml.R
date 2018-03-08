@@ -69,13 +69,13 @@ unitizer_sect("simple html conversion", {
     writeLines(c("<html><pre>", as.character(x), "</pre></html>"), tmp)
     browseURL(tmp)
   }
-  esc_to_html("hello \033[31;42;1mworld\033[0m")
-  esc_to_html("hello \033[31;48;5;23;1mworld\033[m")
+  sgr_to_html("hello \033[31;42;1mworld\033[0m")
+  sgr_to_html("hello \033[31;48;5;23;1mworld\033[m")
 
   # this turned out to be a good corner case, italic is not actually
   # italicized
 
-  esc_to_html(
+  sgr_to_html(
     "\033[1mbold\033[22m \033[2mfaint\033[22m \033[mitalic\033[24m\n"
   )
 
@@ -92,7 +92,7 @@ unitizer_sect("simple html conversion", {
     "\033[8mconceal\033[28m reveal \033[9mcrossed-out\033[29mclear\033[m",
     "\033[3mitalic again\033[24m not italic?\033[m"
   )
-  html_string <- esc_to_html(csi_string)
+  html_string <- sgr_to_html(csi_string)
   html_string
   # tmp <- tempfile()
   # writeLines(c("<html><pre>", html_string, "</pre></html>"))
