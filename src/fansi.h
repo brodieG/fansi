@@ -209,6 +209,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * * 6: other escape sequence
      * * 7: malformed escape
      * * 8: c0 escapes
+     * * 9: malformed UTF8
      */
     int err_code;
     /*
@@ -225,13 +226,17 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     // Whether to issue warnings if err_code is non-zero, if -1 means that the
     // warning was issued at least once so may not need to be re-issued
     int warn;
+    // Whether to use R_nchar, really only needed when we're doing things in
+    // width mode
+    int use_nchar;
 
     /*
      * These support the arguments of the same names for nchar
      */
     int allowNA;
     int keepNA;
-    int nchar_err;  // invalid multi-byte char
+    // invalid multi-byte char, a bit of duplication with err_code = 9;
+    int nchar_err;
   };
   /*
    * Need to keep track of fallback state, so we need ability to return two
@@ -316,7 +321,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     const char * string, SEXP warn, SEXP term_cap
   );
   struct FANSI_state FANSI_state_init_full(
-    const char * string, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA
+    const char * string, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
+    SEXP width
   );
   int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current);
   int FANSI_state_comp_basic(

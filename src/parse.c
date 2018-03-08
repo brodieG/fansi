@@ -28,11 +28,13 @@
  * all other cases `R_nchar` shoudl be set to not `allowNA`.
  */
 struct FANSI_state FANSI_state_init_full(
-  const char * string, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA
+  const char * string, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
+  SEXP width
 ) {
   if(
     TYPEOF(warn) != LGLSXP || TYPEOF(term_cap) != INTSXP ||
-    TYPEOF(allowNA) != LGLSXP || TYPEOF(keepNA) != LGLSXP
+    TYPEOF(allowNA) != LGLSXP || TYPEOF(keepNA) != LGLSXP ||
+    TYPEOF(width) != 1
   )
     error("Internal error: state_init with bad types; contact maintainer.");
 
@@ -56,7 +58,8 @@ struct FANSI_state FANSI_state_init_full(
     .warn = warn_int,
     .term_cap = term_cap_int,
     .allowNA = asLogical(allowNA),
-    .keepNA = asLogical(keepNA)
+    .keepNA = asLogical(keepNA),
+    .use_nchar = asInteger(width)  // 0 for chars, 1 for width
   };
 }
 struct FANSI_state FANSI_state_init(
@@ -64,12 +67,14 @@ struct FANSI_state FANSI_state_init(
 ) {
   SEXP R_false = PROTECT(ScalarLogical(0));
   SEXP R_true = PROTECT(ScalarLogical(1));
+  SEXP R_zero = PROTECT(ScalarInteger(0));
   struct FANSI_state res = FANSI_state_init_full(
     string, warn, term_cap,
-    R_false, // Don't allowNA, fail instead
-    R_true
+    R_true,  // allowNA for invalid multibyte
+    R_true,
+    R_zero   // Don't use width by default
   );
-  UNPROTECT(2);
+  UNPROTECT(3);
   return res;
 }
 /*
@@ -600,12 +605,16 @@ static struct FANSI_state read_utf8(struct FANSI_state state) {
     // Note that we should probably not bother with computing this if display
     // mode is not width as it's probably expensive.
 
-    SEXP str_chr =
-      PROTECT(mkCharLenCE(state.string + state.pos_byte, byte_size, CE_UTF8));
-    disp_size = R_nchar(
-      str_chr, Width, state.allowNA, state.keepNA, mb_err_str
-    );
-    UNPROTECT(1);
+    if(state.use_nchar) {
+      SEXP str_chr =
+        PROTECT(mkCharLenCE(state.string + state.pos_byte, byte_size, CE_UTF8));
+      disp_size = R_nchar(
+        str_chr, Width, state.allowNA, state.keepNA, mb_err_str
+      );
+      UNPROTECT(1);
+    } else {
+      disp_size = byte_size;
+    }
   }
   // Need to check overflow?  Really only for pos_width?  Maybe that's not
   // even true because you need at least two bytes to encode a double wide
@@ -615,6 +624,7 @@ static struct FANSI_state read_utf8(struct FANSI_state state) {
   ++state.pos_ansi;
   ++state.pos_raw;
   if(disp_size == NA_INTEGER) {
+    state.err_code = 9;
     state.nchar_err = 1;
     disp_size = 0;
   }
@@ -1203,8 +1213,11 @@ SEXP FANSI_state_at_pos_ext(
 
   string = FANSI_string_as_utf8(text_chr).string;
 
-  struct FANSI_state state = FANSI_state_init(string, warn, term_cap);
-  struct FANSI_state state_prev = FANSI_state_init(string, warn, term_cap);
+  SEXP R_true = PROTECT(ScalarLogical(1));
+  struct FANSI_state state =
+    FANSI_state_init_full(string, warn, term_cap, R_true, R_true, type);
+  UNPROTECT(1);
+  struct FANSI_state state_prev = state;
 
   state.string = state_prev.string = string;
   state_pair.cur = state;
