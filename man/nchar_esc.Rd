@@ -48,18 +48,18 @@ to be incorrect, for example by moving the cursor (see \link{fansi}).}
 \description{
 \code{nchar_esc} counts all non control character / sequence characters.
 \code{nzchar_esc} returns TRUE for each input vector element that has non control
-chacater / sequence characters.
+charater / sequence characters.  By default newlines and other C0 control
+characters are not counted.
 }
 \details{
-These functions are faster than the semantically equivalent
-\code{nchar(strip_esc(x, strip='all')). If you wish to control which control characters and sequences are stripped you will need to use}nchar(strip_esc(x, strip=...))`.  In particular, note that newlines are
-treated as control characters and not counted.
+\code{nchar_esc} is just a wrapper around \code{nchar(strip_esc(...))}.  \code{nzchar_esc}
+is implemented in native code and is much faster than the otherwise
+equivalent \code{nzchar(strip_esc(...))}.  You cannot control which control
+characters and sequences count in \code{nzchar_esc}, but you can always resort to
+\code{nzchar(strip_esc(..., strip='...'))} if you need that level of control.
 
 These functions will warn if either malformed or non-CSI escape sequences are
 encountered, as these may be incorrectly interpreted.
-
-Any non-ASCII non-UTF8 string will be converted to UTF8 prior to computing
-character or width counts.
 }
 \examples{
 nchar_esc("\\033[31m123\\a\\r")
@@ -70,6 +70,9 @@ nchar_esc(cn.string, type='width')
 
 ## Remember newlines are not counted by default
 nchar_esc("\\t\\n\\r")
+
+## The 'c0' value for the `strip` argument does
+## not include newlines.
 nchar_esc("\\t\\n\\r", strip="c0")
 nchar_esc("\\t\\n\\r", strip=c("c0", "nl"))
 
