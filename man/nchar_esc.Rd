@@ -6,7 +6,7 @@
 \title{ANSI Control Sequence Aware Version of nchar}
 \usage{
 nchar_esc(x, type = "chars", allowNA = FALSE, keepNA = NA,
-  warn = getOption("fansi.warn"))
+  strip = "all", warn = getOption("fansi.warn"))
 
 nzchar_esc(x, keepNA = NA, warn = getOption("fansi.warn"))
 }
@@ -28,6 +28,22 @@ use \link[base:nchar]{base::nchar}.}
   default for \code{nchar()}, \code{NA}, means to use \code{keepNA = TRUE}
   unless \code{type} is \code{"width"}.  Used to be (implicitly) hard
   coded to \code{FALSE} in \R versions \eqn{\le}{<=} 3.2.0.}
+
+\item{strip}{character, any combination of the following values (see details):
+\itemize{
+\item "nl": strip newlines
+\item "c0": strip all other "C0" control characters (i.e. x01-x1f), except for
+newlines and the actual ESC character
+\item "sgr": strip ANSI CSI SGR sequences
+\item "csi": strip all non-SGR csi sequences
+\item "esc": strip all other escape sequences
+\item "all": all of the above
+}}
+
+\item{warn}{TRUE (default) or FALSE, whether to warn when potentially
+problematic escape sequences are encountered.  These could cause the
+assumptions \code{fansi} makes about how strings are rendered on your display
+to be incorrect, for example by moving the cursor (see \link{fansi}).}
 }
 \description{
 \code{nchar_esc} counts all non control character / sequence characters.
@@ -36,7 +52,7 @@ chacater / sequence characters.
 }
 \details{
 These functions are faster than the semantically equivalent
-\code{nchar(strip_esc(x, what='all')). If you wish to control which control characters and sequences are stripped you will need to use}nchar(strip_esc(x, what=...))`.  In particular, note that newlines are
+\code{nchar(strip_esc(x, strip='all')). If you wish to control which control characters and sequences are stripped you will need to use}nchar(strip_esc(x, strip=...))`.  In particular, note that newlines are
 treated as control characters and not counted.
 
 These functions will warn if either malformed or non-CSI escape sequences are
@@ -52,9 +68,14 @@ cn.string <-  sprintf("\\033[31m\%s\\a\\r", "\\u4E00\\u4E01\\u4E03")
 nchar_esc(cn.string)
 nchar_esc(cn.string, type='width')
 
+## Remember newlines are not counted by default
+nchar_esc("\\t\\n\\r")
+nchar_esc("\\t\\n\\r", strip="c0")
+nchar_esc("\\t\\n\\r", strip=c("c0", "nl"))
+
 ## All of the following are control sequences
 nzchar_esc("\\n\\033[42;31m\\033[123P\\a")
-## If we want to count newlines, this is a slower option
+
 }
 \seealso{
 \link{strip_esc}
