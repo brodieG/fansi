@@ -22,7 +22,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #ifndef _FANSI_H
 #define _FANSI_H
 
-  #define FANSI_WHAT_ALL 31 // 1 + 2 + 4 + 8 + 16
+  #define FANSI_STRIP_ALL 31 // 1 + 2 + 4 + 8 + 16
   /*
    * Buffer used for writing strings
    *

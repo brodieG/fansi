@@ -21,9 +21,9 @@
 #' chacater / sequence characters.
 #'
 #' These functions are faster than the semantically equivalent
-#' `nchar(strip_esc(x, what='all')).  If you wish to control which control
+#' `nchar(strip_esc(x, strip='all')).  If you wish to control which control
 #' characters and sequences are stripped you will need to use
-#' `nchar(strip_esc(x, what=...))`.  In particular, note that newlines are
+#' `nchar(strip_esc(x, strip=...))`.  In particular, note that newlines are
 #' treated as control characters and not counted.
 #'
 #' These functions will warn if either malformed or non-CSI escape sequences are
@@ -33,6 +33,7 @@
 #' character or width counts.
 #'
 #' @inheritParams base::nchar
+#' @inheritParams strip_esc
 #' @export
 #' @param type character string, one of "chars", or "width".  For byte counts
 #'   use [base::nchar].
@@ -44,12 +45,18 @@
 #' nchar_esc(cn.string)
 #' nchar_esc(cn.string, type='width')
 #'
+#' ## Remember newlines are not counted by default
+#' nchar_esc("\t\n\r")
+#' nchar_esc("\t\n\r", strip="c0")
+#' nchar_esc("\t\n\r", strip=c("c0", "nl"))
+#'
 #' ## All of the following are control sequences
 #' nzchar_esc("\n\033[42;31m\033[123P\a")
-#' ## If we want to count newlines, this is a slower option
+#'
 
 nchar_esc <- function(
-  x, type='chars', allowNA=FALSE, keepNA=NA, warn=getOption('fansi.warn')
+  x, type='chars', allowNA=FALSE, keepNA=NA, strip='all',
+  warn=getOption('fansi.warn')
 ) {
   if(!is.character(x)) x <- as.character(x)
   vetr(

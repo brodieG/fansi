@@ -25,13 +25,13 @@
 #' @return logical of same length as `x`; NA values in `x` result in NA values
 #'   in return
 
-has_esc <- function(x, what='sgr', warn=getOption('fansi.warn')) {
-  vetr(warn=LGL.1, what=CHR)
-  if(length(what)) {
-    if(anyNA(what.int <- match(what, VALID.WHAT)))
+has_esc <- function(x, strip='sgr', warn=getOption('fansi.warn')) {
+  vetr(warn=LGL.1, strip=CHR)
+  if(length(strip)) {
+    if(anyNA(strip.int <- match(strip, VALID.STRIP)))
       stop(
-        "Argument `what` may contain only values in `", deparse(VALID.WHAT), "`"
+        "Argument `strip` may contain only values in `", deparse(VALID.STRIP), "`"
       )
-    .Call(FANSI_has_csi, x, what.int, warn)
+    .Call(FANSI_has_csi, x, strip.int, warn)
   } else rep(FALSE, length(x))
 }

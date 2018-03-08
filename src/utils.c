@@ -223,7 +223,7 @@ int FANSI_what_as_int(SEXP what) {
     if(what_val < 0) flip_bits = 1;
     else what_int |= 1 << what_val;
   }
-  if(flip_bits) what_int ^= FANSI_WHAT_ALL;
+  if(flip_bits) what_int ^= FANSI_STRIP_ALL;
   return what_int;
 }
 /*
