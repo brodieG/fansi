@@ -52,9 +52,17 @@ nchar_esc <- function(
   x, type='chars', allowNA=FALSE, keepNA=NA, warn=getOption('fansi.warn')
 ) {
   if(!is.character(x)) x <- as.character(x)
-  vetr(warn=LGL.1, type=CHR.1, allowNA=LGL.1, keepNA=logical(1))
-  term.cap.int <- seq_along(VALID.TERM.CAP)
-  .Call(FANSI_nchar_esc, x, type, allowNA, keepNA, warn, term.cap.int)
+  vetr(
+    warn=LGL.1, type=CHR.1, allowNA=LGL.1, keepNA=logical(1), strip=CHR
+  )
+  if(!all(strip %in% VALID.STRIP))
+    stop(
+      "Argument `strip` may contain only values in `", deparse(VALID.STRIP), "`"
+    )
+  nchar(
+    strip_esc(x, strip=strip, warn=warn), type=type, allowNA=allowNA,
+    keepNA=keepNA
+  )
 }
 #' @export
 #' @rdname nchar_esc
