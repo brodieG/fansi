@@ -149,3 +149,14 @@ unitizer_sect("Emoji combining", {
   substr2_ctl(flags, 1, 2)
   substr2_ctl(flags, 1, 2, type='width')
 })
+unitizer_sect("Corner cases", {
+  utf8.bad <- "hello \xF0 world, goodnight moon"
+  Encoding(utf8.bad) <- 'UTF-8'
+
+  substr_ctl(utf8.bad, 1, 7)
+  identical(substr_ctl(utf8.bad, 1, 7), substr(utf8.bad, 1, 7))
+  substr_ctl(utf8.bad, 5, 10)
+
+  substr2_ctl(utf8.bad, 1, 7, type='width')
+  substr2_ctl(utf8.bad, 5, 10, type='width')
+})

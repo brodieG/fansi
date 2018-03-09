@@ -1,6 +1,6 @@
 ## Copyright (C) 2018  Brodie Gaslam
 ##
-## This file is part of "fansi - ANSI Escape Aware String Functions"
+## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by

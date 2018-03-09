@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2018  Brodie Gaslam
  *
- * This file is part of "fansi - ANSI Escape Aware String Functions"
+ * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,6 +31,8 @@ SEXP FANSI_unhandled_esc(SEXP x) {
     // nocov end
 
   SEXP zero_vec = PROTECT(allocVector(INTSXP, 0));
+  SEXP R_true = PROTECT(ScalarLogical(1));
+  SEXP R_one = PROTECT(ScalarInteger(1));
   SEXP no_warn = PROTECT(ScalarLogical(0));
   SEXP res, res_start;
   res = res_start = R_NilValue;
@@ -50,7 +52,9 @@ SEXP FANSI_unhandled_esc(SEXP x) {
 
       string = string_start = string_dat.string;
 
-      struct FANSI_state state = FANSI_state_init(string, no_warn, zero_vec);
+      struct FANSI_state state = FANSI_state_init_full(
+        string, no_warn, zero_vec, R_true, R_true, R_one
+      );
       int has_errors = 0;
 
       while(state.string[state.pos_byte]) {
@@ -133,6 +137,6 @@ SEXP FANSI_unhandled_esc(SEXP x) {
   SET_VECTOR_ELT(res_fin, 2, res_esc_end);
   SET_VECTOR_ELT(res_fin, 3, res_err_code);
   SET_VECTOR_ELT(res_fin, 4, res_translated);
-  UNPROTECT(9);
+  UNPROTECT(11);
   return res_fin;
 }

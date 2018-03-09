@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2018  Brodie Gaslam
  *
- * This file is part of "fansi - ANSI Escape Aware String Functions"
+ *  This file is part of "fansi - ANSI Control Sequence Aware String Functions"
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,11 +28,13 @@
  * all other cases `R_nchar` shoudl be set to not `allowNA`.
  */
 struct FANSI_state FANSI_state_init_full(
-  const char * string, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA
+  const char * string, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
+  SEXP width
 ) {
   if(
     TYPEOF(warn) != LGLSXP || TYPEOF(term_cap) != INTSXP ||
-    TYPEOF(allowNA) != LGLSXP || TYPEOF(keepNA) != LGLSXP
+    TYPEOF(allowNA) != LGLSXP || TYPEOF(keepNA) != LGLSXP ||
+    TYPEOF(width) != INTSXP
   )
     error("Internal error: state_init with bad types; contact maintainer.");
 
@@ -56,7 +58,8 @@ struct FANSI_state FANSI_state_init_full(
     .warn = warn_int,
     .term_cap = term_cap_int,
     .allowNA = asLogical(allowNA),
-    .keepNA = asLogical(keepNA)
+    .keepNA = asLogical(keepNA),
+    .use_nchar = asInteger(width)  // 0 for chars, 1 for width
   };
 }
 struct FANSI_state FANSI_state_init(
@@ -64,12 +67,14 @@ struct FANSI_state FANSI_state_init(
 ) {
   SEXP R_false = PROTECT(ScalarLogical(0));
   SEXP R_true = PROTECT(ScalarLogical(1));
+  SEXP R_zero = PROTECT(ScalarInteger(0));
   struct FANSI_state res = FANSI_state_init_full(
     string, warn, term_cap,
-    R_false, // Don't allowNA, fail instead
-    R_true
+    R_true,  // allowNA for invalid multibyte
+    R_false,
+    R_zero   // Don't use width by default
   );
-  UNPROTECT(2);
+  UNPROTECT(3);
   return res;
 }
 /*
@@ -587,10 +592,13 @@ static struct FANSI_state read_utf8(struct FANSI_state state) {
   for(int i = 1; i < byte_size; ++i) {
     if(!state.string[state.pos_byte + i]) {
       mb_err = 1;
+      byte_size = i;
       break;
   } }
   if(mb_err) {
-    if(state.allowNA) disp_size = NA_INTEGER;
+    if(state.allowNA) {
+      disp_size = NA_INTEGER;
+    }
     else error("invalid multiyte string, %s", mb_err_str);
   } else {
     // In order to compute char display width, we need to create a charsxp
@@ -600,12 +608,20 @@ static struct FANSI_state read_utf8(struct FANSI_state state) {
     // Note that we should probably not bother with computing this if display
     // mode is not width as it's probably expensive.
 
-    SEXP str_chr =
-      PROTECT(mkCharLenCE(state.string + state.pos_byte, byte_size, CE_UTF8));
-    disp_size = R_nchar(
-      str_chr, Width, state.allowNA, state.keepNA, mb_err_str
-    );
-    UNPROTECT(1);
+    if(state.use_nchar) {
+      SEXP str_chr =
+        PROTECT(mkCharLenCE(state.string + state.pos_byte, byte_size, CE_UTF8));
+      disp_size = R_nchar(
+        str_chr, Width, state.allowNA, state.keepNA, mb_err_str
+      );
+      UNPROTECT(1);
+    } else {
+      // This is not consistent with what we do with the padding where we use
+      // byte_size, but in this case we know we're supposed to be dealing
+      // with one char
+
+      disp_size = 1;
+    }
   }
   // Need to check overflow?  Really only for pos_width?  Maybe that's not
   // even true because you need at least two bytes to encode a double wide
@@ -615,8 +631,10 @@ static struct FANSI_state read_utf8(struct FANSI_state state) {
   ++state.pos_ansi;
   ++state.pos_raw;
   if(disp_size == NA_INTEGER) {
+    state.err_code = 9;
+    state.err_msg = "a malformed UTF-8 sequence";
     state.nchar_err = 1;
-    disp_size = 0;
+    disp_size = byte_size;
   }
   state.last_char_width = disp_size;
   state.pos_width += disp_size;
@@ -672,7 +690,7 @@ struct FANSI_state FANSI_read_next(struct FANSI_state state) {
   if(state.warn > 0 && state.err_code) {
     warning(
       "Encountered %s, %s%s", state.err_msg,
-      "see `?unhandled_esc`; you can use `warn=FALSE` to turn ",
+      "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
       "off these warnings."
     );
     state.warn = -state.warn; // only warn once
@@ -801,6 +819,8 @@ struct FANSI_state_pair FANSI_state_at_position(
     }
     break;
   }
+  state_res.warn = state.warn;  // otherwise can get double warning
+
   // Keep advancing if there are any zero width UTF8 characters, not entirely
   // sure what we're supposed to do with prev_buff here, need to have some test
   // cases to see what happens.  Note we only do this when we end on zero width
@@ -1171,7 +1191,6 @@ SEXP FANSI_state_at_pos_ext(
 
   struct FANSI_state_pair state_pair, state_pair_old;
 
-
   // Allocate result, will be a res_cols x n matrix.  A bit wasteful to record
   // all the color values given we'll rarely use them, but variable width
   // structures are likely to be much slower.  We could encode most color values
@@ -1203,8 +1222,11 @@ SEXP FANSI_state_at_pos_ext(
 
   string = FANSI_string_as_utf8(text_chr).string;
 
-  struct FANSI_state state = FANSI_state_init(string, warn, term_cap);
-  struct FANSI_state state_prev = FANSI_state_init(string, warn, term_cap);
+  SEXP R_true = PROTECT(ScalarLogical(1));
+  struct FANSI_state state =
+    FANSI_state_init_full(string, warn, term_cap, R_true, R_true, type);
+  UNPROTECT(1);
+  struct FANSI_state state_prev = state;
 
   state.string = state_prev.string = string;
   state_pair.cur = state;

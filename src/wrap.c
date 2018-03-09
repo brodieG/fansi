@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2018  Brodie Gaslam
  *
- * This file is part of "fansi - ANSI Escape Aware String Functions"
+ * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,13 +47,17 @@ static struct FANSI_prefix_dat make_pre(SEXP x) {
   SEXP what = PROTECT(ScalarInteger(1));
   SEXP x_strip = PROTECT(FANSI_strip(x, what, warn));
   int x_width = R_nchar(
-    asChar(x_strip), Width, FALSE, FALSE, "when computing display width"
+    asChar(x_strip), Width, TRUE, FALSE, "when computing display width"
   );
   // wish we could get this directly from R_nchar, grr
 
   int x_bytes = strlen(x_utf8);
   int warn_int = getAttrib(x_strip, FANSI_warn_sym) != R_NilValue;
 
+  if(x_width == NA_INTEGER) {
+    x_width = x_bytes;
+    warn_int = 9;
+  }
   UNPROTECT(3);
   return (struct FANSI_prefix_dat) {
     .string=x_utf8, .width=x_width, .bytes=x_bytes, .has_utf8=x_has_utf8,
@@ -281,7 +285,12 @@ static SEXP strwrap(
   SEXP warn, SEXP term_cap,
   int first_only
 ) {
-  struct FANSI_state state = FANSI_state_init(x, warn, term_cap);
+  SEXP R_true = PROTECT(ScalarLogical(1));
+  SEXP R_one = PROTECT(ScalarInteger(1));
+  struct FANSI_state state = FANSI_state_init_full(
+    x, warn, term_cap, R_true, R_true, R_one
+  );
+  UNPROTECT(2);
 
   int width_1 = FANSI_add_int(width, -pre_first.width);
   int width_2 = FANSI_add_int(width, -pre_next.width);
@@ -327,6 +336,7 @@ static SEXP strwrap(
 
     if(!state.string[state.pos_byte]) state_next = state;
     else state_next = FANSI_read_next(state);
+    state_bound.warn = state_next.warn;  // avoid double warning
 
     // detect word boundaries and paragraph starts; we need to track
     // state_bound for the special case where we are in strip space mode

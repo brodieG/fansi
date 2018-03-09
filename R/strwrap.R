@@ -1,6 +1,6 @@
 ## Copyright (C) 2018  Brodie Gaslam
 ##
-## This file is part of "fansi - ANSI Escape Aware String Functions"
+## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
@@ -25,7 +25,8 @@
 #' hard-break words if single words are wider than `width`.
 #'
 #' Unlike [base::strwrap], both these functions will translate any non-ASCII
-#' strings to UTF8 if they are not already encoded in UTF8.
+#' strings to UTF-8 and return them in UTF-8.  Additionally, malformed UTF-8
+#' sequences are not converted to a text representation of bytes.
 #'
 #' When replacing tabs with spaces the tabs are computed relative to the
 #' beginning of the input line, not the most recent wrap point.
@@ -86,18 +87,9 @@
 #' ## SGR sequences)
 #'
 #' NEWS <- readLines(file.path(R.home('doc'), 'NEWS'))
-#' length(NEWS) <- 450 # make sure at least 450 long
-#' bg <- ceiling((seq_along(NEWS)) %% 215 + 1) + 16
-#' fg <- ifelse((((bg - 16) %/% 18) %% 2), 30, 37)
-#' tpl <- "\033[%d;48;5;%dm%s\033[49m"
-#'
-#' nz <- nzchar(NEWS)
-#' NEWS[nz] <- sprintf(tpl, fg[nz], bg[nz], NEWS[nz])
-#' NEWS[!nz] <- '\n\n'
-#' NEWS.C <- paste0(NEWS, collapse="")
-#'
+#' NEWS.C <- fansi_lines(NEWS, step=2)  # color each line
 #' W <- strwrap2_ctl(NEWS.C, 25, pad.end=" ", wrap.always=TRUE)
-#' writeLines(c("", paste(W[1:40], W[200:240], W[410:450]), ""))
+#' writeLines(c("", paste(W[1:20], W[100:120], W[200:220]), ""))
 
 strwrap_ctl <- function(
   x, width = 0.9 * getOption("width"), indent = 0,

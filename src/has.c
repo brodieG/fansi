@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2018  Brodie Gaslam
  *
- * This file is part of "fansi - ANSI Escape Aware String Functions"
+ * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,7 +52,7 @@ SEXP FANSI_has(SEXP x, SEXP what, SEXP warn) {
       warning(
         "Encountered invalid ESC sequence at index [%.0f], %s%s",
         (double) i + 1,
-        "see `?unhandled_esc`; you can use `warn=FALSE` to turn ",
+        "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
         "off these warnings."
       );
     }

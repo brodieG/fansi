@@ -1,3 +1,19 @@
+## Copyright (C) 2018  Brodie Gaslam
+##
+## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
+##
+## This program is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 2 of the License, or
+## (at your option) any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+
 #' Identify Unhandled ANSI Control Sequences
 #'
 #' Will return position and types of unhandled _Control Sequences_ in a
@@ -48,14 +64,14 @@
 #'   "\033[41mhello world\033[m", "foo\033[22>m", "\033[999mbar",
 #'   "baz \033[31#3m", "a\033[31k", "hello\033m world"
 #' )
-#' unhandled_esc(string)
+#' unhandled_ctl(string)
 
-unhandled_esc <- function(x) {
+unhandled_ctl <- function(x) {
   res <- .Call(FANSI_unhandled_esc, x)
   names(res) <- c("index", "start", "stop", "error", "translated")
   errors <- c(
     'exceed-term-cap', 'special', 'unknown', 'non-SGR', 'malformed-CSI',
-    'non-CSI', 'malformed-ESC', 'C0'
+    'non-CSI', 'malformed-ESC', 'C0', 'malformed-UTF8'
   )
   res[['error']] <- errors[res[['error']]]
   res[['esc']] <- substring(

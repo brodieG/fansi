@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2018  Brodie Gaslam
  *
- * This file is part of "fansi - ANSI Escape Aware String Functions"
+ * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -103,8 +103,13 @@ SEXP FANSI_tabs_as_spaces(
 
       FANSI_size_buff(buff, new_buff_size);
 
-      struct FANSI_state state =
-        FANSI_state_init(buff_utf8.string, warn, term_cap);
+      SEXP R_true = PROTECT(ScalarLogical(1));
+      SEXP R_one = PROTECT(ScalarInteger(1));
+      struct FANSI_state state = FANSI_state_init_full(
+        buff_utf8.string, warn, term_cap, R_true, R_true, R_one
+      );
+      UNPROTECT(2);
+
       char cur_chr;
 
       char * buff_track, * buff_start;
