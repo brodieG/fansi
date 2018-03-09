@@ -48,9 +48,9 @@
 #'   "\033[41mhello world\033[m", "foo\033[22>m", "\033[999mbar",
 #'   "baz \033[31#3m", "a\033[31k", "hello\033m world"
 #' )
-#' unhandled_esc(string)
+#' unhandled_ctl(string)
 
-unhandled_esc <- function(x) {
+unhandled_ctl <- function(x) {
   res <- .Call(FANSI_unhandled_esc, x)
   names(res) <- c("index", "start", "stop", "error", "translated")
   errors <- c(

@@ -682,7 +682,7 @@ struct FANSI_state FANSI_read_next(struct FANSI_state state) {
   if(state.warn > 0 && state.err_code) {
     warning(
       "Encountered %s, %s%s", state.err_msg,
-      "see `?unhandled_esc`; you can use `warn=FALSE` to turn ",
+      "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
       "off these warnings."
     );
     state.warn = -state.warn; // only warn once

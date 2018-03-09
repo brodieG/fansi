@@ -52,7 +52,7 @@ SEXP FANSI_has(SEXP x, SEXP what, SEXP warn) {
       warning(
         "Encountered invalid ESC sequence at index [%.0f], %s%s",
         (double) i + 1,
-        "see `?unhandled_esc`; you can use `warn=FALSE` to turn ",
+        "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
         "off these warnings."
       );
     }

@@ -14,16 +14,22 @@ unitizer_sect("unhandled", {
     "\033[41mhello world\033[m", "foo\033[22>m", "\033[999mbar",
     "baz \033[31#3m", "a\033[31k", "hello\033m world"
   )
-  unhandled_esc(string.0)
+  unhandled_ctl(string.0)
   # some more interesting cases
   string.1 <- c(
     "foo\033[22>mhello\033[9999m", "a\033[31k", "hello\033m world \033"
   )
-  unhandled_esc(string.1)
+  unhandled_ctl(string.1)
 
   # A malformed ESCape
 
-  unhandled_esc("hello\033\033\033[45p wor\ald")
+  unhandled_ctl("hello\033\033\033[45p wor\ald")
+
+  # a bad utf8 string and other bad stuff
+
+  utf8.bad <- "hello\033\033\033[45p \xF0how wor\ald"
+  unhandled_ctl(utf8.bad)
+
 })
 unitizer_sect("strtrim", {
   strtrim_ctl(" hello world", 7)

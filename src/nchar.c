@@ -55,7 +55,7 @@ SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap) {
             "Encountered %s ESC sequence at index [%.0f], %s%s",
             !pos.valid ? "invalid" : "possibly incorrectly handled",
             (double) i + 1,
-            "see `?unhandled_esc`; you can use `warn=FALSE` to turn ",
+            "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
             "off these warnings."
           );
         }

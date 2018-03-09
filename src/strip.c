@@ -177,7 +177,7 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
           "Encountered %s index [%.0f], %s%s",
           "invalid or possibly incorreclty handled ESC sequence at ",
           (double) invalid_idx,
-          "see `?unhandled_esc`; you can use `warn=FALSE` to turn ",
+          "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
           "off these warnings."
         );
         break;
