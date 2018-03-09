@@ -123,12 +123,21 @@ Internally, \code{fansi} computes the width of every UTF-8 character sequence
 outside of the ASCII range using the native \code{R_nchar} function.  This will
 cause such characters to be processed slower than ASCII characters.
 Additionally, \code{fansi} character width computations can differ from R width
-computations because \code{fansi} always computes width for each character, and it
-is theoretically possible for \code{R_nchar} to return a width for a
-character sequence that forms a single grapheme that is different than the
-sum of the character widths.  In informal testing we have found this to be
-rare because in the most common multi-character graphemes the combining
-characters are computed as zero width.
+computations. \code{fansi} always computes width for each character
+individually, which assumes that the sum of the widths of each character is
+equal to the sum of the width of a sequence.  However, it is theoretically
+possible for character sequence that forms a single grapheme to break that
+assumption. In informal testing we have found this to be rare because in the
+most common multi-character graphemes the trailing characters are computed
+as zero width.
+
+As of R 3.4.0 \code{substr} appears to use UTF-8 byte widths as indicated by the
+leading byte, irrespective of whether the subsequent bytes lead to a valid
+sequence.  Additionally, UTF-8 byte sequences as long as 5 or 6 bytes are
+allowed, which is likely a hold over from older Unicode versions.  \code{fansi}
+mimics this behavior, although if new releases of R fix this there could be
+divergences.  In general, you should assume that \code{fansi} may
+not replicate base R exactly when there are illegal UTF-8 sequences present.
 
 Ultimately we would like to adopt a proper UTF-8 library like
 \itemize{

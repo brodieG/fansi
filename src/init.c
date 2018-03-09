@@ -33,7 +33,6 @@ R_CallMethodDef callMethods[] = {
   {"esc_to_html", (DL_FUNC) &FANSI_esc_to_html, 3},
   {"unhandled_esc", (DL_FUNC) &FANSI_unhandled_esc, 1},
   {"unique_chr", (DL_FUNC) &FANSI_unique_chr, 1},
-  {"nchar_esc", (DL_FUNC) &FANSI_nchar, 6},
   {"nzchar_esc", (DL_FUNC) &FANSI_nzchar, 4},
   {NULL, NULL, 0}
 };

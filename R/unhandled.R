@@ -55,7 +55,7 @@ unhandled_ctl <- function(x) {
   names(res) <- c("index", "start", "stop", "error", "translated")
   errors <- c(
     'exceed-term-cap', 'special', 'unknown', 'non-SGR', 'malformed-CSI',
-    'non-CSI', 'malformed-ESC', 'C0'
+    'non-CSI', 'malformed-ESC', 'C0', 'malformed-UTF8'
   )
   res[['error']] <- errors[res[['error']]]
   res[['esc']] <- substring(

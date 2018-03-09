@@ -34,7 +34,7 @@ struct FANSI_state FANSI_state_init_full(
   if(
     TYPEOF(warn) != LGLSXP || TYPEOF(term_cap) != INTSXP ||
     TYPEOF(allowNA) != LGLSXP || TYPEOF(keepNA) != LGLSXP ||
-    TYPEOF(width) != 1
+    TYPEOF(width) != INTSXP
   )
     error("Internal error: state_init with bad types; contact maintainer.");
 
@@ -71,7 +71,7 @@ struct FANSI_state FANSI_state_init(
   struct FANSI_state res = FANSI_state_init_full(
     string, warn, term_cap,
     R_true,  // allowNA for invalid multibyte
-    R_true,
+    R_false,
     R_zero   // Don't use width by default
   );
   UNPROTECT(3);
@@ -592,10 +592,13 @@ static struct FANSI_state read_utf8(struct FANSI_state state) {
   for(int i = 1; i < byte_size; ++i) {
     if(!state.string[state.pos_byte + i]) {
       mb_err = 1;
+      byte_size = i;
       break;
   } }
   if(mb_err) {
-    if(state.allowNA) disp_size = NA_INTEGER;
+    if(state.allowNA) {
+      disp_size = NA_INTEGER;
+    }
     else error("invalid multiyte string, %s", mb_err_str);
   } else {
     // In order to compute char display width, we need to create a charsxp
@@ -613,7 +616,11 @@ static struct FANSI_state read_utf8(struct FANSI_state state) {
       );
       UNPROTECT(1);
     } else {
-      disp_size = byte_size;
+      // This is not consistent with what we do with the padding where we use
+      // byte_size, but in this case we know we're supposed to be dealing
+      // with one char
+
+      disp_size = 1;
     }
   }
   // Need to check overflow?  Really only for pos_width?  Maybe that's not
@@ -1180,7 +1187,6 @@ SEXP FANSI_state_at_pos_ext(
   } else PROTECT(text);
 
   struct FANSI_state_pair state_pair, state_pair_old;
-
 
   // Allocate result, will be a res_cols x n matrix.  A bit wasteful to record
   // all the color values given we'll rarely use them, but variable width

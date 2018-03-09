@@ -138,8 +138,8 @@
 #' sequence.  Additionally, UTF-8 byte sequences as long as 5 or 6 bytes are
 #' allowed, which is likely a hold over from older Unicode versions.  `fansi`
 #' mimics this behavior, although if new releases of R fix this there could be
-#' divergences.  In general, you should assume that `fansi` may
-#' not replicate base R exactly when there are illegal UTF-8 sequences present.
+#' divergences.  In general, you should assume that `fansi` may not replicate
+#' base R exactly when there are illegal UTF-8 sequences present.
 #'
 #' Ultimately we would like to adopt a proper UTF-8 library like
 #'
