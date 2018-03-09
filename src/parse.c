@@ -632,8 +632,9 @@ static struct FANSI_state read_utf8(struct FANSI_state state) {
   ++state.pos_raw;
   if(disp_size == NA_INTEGER) {
     state.err_code = 9;
+    state.err_msg = "a malformed UTF-8 sequence";
     state.nchar_err = 1;
-    disp_size = 0;
+    disp_size = byte_size;
   }
   state.last_char_width = disp_size;
   state.pos_width += disp_size;

@@ -27,8 +27,12 @@ unitizer_sect("unhandled", {
 
   # a bad utf8 string and other bad stuff
 
-  utf8.bad <- "hello\033\033\033[45p \xF0how wor\ald"
-  unhandled_ctl(utf8.bad)
+  utf8.bad.0 <- "hello\033\033\033[45p \xF0how wor\ald"
+  Encoding(utf8.bad.0) <- "UTF-8"
+  unhandled_ctl(utf8.bad.0)
+  utf8.bad.1 <- "hello \xF0ho"
+  Encoding(utf8.bad.1) <- "UTF-8"
+  unhandled_ctl(utf8.bad.1)
 
 })
 unitizer_sect("strtrim", {
