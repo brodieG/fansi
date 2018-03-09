@@ -819,6 +819,8 @@ struct FANSI_state_pair FANSI_state_at_position(
     }
     break;
   }
+  state_res.warn = state.warn;  // otherwise can get double warning
+
   // Keep advancing if there are any zero width UTF8 characters, not entirely
   // sure what we're supposed to do with prev_buff here, need to have some test
   // cases to see what happens.  Note we only do this when we end on zero width

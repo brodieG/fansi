@@ -336,6 +336,7 @@ static SEXP strwrap(
 
     if(!state.string[state.pos_byte]) state_next = state;
     else state_next = FANSI_read_next(state);
+    state_bound.warn = state_next.warn;  // avoid double warning
 
     // detect word boundaries and paragraph starts; we need to track
     // state_bound for the special case where we are in strip space mode
