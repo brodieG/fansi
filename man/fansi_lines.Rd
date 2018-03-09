@@ -16,6 +16,7 @@ character vector with each element colored
 }
 \description{
 Color each element in input with one of the 256 color ANSI CSI SGR codes.
+This is intended for testing and demo purposes.
 }
 \examples{
 NEWS <- readLines(file.path(R.home('doc'), 'NEWS'))

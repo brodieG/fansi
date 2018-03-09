@@ -130,18 +130,9 @@ writeLines(strwrap2_ctl("hello how are you today", 10, pad.end="."))
 ## SGR sequences)
 
 NEWS <- readLines(file.path(R.home('doc'), 'NEWS'))
-length(NEWS) <- 450 # make sure at least 450 long
-bg <- ceiling((seq_along(NEWS)) \%\% 215 + 1) + 16
-fg <- ifelse((((bg - 16) \%/\% 18) \%\% 2), 30, 37)
-tpl <- "\\033[\%d;48;5;\%dm\%s\\033[49m"
-
-nz <- nzchar(NEWS)
-NEWS[nz] <- sprintf(tpl, fg[nz], bg[nz], NEWS[nz])
-NEWS[!nz] <- '\\n\\n'
-NEWS.C <- paste0(NEWS, collapse="")
-
+NEWS.C <- fansi_lines(NEWS, step=2)  # color each line
 W <- strwrap2_ctl(NEWS.C, 25, pad.end=" ", wrap.always=TRUE)
-writeLines(c("", paste(W[1:40], W[200:240], W[410:450]), ""))
+writeLines(c("", paste(W[1:20], W[100:120], W[200:220]), ""))
 }
 \seealso{
 \link{fansi} for details on how \emph{Control Sequences} are

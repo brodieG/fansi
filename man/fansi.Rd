@@ -4,7 +4,7 @@
 \name{fansi}
 \alias{fansi}
 \alias{fansi-package}
-\title{ANSI Control Sequence Aware String Functions}
+\title{Details About Manipulation of Strings Containing Control Sequences}
 \description{
 Counterparts to R string manipulation functions that account for
 the effects of ANSI text formatting control sequences.
