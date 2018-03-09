@@ -256,6 +256,7 @@ unitizer_sect("corner cases", {
   strwrap2_ctl("lovelyday.", 10, wrap.always=TRUE)
 
   utf8.bad <- "hello \xF0 world, goodnight moon"
+  Encoding(utf8.bad) <- "UTF-8"
   strwrap_ctl(utf8.bad, 10)
 })
 
