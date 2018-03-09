@@ -136,7 +136,7 @@
 #' As of R 3.4.0 `substr` appears to use UTF-8 byte widths as indicated by the
 #' leading byte, irrespective of whether the subsequent bytes lead to a valid
 #' sequence.  Additionally, UTF-8 byte sequences as long as 5 or 6 bytes are
-#' allowed, which is likely a hold over from older Unicode versions.  `fansi`
+#' allowed, which is likely a holdover from older Unicode versions.  `fansi`
 #' mimics this behavior, although if new releases of R fix this there could be
 #' divergences.  In general, you should assume that `fansi` may not replicate
 #' base R exactly when there are illegal UTF-8 sequences present.

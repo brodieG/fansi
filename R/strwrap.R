@@ -25,7 +25,8 @@
 #' hard-break words if single words are wider than `width`.
 #'
 #' Unlike [base::strwrap], both these functions will translate any non-ASCII
-#' strings to UTF8 if they are not already encoded in UTF8.
+#' strings to UTF-8 and return them in UTF-8.  Additionally, malformed UTF-8
+#' sequences are not converted to a text representation of bytes.
 #'
 #' When replacing tabs with spaces the tabs are computed relative to the
 #' beginning of the input line, not the most recent wrap point.

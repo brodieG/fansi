@@ -117,19 +117,31 @@ esc_color_code_to_html <- function(x) {
   vetr(matrix(integer(), 5))
   .Call(FANSI_color_to_html, as.integer(x))
 }
-## For testing colored strings
+#' Colorize Character Vectors
+#'
+#' Color each element in input with one of the 256 color ANSI CSI SGR codes.
+#' This is intended for testing and demo purposes.
+#'
+#' @export
+#' @param txt character to color
+#' @param integer(1L) how quickly to step through the color palette
+#' @return character vector with each element colored
+#' @examples
+#' NEWS <- readLines(file.path(R.home('doc'), 'NEWS'))
+#' writeLines(fansi_lines(NEWS[1:20]))
+#' writeLines(fansi_lines(NEWS[1:20], 8))
 
-colorize <- function(txt) {
+fansi_lines <- function(txt, step=1) {
+  vetr(txt=character(), INT.1.POS.STR)
   txt.c <- txt
-  bg <- ceiling((seq_along(txt)) %% 215 + 1) + 16
+  bg <- ceiling((seq_along(txt) * step) %% 215 + 1) + 16
   fg <- ifelse((((bg - 16) %/% 18) %% 2), 30, 37)
-  tpl <- "\033[%d;48;5;%dm%s\033[49m"
+  tpl <- "\033[%d;48;5;%dm%s\033[39;49m"
 
   ## Apply colors to strings and collapse
 
   nz <- nzchar(txt)
   txt.c[nz] <- sprintf(tpl, fg[nz], bg[nz], txt[nz])
-  # res <- paste0(txt.c, collapse="\n")
   txt.c
 }
 
