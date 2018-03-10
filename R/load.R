@@ -26,6 +26,7 @@
   # function runtime
 
   .default.opts <- list(
+    fansi.tabs.as.spaces=FALSE,
     fansi.tab.stops=8L,
     fansi.warn=TRUE,
     fansi.term.cap=c(

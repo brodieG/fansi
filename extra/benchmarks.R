@@ -4,9 +4,9 @@ source('tests/unitizer/_pre/lorem.R')
 
 utf8 <- strwrap2_ctl(c(lorem.ru, lorem.cn), 71, wrap.always=TRUE)
 utf8.c <- fansi_lines(utf8)
-writeLines(strwrap2_ctl(utf8.c, 24, wrap.always=TRUE, pad.end=" "))
+writeLines(strwrap2_ctl(utf8.c, 25, wrap.always=TRUE, pad.end=" "))
 
-string <-   "\033[37;48;5;32m國官方認定的民族現有56個\033[39;49m"
+string <- "\033[37;48;5;32m國官方認定的民族現有56個\033[39;49m"
 strwrap2_ctl(string, 24, wrap.always=TRUE, pad.end=" ")
 
 strwrap2_ctl(utf8.c[15], 24, wrap.always=TRUE, pad.end=" ")
