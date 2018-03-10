@@ -47,6 +47,6 @@
 # Need global declaration so that `vetr` doesn't issue R CMD build warnings due
 # to the use of `.`
 
-if(getRversion() >= "2.15.1")  utils::globalVariables(c("a", "othervar"))
+if(getRversion() >= "2.15.1")  utils::globalVariables(".")
 
 # nocov end
