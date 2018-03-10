@@ -89,7 +89,7 @@ substr2_ctl <- function(
   warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap')
 ) {
-  x <- as.character(x)
+  x <- enc2utf8(as.character(x))
   vetr(
     character(), start=numeric() && !anyNA(.), stop=NUM,
     type=CHR.1 && . %in% c('chars', 'width'),
