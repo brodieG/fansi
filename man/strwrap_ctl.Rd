@@ -13,7 +13,7 @@ strwrap2_ctl(x, width = 0.9 * getOption("width"), indent = 0, exdent = 0,
   prefix = "", simplify = TRUE, initial = prefix, wrap.always = FALSE,
   pad.end = "", strip.spaces = !tabs.as.spaces,
   tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
-  tab.stops = ("fansi.tab.stops"), warn = getOption("fansi.warn"),
+  tab.stops = getOption("fansi.tab.stops"), warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"))
 }
 \arguments{

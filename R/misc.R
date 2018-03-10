@@ -124,7 +124,7 @@ esc_color_code_to_html <- function(x) {
 #'
 #' @export
 #' @param txt character to color
-#' @param integer(1L) how quickly to step through the color palette
+#' @param step integer(1L) how quickly to step through the color palette
 #' @return character vector with each element colored
 #' @examples
 #' NEWS <- readLines(file.path(R.home('doc'), 'NEWS'))

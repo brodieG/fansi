@@ -9,7 +9,7 @@ fansi_lines(txt, step = 1)
 \arguments{
 \item{txt}{character to color}
 
-\item{integer(1L)}{how quickly to step through the color palette}
+\item{step}{integer(1L) how quickly to step through the color palette}
 }
 \value{
 character vector with each element colored
