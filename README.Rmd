@@ -23,9 +23,10 @@ ANSI text formatting control sequences.
 
 Many terminals will recognize special sequences of characters in strings and
 change display behavior as a result.  For example, on my terminal the sequence
-`"\033&#91;42m"` turns text background green:
+`"\033[42m"` turns text background green:
 
-![hello world](https://raw.githubusercontent.com/brodieG/fansi/rc/hello.png)
+![hello
+world](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/hello.png)
 
 The sequence itself is not shown, but the text display changes.
 
@@ -43,12 +44,12 @@ for details, particularly if you are getting unexpected results.
 ANSI control characters and sequences (Control Sequences hereafter) break the
 relationship between byte/character position in a string and display position.
 
-For example, in `"Hello \033&#91;42mWorld, Good\033&#91;m Night Moon!"` the `,`
+For example, in `"Hello \033[42mWorld, Good\033[m Night Moon!"` the `,`
 after "World" is thirteenth displayed character, but the eighteenth in
 memory.  If we try to split the string after the comma with `substr` things go
 wrong in several ways:
 
-```{echo=FALSE, eval=FALSE}
+```{r echo=FALSE, eval=FALSE}
 ## code for reference
 hello <- "Hello \033[42mWorld, Good\033[m Night Moon!"
 writeLines(substr(hello, 1, 13))
@@ -88,7 +89,7 @@ faster.
 ## HTML Translation
 
 You can translate ANSI CSI SGR formatted strings into their HTML counterparts:
-```{echo=FALSE, eval=FALSE}
+```{r echo=FALSE, eval=FALSE}
 N <- readLines(file.path(R.home('doc'), 'NEWS'))
 N <- fansi_lines(N, step=2)                             # color each line
 N <- strwrap2_ctl(N, 25, pad.end=" ", wrap.always=TRUE) # wrap to 25 chrs
@@ -100,13 +101,13 @@ f <- tempfile()
 writeLines(c("<html><pre>", sgr_to_html(N), "</pre></html>"), f)
 browseURL(f)
 ```
-![translate to html](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/substr.png)
+![translate to html](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/sgr_to_html.png)
 
 ## Installation
 
-This package is currently only available on github:
+This package is currently only available on Github.  You can install it with `substr2_ctl(utf8.bad, 1, 7, type = "width")` or:
 
-```
+```{r eval=FALSE}
 fansi.dl <- tempfile()
 fansi.uz <- tempfile()
 download.file('https://github.com/brodieG/fansi/archive/master.zip', fansi.dl)
@@ -125,5 +126,47 @@ unlink(c(fansi.dl, fansi.uz))
   for a gentler introduction.
 
 ## Acknowledgments
+
+* R Core for developing and maintaining such a wonderful language.
+* CRAN maintainers, for patiently shepherding packages onto CRAN and maintaining
+  the repository, and Uwe Ligges in particular for maintaining
+  [Winbuilder](http://win-builder.r-project.org/).
+* [Gábor Csárdi](https://github.com/gaborcsardi) for getting me started on the
+  journey through the crazy world of ANSI control sequences.
+* [Jim Hester](https://github.com/jimhester) because
+  [covr](https://cran.r-project.org/package=covr) rocks.
+* [Dirk Eddelbuettel](https://github.com/eddelbuettel) and [Carl
+  Boettiger](https://github.com/cboettig) for the
+  [rocker](https://github.com/rocker-org/rocker) project, and [Gábor
+  Csárdi](https://github.com/gaborcsardi) and the
+  [R-consortium](https://www.r-consortium.org/) for
+  [Rhub](https://github.com/r-hub), without which testing bugs on R-devel and
+  other platforms would be a nightmare.
+* [Tomas Kalibera](https://github.com/kalibera) for
+  [rchk](https://github.com/kalibera/rchk) and rcnst to help detect errors in
+  compiled code.
+* [Winston Chang](https://github.com/wch) for the
+  [r-debug](https://hub.docker.com/r/wch1/r-debug/) docker container,
+  especially now that valgrind is no longer working on my OSX system.
+* Hadley Wickham for [devtools](https://cran.r-project.org/package=devtools) and
+  [roxygen2](https://cran.r-project.org/package=roxygen2).
+* [Yihui Xie](https://github.com/yihui) for
+  [knitr](https://cran.r-project.org/package=knitr) and  [J.J.
+  Allaire](https://github.com/jjallaire) etal for
+  [rmarkdown](https://cran.r-project.org/package=rmarkdown), and by extension
+  John MacFarlane for [pandoc](http://pandoc.org/).
+* Olaf Mersmann for
+  [microbenchmark](https://cran.r-project.org/package=microbenchmark), because
+  microsecond matter.
+* All open source developers out there that make their work freely available
+  for others to use.
+* [Github](https://github.com/), [Travis-CI](https://travis-ci.org/),
+  [Codecov](https://codecov.io/), [Vagrant](https://www.vagrantup.com/),
+  [Docker](https://www.docker.com/), [Ubuntu](https://www.ubuntu.com/),
+  [Brew](https://brew.sh/) for providing infrastructure that greatly simplifies
+  open source development.
+* [Free Software Foundation](http://fsf.org/) for developing the GPL license and
+  promotion of the free software movement.
+
 
 
