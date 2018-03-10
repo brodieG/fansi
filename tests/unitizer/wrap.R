@@ -154,6 +154,10 @@ unitizer_sect("wrap with wide UTF8 and ESC", {
   wrap.mix <- strwrap_ctl(lorem.mix, 25)
   wrap.mix
   identical(strwrap(strip_ctl(lorem.mix, "sgr"), 25), strip_ctl(wrap.mix, "sgr"))
+
+  string <- "\033[37;48;5;32m國官方認定的民族現有56個\033[39;49m"
+  Encoding(string) <- "UTF-8"
+  strwrap2_ctl(string, 24, wrap.always=TRUE, pad.end=" ")
 })
 unitizer_sect("wrap2", {
   # Examples
