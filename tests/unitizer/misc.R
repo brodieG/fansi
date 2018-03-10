@@ -77,4 +77,15 @@ unitizer_sect("utf8clen", {
   )
   Encoding(chrs) <- "UTF-8"
   nchar(chrs, allowNA=TRUE)
+  nchar_ctl(chrs, allowNA=TRUE)
+
+  # Of the 10xxxxxx variety
+
+  utf8.bad.2 <- "\xBFaaaaaa"
+  Encoding(utf8.bad.2) <- "UTF-8"
+  nchar(utf8.bad.2, allowNA=TRUE)
+  nchar_ctl(utf8.bad.2, allowNA=TRUE)
+
+  substr(utf8.bad.2, 1, 1)
+  substr_ctl(utf8.bad.2, 1, 1)
 })
