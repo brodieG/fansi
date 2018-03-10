@@ -363,14 +363,20 @@ static SEXP strwrap(
       // newlines kept in strtrim mode
       (state.string[state.pos_byte] == '\n' && !first_only) ||
       (
-        state.pos_width >= width_tar &&
-        state_next.pos_width > state.pos_width &&  // keep going w/ zero width
+        (
+          state.pos_width > width_tar ||
+          (
+            // If exactly at width we need to keep going if the next char is
+            // zero width, otherwise we shoudl write the string
+            state.pos_width == width_tar &&
+            state_next.pos_width > state.pos_width
+        ) ) &&
         (has_boundary || wrap_always)
       )
     ) {
       /*
       Rprintf(
-        "so: %d width: %d tar: %d has_b: %d wa: %d fo: %d\n",
+        "--so: %d width: %d tar: %d has_b: %d wa: %d fo: %d\n",
         !state.string[state.pos_byte], state.pos_width, width_tar,
         has_boundary, wrap_always, first_only
       );
