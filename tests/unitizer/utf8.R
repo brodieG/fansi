@@ -157,17 +157,28 @@ unitizer_sect("Corner cases", {
   identical(substr_ctl(utf8.bad, 1, 7), substr(utf8.bad, 1, 7))
   substr_ctl(utf8.bad, 5, 10)
 
-  # using `fansi::` in an attempt to quash a bizzarre instability in how the
-  # warning message is displayed, in some cases it shows up with the call, and
-  # in some cases without, and can't figure out why that's happening.  Seems to
-  # be triggered by re-installing package. now we're stuff with the try business
+  # Need to use `tryCatch` because the warnings vascillate for no rhyme or
+  # reason between showing the call and not.  Seems to be triggered by
+  # re-installing package. now we're stuff with the try business to circumvent
+  # that variability.
 
   tryCatch(
-    fansi::substr2_ctl(utf8.bad, 1, 7, type='width'),
-    warning=function(e) TRUE
+    substr2_ctl(utf8.bad, 1, 7, type='width'),
+    warning=function(e) conditionMessage(e)
   )
+  substr2_ctl(utf8.bad, 1, 7, type='width', warn=FALSE)
   tryCatch(
-    fansi::substr2_ctl(utf8.bad, 5, 10, type='width'),
-    warning=function(e) TRUE
+    substr2_ctl(utf8.bad, 5, 10, type='width'),
+    warning=function(e) conditionMessage(e)
   )
+  substr2_ctl(utf8.bad, 5, 10, type='width', warn=FALSE)
+  # ends early
+
+  chrs.2 <- "hello\xee"
+  Encoding(chrs.2) <- "UTF-8"
+  tryCatch(
+    substr2_ctl(chrs.2, 1, 10, type='width'),
+    warning=function(e) conditionMessage(e)
+  )
+  substr2_ctl(chrs.2, 1, 10, type='width', warn=FALSE)
 })
