@@ -333,7 +333,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_state_size(struct FANSI_state state);
   int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len);
   struct FANSI_state FANSI_read_next(struct FANSI_state state);
-  int FANSI_add_int(int x, int y);
+
+  int FANSI_add_int(int x, int y, const char * file, int line);
+  SEXP FANSI_add_int_ext(SEXP x, SEXP y);
+
   int FANSI_has_utf8(const char * x);
   void FANSI_interrupt(int i);
 
@@ -341,4 +344,5 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   SEXP FANSI_warn_sym;
 
+  #define FANSI_ADD_INT(x, y) FANSI_add_int((x), (y), __FILE__, __LINE__)
 #endif

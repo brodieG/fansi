@@ -73,7 +73,7 @@ static struct FANSI_prefix_dat pad_pre(
   int pre_len = dat.bytes;
   const char * pre_chr = dat.string;
 
-  int alloc_size = FANSI_add_int(FANSI_add_int(pre_len, spaces), 1);
+  int alloc_size = FANSI_ADD_INT(FANSI_ADD_INT(pre_len, spaces), 1);
   char * res_start = "";
   if(alloc_size > 1) {
     // Can't use buff here because we don't write this string out
@@ -86,9 +86,9 @@ static struct FANSI_prefix_dat pad_pre(
     *res = '\0';
   }
   dat.string = (const char *) res_start;
-  dat.bytes = FANSI_add_int(dat.bytes, spaces);
-  dat.width = FANSI_add_int(dat.width, spaces);
-  dat.indent = FANSI_add_int(dat.indent, spaces);
+  dat.bytes = FANSI_ADD_INT(dat.bytes, spaces);
+  dat.width = FANSI_ADD_INT(dat.width, spaces);
+  dat.indent = FANSI_ADD_INT(dat.indent, spaces);
 
   return dat;
 }
@@ -99,9 +99,9 @@ static struct FANSI_prefix_dat pad_pre(
  */
 
 static struct FANSI_prefix_dat drop_pre_indent(struct FANSI_prefix_dat dat) {
-  dat.bytes = FANSI_add_int(dat.bytes, -dat.indent);
-  dat.width = FANSI_add_int(dat.width, -dat.indent);
-  dat.indent = FANSI_add_int(dat.indent, -dat.indent);
+  dat.bytes = FANSI_ADD_INT(dat.bytes, -dat.indent);
+  dat.width = FANSI_ADD_INT(dat.width, -dat.indent);
+  dat.indent = FANSI_ADD_INT(dat.indent, -dat.indent);
   if(dat.indent < 0)
     error(
       "Internal Error: cannot drop indent when there is none; contact ",
@@ -140,6 +140,8 @@ SEXP FANSI_writeline(
     // nocov start
     error("Internal Error: boundary leading position; contact maintainer.");
     // nocov end
+  if(tar_width < 0)
+    error("Internal Errorr: tar_width must be positive."); // nocov start
 
   size_t target_size = state_bound.pos_byte - state_start.pos_byte;
   size_t target_width = state_bound.pos_width - state_start.pos_width;
@@ -157,18 +159,18 @@ SEXP FANSI_writeline(
   }
   // If we are going to pad the end, adjust sizes and widths
 
-  if(target_width <= tar_width && *pad_chr) {
+  if(target_width <= (size_t) tar_width && *pad_chr) {
     target_pad = tar_width - target_width;
     if(
       (tar_width > INT_MAX - target_pad) ||
-      (target_size > INT_MAX - target_pad)
+      (target_size > (size_t) (INT_MAX - target_pad))
     ) {
       error("Attempting to create string longer than INT_MAX while padding.");
     }
     target_width = tar_width + target_pad;
     target_size = target_size + target_pad;
   }
-  if(target_size > INT_MAX - pre_dat.bytes) {
+  if(target_size > (size_t)(INT_MAX - pre_dat.bytes)) {
     error(
       "%%",
       "Attempting to create string longer than INT_MAX when adding ",
@@ -184,7 +186,7 @@ SEXP FANSI_writeline(
     state_start_size = FANSI_state_size(state_start);
     start_close += state_start_size;  // this can't possibly overflow
   }
-  if(target_size > INT_MAX - start_close) {
+  if(target_size > (size_t)(INT_MAX - start_close)) {
     error(
       "%s%s",
       "Attempting to create string longer than INT_MAX while adding leading ",
@@ -292,8 +294,8 @@ static SEXP strwrap(
   );
   UNPROTECT(2);
 
-  int width_1 = FANSI_add_int(width, -pre_first.width);
-  int width_2 = FANSI_add_int(width, -pre_next.width);
+  int width_1 = FANSI_ADD_INT(width, -pre_first.width);
+  int width_2 = FANSI_ADD_INT(width, -pre_next.width);
 
   int width_tar = width_1;
 

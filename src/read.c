@@ -492,7 +492,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
     } else {
       // nocov start
       error("Internal Error: unknown ESC parse error; contact maintainer.");
-      // nocov 3nd
+      // nocov end
     }
   } else {
     // Not 100% sure this is right...
@@ -523,8 +523,14 @@ static struct FANSI_state read_utf8(struct FANSI_state state) {
   if(mb_err) {
     if(state.allowNA) {
       disp_size = NA_INTEGER;
+    } else {
+      // nocov start
+      // shouldn't actually be possible to reach this point since in all use
+      // cases we chose to allowNA, except for `nchar_ctl`, which internally
+      // uses `nchar` so would never get here anyway
+      error("invalid multiyte string, %s", mb_err_str);
+      // nocov end
     }
-    else error("invalid multiyte string, %s", mb_err_str);
   } else {
     // In order to compute char display width, we need to create a charsxp
     // with the sequence in question.  Hopefully not too much overhead since
