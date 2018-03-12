@@ -13,6 +13,13 @@ unitizer_sect("digits", {
     fansi:::digits_in_int(ints)
   )
 })
+unitizer_sect("add_int", {
+  fansi:::add_int(1, 1)
+  fansi:::add_int(2^31 - 1, 1)
+  fansi:::add_int(2^31 - 1, 0)
+  fansi:::add_int(-2^31 + 1, 0)
+  fansi:::add_int(-2^31 + 1, -1)
+})
 unitizer_sect("unhandled", {
   # example
   string.0 <- c(

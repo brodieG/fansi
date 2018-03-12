@@ -10,6 +10,7 @@ unitizer_sect("Strip ansi", {
   string[c(2,4,6)] <- paste0(red, string[c(2,4,6)], end)
 
   strip_ctl(string)
+  strip_sgr(string)
 })
 unitizer_sect("Corner cases", {
   strip_ctl("hello\033")
@@ -92,6 +93,8 @@ unitizer_sect("Selective stripping", {
   strip_ctl(string.1, "all")
   strip_ctl(string.1, c("c0", "nl"))
   strip_ctl(string.1, c("all", "sgr"))
+
+  strip_sgr(string.1)
 
   # longer vec
 
