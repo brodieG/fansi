@@ -15,7 +15,7 @@ ANSI text formatting control sequences.
 
 Many terminals will recognize special sequences of characters in strings and
 change display behavior as a result.  For example, on my terminal the sequence
-`"\033&#91;42m"` turns text background green:
+`"\033[42m"` turns text background green:
 
 ![hello
 world](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/hello.png)
@@ -36,7 +36,7 @@ for details, particularly if you are getting unexpected results.
 ANSI control characters and sequences (Control Sequences hereafter) break the
 relationship between byte/character position in a string and display position.
 
-For example, in `"Hello \033&#91;42mWorld, Good\033&#91;m Night Moon!"` the `,`
+For example, in `"Hello \033[42mWorld, Good\033[m Night Moon!"` the `,`
 after "World" is thirteenth displayed character, but the eighteenth in
 memory.  If we try to split the string after the comma with `substr` things go
 wrong in several ways:
@@ -78,7 +78,7 @@ You can translate ANSI CSI SGR formatted strings into their HTML counterparts:
 
 ## Installation
 
-This package is currently only available on Github.  You can install it with `substr2_ctl(utf8.bad, 1, 7, type = "width")` or:
+This package is currently only available on Github.  You can install it with `devtools::install_github('brodieg/fansi')` or:
 
 
 ```r
@@ -90,8 +90,11 @@ install.packages(file.path(fansi.uz, 'fansi-master'), repos=NULL, type='source')
 unlink(c(fansi.dl, fansi.uz))
 ```
 
-## References
+## Related Packages and References
 
+* [crayon](https://github.com/r-lib/crayon), the library that started it all.
+* [ansistrings](https://github.com/r-lib/ansistrings/), which implements similar
+  functionality.
 * [ECMA-48 - Control Functions For Coded Character
   Sets](http://www.ecma-international.org/publications/standards/Ecma-048.htm),
   in particular pages 10-12, and 61.
@@ -106,7 +109,7 @@ unlink(c(fansi.dl, fansi.uz))
   the repository, and Uwe Ligges in particular for maintaining
   [Winbuilder](http://win-builder.r-project.org/).
 * [Gábor Csárdi](https://github.com/gaborcsardi) for getting me started on the
-  journey through the crazy world of ANSI control sequences.
+  journey ANSI control sequences.
 * [Jim Hester](https://github.com/jimhester) because
   [covr](https://cran.r-project.org/package=covr) rocks.
 * [Dirk Eddelbuettel](https://github.com/eddelbuettel) and [Carl
