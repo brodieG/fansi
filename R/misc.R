@@ -124,7 +124,7 @@ esc_color_code_to_html <- function(x) {
 #'
 #' @export
 #' @param txt character to color
-#' @param integer(1L) how quickly to step through the color palette
+#' @param step integer(1L) how quickly to step through the color palette
 #' @return character vector with each element colored
 #' @examples
 #' NEWS <- readLines(file.path(R.home('doc'), 'NEWS'))
@@ -148,3 +148,4 @@ fansi_lines <- function(txt, step=1) {
 check_assumptions <- function() .Call(FANSI_check_assumptions)  # nocov
 digits_in_int <- function(x) .Call(FANSI_digits_in_int, x)
 
+add_int <- function(x, y) .Call(FANSI_add_int, as.integer(x), as.integer(y))

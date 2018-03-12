@@ -8,7 +8,8 @@
 strtrim_ctl(x, width, warn = getOption("fansi.warn"))
 
 strtrim2_ctl(x, width, warn = getOption("fansi.warn"),
-  tabs.as.spaces = FALSE, tab.stops = 8L)
+  tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
+  tab.stops = getOption("fansi.tab.stops"))
 }
 \arguments{
 \item{x}{a character vector, or an object which can be coerced to a

@@ -58,10 +58,15 @@ strtrim_ctl <- function(x, width, warn=getOption('fansi.warn')){
 #' @rdname strtrim_ctl
 
 strtrim2_ctl <- function(
-  x, width, warn=getOption('fansi.warn'), tabs.as.spaces=FALSE, tab.stops=8L
+  x, width, warn=getOption('fansi.warn'),
+  tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
+  tab.stops=getOption('fansi.tab.stops')
 ) {
   if(!is.character(x)) x <- as.character(x)
-  vetr(width=NUM.1.POS && . >= 1, warn=LGL.1)
+  vetr(
+    width=NUM.1.POS && . >= 1, warn=LGL.1, tabs.as.spaces=LGL.1,
+    tab.stops=INT.POS.STR && length(.) > 0,
+  )
 
   # can assume all term cap available for these purposes
 

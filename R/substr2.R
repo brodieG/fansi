@@ -48,6 +48,8 @@
 #'   controls how to resolve ambiguities when a `start` or `stop` value in
 #'   "width" `type` mode falls within a multi-byte character or a wide display
 #'   character.  See details.
+#' @param tabs.as.spaces FALSE (default) or TRUE, whether to convert tabs to
+#'   spaces.  This can only be set to TRUE if `strip.spaces` is FALSE.
 #' @param warn TRUE (default) or FALSE, whether to warn when potentially
 #'   problematic escape sequences are encountered.  These could cause the
 #'   assumptions `fansi` makes about how strings are rendered on your display
@@ -89,7 +91,7 @@ substr2_ctl <- function(
   warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap')
 ) {
-  x <- as.character(x)
+  x <- enc2utf8(as.character(x))
   vetr(
     character(), start=numeric() && !anyNA(.), stop=NUM,
     type=CHR.1 && . %in% c('chars', 'width'),

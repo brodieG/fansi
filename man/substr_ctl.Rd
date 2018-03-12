@@ -38,6 +38,9 @@ controls how to resolve ambiguities when a \code{start} or \code{stop} value in
 "width" \code{type} mode falls within a multi-byte character or a wide display
 character.  See details.}
 
+\item{tabs.as.spaces}{FALSE (default) or TRUE, whether to convert tabs to
+spaces.  This can only be set to TRUE if \code{strip.spaces} is FALSE.}
+
 \item{tab.stops}{integer(1:n) indicating position of tab stops to use when
 converting tabs to spaces.  If there are more tabs in a line than defined
 tab stops the last tab stop is re-used.  For the purposes of applying tab

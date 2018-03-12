@@ -300,7 +300,18 @@ static size_t html_check_overflow(
       "which is not allowed by R."
     );
   } else if(bytes_extra < 0) {
-    int bytes_extra_extra = FANSI_add_int(bytes_extra, span_extra);
+    if(bytes_extra <= INT_MIN - span_extra) {
+      // nocov start
+      error(
+        "%s%s%s",
+        "Internal error: integer overflow when trying to compute net ",
+        "additional bytes requires by conversion of SGR to HTML. "
+        "Contact maintainer"
+      );
+      // nocov end
+    }
+    int bytes_extra_extra = bytes_extra + span_extra;
+
     if(bytes_init + bytes_extra_extra < 0)
       error(
         "%s%s",
