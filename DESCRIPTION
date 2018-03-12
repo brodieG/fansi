@@ -1,21 +1,25 @@
 Package: fansi
-Title: ANSI-aware String Functions
-Description: Counterparts to R string manipulation functions that preserve ANSI
-    CSI escape sequences while treating them as zero width.
-Version: 0.0.1
+Title: ANSI Control Sequence Aware String Functions
+Description: Counterparts to R string manipulation functions that account for
+   the effects of ANSI text formatting control sequences.
+Version: 0.1.0
 Authors@R: c(
     person("Brodie", "Gaslam", email="brodie.gaslam@yahoo.com",
-    role=c("aut", "cre"))
-    )
+    role=c("aut", "cre")),
+    person(family="R Core Team",
+    email="R-core@r-project.org", role="cph",
+    comment="UTF8 byte length calcs from src/util.c"
+    ))
 Depends:
-    R (>= 3.3.2)
+    R (>= 3.3.0)
 License: GPL (>=2)
 LazyData: true
 URL: https://github.com/brodieG/fansi
 BugReports: https://github.com/brodieG/fansi/issues
 VignetteBuilder: knitr
 Imports:
-    utils
+    utils,
+    vetr
 Suggests:
     knitr,
     rmarkdown,
@@ -23,3 +27,16 @@ Suggests:
     covr
 RoxygenNote: 6.0.1
 Roxygen: list(markdown = TRUE)
+Collate:
+    'constants.R'
+    'fansi-package.R'
+    'has.R'
+    'load.R'
+    'misc.R'
+    'nchar.R'
+    'strip.R'
+    'strwrap.R'
+    'strtrim.R'
+    'substr2.R'
+    'tohtml.R'
+    'unhandled.R'
