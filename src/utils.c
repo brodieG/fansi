@@ -17,7 +17,31 @@
  */
 
 #include "fansi.h"
+/*
+ * Add integers while checking for overflow
+ *
+ * Note we are stricter than necessary when y is negative because we want to
+ * count hitting INT_MIN as an overflow so that we can use the integer values
+ * in R where INT_MIN is NA.
+ */
 
+int FANSI_add_int(int x, int y, const char * file, int line) {
+  if((y >= 0 && (x > INT_MAX - y)) || (y < 0 && (x <= INT_MIN - y)))
+    error(
+      "Integer overflow in file %s at line %d; %s", file, line,
+      "contact maintainer."
+    );
+  return x + y;
+}
+SEXP FANSI_add_int_ext(SEXP x, SEXP y) {
+  if(
+    TYPEOF(x) != INTSXP || XLENGTH(x) != 1 ||
+    TYPEOF(y) != INTSXP || XLENGTH(y) != 1
+  )
+    error("Internal error: arguments must be scalar integers"); // nocov
+
+  return ScalarInteger(FANSI_ADD_INT(asInteger(x), asInteger(y)));
+}
 /*
  * Compute Location and Size of Next ANSI Sequences
  *
@@ -158,7 +182,8 @@ void FANSI_size_buff(struct FANSI_buff * buff, size_t size) {
 
     size_t tmp_double_size = 0;
     if(buff->len > (size_t) INT_MAX + 1 - buff->len) {
-      tmp_double_size = (size_t) INT_MAX + 1;
+      // too expensive to test
+      tmp_double_size = (size_t) INT_MAX + 1; // nocov
     } else {
       tmp_double_size = buff->len + buff->len;
     }
@@ -198,18 +223,6 @@ SEXP FANSI_digits_in_int_ext(SEXP y) {
 
   UNPROTECT(1);
   return(res);
-}
-/*
- * Add integers while checking for overflow
- *
- * Note we are stricter than necessary when y is negative because we want to
- * count hitting INT_MIN as an overflow so that we can use the integer values
- * in R where INT_MIN is NA.
- */
-int FANSI_add_int(int x, int y) {
-  if((y >= 0 && (x > INT_MAX - y)) || (y < 0 && (x <= INT_MIN - y)))
-    error ("Integer overflow");
-  return x + y;
 }
 /*
  * Compresses the what vector into a single integer
