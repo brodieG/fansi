@@ -123,8 +123,8 @@ struct FANSI_state_pair FANSI_state_at_position(
   if(pos < state.pos_raw)
     // nocov start
     error(
-      "Cannot re-use a state for a later position (%0f) than `pos` (%0f).",
-      (double) state.pos_raw, (double) pos
+      "Cannot re-use a state for a later position (%d) than `pos` (%d).",
+      state.pos_raw, pos
     );
     // nocov end
   int cond = 0;
@@ -306,43 +306,47 @@ int FANSI_color_size(int color, int * color_extra) {
  * for the NULL terminator.
  */
 int FANSI_state_size(struct FANSI_state state) {
-  int color_size = FANSI_color_size(state.color, state.color_extra);
-  int bg_color_size = FANSI_color_size(state.bg_color, state.bg_color_extra);
+  int size = 0;
+  if(FANSI_state_has_style(state)) {
+    int color_size = FANSI_color_size(state.color, state.color_extra);
+    int bg_color_size = FANSI_color_size(state.bg_color, state.bg_color_extra);
 
-  // styles are stored as bits
+    // styles are stored as bits
 
-  int style_size = 0;
-  if(state.style) {
-    for(int i = 1; i < 10; ++i){
-      style_size += ((state.style & (1 << i)) > 0) * 2;
+    int style_size = 0;
+    if(state.style) {
+      for(int i = 1; i < 10; ++i){
+        style_size += ((state.style & (1 << i)) > 0) * 2;
+      }
     }
-  }
-  // Some question of whether we are adding a slowdown to check for rarely use
-  // ESC sequences such as these...
+    // Some question of whether we are adding a slowdown to check for rarely use
+    // ESC sequences such as these...
 
-  // Border
+    // Border
 
-  int border_size = 0;
-  if(state.border) {
-    for(int i = 1; i < 4; ++i){
-      border_size += ((state.border & (1 << i)) > 0) * 3;
+    int border_size = 0;
+    if(state.border) {
+      for(int i = 1; i < 4; ++i){
+        border_size += ((state.border & (1 << i)) > 0) * 3;
+      }
     }
-  }
-  // Ideogram
+    // Ideogram
 
-  int ideogram_size = 0;
-  if(state.ideogram) {
-    for(int i = 0; i < 5; ++i){
-      ideogram_size += ((state.ideogram & (1 << i)) > 0) * 3;
+    int ideogram_size = 0;
+    if(state.ideogram) {
+      for(int i = 0; i < 5; ++i){
+        ideogram_size += ((state.ideogram & (1 << i)) > 0) * 3;
+      }
     }
+    // font
+
+    int font_size = 0;
+    if(state.font) font_size = 3;
+
+    size += color_size + bg_color_size + style_size +
+      border_size + ideogram_size + font_size + 2; // +2 for ESC[
   }
-  // font
-
-  int font_size = 0;
-  if(state.font) font_size = 3;
-
-  return color_size + bg_color_size + style_size +
-    border_size + ideogram_size + font_size + 2;  // +2 for ESC[
+  return size;
 }
 /*
  * Write extra color info to string
@@ -417,60 +421,62 @@ int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
   \****************************************************/
 
   int str_pos = 0;
-  buff[str_pos++] = 27;    // ESC
-  buff[str_pos++] = '[';
 
-  // styles
+  if(FANSI_state_has_style(state)) {
+    buff[str_pos++] = 27;    // ESC
+    buff[str_pos++] = '[';
+    // styles
 
-  for(int i = 1; i < 10; i++) {
-    if((1 << i) & state.style) {
-      buff[str_pos++] = '0' + i;
-      buff[str_pos++] = ';';
-  } }
-  // colors
-
-  str_pos += FANSI_color_write(
-    &(buff[str_pos]), state.color, state.color_extra, 3
-  );
-  str_pos += FANSI_color_write(
-    &(buff[str_pos]), state.bg_color, state.bg_color_extra, 4
-  );
-  // Borders
-
-  if(state.border) {
-    for(int i = 1; i < 4; ++i){
-      if((1 << i) & state.border) {
-        buff[str_pos++] = '5';
+    for(int i = 1; i < 10; i++) {
+      if((1 << i) & state.style) {
         buff[str_pos++] = '0' + i;
         buff[str_pos++] = ';';
-  } } }
-  // Ideogram
+    } }
+    // colors
 
-  if(state.ideogram) {
-    for(int i = 0; i < 5; ++i){
-      if((1 << i) & state.ideogram) {
-        buff[str_pos++] = '6';
-        buff[str_pos++] = '0' + i;
-        buff[str_pos++] = ';';
-  } } }
-  // font
-
-  if(state.font) {
-    buff[str_pos++] = '1';
-    buff[str_pos++] = '0' + (state.font % 10);
-    buff[str_pos++] = ';';
-  }
-  // Finalize
-
-  if(str_pos != buff_len)
-    // nocov start
-    // note this error is really too late, as we could have written past
-    // allocation in the steps above
-    error(
-      "Internal Error: tag mem allocation mismatch (%u, %u)", str_pos, buff_len
+    str_pos += FANSI_color_write(
+      &(buff[str_pos]), state.color, state.color_extra, 3
     );
-    // nocov end
-  buff[str_pos - 1] = 'm';
+    str_pos += FANSI_color_write(
+      &(buff[str_pos]), state.bg_color, state.bg_color_extra, 4
+    );
+    // Borders
+
+    if(state.border) {
+      for(int i = 1; i < 4; ++i){
+        if((1 << i) & state.border) {
+          buff[str_pos++] = '5';
+          buff[str_pos++] = '0' + i;
+          buff[str_pos++] = ';';
+    } } }
+    // Ideogram
+
+    if(state.ideogram) {
+      for(int i = 0; i < 5; ++i){
+        if((1 << i) & state.ideogram) {
+          buff[str_pos++] = '6';
+          buff[str_pos++] = '0' + i;
+          buff[str_pos++] = ';';
+    } } }
+    // font
+
+    if(state.font) {
+      buff[str_pos++] = '1';
+      buff[str_pos++] = '0' + (state.font % 10);
+      buff[str_pos++] = ';';
+    }
+    // Finalize
+
+    if(str_pos != buff_len)
+      // nocov start
+      // note this error is really too late, as we could have written past
+      // allocation in the steps above
+      error(
+        "Internal Error: tag mem allocation mismatch (%u, %u)", str_pos, buff_len
+      );
+      // nocov end
+    buff[str_pos - 1] = 'm';
+  }
   return str_pos;
 }
 /*
