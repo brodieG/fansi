@@ -112,6 +112,8 @@ substr2_ctl <- function(
 
   start <- rep(as.integer(start), length.out=x.len)
   stop <- rep(as.integer(stop), length.out=x.len)
+  start[start < 1L] <- 1L
+  s.s.valid <- stop >= start & stop
 
   # For each unique string, compute the state at each start and stop position
   # and re-map the positions to "ansi" space
@@ -121,7 +123,7 @@ substr2_ctl <- function(
   type.m <- match(type, c('chars', 'width'))
 
   for(u in x.u) {
-    elems <- which(x == u)
+    elems <- which(x == u & s.s.valid)
     e.start <- start[elems]
     e.stop <- stop[elems]
     # note, for expediency we're currently assuming that there is no overlap
@@ -157,10 +159,10 @@ substr2_ctl <- function(
     start.tag <- state[[1]][start.ansi.idx]
     stop.tag <- state[[1]][stop.ansi.idx]
 
-    # if there is any ANSI CSI then add a terminating CSI
+    # if there is any ANSI CSI at end then add a terminating CSI
 
     end.csi <- character(length(start.tag))
-    end.csi[nzchar(start.tag) | nzchar(stop.tag)] <- '\033[0m'
+    end.csi[nzchar(stop.tag)] <- '\033[0m'
 
     res[elems] <- paste0(
       start.tag, substr(x[elems], start.ansi, stop.ansi), end.csi

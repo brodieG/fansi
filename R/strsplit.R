@@ -34,18 +34,40 @@
 #' @inheritParams strwrap_ctl
 #' @return list, see [base::strsplit].
 
+# strsplit_ctl <- function(
+#   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
+#   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+# ) {
+#   x.split <- strsplit(x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE)
+#   vetr(warn=LGL.1, term.cap=CHR)
+#   if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
+#     stop(
+#       "Argument `term.cap` may only contain values in ",
+#       deparse(VALID.TERM.CAP)
+#     )
+#   .Call(FANSI_strsplit, x.split, warn, term.cap.int)
+# }
+
 strsplit_ctl <- function(
   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
-  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+  warn=getOption('fansi.warn')
 ) {
-  x.split <- strsplit(x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE)
-  vetr(warn=LGL.1, term.cap=CHR)
-  if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
-    stop(
-      "Argument `term.cap` may only contain values in ",
-      deparse(VALID.TERM.CAP)
-    )
-  .Call(FANSI_strsplit, x.split, warn, term.cap.int)
-}
+  x <- as.character(x)
+  x.strip <- strip_ctl(x, warn=warn)
+  res <- vector("list", length(x))
+  matches <- gregexpr(split, x.strip, perl=perl, useBytes=useBytes, fixed=fixed)
+  chars <- nchar(x.strip)
 
+  for(i in seq_along(x)) {
+    if(!identical(matches[[i]], -1L)) {
+      starts <- c(1, matches[[i]] + attr(matches[[i]], 'match.length'))
+      ends <- c(matches[[i]] - 1, chars[i])
+      res[[i]] <-
+        substr_ctl(rep(x[[i]], length(starts)), starts, ends, warn=warn)
+    } else {
+      res[[i]] <- x[[i]]
+    }
+  }
+  res
+}
 

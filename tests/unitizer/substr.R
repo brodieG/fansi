@@ -29,4 +29,8 @@ unitizer_sect("Simple", {
   substr_ctl(str04, 5, 7, term.cap=term.cap)
   substr_ctl(str04, 5, 13, term.cap=term.cap)
 })
-
+unitizer_sect("Corner cases", {
+  substr_ctl("hello", 0, -1)
+  substr_ctl("hello", 0, 0)
+  substr_ctl(rep("hello", 2), c(1, 0), c(1, 1))
+})

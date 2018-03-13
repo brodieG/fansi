@@ -174,11 +174,15 @@ struct FANSI_state_pair FANSI_state_at_position(
       state.pos_byte, state_prev.pos_byte
     );
     */
+    // If zero width advance, we want to update prev state to be the newest
+    // state
+
+    if(state.pos_width == state_prev.pos_width) state_prev = state;
+
     // We still have stuff to process
 
-    if(cond > 0) continue;
-    if(cond == 0) {
-      // some ambiguity as to whether the next `state_prev` will be valid, soe
+    if(cond >= 0) {
+      // some ambiguity as to whether the next `state_prev` will be valid, so
       // we store the current one just in case
       state_prev_buff = state_prev;
       continue;
@@ -198,7 +202,9 @@ struct FANSI_state_pair FANSI_state_at_position(
           state_res = state_prev_buff;
         } else if (!end && cond != -state.last_char_width) {
           state_res = state;
-      } }
+        }
+      }
+      // This is the width we hoped to get originally
       state_res.pos_width_target = pos;
     } else if(cond < -1) {
       // nocov start
@@ -629,6 +635,7 @@ SEXP FANSI_state_at_pos_ext(
   state.string = state_prev.string = string;
   state_pair.cur = state;
   state_pair.prev = state_prev;
+  state_pair_old = state_pair;
 
   // Compute state at each `pos` and record result in our results matrix
 
