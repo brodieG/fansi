@@ -33,4 +33,17 @@ unitizer_sect("Corner cases", {
   substr_ctl("hello", 0, -1)
   substr_ctl("hello", 0, 0)
   substr_ctl(rep("hello", 2), c(1, 0), c(1, 1))
+
+  substr_ctl(character(), 1, 1)
+  substr_ctl(list("hello", list("goodbye", "there")), 1, 2)
+  substr_ctl(structure(list(list("goodbye", "there")), class="foo"), 1, 2)
+
+  str.0 <- "\033[31mred\033[m"
+  str.1 <- "\033[31mred\033[42m"
+  str.2 <- c(str.0, str.1)
+
+  substr_ctl(str.2, 0, 0)
+  substr_ctl(str.2, 1, 1)
+  substr_ctl(str.2, 3, 3)
+  substr_ctl(str.2, 4, 4)
 })

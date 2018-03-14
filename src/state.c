@@ -155,7 +155,10 @@ struct FANSI_state_pair FANSI_state_at_position(
       // nocov end
 
     state = FANSI_read_next(state);
-    if(!state.string[state.pos_byte]) break;
+    if(!state.string[state.pos_byte]) {
+      state_res = state;
+      break;
+    }
 
     switch(type) {
       case 0: cond = pos - state.pos_raw; break;
