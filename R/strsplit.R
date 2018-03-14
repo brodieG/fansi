@@ -53,9 +53,30 @@ strsplit_ctl <- function(
   warn=getOption('fansi.warn')
 ) {
   x <- as.character(x)
+  split <- rep(as.character(split), length.out=length(x))
+
+  # Need to handle recycling, complicated by the ability of strsplit to accept
+  # multiple different split arguments
+
+  x.seq <- seq_along(x)
+  s.seq <- seq_along(split)
+  s.x.seq <- rep(s.seq, length.out=length(x))
+
+  matches <- res <- vector("list", length(x))
   x.strip <- strip_ctl(x, warn=warn)
-  res <- vector("list", length(x))
-  matches <- gregexpr(split, x.strip, perl=perl, useBytes=useBytes, fixed=fixed)
+
+  for(i in s.seq) {
+    to.split <- s.x.seq == i
+    matches[to.split] <- if(!nzchar(split[i])) {
+      lapply(
+        nchar(x.strip[to.split]),
+        function(y) structure(seq.int(y), match.length=integer(length(y)))
+      )
+    } else {
+      gregexpr(
+        split[i], x.strip[to.split], perl=perl, useBytes=useBytes, fixed=fixed
+      )
+  } }
   chars <- nchar(x.strip)
 
   for(i in seq_along(x)) {

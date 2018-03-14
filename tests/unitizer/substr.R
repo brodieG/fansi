@@ -46,4 +46,18 @@ unitizer_sect("Corner cases", {
   substr_ctl(str.2, 1, 1)
   substr_ctl(str.2, 3, 3)
   substr_ctl(str.2, 4, 4)
+
+  substr_ctl(str.2, 3, 4)
+  substr_ctl(str.2, 3, 5)
+
+  substr_ctl(str.2, -1, 2)
+  substr_ctl(str.2, -2, -1)
+
+  substr_ctl("hello", "1", 1)
+  substr_ctl("hello", 1, "1")
+
+  substr_ctl("hello", "a", "b")
+
+  substr_ctl("hello", 1, NA_integer_)
+  substr_ctl("hello", NA_integer_, 1)
 })

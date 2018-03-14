@@ -8,7 +8,13 @@ unitizer_sect("basic splits", {
   strsplit_ctl(str.2, ", ")
   strsplit_ctl(c(str.1, "hello world", str.2), "hello")
 })
-# unitizer_sect("corner cases", {
-#   # strsplit_ctl("hello\033[31m world", "")
-#   # strsplit_ctl("hello\033[31m world", "[", fixed=TRUE)
-# })
+unitizer_sect("corner cases", {
+  strsplit_ctl("hello\033[31m world", "")
+  strsplit_ctl("hello\033[31m world", "[", fixed=TRUE)
+
+  strsplit_ctl("hello\033[31m world", NA_character_)
+  strsplit_ctl("hello\033[31m world", character())
+  strsplit_ctl("hello\033[31m world", letters)
+
+  strsplit_ctl(c("hello", "hello"), c('h', 'e'))
+})
