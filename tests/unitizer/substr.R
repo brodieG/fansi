@@ -53,6 +53,8 @@ unitizer_sect("Corner cases", {
   substr_ctl(str.2, -1, 2)
   substr_ctl(str.2, -2, -1)
 
+  substr_ctl("hello", 5, 5)
+
   substr_ctl("hello", "1", 1)
   substr_ctl("hello", 1, "1")
 

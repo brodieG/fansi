@@ -64,25 +64,39 @@ strsplit_ctl <- function(
 
   matches <- res <- vector("list", length(x))
   x.strip <- strip_ctl(x, warn=warn)
+  chars <- nchar(x.strip)
+
+  # Find the split locations and widths
 
   for(i in s.seq) {
     to.split <- s.x.seq == i
     matches[to.split] <- if(!nzchar(split[i])) {
+      # special handling for zero width split
       lapply(
-        nchar(x.strip[to.split]),
-        function(y) structure(seq.int(y), match.length=integer(length(y)))
+        chars[to.split],
+        function(y)
+          structure(
+            seq.int(from=2L, by=1L, length.out=y - 1L),
+            match.length=integer(y - 1L)
+          )
       )
     } else {
       gregexpr(
         split[i], x.strip[to.split], perl=perl, useBytes=useBytes, fixed=fixed
       )
   } }
-  chars <- nchar(x.strip)
+  # Use `substr` to select the pieces between the start/end
 
   for(i in seq_along(x)) {
-    if(!identical(matches[[i]], -1L)) {
+    if(any(matches[[i]] > 0)) {
       starts <- c(1, matches[[i]] + attr(matches[[i]], 'match.length'))
       ends <- c(matches[[i]] - 1, chars[i])
+      sub.invalid <- starts > chars[i]
+      if(any(sub.invalid)) {
+        # happens when split goes all way to end of string
+        starts <- starts[!sub.invalid]
+        ends <- ends[!sub.invalid]
+      }
       res[[i]] <-
         substr_ctl(rep(x[[i]], length(starts)), starts, ends, warn=warn)
     } else {

@@ -155,10 +155,9 @@ struct FANSI_state_pair FANSI_state_at_position(
       // nocov end
 
     state = FANSI_read_next(state);
-    if(!state.string[state.pos_byte]) {
-      state_res = state;
-      break;
-    }
+
+    // cond is just how many units we have left until our requested position.
+    // we can overshoot and it can be negative
 
     switch(type) {
       case 0: cond = pos - state.pos_raw; break;
@@ -182,13 +181,18 @@ struct FANSI_state_pair FANSI_state_at_position(
 
     if(state.pos_width == state_prev.pos_width) state_prev = state;
 
-    // We still have stuff to process
+    // We still have stuff to process, though keep in mind we can be at end of
+    // string with cond > 0 if we ask for position past end
 
     if(cond >= 0) {
-      // some ambiguity as to whether the next `state_prev` will be valid, so
-      // we store the current one just in case
-      state_prev_buff = state_prev;
-      continue;
+      if(state.string[state.pos_byte]) {
+        // some ambiguity as to whether the next `state_prev` will be valid, so
+        // we store the current one just in case
+        state_prev_buff = state_prev;
+        continue;
+      }
+      state_res = state_prev;
+      break;
     }
     /*
      * A key problem here is that what constitues a valid offset depends on the
