@@ -120,11 +120,13 @@ struct FANSI_state_pair FANSI_state_at_position(
   int pos, struct FANSI_state_pair state_pair, int type, int lag, int end
 ) {
   struct FANSI_state state = state_pair.cur;
-  if(pos < state.pos_raw)
+  int pos_init = type ? state.pos_width : state.pos_raw;
+  if(pos < pos_init)
     // nocov start
     error(
-      "Cannot re-use a state for a later position (%d) than `pos` (%d).",
-      state.pos_raw, pos
+      "Internal Error: %s (%d) than `pos` (%d)",
+      "Cannot re-use a state for a later position",
+      pos_init, pos
     );
     // nocov end
   int cond = 0;
@@ -273,12 +275,6 @@ struct FANSI_state_pair FANSI_state_at_position(
   }
   // We return the state just before we overshot the end
 
-  /*
-  Rprintf(
-    "   return pos %2d width %d ansi %2d byte %2d\n",
-    pos, state_res.pos_width, state_res.pos_ansi, state_res.pos_byte
-  );
-  */
   return (struct FANSI_state_pair){.cur=state_res, .prev=state_prev_buff};
 }
 /*
@@ -663,7 +659,7 @@ SEXP FANSI_state_at_pos_ext(
       // as starts and ends, etc.
 
       if(pos_i == pos_prev) {
-        state_pair = state_pair_old;
+        state_pair.cur = state_pair.prev;
       } else {
         state_pair_old = state_pair;
       }
