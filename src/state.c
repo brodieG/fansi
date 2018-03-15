@@ -193,7 +193,8 @@ struct FANSI_state_pair FANSI_state_at_position(
         state_prev_buff = state_prev;
         continue;
       }
-      state_res = state_prev;
+      // state_res = state_prev;
+      state_res = state;
       break;
     }
     /*
