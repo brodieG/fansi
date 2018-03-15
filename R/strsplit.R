@@ -52,8 +52,9 @@ strsplit_ctl <- function(
   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
   warn=getOption('fansi.warn')
 ) {
-  x <- as.character(x)
-  split <- rep(as.character(split), length.out=length(x))
+  x <- enc2utf8(as.character(x))
+  split <- as.character(enc2utf8(split))
+  if(!length(split)) split <- ""
 
   # Need to handle recycling, complicated by the ability of strsplit to accept
   # multiple different split arguments
@@ -97,8 +98,12 @@ strsplit_ctl <- function(
         starts <- starts[!sub.invalid]
         ends <- ends[!sub.invalid]
       }
-      res[[i]] <-
-        substr_ctl(rep(x[[i]], length(starts)), starts, ends, warn=warn)
+      res[[i]] <- substr_ctl_internal(
+        x=rep(x[[i]], length(starts)),
+        start=starts, stop=ends, type=0L, round="first",
+        tabs.as.spaces=FALSE, tab.stops=8L, warn=warn,
+        term.cap.int=integer()
+      )
     } else {
       res[[i]] <- x[[i]]
     }

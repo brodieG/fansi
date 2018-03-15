@@ -24,4 +24,6 @@ unitizer_sect("corner cases", {
   str.spl3 <- strsplit_ctl(rep("\033[31mhello\033[39m", 6), splits)
   str.spl3
   identical(lapply(str.spl3, strip_ctl), str.spl2)
+
+  strsplit_ctl("", " ")
 })

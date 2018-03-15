@@ -31,14 +31,34 @@ struct FANSI_state FANSI_state_init_full(
   const char * string, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
   SEXP width
 ) {
-  if(
-    TYPEOF(warn) != LGLSXP || TYPEOF(term_cap) != INTSXP ||
-    TYPEOF(allowNA) != LGLSXP || TYPEOF(keepNA) != LGLSXP ||
-    TYPEOF(width) != INTSXP
-  )
-    // nocov start
-    error("Internal error: state_init with bad types; contact maintainer.");
-    // nocov end
+  // nocov start
+  if(TYPEOF(warn) != LGLSXP)
+    error(
+      "Internal error: state_init with bad type for warn (%s)",
+      type2char(TYPEOF(warn))
+    );
+  if(TYPEOF(term_cap) != INTSXP)
+    error(
+      "Internal error: state_init with bad type for term_cap (%s)",
+      type2char(TYPEOF(term_cap))
+    );
+  if(TYPEOF(allowNA) != LGLSXP)
+    error(
+      "Internal error: state_init with bad type for allowNA (%s)",
+      type2char(TYPEOF(allowNA))
+    );
+  if(TYPEOF(keepNA) != LGLSXP)
+    error(
+      "Internal error: state_init with bad type for keepNA (%s)",
+      type2char(TYPEOF(keepNA))
+    );
+  if(TYPEOF(width) != INTSXP)
+    error(
+      "Internal error: state_init with bad type for width (%s)",
+      type2char(TYPEOF(width))
+    );
+
+  // nocov end
 
   int * term_int = INTEGER(term_cap);
   int warn_int = asInteger(warn);

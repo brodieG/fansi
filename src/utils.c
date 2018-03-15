@@ -287,3 +287,37 @@ int FANSI_pmatch(
 // concept borrowed from utf8-lite
 
 void FANSI_interrupt(int i) {if(!(i % 1000)) R_CheckUserInterrupt();}
+/*
+ * Split an integer vector into two equal size pieces
+ */
+
+SEXP FANSI_cleave(SEXP x) {
+  if(TYPEOF(x) != INTSXP || XLENGTH(x) % 2)
+    error("Internal error, need even length INTSXP.");
+
+  R_xlen_t len = XLENGTH(x) / 2;
+  if(len > SIZE_MAX)
+    error("Internal error: vector too long to cleave"); // nocov
+
+  SEXP a, b;
+  a = PROTECT(allocVector(INTSXP, len));
+  b = PROTECT(allocVector(INTSXP, len));
+
+  size_t size = 0;
+  for(int i = 0; i < sizeof(int)) {
+    if(size > SIZE_MAX - len)
+      error("Internal error: vector too long to cleave"); // nocov
+    size += len;
+  }
+
+  int * data = ;
+
+  memcpy(a, INTEGER(x), size);
+  memcpy(b, INTEGER(x)[len], size);
+
+  SEXP res = PROTECT(allocVector(VECSXP, 2));
+  SET_VECTOR_ELT(res, 0, a);
+  SET_VECTOR_ELT(res, 1, b);
+  UNPROTECT(3);
+  return res;
+}
