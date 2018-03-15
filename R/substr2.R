@@ -144,7 +144,7 @@ substr_ctl_internal <- function(
     # note, for expediency we're currently assuming that there is no overlap
     # between starts and stops
 
-    e.order <- order(c(e.start, e.stop), method='shell')
+    e.order <- forder(c(e.start, e.stop))
 
     e.lag <- c(
       rep(round %in% c('start', 'both'), length(start)),

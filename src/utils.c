@@ -318,3 +318,66 @@ SEXP FANSI_cleave(SEXP x) {
   UNPROTECT(3);
   return res;
 }
+struct datum {int val; int idx;};
+
+static int cmpfun (const void * p, const void * q) {
+  struct datum a = *(struct datum *) p;
+  struct datum b = *(struct datum *) q;
+  return(a.val > b.val ? 1 : (a.val < b.val ? -1 : 0));
+}
+/*
+ * Equivalent to `order`, but less overhead.  May not be faster for longer
+ * vectors but since we call it potentially repeatedly via our initial version
+ * of strsplit, we want to do this to make somewhat less sub-optimal
+ */
+SEXP FANSI_order(SEXP x) {
+  if(TYPEOF(x) != INTSXP)
+    error("Internal error: this order only supports ints.");  // nocov
+
+  R_xlen_t len = XLENGTH(x);
+
+  size_t size = 0;
+  for(int i = 0; i < sizeof(struct datum); ++i) {
+    if(size > SIZE_MAX - len)
+      error("Internal error: vector too long to order"); // nocov
+    size += len;
+  }
+  struct datum * data = (struct datum *) R_alloc(len, sizeof(struct datum));
+
+  for(R_xlen_t i = 0; i < len; ++i)
+    *(data + i) = (struct datum){.val=INTEGER(x)[i], .idx=i + 1};
+
+  qsort(data, (size_t) len, sizeof(struct datum), cmpfun);
+
+  SEXP res = PROTECT(allocVector(INTSXP, len));
+
+  for(R_xlen_t i = 0; i < len; ++i) INTEGER(res)[i] = (data + i)->idx;
+
+  UNPROTECT(1);
+  return res;
+}
+static int cmpfun2 (const void * p, const void * q) {
+  int a = *(int *) p;
+  int b = *(int *) q;
+  return(a > b ? 1 : (a < b ? -1 : 0));
+}
+/*
+ * Equivalent to `sort`, but less overhead.  May not be faster for longer
+ * vectors but since we call it potentially repeatedly via our initial version
+ * of strsplit, we want to do this to make somewhat less sub-optimal
+ */
+SEXP FANSI_sort(SEXP x) {
+  if(TYPEOF(x) != INTSXP)
+    error("Internal error: this order only supports ints.");  // nocov
+
+  R_xlen_t len = XLENGTH(x);
+  if(len > SIZE_MAX)
+    error("Internal error: vector too long to sort"); // nocov
+
+  SEXP res = PROTECT(duplicate(x));
+
+  qsort(INTEGER(res), (size_t) len, sizeof(int), cmpfun2);
+
+  UNPROTECT(1);
+  return res;
+}

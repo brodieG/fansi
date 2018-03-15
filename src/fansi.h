@@ -300,6 +300,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   // Utilities
 
   SEXP FANSI_cleave(SEXP x);
+  SEXP FANSI_order(SEXP x);
+  SEXP FANSI_sort(SEXP x);
+
   SEXP FANSI_check_assumptions();
   SEXP FANSI_digits_in_int_ext(SEXP y);
   SEXP FANSI_unique_chr(SEXP x);
