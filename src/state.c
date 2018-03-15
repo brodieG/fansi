@@ -596,7 +596,7 @@ SEXP FANSI_state_at_pos_ext(
     text = PROTECT(FANSI_tabs_as_spaces(text, tab_stops, &buff, warn, term_cap));
   } else PROTECT(text);
 
-  struct FANSI_state_pair state_pair, state_pair_old;
+  struct FANSI_state_pair state_pair;
 
   // Allocate result, will be a res_cols x n matrix.  A bit wasteful to record
   // all the color values given we'll rarely use them, but variable width
@@ -638,7 +638,6 @@ SEXP FANSI_state_at_pos_ext(
   state.string = state_prev.string = string;
   state_pair.cur = state;
   state_pair.prev = state_prev;
-  state_pair_old = state_pair;
 
   // Compute state at each `pos` and record result in our results matrix
 
@@ -658,11 +657,8 @@ SEXP FANSI_state_at_pos_ext(
       // We need to allow the same position multiple times in case it shows up
       // as starts and ends, etc.
 
-      if(pos_i == pos_prev) {
-        state_pair.cur = state_pair.prev;
-      } else {
-        state_pair_old = state_pair;
-      }
+      if(pos_i == pos_prev) state_pair.cur = state_pair.prev;
+
       state_pair = FANSI_state_at_position(
         pos_i, state_pair, type_int, INTEGER(lag)[i], INTEGER(ends)[i]
       );
