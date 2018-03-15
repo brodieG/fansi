@@ -108,20 +108,21 @@ substr2_ctl <- function(
   type.m <- match(type, c('chars', 'width')) - 1L
   x.len <- length(x)
 
+  # Silently recycle start/stop like substr does
+
   start <- rep(as.integer(start), length.out=x.len)
   stop <- rep(as.integer(stop), length.out=x.len)
   start[start < 1L] <- 1L
-  s.s.valid <- stop >= start & stop
 
-  res <- character(x.len)
-
-  res[s.s.valid] <- substr_ctl_internal(
-    x[s.s.valid], start=start[s.s.valid], stop=stop[s.s.valid],
-    type.int=type.m, round=round,
+  substr_ctl_internal(
+    x, start=start, stop=stop,
+    type.int=type.m,
     tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
-    term.cap.int=term.cap.int
+    term.cap.int=term.cap.int,
+    round.start=round == 'start' || round == 'both',
+    round.stop=round == 'stop' || round == 'both',
+    x.len=length(x)
   )
-  res
 }
 ## Lower overhead version of the function for use by strwrap
 ##
@@ -129,35 +130,32 @@ substr2_ctl <- function(
 
 substr_ctl_internal <- function(
   x, start, stop, type.int, round, tabs.as.spaces,
-  tab.stops, warn, term.cap.int
+  tab.stops, warn, term.cap.int, round.start, round.stop,
+  x.len
 ) {
-  x.len <- length(x)
-
-  # Add special case for length(x) == 1
-
-  # Silently recycle start/stop like substr does
-
   # For each unique string, compute the state at each start and stop position
   # and re-map the positions to "ansi" space
 
-  res <- character(length(x))
-  x.u <- unique_chr(x)
+  res <- character(x.len)
+  s.s.valid <- stop >= start & stop
+
+  x.scalar <- length(x) == 1
+  x.u <- if(x.scalar) x else unique_chr(x)
 
   for(u in x.u) {
-    elems <- which(x == u)
+    elems <- which(x == u & s.s.valid)
+    elems.len <- length(elems)
     e.start <- start[elems]
     e.stop <- stop[elems]
+    x.elems <- if(x.scalar) rep(x, length.out=elems.len) else x[elems]
+
     # note, for expediency we're currently assuming that there is no overlap
     # between starts and stops
 
     e.order <- forder(c(e.start, e.stop))
 
-    e.lag <- c(
-      rep(round %in% c('start', 'both'), length(start)),
-      rep(round %in% c('stop', 'both'), length(stop))
-    )[e.order]
-
-    e.ends <- c(rep(FALSE, length(start)), rep(TRUE, length(start)))[e.order]
+    e.lag <- rep(c(round.start, round.stop), each=elems.len)[e.order]
+    e.ends <- rep(c(FALSE, TRUE), each=elems.len)[e.order]
     e.sort <- c(e.start, e.stop)[e.order]
 
     state <- .Call(
@@ -187,7 +185,7 @@ substr_ctl_internal <- function(
     end.csi[nzchar(stop.tag)] <- '\033[0m'
 
     res[elems] <- paste0(
-      start.tag, substr(x[elems], start.ansi, stop.ansi), end.csi
+      start.tag, substr(x.elems, start.ansi, stop.ansi), end.csi
     )
   }
   res

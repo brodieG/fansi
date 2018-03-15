@@ -92,17 +92,20 @@ strsplit_ctl <- function(
     if(any(matches[[i]] > 0)) {
       starts <- c(1L, matches[[i]] + attr(matches[[i]], 'match.length'))
       ends <- c(matches[[i]] - 1L, chars[i])
+      starts[starts < 1L] <- 1L
       sub.invalid <- starts > chars[i]
+
       if(any(sub.invalid)) {
         # happens when split goes all way to end of string
         starts <- starts[!sub.invalid]
         ends <- ends[!sub.invalid]
       }
       res[[i]] <- substr_ctl_internal(
-        x=rep(x[[i]], length(starts)),
-        start=starts, stop=ends, type=0L, round="first",
+        x=x[[i]],
+        start=starts, stop=ends, type=0L,
+        round.start=TRUE, round.stop=FALSE,
         tabs.as.spaces=FALSE, tab.stops=8L, warn=warn,
-        term.cap.int=integer()
+        term.cap.int=integer(), x.len=length(starts)
       )
     } else {
       res[[i]] <- x[[i]]
