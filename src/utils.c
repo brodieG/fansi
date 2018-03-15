@@ -304,16 +304,13 @@ SEXP FANSI_cleave(SEXP x) {
   b = PROTECT(allocVector(INTSXP, len));
 
   size_t size = 0;
-  for(int i = 0; i < sizeof(int)) {
+  for(int i = 0; i < sizeof(int); ++i) {
     if(size > SIZE_MAX - len)
       error("Internal error: vector too long to cleave"); // nocov
     size += len;
   }
-
-  int * data = ;
-
-  memcpy(a, INTEGER(x), size);
-  memcpy(b, INTEGER(x)[len], size);
+  memcpy(INTEGER(a), INTEGER(x), size);
+  memcpy(INTEGER(b), INTEGER(x) + len, size);
 
   SEXP res = PROTECT(allocVector(VECSXP, 2));
   SET_VECTOR_ELT(res, 0, a);
