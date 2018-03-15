@@ -38,7 +38,8 @@ R_CallMethodDef callMethods[] = {
   {"strsplit", (DL_FUNC) &FANSI_strsplit, 3},
   {"cleave", (DL_FUNC) &FANSI_cleave, 1},
   {"order", (DL_FUNC) &FANSI_order, 1},
-  {"sort", (DL_FUNC) &FANSI_sort, 1},
+  {"sort_int", (DL_FUNC) &FANSI_sort_int, 1},
+  {"sort_chr", (DL_FUNC) &FANSI_sort_chr, 1},
   {NULL, NULL, 0}
 };
 
