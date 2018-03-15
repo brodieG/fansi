@@ -90,8 +90,8 @@ strsplit_ctl <- function(
 
   for(i in seq_along(x)) {
     if(any(matches[[i]] > 0)) {
-      starts <- c(1, matches[[i]] + attr(matches[[i]], 'match.length'))
-      ends <- c(matches[[i]] - 1, chars[i])
+      starts <- c(1L, matches[[i]] + attr(matches[[i]], 'match.length'))
+      ends <- c(matches[[i]] - 1L, chars[i])
       sub.invalid <- starts > chars[i]
       if(any(sub.invalid)) {
         # happens when split goes all way to end of string

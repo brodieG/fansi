@@ -106,11 +106,22 @@ substr2_ctl <- function(
       deparse(VALID.TERM.CAP)
     )
   type.m <- match(type, c('chars', 'width')) - 1L
-  substr_ctl_internal(
-    x, start=start, stop=stop, type.int=type.m, round=round,
+  x.len <- length(x)
+
+  start <- rep(as.integer(start), length.out=x.len)
+  stop <- rep(as.integer(stop), length.out=x.len)
+  start[start < 1L] <- 1L
+  s.s.valid <- stop >= start & stop
+
+  res <- character(x.len)
+
+  res[s.s.valid] <- substr_ctl_internal(
+    x[s.s.valid], start=start[s.s.valid], stop=stop[s.s.valid],
+    type.int=type.m, round=round,
     tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
     term.cap.int=term.cap.int
   )
+  res
 }
 ## Lower overhead version of the function for use by strwrap
 ##
@@ -126,11 +137,6 @@ substr_ctl_internal <- function(
 
   # Silently recycle start/stop like substr does
 
-  start <- rep(as.integer(start), length.out=x.len)
-  stop <- rep(as.integer(stop), length.out=x.len)
-  start[start < 1L] <- 1L
-  s.s.valid <- stop >= start & stop
-
   # For each unique string, compute the state at each start and stop position
   # and re-map the positions to "ansi" space
 
@@ -138,7 +144,7 @@ substr_ctl_internal <- function(
   x.u <- unique_chr(x)
 
   for(u in x.u) {
-    elems <- which(x == u & s.s.valid)
+    elems <- which(x == u)
     e.start <- start[elems]
     e.stop <- stop[elems]
     # note, for expediency we're currently assuming that there is no overlap
