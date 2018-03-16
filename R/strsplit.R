@@ -20,10 +20,14 @@
 #' but should otherwise behave the same way except for CSI SGR sequence
 #' awareness.
 #'
+#' Non-ASCII strings are converted to UTF-8.
+#'
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results,
 #'   [base::strsplit] for details on the splitting.
 #' @export
+#' @param x a character vector, or, unlike [base::strsplit] an object that can
+#'   be coerced to character.
 #' @inheritParams base::strsplit
 #' @inheritParams strwrap_ctl
 #' @return list, see [base::strsplit].
@@ -35,7 +39,6 @@
 #   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
 # ) {
 #   x.split <- strsplit(x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE)
-#   vetr(warn=LGL.1, term.cap=CHR)
 #   if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
 #     stop(
 #       "Argument `term.cap` may only contain values in ",
@@ -51,7 +54,26 @@ strsplit_ctl <- function(
   x <- enc2utf8(as.character(x))
   split <- as.character(enc2utf8(split))
   if(!length(split)) split <- ""
+  if(anyNA(split)) stop("Argument `split` may not contain NAs.")
 
+  if(!is.logical(warn)) warn <- as.logical(warn)
+  if(length(warn) != 1L || is.na(warn))
+    stop("Argument `warn` must be TRUE or FALSE.")
+
+  if(!is.logical(fixed)) fixed <- as.logical(fixed)
+  if(length(fixed) != 1L || is.na(fixed))
+    stop("Argument `fixed` must be TRUE or FALSE.")
+
+  if(!is.logical(perl)) perl <- as.logical(perl)
+  if(length(perl) != 1L || is.na(perl))
+    stop("Argument `perl` must be TRUE or FALSE.")
+
+  if(!is.logical(useBytes)) useBytes <- as.logical(useBytes)
+  if(length(useBytes) != 1L || is.na(useBytes))
+    stop("Argument `useBytes` must be TRUE or FALSE.")
+
+  if(!is.character(term.cap))
+    stop("Argument `term.cap` must be character.")
   if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
     stop(
       "Argument `term.cap` may only contain values in ",
@@ -61,9 +83,10 @@ strsplit_ctl <- function(
   # Need to handle recycling, complicated by the ability of strsplit to accept
   # multiple different split arguments
 
+  x.na <- is.na(x)
   x.seq <- seq_along(x)
   s.seq <- seq_along(split)
-  s.x.seq <- rep(s.seq, length.out=length(x))
+  s.x.seq <- rep(s.seq, length.out=length(x)) * (!x.na)
 
   matches <- res <- vector("list", length(x))
   x.strip <- strip_ctl(x, warn=warn)
@@ -117,6 +140,7 @@ strsplit_ctl <- function(
   # fix upstream...
 
   res[!chars] <- list(character(0L))
+  res[x.na] <- list(NA_character_)
   res
 }
 

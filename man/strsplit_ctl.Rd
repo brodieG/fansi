@@ -5,13 +5,11 @@
 \title{ANSI Control Sequence Aware Version of strsplit}
 \usage{
 strsplit_ctl(x, split, fixed = FALSE, perl = FALSE, useBytes = FALSE,
-  warn = getOption("fansi.warn"))
+  warn = getOption("fansi.warn"), term.cap = getOption("fansi.term.cap"))
 }
 \arguments{
-\item{x}{
-    character vector, each element of which is to be split.  Other
-    inputs, including a factor, will give an error.
-  }
+\item{x}{a character vector, or, unlike \link[base:strsplit]{base::strsplit} an object that can
+be coerced to character.}
 
 \item{split}{
     character vector (or object which can be coerced to such)
@@ -39,6 +37,13 @@ strsplit_ctl(x, split, fixed = FALSE, perl = FALSE, useBytes = FALSE,
 problematic escape sequences are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
+
+\item{term.cap}{character a vector of the capabilities of the terminal, can
+be any combination "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
+starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
+"38;2" or "48;2"). Changing this parameter changes how \code{fansi} interprets
+escape sequences, so you should ensure that it matches your terminal
+capabilities. See \link{term_cap_test} for details.}
 }
 \value{
 list, see \link[base:strsplit]{base::strsplit}.
@@ -47,6 +52,9 @@ list, see \link[base:strsplit]{base::strsplit}.
 A drop-in replacement for \link[base:strsplit]{base::strsplit}.  It will be noticeably slower,
 but should otherwise behave the same way except for CSI SGR sequence
 awareness.
+}
+\details{
+Non-ASCII strings are converted to UTF-8.
 }
 \examples{
 strsplit_ctl("\\033[31mhello\\033[42m world!", " ")

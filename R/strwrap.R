@@ -97,13 +97,31 @@ strwrap_ctl <- function(
   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
 ) {
   if(!is.character(x)) x <- as.character(x)
-  vetr(
-    x=character(),
-    width=NUM,
-    indent=INT.1.POS,
-    exdent=INT.1.POS, prefix=character(1), simplify=LGL.1, initial=character(1),
-    warn=LGL.1, term.cap=CHR
-  )
+
+  if(!is.numeric(width) || length(width) != 1L || is.na(width))
+    stop("Argument `width` must be a scalar numeric.")
+
+  if(!is.numeric(indent) || length(indent) != 1L || is.na(indent) || indent < 0)
+    stop("Argument `indent` must be a positive scalar numeric.")
+
+  if(!is.numeric(exdent) || length(exdent) != 1L || is.na(exdent) || exdent < 0)
+    stop("Argument `exdent` must be a positive scalar numeric.")
+
+  if(!is.character(prefix)) prefix <- as.character(prefix)
+  if(length(prefix) != 1L)
+    stop("Argument `prefix` must be a scalar character.")
+
+  if(!is.character(initial)) initial <- as.character(initial)
+  if(length(initial) != 1L)
+    stop("Argument `initial` must be a scalar character.")
+
+  if(!is.logical(warn)) warn <- as.logical(warn)
+  if(length(warn) != 1L || is.na(warn))
+    stop("Argument `warn` must be TRUE or FALSE.")
+
+  if(!is.character(term.cap))
+    stop("Argument `term.cap` must be character.")
+
   if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
     stop(
       "Argument `term.cap` may only contain values in ",
@@ -138,24 +156,64 @@ strwrap2_ctl <- function(
   tab.stops=getOption('fansi.tab.stops'),
   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
 ) {
+  # {{{ validation
+
   if(!is.character(x)) x <- as.character(x)
-  vetr(
-    x=character(),
-    width=NUM.1 && I(. > 1 || !wrap.always),
-    indent=INT.1.POS,
-    exdent=INT.1.POS, prefix=character(1), simplify=LGL.1, initial=character(1),
-    pad.end=CHR.1 && nchar(.) < 2, wrap.always=LGL.1, strip.spaces=LGL.1,
-    tabs.as.spaces=LGL.1,
-    tab.stops=INT.POS.STR && length(.) > 0,
-    warn=LGL.1, term.cap=CHR
-  )
-  if(tabs.as.spaces && strip.spaces)
-    stop("`tabs.as.spaces` and `strip.spaces` should not both be TRUE.")
+
+  if(!is.numeric(width) || length(width) != 1L || is.na(width))
+    stop("Argument `width` must be a scalar numeric.")
+
+  if(!is.numeric(indent) || length(indent) != 1L || is.na(indent) || indent < 0)
+    stop("Argument `indent` must be a positive scalar numeric.")
+
+  if(!is.numeric(exdent) || length(exdent) != 1L || is.na(exdent) || exdent < 0)
+    stop("Argument `exdent` must be a positive scalar numeric.")
+
+  if(!is.character(prefix)) prefix <- as.character(prefix)
+  if(length(prefix) != 1L)
+    stop("Argument `prefix` must be a scalar character.")
+
+  if(!is.character(initial)) initial <- as.character(initial)
+  if(length(initial) != 1L)
+    stop("Argument `initial` must be a scalar character.")
+
+  if(!is.logical(warn)) warn <- as.logical(warn)
+  if(length(warn) != 1L || is.na(warn))
+    stop("Argument `warn` must be TRUE or FALSE.")
+
+  if(!is.character(term.cap))
+    stop("Argument `term.cap` must be character.")
   if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
     stop(
       "Argument `term.cap` may only contain values in ",
       deparse(VALID.TERM.CAP)
     )
+
+  if(!is.character(pad.end) || length(pad.end) != 1 || nchar(pad.end) > 1)
+    stop("Argument `pad.end` must be a one character or empty string.")
+
+  if(!is.logical(wrap.always)) wrap.always <- as.logical(wrap.always)
+  if(length(wrap.always) != 1L || is.na(wrap.always))
+    stop("Argument `wrap.always` must be TRUE or FALSE.")
+
+  if(!is.logical(tabs.as.spaces)) tabs.as.spaces <- as.logical(tabs.as.spaces)
+  if(length(tabs.as.spaces) != 1L || is.na(tabs.as.spaces))
+    stop("Argument `tabs.as.spaces` must be TRUE or FALSE.")
+
+  if(!is.logical(strip.spaces)) strip.spaces <- as.logical(strip.spaces)
+  if(length(strip.spaces) != 1L || is.na(strip.spaces))
+    stop("Argument `strip.spaces` must be TRUE or FALSE.")
+
+  if(!is.numeric(tab.stops) || !length(tab.stops) || any(tab.stops < 1))
+    stop("Argument `tab.stops` must be numeric and strictly positive")
+
+  if(wrap.always && width < 2L)
+    stop("Width must be at least 2 in `wrap.always` mode.")
+
+  if(tabs.as.spaces && strip.spaces)
+    stop("`tabs.as.spaces` and `strip.spaces` should not both be TRUE.")
+    #
+  # }}} end validation
 
   width <- max(c(as.integer(width) - 1L, 1L))
   indent <- as.integer(indent)

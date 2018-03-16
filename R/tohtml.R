@@ -20,7 +20,6 @@
 #' translated.  Others are ignored.
 #'
 #' @export
-#' @param x character vector
 #' @inheritParams substr_ctl
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
@@ -33,12 +32,19 @@
 sgr_to_html <- function(
   x, warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
 ) {
-  vetr(character(), LGL.1, CHR)
+  if(!is.character(x)) x <- as.character(x)
+  if(!is.logical(warn)) warn <- as.logical(warn)
+  if(length(warn) != 1L || is.na(warn))
+    stop("Argument `warn` must be TRUE or FALSE.")
+
+  if(!is.character(term.cap))
+    stop("Argument `term.cap` must be character.")
   if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
     stop(
       "Argument `term.cap` may only contain values in ",
       deparse(VALID.TERM.CAP)
     )
+
   .Call(FANSI_esc_to_html, x, warn, term.cap.int)
 }
 
