@@ -29,6 +29,14 @@ unitizer_sect("Simple", {
   substr_ctl(str04, 5, 7, term.cap=term.cap)
   substr_ctl(str04, 5, 13, term.cap=term.cap)
 })
+unitizer_sect("Multi-line", {
+  str.m.0 <- paste0(
+    "\033[44m",
+    c("hello world", rep("goodbye \033[45mmoon", 2), "yowza bombastic"),
+    "\033[m"
+  )
+  substr_ctl(str.m.0, (1:4) * 2, (3:8) * 2)
+})
 unitizer_sect("Corner cases", {
   substr_ctl("hello", 0, -1)
   substr_ctl("hello", 0, 0)
@@ -70,4 +78,11 @@ unitizer_sect("Corner cases", {
 
   substr_ctl("hello", 1, NA_integer_)
   substr_ctl("hello", NA_integer_, 1)
+
+  # Nested
+
+  substr_ctl(rep("\033[31mhello\033[m", 3), c(3,2,1), c(3,4,5))
+
+
+
 })
