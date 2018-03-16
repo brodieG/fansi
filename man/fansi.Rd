@@ -44,7 +44,8 @@ not support it.
 \section{ANSI CSI SGR Control Sequences}{
 
 
-\strong{NOTE}: not all displays support ANSI CSI SGR sequences.
+\strong{NOTE}: not all displays support ANSI CSI SGR sequences; run
+\link{term_cap_test} to see whether your display supports them.
 
 ANSI CSI SGR Control Sequences are the subset of CSI sequences that can be
 used to change text appearance (e.g. color).  These sequences begin with

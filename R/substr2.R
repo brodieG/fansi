@@ -86,7 +86,8 @@ substr_ctl <- function(
 #' @export
 
 substr2_ctl <- function(
-  x, start, stop, type='chars', round='start', tabs.as.spaces=FALSE,
+  x, start, stop, type='chars', round='start',
+  tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
   tab.stops=getOption('fansi.tab.stops'),
   warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap')
@@ -104,42 +105,62 @@ substr2_ctl <- function(
       "Argument `term.cap` may only contain values in ",
       deparse(VALID.TERM.CAP)
     )
+  type.m <- match(type, c('chars', 'width')) - 1L
   x.len <- length(x)
-
-  # Add special case for length(x) == 1
 
   # Silently recycle start/stop like substr does
 
   start <- rep(as.integer(start), length.out=x.len)
   stop <- rep(as.integer(stop), length.out=x.len)
+  start[start < 1L] <- 1L
 
+  substr_ctl_internal(
+    x, start=start, stop=stop,
+    type.int=type.m,
+    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
+    term.cap.int=term.cap.int,
+    round.start=round == 'start' || round == 'both',
+    round.stop=round == 'stop' || round == 'both',
+    x.len=length(x)
+  )
+}
+## Lower overhead version of the function for use by strwrap
+##
+## @param type.int is supposed to be the matched version of type, minus 1
+
+substr_ctl_internal <- function(
+  x, start, stop, type.int, round, tabs.as.spaces,
+  tab.stops, warn, term.cap.int, round.start, round.stop,
+  x.len
+) {
   # For each unique string, compute the state at each start and stop position
   # and re-map the positions to "ansi" space
 
-  res <- character(length(x))
-  x.u <- unique_chr(x)
-  type.m <- match(type, c('chars', 'width'))
+  res <- character(x.len)
+  s.s.valid <- stop >= start & stop
+
+  x.scalar <- length(x) == 1
+  x.u <- if(x.scalar) x else unique_chr(x)
 
   for(u in x.u) {
-    elems <- which(x == u)
+    elems <- which(x == u & s.s.valid)
+    elems.len <- length(elems)
     e.start <- start[elems]
     e.stop <- stop[elems]
+    x.elems <- if(x.scalar) rep(x, length.out=elems.len) else x[elems]
+
     # note, for expediency we're currently assuming that there is no overlap
     # between starts and stops
 
-    e.order <- order(c(e.start, e.stop), method='shell')
+    e.order <- forder(c(e.start, e.stop))
 
-    e.lag <- c(
-      rep(round %in% c('start', 'both'), length(start)),
-      rep(round %in% c('stop', 'both'), length(stop))
-    )[e.order]
-
-    e.ends <- c(rep(FALSE, length(start)), rep(TRUE, length(start)))[e.order]
+    e.lag <- rep(c(round.start, round.stop), each=elems.len)[e.order]
+    e.ends <- rep(c(FALSE, TRUE), each=elems.len)[e.order]
     e.sort <- c(e.start, e.stop)[e.order]
 
     state <- .Call(
       FANSI_state_at_pos_ext,
-      u, e.sort - 1L, type.m - 1L,
+      u, e.sort - 1L, type.int,
       e.lag, e.ends,
       tabs.as.spaces, tab.stops,
       warn, term.cap.int
@@ -147,8 +168,9 @@ substr2_ctl <- function(
     # Recover the matching values for e.sort
 
     e.unsort.idx <- match(seq_along(e.order), e.order)
-    start.ansi.idx <- head(e.unsort.idx, length(e.start))
-    stop.ansi.idx <- tail(e.unsort.idx, length(e.stop))
+    start.stop.ansi.idx <- .Call(FANSI_cleave, e.unsort.idx)
+    start.ansi.idx <- start.stop.ansi.idx[[1L]]
+    stop.ansi.idx <- start.stop.ansi.idx[[2L]]
 
     # And use those to substr with
 
@@ -157,15 +179,14 @@ substr2_ctl <- function(
     start.tag <- state[[1]][start.ansi.idx]
     stop.tag <- state[[1]][stop.ansi.idx]
 
-    # if there is any ANSI CSI then add a terminating CSI
+    # if there is any ANSI CSI at end then add a terminating CSI
 
     end.csi <- character(length(start.tag))
-    end.csi[nzchar(start.tag) | nzchar(stop.tag)] <- '\033[0m'
+    end.csi[nzchar(stop.tag)] <- '\033[0m'
 
     res[elems] <- paste0(
-      start.tag, substr(x[elems], start.ansi, stop.ansi), end.csi
+      start.tag, substr(x.elems, start.ansi, stop.ansi), end.csi
     )
   }
   res
 }
-

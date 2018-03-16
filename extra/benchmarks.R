@@ -20,7 +20,14 @@ library(fansi)
 #   "http://www.gutenberg.org/files/4300/4300-0.txt", encoding='UTF-8'
 # )
 ulysses <- readLines("~/Downloads/ulysses.txt", encoding='UTF-8')
+ulysses.f <- fansi_lines(ulysses)
+system.time(strsplit(ulysses, " "))
+zz <- treeprof(strsplit_ctl(ulysses, " "))
+zz <- treeprof(strsplit_ctl(ulysses.f, " "))
+system.time(gregexpr(" ", ulysses))
+
 ulysses.c <- paste0(ulysses, collapse='\n')
+ulysses.c.c <- paste0(, collapse='\n')
 
 n <- 1e4
 starts <- 1:n

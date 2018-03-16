@@ -109,7 +109,7 @@ term_cap_test <- function() {
 ## A version of unique that isn't terrible for very long strings that are
 ## actually the same
 
-unique_chr <- function(x) .Call(FANSI_unique_chr, sort.int(x))
+unique_chr <- function(x) .Call(FANSI_unique_chr, x)
 
 ## Testing interface for color code to HTML conversion
 
@@ -149,3 +149,10 @@ check_assumptions <- function() .Call(FANSI_check_assumptions)  # nocov
 digits_in_int <- function(x) .Call(FANSI_digits_in_int, x)
 
 add_int <- function(x, y) .Call(FANSI_add_int, as.integer(x), as.integer(y))
+
+## testing interface for low overhead versions of R funs
+
+cleave <- function(x) .Call(FANSI_cleave, x)
+forder <- function(x) .Call(FANSI_order, x)
+sort_chr <- function(x) .Call(FANSI_sort_chr, x)
+

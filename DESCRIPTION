@@ -37,6 +37,7 @@ Collate:
     'strip.R'
     'strwrap.R'
     'strtrim.R'
+    'strsplit.R'
     'substr2.R'
     'tohtml.R'
     'unhandled.R'

@@ -33,7 +33,7 @@ for details, particularly if you are getting unexpected results.
 
 ## Control Sequences Require Special Handling
 
-ANSI control characters and sequences (Control Sequences hereafter) break the
+ANSI control characters and sequences (_Control Sequences_ hereafter) break the
 relationship between byte/character position in a string and display position.
 
 For example, in `"Hello \033[42mWorld, Good\033[m Night Moon!"` the `,`
@@ -46,7 +46,7 @@ wrong in several ways:
 
 We end up cutting up our string in the middle of "World", and worse the
 formatting bleeds out of our string into the prompt line.  Compare to what
-happens when we use `substr_ctl`, the Control Sequence aware version of
+happens when we use `substr_ctl`, the _Control Sequence_ aware version of
 `substr`:
 
 ![good substring](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/substr_ctl.png)
@@ -56,23 +56,27 @@ happens when we use `substr_ctl`, the Control Sequence aware version of
 `fansi` provides counterparts to the following string functions:
 
 * `substr`
-* `strwrap`
+* `strsplit`
 * `strtrim`
+* `strwrap`
 * `nchar` / `nzchar`
 
 These are drop-in replacements that behave (almost) identically to the base
-counterparts, except for the Control Sequence awareness.  There are also
-slightly improved versions of them that provide additional functionality, and
-utility functions such as `strip_ctl` to remove Control Sequences and `has_ctl`
+counterparts, except for the _Control Sequence_ awareness.
+
+`fansi` also includes improved versions of some of those functions, such as
+`substr2_ctl` which allows for width based substrings.  There are also
+utility functions such as `strip_ctl` to remove _Control Sequences_ and `has_ctl`
 to detect whether strings contain them.
 
 Most of `fansi` is in C so you should find performance of the `fansi` functions
-to be comparable to the base functions, or in some cases like `strwrap_ctl` much
-faster.
+to be comparable to the base functions.  `strwrap_ctl` is much faster, and
+`strsplit_ctl` is somewhat slower than the corresponding base functions.
 
 ## HTML Translation
 
-You can translate ANSI CSI SGR formatted strings into their HTML counterparts:
+You can translate ANSI CSI SGR formatted strings into their HTML counterparts
+with `sgr_to_html`:
 
 ![translate to html](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/sgr_to_html.png)
 

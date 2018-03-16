@@ -141,7 +141,7 @@ SEXP FANSI_writeline(
     error("Internal Error: boundary leading position; contact maintainer.");
     // nocov end
   if(tar_width < 0)
-    error("Internal Errorr: tar_width must be positive."); // nocov start
+    error("Internal Errorr: tar_width must be positive."); // nocov
 
   size_t target_size = state_bound.pos_byte - state_start.pos_byte;
   size_t target_width = state_bound.pos_width - state_start.pos_width;
