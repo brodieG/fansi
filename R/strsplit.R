@@ -111,6 +111,10 @@ strsplit_ctl <- function(
       res[[i]] <- x[[i]]
     }
   }
+  # lazy fix for zero length strings splitting into nothing; would be better to
+  # fix upstream...
+
+  res[!chars] <- list(character(0L))
   res
 }
 
