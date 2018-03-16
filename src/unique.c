@@ -47,6 +47,7 @@ SEXP FANSI_unique_chr(SEXP x) {
     res = PROTECT(allocVector(STRSXP, u_count));
     SET_STRING_ELT(res, 0, STRING_ELT(x_srt, 0));
 
+    x_prev = STRING_ELT(x_srt, 0);
     u_count = 1;
     for(R_xlen_t i = 1; i < x_len; ++i) {
       SEXP x_cur = STRING_ELT(x_srt, i);
