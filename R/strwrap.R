@@ -199,13 +199,12 @@ strwrap2_ctl <- function(
   if(!is.logical(tabs.as.spaces)) tabs.as.spaces <- as.logical(tabs.as.spaces)
   if(length(tabs.as.spaces) != 1L || is.na(tabs.as.spaces))
     stop("Argument `tabs.as.spaces` must be TRUE or FALSE.")
+  if(!is.numeric(tab.stops) || !length(tab.stops) || any(tab.stops < 1))
+    stop("Argument `tab.stops` must be numeric and strictly positive")
 
   if(!is.logical(strip.spaces)) strip.spaces <- as.logical(strip.spaces)
   if(length(strip.spaces) != 1L || is.na(strip.spaces))
     stop("Argument `strip.spaces` must be TRUE or FALSE.")
-
-  if(!is.numeric(tab.stops) || !length(tab.stops) || any(tab.stops < 1))
-    stop("Argument `tab.stops` must be numeric and strictly positive")
 
   if(wrap.always && width < 2L)
     stop("Width must be at least 2 in `wrap.always` mode.")

@@ -84,7 +84,6 @@ substr_ctl <- function(
   term.cap=getOption('fansi.term.cap')
 ) substr2_ctl(x=x, start=start, stop=stop, warn=warn, term.cap=term.cap)
 
-#' @importFrom utils head tail
 #' @rdname substr_ctl
 #' @export
 
