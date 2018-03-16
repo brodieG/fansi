@@ -16,15 +16,9 @@
 
 #' ANSI Control Sequence Aware Version of strsplit
 #'
-#' Will run [base::strsplit] with the provided inputs, and then will process
-#' them to ensure the effect of CSI SGR sequences is preserved within each
-#' element of the input character vector.
-#'
-#' Currently this function will not produce the expected outcome if `split`
-#' matches CSI SGR sequences.  For example, if you use `split='m'` this will
-#' destroy the CSI SGR sequences as they end in the letter "m".  CSI SGR
-#' sequences contain ESC, "[", "m", and numbers.  In future releases we will
-#' ensure splits do not affect the CSI SGR sequences.
+#' A drop-in replacement for [base::strsplit].  It will be noticeably slower,
+#' but should otherwise behave the same way except for CSI SGR sequence
+#' awareness.
 #'
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results,
@@ -33,6 +27,8 @@
 #' @inheritParams base::strsplit
 #' @inheritParams strwrap_ctl
 #' @return list, see [base::strsplit].
+#' @examples
+#' strsplit_ctl("\033[31mhello\033[42m world!", " ")
 
 # strsplit_ctl <- function(
 #   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,

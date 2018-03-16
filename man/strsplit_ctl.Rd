@@ -44,16 +44,12 @@ to be incorrect, for example by moving the cursor (see \link{fansi}).}
 list, see \link[base:strsplit]{base::strsplit}.
 }
 \description{
-Will run \link[base:strsplit]{base::strsplit} with the provided inputs, and then will process
-them to ensure the effect of CSI SGR sequences is preserved within each
-element of the input character vector.
+A drop-in replacement for \link[base:strsplit]{base::strsplit}.  It will be noticeably slower,
+but should otherwise behave the same way except for CSI SGR sequence
+awareness.
 }
-\details{
-Currently this function will not produce the expected outcome if \code{split}
-matches CSI SGR sequences.  For example, if you use \code{split='m'} this will
-destroy the CSI SGR sequences as they end in the letter "m".  CSI SGR
-sequences contain ESC, "[", "m", and numbers.  In future releases we will
-ensure splits do not affect the CSI SGR sequences.
+\examples{
+strsplit_ctl("\\033[31mhello\\033[42m world!", " ")
 }
 \seealso{
 \link{fansi} for details on how \emph{Control Sequences} are

@@ -9,8 +9,9 @@ substr_ctl(x, start, stop, warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"))
 
 substr2_ctl(x, start, stop, type = "chars", round = "start",
-  tabs.as.spaces = FALSE, tab.stops = getOption("fansi.tab.stops"),
-  warn = getOption("fansi.warn"), term.cap = getOption("fansi.term.cap"))
+  tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
+  tab.stops = getOption("fansi.tab.stops"), warn = getOption("fansi.warn"),
+  term.cap = getOption("fansi.term.cap"))
 }
 \arguments{
 \item{x}{a character vector.}
