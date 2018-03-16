@@ -46,11 +46,17 @@
 
 strsplit_ctl <- function(
   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
-  warn=getOption('fansi.warn')
+  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
 ) {
   x <- enc2utf8(as.character(x))
   split <- as.character(enc2utf8(split))
   if(!length(split)) split <- ""
+
+  if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
+    stop(
+      "Argument `term.cap` may only contain values in ",
+      deparse(VALID.TERM.CAP)
+    )
 
   # Need to handle recycling, complicated by the ability of strsplit to accept
   # multiple different split arguments
@@ -101,7 +107,7 @@ strsplit_ctl <- function(
         start=starts, stop=ends, type=0L,
         round.start=TRUE, round.stop=FALSE,
         tabs.as.spaces=FALSE, tab.stops=8L, warn=warn,
-        term.cap.int=integer(), x.len=length(starts)
+        term.cap.int=term.cap.int, x.len=length(starts)
       )
     } else {
       res[[i]] <- x[[i]]
