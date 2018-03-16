@@ -127,7 +127,7 @@ strsplit_ctl <- function(
       }
       res[[i]] <- substr_ctl_internal(
         x=x[[i]],
-        start=starts, stop=ends, type=0L,
+        start=starts, stop=ends, type.int=0L,
         round.start=TRUE, round.stop=FALSE,
         tabs.as.spaces=FALSE, tab.stops=8L, warn=warn,
         term.cap.int=term.cap.int, x.len=length(starts)
