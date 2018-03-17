@@ -142,8 +142,8 @@ SEXP FANSI_writeline(
     // nocov start
     error("Internal Error: boundary leading position; contact maintainer.");
     // nocov end
-  if(tar_width < 0)
-    error("Internal Errorr: tar_width must be positive."); // nocov
+
+  if(tar_width < 0) tar_width = 0;
 
   size_t target_size = state_bound.pos_byte - state_start.pos_byte;
   size_t target_width = state_bound.pos_width - state_start.pos_width;
@@ -301,9 +301,9 @@ static SEXP strwrap(
 
   int width_tar = width_1;
 
-  if(width < 1)
+  if(width < 1 && wrap_always)
     error("Internal Error: invalid width."); // nocov
-  if(width_1 < 0 || width_2 < 0)
+  if(wrap_always && (width_1 < 0 || width_2 < 0))
     error("Internal Error: incompatible width/indent/prefix."); // nocov
 
   // Use LISTSXP so we don't have to do a two pass process to determine how many
