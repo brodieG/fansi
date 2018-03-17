@@ -18,6 +18,25 @@
 
 #include "fansi.h"
 /*
+ * Used to set a global int_max value smaller than INT_MAX for testing
+ * purposes
+ */
+
+int FANSI_int_max = INT_MAX;
+
+SEXP FANSI_set_int_max(SEXP x) {
+  if(TYPEOF(x) != INTSXP || XLENGTH(x) != 1)
+    error("invalid int_max value");  // nocov
+  int x_int = asInteger(x);
+
+  if(x_int < 1)
+    error("int_max value mus be positive");
+
+  int old_int = FANSI_int_max;
+  FANSI_int_max = x_int;
+  return ScalarInteger(old_int);
+}
+/*
  * Add integers while checking for overflow
  *
  * Note we are stricter than necessary when y is negative because we want to

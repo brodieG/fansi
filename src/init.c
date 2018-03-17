@@ -40,6 +40,7 @@ R_CallMethodDef callMethods[] = {
   {"order", (DL_FUNC) &FANSI_order, 1},
   {"sort_int", (DL_FUNC) &FANSI_sort_int, 1},
   {"sort_chr", (DL_FUNC) &FANSI_sort_chr, 1},
+  {"set_int_max", (DL_FUNC) &FANSI_set_int_max, 1},
   {NULL, NULL, 0}
 };
 

@@ -24,6 +24,7 @@ Collate:
     'constants.R'
     'fansi-package.R'
     'has.R'
+    'internal.R'
     'load.R'
     'misc.R'
     'nchar.R'
