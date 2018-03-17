@@ -119,13 +119,9 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
   // Final interpretations; note that anything over 255 cannot be part of a
   // valid SGR sequence
 
-  if(last && (*string != 'm') && err_code < 4) {
-    // Not actually an SGR sequence
-    err_code = 4;
-  } else if(!err_code && (len - leading_zeros) > 3) {
+  if(!err_code && (len - leading_zeros) > 3) {
     err_code = 3;
   }
-  // Rprintf("    len: %d leading_zeros: %d\n", len, leading_zeros);
   if(!err_code) {
     int len2 = len - leading_zeros;
     while(len2--) {
@@ -182,6 +178,7 @@ static struct FANSI_state parse_colors(
       // terminal and iTerm)
 
       state.pos_byte -= (res.len);
+      state.err_code = 3;
     } else if (
       // terminal doesn't have 256 or true color capability
       (res.val == 2 && !(state.term_cap & (1 << 2))) ||
