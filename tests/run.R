@@ -7,6 +7,9 @@ if(suppressWarnings(require('unitizer'))) {
     fansi.tab.stops=8L,
     fansi.warn=TRUE,
     fansi.term.cap=c('bright', '256')
+    # warnPartialMatchArgs = TRUE,
+    # warnPartialMatchAttr = TRUE,
+    # warnPartialMatchDollar = TRUE
   )
   on.exit(old.opt)
   unitize_dir('unitizer', state='recommended')
