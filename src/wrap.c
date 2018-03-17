@@ -164,15 +164,15 @@ SEXP FANSI_writeline(
   if(target_width <= (size_t) tar_width && *pad_chr) {
     target_pad = tar_width - target_width;
     if(
-      (tar_width > INT_MAX - target_pad) ||
-      (target_size > (size_t) (INT_MAX - target_pad))
+      (tar_width > FANSI_int_max - target_pad) ||
+      (target_size > (size_t) (FANSI_int_max - target_pad))
     ) {
       error("Attempting to create string longer than INT_MAX while padding.");
     }
     target_width = tar_width + target_pad;
     target_size = target_size + target_pad;
   }
-  if(target_size > (size_t)(INT_MAX - pre_dat.bytes)) {
+  if(target_size > (size_t)(FANSI_int_max - pre_dat.bytes)) {
     error(
       "%%",
       "Attempting to create string longer than INT_MAX when adding ",
@@ -188,7 +188,7 @@ SEXP FANSI_writeline(
     state_start_size = FANSI_state_size(state_start);
     start_close += state_start_size;  // this can't possibly overflow
   }
-  if(target_size > (size_t)(INT_MAX - start_close)) {
+  if(target_size > (size_t)(FANSI_int_max - start_close)) {
     error(
       "%s%s",
       "Attempting to create string longer than INT_MAX while adding leading ",
@@ -247,7 +247,7 @@ SEXP FANSI_writeline(
   cetype_t chr_type = CE_NATIVE;
   if((state_bound.has_utf8 || pre_dat.has_utf8)) chr_type = CE_UTF8;
 
-  if(buff_track - buff->buff > INT_MAX)
+  if(buff_track - buff->buff > FANSI_int_max)
     // nocov start
     error(
       "%s%s",

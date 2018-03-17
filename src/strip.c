@@ -98,7 +98,7 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
         invalid_idx = i + 1;
       }
       if(csi.len) {
-        if(csi.start - chr > INT_MAX - csi.len)
+        if(csi.start - chr > FANSI_int_max - csi.len)
           // nocov start
           error(
             "%s%s",
@@ -358,7 +358,7 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
     }
     if(strip_this) {
       *(buff_track) = 0;
-      if(buff_track - buff->buff > INT_MAX)
+      if(buff_track - buff->buff > FANSI_int_max)
         // nocov start
         error(
           "%s%s",

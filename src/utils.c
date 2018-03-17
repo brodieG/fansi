@@ -23,6 +23,7 @@
  */
 
 int FANSI_int_max = INT_MAX;
+int FANSI_int_min = INT_MIN;  // currently no external interface for this
 
 SEXP FANSI_set_int_max(SEXP x) {
   if(TYPEOF(x) != INTSXP || XLENGTH(x) != 1)
@@ -45,7 +46,7 @@ SEXP FANSI_set_int_max(SEXP x) {
  */
 
 int FANSI_add_int(int x, int y, const char * file, int line) {
-  if((y >= 0 && (x > INT_MAX - y)) || (y < 0 && (x <= INT_MIN - y)))
+  if((y >= 0 && (x > FANSI_int_max - y)) || (y < 0 && (x <= FANSI_int_min - y)))
     error(
       "Integer overflow in file %s at line %d; %s", file, line,
       "contact maintainer."
@@ -199,14 +200,14 @@ void FANSI_size_buff(struct FANSI_buff * buff, size_t size) {
     if(size < 128) size = 128;  // in theory little penalty to ask this minimum
 
     size_t tmp_double_size = 0;
-    if(buff->len > (size_t) INT_MAX + 1 - buff->len) {
-      tmp_double_size = (size_t) INT_MAX + 1;
+    if(buff->len > (size_t) FANSI_int_max + 1 - buff->len) {
+      tmp_double_size = (size_t) FANSI_int_max + 1;
     } else {
       tmp_double_size = buff->len + buff->len;
     }
     if(size > tmp_double_size) tmp_double_size = size;
 
-    if(tmp_double_size > (size_t) INT_MAX + 1)
+    if(tmp_double_size > (size_t) FANSI_int_max + 1)
       error("Internal Error: max allowed buffer size is INT_MAX + 1."); // nocov
 
     buff->len = tmp_double_size;

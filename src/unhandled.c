@@ -23,7 +23,7 @@ SEXP FANSI_unhandled_esc(SEXP x) {
     error("Argument `x` must be a character vector.");  // nocov
 
   R_xlen_t x_len = XLENGTH(x);
-  if(x_len >= INT_MAX)
+  if(x_len >= FANSI_int_max)
     // nocov start
     error(
       "This function does not support vectors of length INT_MAX or longer."
@@ -64,7 +64,7 @@ SEXP FANSI_unhandled_esc(SEXP x) {
         int esc_start = state.pos_ansi;
         state = FANSI_read_next(state);
         if(state.err_code) {
-          if(err_count == INT_MAX) {
+          if(err_count == FANSI_int_max) {
             warning(
               "%s%s",
               "There are more than INT_MAX unhandled sequences, returning ",
@@ -73,7 +73,7 @@ SEXP FANSI_unhandled_esc(SEXP x) {
             break_early = 1;
             break;
           }
-          if(esc_start == INT_MAX || state.pos_ansi == INT_MAX)
+          if(esc_start == FANSI_int_max || state.pos_ansi == FANSI_int_max)
             // nocov start
             error(
               "%s%s",

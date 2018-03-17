@@ -36,9 +36,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   #define FANSI_ADD_INT(x, y) FANSI_add_int((x), (y), __FILE__, __LINE__)
 
-  // Global variables
+  // Global variables (see utils.c)
 
   int FANSI_int_max;
+  int FANSI_int_min;
 
   // - Structs -----------------------------------------------------------------
   /*

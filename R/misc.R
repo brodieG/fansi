@@ -113,18 +113,6 @@ term_cap_test <- function() {
   writeLines(res.fin)
   invisible(res)
 }
-## A version of unique that isn't terrible for very long strings that are
-## actually the same
-
-unique_chr <- function(x) .Call(FANSI_unique_chr, x)
-
-## Testing interface for color code to HTML conversion
-
-esc_color_code_to_html <- function(x) {
-  if(!is.matrix(x) || !is.integer(x) || nrow(x) != 5)
-    stop("Argument `x` must be a five row integer matrix.")
-  .Call(FANSI_color_to_html, as.integer(x))
-}
 #' Colorize Character Vectors
 #'
 #' Color each element in input with one of the 256 color ANSI CSI SGR codes.
@@ -156,15 +144,3 @@ fansi_lines <- function(txt, step=1) {
   txt.c[nz] <- sprintf(tpl, fg[nz], bg[nz], txt[nz])
   txt.c
 }
-
-check_assumptions <- function() .Call(FANSI_check_assumptions)  # nocov
-digits_in_int <- function(x) .Call(FANSI_digits_in_int, x)
-
-add_int <- function(x, y) .Call(FANSI_add_int, as.integer(x), as.integer(y))
-
-## testing interface for low overhead versions of R funs
-
-cleave <- function(x) .Call(FANSI_cleave, x)
-forder <- function(x) .Call(FANSI_order, x)
-sort_chr <- function(x) .Call(FANSI_sort_chr, x)
-

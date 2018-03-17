@@ -156,7 +156,9 @@ static int state_as_html(struct FANSI_state state, int first, char * buff) {
   const char * buff_start = buff;
   if(!FANSI_state_has_style_basic(state)) {
     if(first)
+      // nocov start
       error("Internal Error: no state in first span; contact maintainer.");
+      // nocov end
     if(state.string[state.pos_byte]) {
       memcpy(buff, "</span><span>", 13);
       buff += 13;
@@ -254,7 +256,7 @@ static int html_compute_size(
   int bytes_net = bytes_html - bytes_esc;
 
   if(bytes_net >= 0) {
-    if(bytes_extra > INT_MAX - bytes_net) {
+    if(bytes_extra > FANSI_int_max - bytes_net) {
       error(
         "%s%s %.0f %s",
         "Expanding ESC sequences into CSS will create a string longer ",
@@ -264,7 +266,7 @@ static int html_compute_size(
     }
     bytes_extra += bytes_net;
   } else {
-    if(bytes_extra < INT_MIN - bytes_net) {
+    if(bytes_extra < FANSI_int_min - bytes_net) {
       // This should actually be impossible as a string that is only ESC
       // sequences with no SGR is the only way to get that big a decrease,
       // and if it doesn't have SGR then it wouldn't enter this loop
@@ -293,7 +295,7 @@ static size_t html_check_overflow(
   if(bytes_init < 0) error("Internal error: bytes_init must be positive.");
   if(
     bytes_extra >= 0 && (
-      bytes_init > INT_MAX - bytes_extra - span_extra
+      bytes_init > FANSI_int_max - bytes_extra - span_extra
     )
   ) {
     error(
@@ -303,7 +305,7 @@ static size_t html_check_overflow(
       "which is not allowed by R."
     );
   } else if(bytes_extra < 0) {
-    if(bytes_extra <= INT_MIN - span_extra) {
+    if(bytes_extra <= FANSI_int_min - span_extra) {
       // nocov start
       error(
         "%s%s%s",
@@ -445,7 +447,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
       cetype_t chr_type = CE_NATIVE;
       if(state.has_utf8) chr_type = CE_UTF8;
-      if(buff_track - buff.buff > INT_MAX)
+      if(buff_track - buff.buff > FANSI_int_max)
         // nocov start
         error(
           "%s%s",
