@@ -460,6 +460,14 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
             state.err_code = 3;  // unknown token
           }
         }
+        if(state.style > ((1 << (FANSI_STYLE_MAX + 1)) - 1))
+          // nocov start
+          error(
+            "Internal Error: style greater than FANSI_STYLE_MAX; ",
+            "contact maintainer."
+          );
+          // nocov end
+
         // `tok_res` value can't be used because code above, including
         // parse_colors can change the corresponding value in the `state`
         // struct, so better to deal with that directly

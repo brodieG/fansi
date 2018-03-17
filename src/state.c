@@ -341,14 +341,17 @@ int FANSI_state_size(struct FANSI_state state) {
     int color_size = FANSI_color_size(state.color, state.color_extra);
     int bg_color_size = FANSI_color_size(state.bg_color, state.bg_color_extra);
 
-    // styles are stored as bits
+    // styles are stored as bits, styles less than 10 correspond to 0-9, the
+    // others are random ones but will need one more byte, hence the
+    // `(2 + (i > 9))`
 
     int style_size = 0;
     if(state.style) {
-      for(int i = 1; i < 10; ++i){
-        style_size += ((state.style & (1 << i)) > 0) * 2;
-      }
-    }
+      for(int i = 1; i <= FANSI_STYLE_MAX; ++i){
+        style_size +=
+          ((state.style & (1 << i)) > 0) *
+          (2 + (i > 9));
+    } }
     // Some question of whether we are adding a slowdown to check for rarely use
     // ESC sequences such as these...
 
@@ -462,6 +465,26 @@ int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
         buff[str_pos++] = '0' + i;
         buff[str_pos++] = ';';
     } }
+    // styles outside 0-9
+
+    if(state.style & (1 << 10)) {
+      // fraktur
+      buff[str_pos++] = '2';
+      buff[str_pos++] = '0';
+      buff[str_pos++] = ';';
+    }
+    if(state.style & (1 << 11)) {
+      // double underline
+      buff[str_pos++] = '2';
+      buff[str_pos++] = '1';
+      buff[str_pos++] = ';';
+    }
+    if(state.style & (1 << 12)) {
+      // prop spacing
+      buff[str_pos++] = '2';
+      buff[str_pos++] = '6';
+      buff[str_pos++] = ';';
+    }
     // colors
 
     str_pos += FANSI_color_write(

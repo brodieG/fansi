@@ -23,6 +23,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #define _FANSI_H
 
   #define FANSI_STRIP_ALL 31 // 1 + 2 + 4 + 8 + 16
+  #define FANSI_STYLE_MAX 12 // 12 is double underline
   /*
    * Buffer used for writing strings
    *
@@ -107,6 +108,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * - n ==  9: crossout
      * - n == 10: fraktur
      * - n == 11: double underline
+     * - n == 12: prop spacing
+     *
+     * UPDATE FANSI_STYLE_MAX if we add more here!!, make sure to check the
+     * size, read, and write funs any time this changes
      */
     unsigned int style;
 
