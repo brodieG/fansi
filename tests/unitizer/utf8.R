@@ -181,4 +181,34 @@ unitizer_sect("Corner cases", {
     warning=function(e) conditionMessage(e)
   )
   substr2_ctl(chrs.2, 1, 10, type='width', warn=FALSE)
+
+  # boundaries
+
+  b.test <- c(
+    "\uc0f6\ubed9",
+    "\u0301a\ubed9",  # leading diacritic
+    "\ubed9\u0301a",  # trailing diacritic
+    "\ubed9a\u0301"   # really trailing diacritic
+  )
+  identical(substr_ctl(b.test, 0, 3), substr(b.test, 0, 3))
+  identical(substr_ctl(b.test, 0, 2), substr(b.test, 0, 2))
+  identical(substr_ctl(b.test, 1, 2), substr(b.test, 1, 2))
+  identical(substr_ctl(b.test, 0, 4), substr(b.test, 0, 4))
+  identical(substr_ctl(b.test, 4, 4), substr(b.test, 4, 4))
+
+  b.t.c <- sprintf("\033[43m%s\033[49m", b.test)
+
+  substr_ctl(b.t.c, 0, 0)
+  substr_ctl(b.t.c, 0, 2)
+  substr_ctl(b.t.c, 1, 2)
+  substr_ctl(b.t.c, 0, 4)
+  substr_ctl(b.t.c, 4, 4)
+
+  substr2_ctl(b.t.c, 0, 0, type='width')
+  substr2_ctl(b.t.c, 0, 2, type='width')
+  substr2_ctl(b.t.c, 1, 4, type='width')
+  substr2_ctl(b.t.c, 0, 5, type='width')
+  substr2_ctl(b.t.c, 5, 5, type='width')
+
+
 })

@@ -50,7 +50,8 @@
 #'
 #' @section ANSI CSI SGR Control Sequences:
 #'
-#' **NOTE**: not all displays support ANSI CSI SGR sequences.
+#' **NOTE**: not all displays support ANSI CSI SGR sequences; run
+#' [term_cap_test] to see whether your display supports them.
 #'
 #' ANSI CSI SGR Control Sequences are the subset of CSI sequences that can be
 #' used to change text appearance (e.g. color).  These sequences begin with
@@ -157,7 +158,6 @@
 #' @useDynLib fansi, .registration=TRUE, .fixes="FANSI_"
 #' @docType package
 #' @importFrom utils globalVariables
-#' @import vetr
 #' @name fansi
 
 NULL

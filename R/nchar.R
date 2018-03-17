@@ -62,13 +62,33 @@ nchar_ctl <- function(
   warn=getOption('fansi.warn')
 ) {
   if(!is.character(x)) x <- as.character(x)
-  vetr(
-    warn=LGL.1, type=CHR.1, allowNA=LGL.1, keepNA=logical(1), strip=CHR
-  )
+  if(!is.logical(warn)) warn <- as.logical(warn)
+  if(length(warn) != 1L || is.na(warn))
+    stop("Argument `warn` must be TRUE or FALSE.")
+
+  if(!is.logical(allowNA)) allowNA <- as.logical(allowNA)
+  if(length(allowNA) != 1L)
+    stop("Argument `allowNA` must be a scalar logical.")
+
+  if(!is.logical(keepNA)) keepNA <- as.logical(keepNA)
+  if(length(keepNA) != 1L)
+    stop("Argument `keepNA` must be a scalar logical.")
+
+  if(!is.character(strip))
+    stop("Argument `strip` must be character.")
   if(!all(strip %in% VALID.STRIP))
     stop(
       "Argument `strip` may contain only values in `", deparse(VALID.STRIP), "`"
     )
+  if(!is.character(type) || length(type) != 1 || is.na(type))
+    stop("Argument `type` must be scalar character and not NA.")
+  valid.types <- c('chars', 'width', 'bytes')
+  if(is.na(type.int <- pmatch(type, valid.types)))
+    stop(
+      "Argument `type` must partial match one of 'chars', 'width', or 'bytes'."
+    )
+  type <- valid.types[type.int]
+
   nchar(
     strip_ctl(x, strip=strip, warn=warn), type=type, allowNA=allowNA,
     keepNA=keepNA
@@ -79,7 +99,14 @@ nchar_ctl <- function(
 
 nzchar_ctl <- function(x, keepNA=NA, warn=getOption('fansi.warn')) {
   if(!is.character(x)) x <- as.character(x)
-  vetr(warn=LGL.1, keepNA=logical(1))
+
+  if(length(warn) != 1L || is.na(warn))
+    stop("Argument `warn` must be TRUE or FALSE.")
+
+  if(!is.logical(keepNA)) keepNA <- as.logical(keepNA)
+  if(length(keepNA) != 1L)
+    stop("Argument `keepNA` must be a scalar logical.")
+
   term.cap.int <- seq_along(VALID.TERM.CAP)
   .Call(FANSI_nzchar_esc, x, keepNA, warn, term.cap.int)
 }

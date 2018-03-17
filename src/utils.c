@@ -287,3 +287,144 @@ int FANSI_pmatch(
 // concept borrowed from utf8-lite
 
 void FANSI_interrupt(int i) {if(!(i % 1000)) R_CheckUserInterrupt();}
+/*
+ * Split an integer vector into two equal size pieces
+ */
+
+SEXP FANSI_cleave(SEXP x) {
+  if(TYPEOF(x) != INTSXP || XLENGTH(x) % 2)
+    error("Internal error, need even length INTSXP.");
+
+  R_xlen_t len = XLENGTH(x) / 2;
+  if(len > SIZE_MAX)
+    error("Internal error: vector too long to cleave"); // nocov
+
+  SEXP a, b;
+  a = PROTECT(allocVector(INTSXP, len));
+  b = PROTECT(allocVector(INTSXP, len));
+
+  size_t size = 0;
+  for(int i = 0; i < sizeof(int); ++i) {
+    if(size > SIZE_MAX - len)
+      error("Internal error: vector too long to cleave"); // nocov
+    size += len;
+  }
+  memcpy(INTEGER(a), INTEGER(x), size);
+  memcpy(INTEGER(b), INTEGER(x) + len, size);
+
+  SEXP res = PROTECT(allocVector(VECSXP, 2));
+  SET_VECTOR_ELT(res, 0, a);
+  SET_VECTOR_ELT(res, 1, b);
+  UNPROTECT(3);
+  return res;
+}
+struct datum {int val; R_xlen_t idx;};
+
+static int cmpfun (const void * p, const void * q) {
+  struct datum a = *(struct datum *) p;
+  struct datum b = *(struct datum *) q;
+  return(a.val > b.val ? 1 : (a.val < b.val ? -1 : 0));
+}
+/*
+ * Equivalent to `order`, but less overhead.  May not be faster for longer
+ * vectors but since we call it potentially repeatedly via our initial version
+ * of strsplit, we want to do this to make somewhat less sub-optimal
+ */
+SEXP FANSI_order(SEXP x) {
+  if(TYPEOF(x) != INTSXP)
+    error("Internal error: this order only supports ints.");  // nocov
+
+  R_xlen_t len = XLENGTH(x);
+
+  size_t size = 0;
+  for(int i = 0; i < sizeof(struct datum); ++i) {
+    if(size > SIZE_MAX - len)
+      error("Internal error: vector too long to order"); // nocov
+    size += len;
+  }
+  struct datum * data = (struct datum *) R_alloc(len, sizeof(struct datum));
+
+  for(R_xlen_t i = 0; i < len; ++i)
+    *(data + i) = (struct datum){.val=INTEGER(x)[i], .idx=i + 1};
+
+  qsort(data, (size_t) len, sizeof(struct datum), cmpfun);
+
+  SEXP res = PROTECT(allocVector(INTSXP, len));
+
+  for(R_xlen_t i = 0; i < len; ++i) INTEGER(res)[i] = (data + i)->idx;
+
+  UNPROTECT(1);
+  return res;
+}
+static int cmpfun2 (const void * p, const void * q) {
+  int a = *(int *) p;
+  int b = *(int *) q;
+  return(a > b ? 1 : (a < b ? -1 : 0));
+}
+/*
+ * Equivalent to `sort`, but less overhead.  May not be faster for longer
+ * vectors but since we call it potentially repeatedly via our initial version
+ * of strsplit, we want to do this to make somewhat less sub-optimal
+ */
+SEXP FANSI_sort_int(SEXP x) {
+  if(TYPEOF(x) != INTSXP)
+    error("Internal error: this order only supports ints.");  // nocov
+
+  R_xlen_t len = XLENGTH(x);
+  if(len > SIZE_MAX)
+    error("Internal error: vector too long to sort"); // nocov
+
+  SEXP res = PROTECT(duplicate(x));
+
+  qsort(INTEGER(res), (size_t) len, sizeof(int), cmpfun2);
+
+  UNPROTECT(1);
+  return res;
+}
+struct datum2 {SEXP val; R_xlen_t idx;};
+
+static int cmpfun3 (const void * p, const void * q) {
+  struct datum2 a = *(struct datum2 *) p;
+  struct datum2 b = *(struct datum2 *) q;
+  const char * a_chr = CHAR(a.val);
+  const char * b_chr = CHAR(b.val);
+  return(a_chr > b_chr ? 1 : (a_chr < b_chr ? -1 : 0));
+}
+/*
+ * Sort chars so that equal values are contiguous
+ *
+ * Beware, the sort is not lexical, instead this is sorted by the memory addess
+ * of the character strings backing each CHARSXP.
+ *
+ * The only purpose of this is to support the unique_chr function.
+ */
+
+SEXP FANSI_sort_chr(SEXP x) {
+  if(TYPEOF(x) != STRSXP)
+    error("Internal error: this sort only supports char vecs.");  // nocov
+
+  R_xlen_t len = XLENGTH(x);
+  if(len > SIZE_MAX)
+    error("Internal error: vector too long to sort"); // nocov
+
+  size_t size = 0;
+  for(int i = 0; i < sizeof(struct datum); ++i) {
+    if(size > SIZE_MAX - len)
+      error("Internal error: vector too long to order"); // nocov
+    size += len;
+  }
+  struct datum2 * data = (struct datum2 *) R_alloc(len, sizeof(struct datum2));
+
+  for(R_xlen_t i = 0; i < len; ++i)
+    *(data + i) = (struct datum2){.val=STRING_ELT(x, i), .idx=i};
+
+  qsort(data, (size_t) len, sizeof(struct datum2), cmpfun3);
+
+  SEXP res = PROTECT(allocVector(STRSXP, len));
+
+  for(R_xlen_t i = 0; i < len; ++i)
+    SET_STRING_ELT(res, i, STRING_ELT(x, (data + i)->idx));
+
+  UNPROTECT(1);
+  return res;
+}

@@ -12,15 +12,24 @@ strwrap2_ctl(string, 24, wrap.always=TRUE, pad.end=" ")
 strwrap2_ctl(utf8.c[15], 24, wrap.always=TRUE, pad.end=" ")
 
 utf8.big <- rep(c(lorem.ru, lorem.cn), 10000)
-system.time(utf8.big.wrap <- strwrap2_esc(utf8.big, 71, wrap.always=TRUE))
+system.time(utf8.big.wrap <- strwrap2_ctl(utf8.big, 71, wrap.always=TRUE))
 utf8.big.small <- utf8.big.wrap[1:32710]
+
+system.time(strwrap2_ctl(utf8.big.small, 25))
 
 library(fansi)
 # ulysses <- readLines(
 #   "http://www.gutenberg.org/files/4300/4300-0.txt", encoding='UTF-8'
 # )
 ulysses <- readLines("~/Downloads/ulysses.txt", encoding='UTF-8')
+ulysses.f <- fansi_lines(ulysses)
+system.time(strsplit(ulysses, " "))
+zz <- treeprof(strsplit_ctl(ulysses, " "))
+zz <- treeprof(strsplit_ctl(ulysses.f, " "))
+system.time(gregexpr(" ", ulysses))
+
 ulysses.c <- paste0(ulysses, collapse='\n')
+ulysses.c.c <- paste0(, collapse='\n')
 
 n <- 1e4
 starts <- 1:n

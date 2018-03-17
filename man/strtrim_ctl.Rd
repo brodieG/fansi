@@ -25,11 +25,11 @@ to be incorrect, for example by moving the cursor (see \link{fansi}).}
 \item{tabs.as.spaces}{FALSE (default) or TRUE, whether to convert tabs to
 spaces.  This can only be set to TRUE if \code{strip.spaces} is FALSE.}
 
-\item{tab.stops}{integer(1:n) indicating position of tab stops to use when
-converting tabs to spaces.  If there are more tabs in a line than defined
-tab stops the last tab stop is re-used.  For the purposes of applying tab
-stops, each input line is considered a line and the character count begins
-from the beginning of the input line.}
+\item{tab.stops}{integer(1:n) indicating position of tab stops to use
+when converting tabs to spaces.  If there are more tabs in a line than
+defined tab stops the last tab stop is re-used.  For the purposes of
+applying tab stops, each input line is considered a line and the character
+count begins from the beginning of the input line.}
 }
 \description{
 One difference with \link[base:strtrim]{base::strtrim} is that all C0 control characters such as

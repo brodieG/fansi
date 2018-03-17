@@ -288,6 +288,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP x, SEXP type, SEXP allowNA, SEXP keepNA, SEXP warn, SEXP term_cap
   );
   SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap);
+  SEXP FANSI_strsplit(SEXP x, SEXP warn, SEXP term_cap);
 
   // Internal
 
@@ -297,6 +298,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   );
 
   // Utilities
+
+  SEXP FANSI_cleave(SEXP x);
+  SEXP FANSI_order(SEXP x);
+  SEXP FANSI_sort_int(SEXP x);
+  SEXP FANSI_sort_chr(SEXP x);
 
   SEXP FANSI_check_assumptions();
   SEXP FANSI_digits_in_int_ext(SEXP y);

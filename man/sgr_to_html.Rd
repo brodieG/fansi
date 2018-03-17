@@ -8,7 +8,7 @@ sgr_to_html(x, warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"))
 }
 \arguments{
-\item{x}{character vector}
+\item{x}{a character vector or object that can be coerced to character.}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic escape sequences are encountered.  These could cause the

@@ -10,7 +10,7 @@ has_ctl(x, which = "all", warn = getOption("fansi.warn"))
 has_sgr(x, warn = getOption("fansi.warn"))
 }
 \arguments{
-\item{x}{a character vector.}
+\item{x}{a character vector or object that can be coerced to character.}
 
 \item{which}{character, what Control Sequences to check for; see \code{strip}
 parameter for \link{strip_ctl} for details.}
