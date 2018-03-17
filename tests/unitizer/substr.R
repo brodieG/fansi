@@ -111,10 +111,14 @@ unitizer_sect("Obscure escapes", {
   )
   suppressWarnings(substr_ctl("\033[38;6;31mworld\033[m", 2, 3))
 
+  # illegal colors leave prior color unchanged
+
   tryCatch(
-    substr_ctl("\033[38;5;256\033[m", 2, 3),
+    substr_ctl("\033[31mhello\033[38;5;256m world\033[m", 7, 8),
     warning=conditionMessage
   )
+  suppressWarnings(substr_ctl("\033[31mhello\033[38;5;256m world\033[m", 7, 8))
+
   # fraktur and double underline and prop spacing, and other odd ones
 
   substr_ctl("\033[20mworld\033[m", 2, 3)

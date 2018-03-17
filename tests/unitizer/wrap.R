@@ -287,8 +287,14 @@ unitizer_sect("corner cases", {
   tryCatch(
     strwrap2_ctl("hello world", 8, pad.end='  '), error=conditionMessage
   )
+  strwrap2_ctl("goodbye moon", 8, indent=5, prefix='> hello >')
+  strwrap2_ctl(
+    "goodbye moon", 16, indent=5, prefix='> hello >', wrap.always=TRUE
+  )
   tryCatch(
-    strwrap2_ctl("hello world", 8, indent=5, prefix='> hello >'),
+    strwrap2_ctl(
+      "goodbye moon", 15, indent=5, prefix='> hello >', wrap.always=TRUE
+    ),
     error=conditionMessage
   )
 })
