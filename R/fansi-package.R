@@ -158,7 +158,6 @@
 #' @useDynLib fansi, .registration=TRUE, .fixes="FANSI_"
 #' @docType package
 #' @importFrom utils globalVariables
-#' @import vetr
 #' @name fansi
 
 NULL

@@ -10,7 +10,7 @@ strip_ctl(x, strip = "all", warn = getOption("fansi.warn"))
 strip_sgr(x, warn = getOption("fansi.warn"))
 }
 \arguments{
-\item{x}{a character vector.}
+\item{x}{a character vector or object that can be coerced to character.}
 
 \item{strip}{character, any combination of the following values (see details):
 \itemize{

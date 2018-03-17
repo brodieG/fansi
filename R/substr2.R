@@ -38,16 +38,19 @@
 #' characters to be dropped irrespective whether they correspond to `start` or
 #' `stop`, and "both" could cause all of them to be included.
 #'
+#' @note Non-ASCII strings are converted to UTF-8.
+#'
 #' @inheritParams base::substr
 #' @inheritParams tabs_as_spaces
 #' @export
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
-#' @param type character(1L) in `c("char", "width")`
-#' @param round character(1L) in `c("start", "stop", "both", "neither")`,
-#'   controls how to resolve ambiguities when a `start` or `stop` value in
-#'   "width" `type` mode falls within a multi-byte character or a wide display
-#'   character.  See details.
+#' @param x a character vector or object that can be coerced to character.
+#' @param type character(1L) partial matching `c("chars", "width")`.
+#' @param round character(1L) partial matching
+#'   `c("start", "stop", "both", "neither")`, controls how to resolve
+#'   ambiguities when a `start` or `stop` value in "width" `type` mode falls
+#'   within a multi-byte character or a wide display character.  See details.
 #' @param tabs.as.spaces FALSE (default) or TRUE, whether to convert tabs to
 #'   spaces.  This can only be set to TRUE if `strip.spaces` is FALSE.
 #' @param warn TRUE (default) or FALSE, whether to warn when potentially
@@ -81,7 +84,6 @@ substr_ctl <- function(
   term.cap=getOption('fansi.term.cap')
 ) substr2_ctl(x=x, start=start, stop=stop, warn=warn, term.cap=term.cap)
 
-#' @importFrom utils head tail
 #' @rdname substr_ctl
 #' @export
 
@@ -93,19 +95,42 @@ substr2_ctl <- function(
   term.cap=getOption('fansi.term.cap')
 ) {
   x <- enc2utf8(as.character(x))
-  vetr(
-    character(), start=numeric() && !anyNA(.), stop=NUM,
-    type=CHR.1 && . %in% c('chars', 'width'),
-    round=CHR.1 && . %in% c('start', 'stop', 'both', 'neither'),
-    tabs.as.spaces=LGL.1, tab.stops=INT && length(.) >= 1L,
-    warn=LGL.1, term.cap=CHR
-  )
+
+  if(!is.logical(tabs.as.spaces)) tabs.as.spaces <- as.logical(tabs.as.spaces)
+  if(length(tabs.as.spaces) != 1L || is.na(tabs.as.spaces))
+    stop("Argument `tabs.as.spaces` must be TRUE or FALSE.")
+  if(!is.numeric(tab.stops) || !length(tab.stops) || any(tab.stops < 1))
+    stop("Argument `tab.stops` must be numeric and strictly positive")
+
+  if(!is.logical(warn)) warn <- as.logical(warn)
+  if(length(warn) != 1L || is.na(warn))
+    stop("Argument `warn` must be TRUE or FALSE.")
+
+  if(!is.character(term.cap))
+    stop("Argument `term.cap` must be character.")
   if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
     stop(
       "Argument `term.cap` may only contain values in ",
       deparse(VALID.TERM.CAP)
     )
-  type.m <- match(type, c('chars', 'width')) - 1L
+
+  valid.round <- c('start', 'stop', 'both', 'neither')
+  if(
+    !is.character(round) || length(round) != 1 ||
+    is.na(round.int <- pmatch(round, valid.round))
+  )
+    stop("Argument `round` must partial match one of ", deparse(valid.round))
+
+  round <- valid.round[round.int]
+
+  valid.types <- c('chars', 'width')
+  if(
+    !is.character(type) || length(type) != 1 ||
+    is.na(type.int <- pmatch(type, valid.types))
+  )
+    stop("Argument `type` must partial match one of ", deparse(valid.types))
+
+  type.m <- type.int - 1L
   x.len <- length(x)
 
   # Silently recycle start/stop like substr does
@@ -114,8 +139,11 @@ substr2_ctl <- function(
   stop <- rep(as.integer(stop), length.out=x.len)
   start[start < 1L] <- 1L
 
-  substr_ctl_internal(
-    x, start=start, stop=stop,
+  res <- rep(NA_character_, x.len)
+  no.na <- !(is.na(x) | is.na(start & stop))
+
+  res[no.na] <- substr_ctl_internal(
+    x[no.na], start=start[no.na], stop=stop[no.na],
     type.int=type.m,
     tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
     term.cap.int=term.cap.int,
@@ -123,6 +151,7 @@ substr2_ctl <- function(
     round.stop=round == 'stop' || round == 'both',
     x.len=length(x)
   )
+  res
 }
 ## Lower overhead version of the function for use by strwrap
 ##

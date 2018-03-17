@@ -32,7 +32,13 @@
 
 strtrim_ctl <- function(x, width, warn=getOption('fansi.warn')){
   if(!is.character(x)) x <- as.character(x)
-  vetr(width=NUM.1.POS && . >= 1, warn=LGL.1)
+
+  if(!is.numeric(width) || length(width) != 1L || is.na(width) || width < 0)
+    stop("Argument `width` must be a positive scalar numeric.")
+
+  if(!is.logical(warn)) warn <- as.logical(warn)
+  if(length(warn) != 1L || is.na(warn))
+    stop("Argument `warn` must be TRUE or FALSE.")
 
   # can assume all term cap available for these purposes
 
@@ -63,10 +69,20 @@ strtrim2_ctl <- function(
   tab.stops=getOption('fansi.tab.stops')
 ) {
   if(!is.character(x)) x <- as.character(x)
-  vetr(
-    width=NUM.1.POS && . >= 1, warn=LGL.1, tabs.as.spaces=LGL.1,
-    tab.stops=INT.POS.STR && length(.) > 0,
-  )
+
+  if(!is.numeric(width) || length(width) != 1L || is.na(width) || width < 0)
+    stop("Argument `width` must be a positive scalar numeric.")
+
+  if(!is.logical(warn)) warn <- as.logical(warn)
+  if(length(warn) != 1L || is.na(warn))
+    stop("Argument `warn` must be TRUE or FALSE.")
+
+  if(!is.logical(tabs.as.spaces)) tabs.as.spaces <- as.logical(tabs.as.spaces)
+  if(length(tabs.as.spaces) != 1L || is.na(tabs.as.spaces))
+    stop("Argument `tabs.as.spaces` must be TRUE or FALSE.")
+
+  if(!is.numeric(tab.stops) || !length(tab.stops) || any(tab.stops < 1))
+    stop("Argument `tab.stops` must be numeric and strictly positive")
 
   # can assume all term cap available for these purposes
 

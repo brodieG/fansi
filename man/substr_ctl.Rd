@@ -14,7 +14,7 @@ substr2_ctl(x, start, stop, type = "chars", round = "start",
   term.cap = getOption("fansi.term.cap"))
 }
 \arguments{
-\item{x}{a character vector.}
+\item{x}{a character vector or object that can be coerced to character.}
 
 \item{start}{integer.  The first element to be replaced.}
 
@@ -32,21 +32,21 @@ starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
 escape sequences, so you should ensure that it matches your terminal
 capabilities. See \link{term_cap_test} for details.}
 
-\item{type}{character(1L) in \code{c("char", "width")}}
+\item{type}{character(1L) partial matching \code{c("chars", "width")}.}
 
-\item{round}{character(1L) in \code{c("start", "stop", "both", "neither")},
-controls how to resolve ambiguities when a \code{start} or \code{stop} value in
-"width" \code{type} mode falls within a multi-byte character or a wide display
-character.  See details.}
+\item{round}{character(1L) partial matching
+\code{c("start", "stop", "both", "neither")}, controls how to resolve
+ambiguities when a \code{start} or \code{stop} value in "width" \code{type} mode falls
+within a multi-byte character or a wide display character.  See details.}
 
 \item{tabs.as.spaces}{FALSE (default) or TRUE, whether to convert tabs to
 spaces.  This can only be set to TRUE if \code{strip.spaces} is FALSE.}
 
-\item{tab.stops}{integer(1:n) indicating position of tab stops to use when
-converting tabs to spaces.  If there are more tabs in a line than defined
-tab stops the last tab stop is re-used.  For the purposes of applying tab
-stops, each input line is considered a line and the character count begins
-from the beginning of the input line.}
+\item{tab.stops}{integer(1:n) indicating position of tab stops to use
+when converting tabs to spaces.  If there are more tabs in a line than
+defined tab stops the last tab stop is re-used.  For the purposes of
+applying tab stops, each input line is considered a line and the character
+count begins from the beginning of the input line.}
 }
 \description{
 \code{substr_ctl} is a drop-in replacement for \code{substr}.  Performance is
@@ -70,6 +70,9 @@ included character via the \code{stop} is left out.  The converse is true if we
 use "stop" as the \code{round} value.  "neither" would cause all partial
 characters to be dropped irrespective whether they correspond to \code{start} or
 \code{stop}, and "both" could cause all of them to be included.
+}
+\note{
+Non-ASCII strings are converted to UTF-8.
 }
 \examples{
 substr_ctl("\\033[42mhello\\033[m world", 1, 9)

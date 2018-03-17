@@ -7,7 +7,7 @@
 fansi_lines(txt, step = 1)
 }
 \arguments{
-\item{txt}{character to color}
+\item{txt}{character vector or object that can be coerced to character vector}
 
 \item{step}{integer(1L) how quickly to step through the color palette}
 }
