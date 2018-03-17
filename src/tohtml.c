@@ -140,7 +140,7 @@ static int color_to_html(
       buff_track += 6;
     }
   } else {
-    error("Internal Error: invalid color code %d", color);
+    error("Internal Error: invalid color code %d", color); // nocov
   }
   *buff_track = '0';
   return res_bytes;
@@ -210,7 +210,10 @@ static int state_size_as_html(struct FANSI_state state, int first) {
   int size = 0;
   if(!FANSI_state_has_style_basic(state)) {
     if(first)
+      // nocov start
       error("Internal Error: no state in first span; contact maintainer.");
+      // nocov end
+
     // Only need to re-open tag if not at end of string
     if(state.string[state.pos_byte]) {
       size = 13;  // </span><span>
@@ -324,7 +327,7 @@ static size_t html_check_overflow(
 }
 SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
   if(TYPEOF(x) != STRSXP)
-    error("Argument `x` must be a character vector");
+    error("Internal Error: `x` must be a character vector");  // nocov
 
   R_xlen_t x_len = XLENGTH(x);
   struct FANSI_buff buff = {.len=0};
@@ -471,10 +474,11 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
 SEXP FANSI_color_to_html_ext(SEXP x) {
   if(TYPEOF(x) != INTSXP)
-    error("Argument must be integer.");
+    error("Argument must be integer.");  // nocov
 
   R_xlen_t len = XLENGTH(x);
-  if(len % 5) error("Argument length not a multipe of 5");
+  if(len % 5)
+    error("Argument length not a multipe of 5"); // nocov
 
   struct FANSI_buff buff = {.len = 0};
   FANSI_size_buff(&buff, 8);

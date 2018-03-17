@@ -17,6 +17,8 @@
  */
 
 #include "fansi.h"
+// nocov start
+// this is a temporarily un-used implementation, but we may re-use it later
 
 SEXP FANSI_strsplit(SEXP x, SEXP warn, SEXP term_cap) {
   if(
@@ -140,3 +142,4 @@ SEXP FANSI_strsplit(SEXP x, SEXP warn, SEXP term_cap) {
   UNPROTECT(1);
   return res_vec;
 }
+// nocov end

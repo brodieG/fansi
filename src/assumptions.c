@@ -28,7 +28,8 @@
  *
  * returns TRUE on success, errors on failure
  */
-// nocov start by definition none of the errors should be thrown, so no sense in
+// nocov start
+// by definition none of the errors should be thrown, so no sense in
 // covering this
 SEXP FANSI_check_assumptions() {
   const char * err_base = "Failed system assumption: %s%s";

@@ -176,14 +176,12 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
  * before, or size `size` if that is greater than twice the size.
  */
 void FANSI_size_buff(struct FANSI_buff * buff, size_t size) {
-  // Rprintf("  buff_len %d size %d\n", buff->len, size);
   if(size > buff->len) {
     if(size < 128) size = 128;  // in theory little penalty to ask this minimum
 
     size_t tmp_double_size = 0;
     if(buff->len > (size_t) INT_MAX + 1 - buff->len) {
-      // too expensive to test
-      tmp_double_size = (size_t) INT_MAX + 1; // nocov
+      tmp_double_size = (size_t) INT_MAX + 1;
     } else {
       tmp_double_size = buff->len + buff->len;
     }
@@ -193,7 +191,6 @@ void FANSI_size_buff(struct FANSI_buff * buff, size_t size) {
       error("Internal Error: max allowed buffer size is INT_MAX + 1."); // nocov
 
     buff->len = tmp_double_size;
-    // Rprintf("  Alloc to %d\n", buff->len);
     buff->buff = R_alloc(buff->len, sizeof(char));
   }
 }
@@ -250,9 +247,11 @@ int FANSI_what_as_int(SEXP what) {
  * @return the position in choices that partial matches x, on a 0-index basis
  *   (ie. 0 == 1st, 1 == 2nd, etc.)
  */
+// nocov start
 int FANSI_pmatch(
   SEXP x, const char ** choices, int choice_count, const char * arg_name
 ) {
+  error("remove nocov if we start to use this");
   if(TYPEOF(x) != STRSXP || XLENGTH(x) != 1)
     error("Argument `%s` must be a length 1 character vector.", arg_name);
 
@@ -283,6 +282,7 @@ int FANSI_pmatch(
 
   return last_match_index;
 }
+// nocov end
 
 // concept borrowed from utf8-lite
 
@@ -293,7 +293,7 @@ void FANSI_interrupt(int i) {if(!(i % 1000)) R_CheckUserInterrupt();}
 
 SEXP FANSI_cleave(SEXP x) {
   if(TYPEOF(x) != INTSXP || XLENGTH(x) % 2)
-    error("Internal error, need even length INTSXP.");
+    error("Internal error, need even length INTSXP.");  // nocov
 
   R_xlen_t len = XLENGTH(x) / 2;
   if(len > SIZE_MAX)
@@ -366,7 +366,9 @@ static int cmpfun2 (const void * p, const void * q) {
  * vectors but since we call it potentially repeatedly via our initial version
  * of strsplit, we want to do this to make somewhat less sub-optimal
  */
+// nocov start
 SEXP FANSI_sort_int(SEXP x) {
+  error("get rid of nocov if we start using");
   if(TYPEOF(x) != INTSXP)
     error("Internal error: this order only supports ints.");  // nocov
 
@@ -381,6 +383,7 @@ SEXP FANSI_sort_int(SEXP x) {
   UNPROTECT(1);
   return res;
 }
+// nocov end
 struct datum2 {SEXP val; R_xlen_t idx;};
 
 static int cmpfun3 (const void * p, const void * q) {

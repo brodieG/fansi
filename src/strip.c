@@ -31,18 +31,18 @@
 
 SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
   if(TYPEOF(x) != STRSXP)
-    error("Argument `x` should be a character vector.");
+    error("Argument `x` should be a character vector.");  // nocov
   if(TYPEOF(what) != INTSXP)
-    error("Internal Error: `what` should integer.");
+    error("Internal Error: `what` should integer.");      // nocov
   if(
     (TYPEOF(warn) != LGLSXP && TYPEOF(warn) != INTSXP) || XLENGTH(warn) != 1 ||
     INTEGER(warn)[0] == NA_INTEGER
   )
-    error("Internal Error: `warn` should be TRUE or FALSE");
+    error("Internal Error: `warn` should be TRUE or FALSE");  // nocov
 
   int warn_int = asInteger(warn);
   if(warn_int < 0 || warn_int > 2)
-    error("Argument `warn` must be between 0 and 2 if an integer.");
+    error("Argument `warn` must be between 0 and 2 if an integer.");  // nocov
 
   // Compress `what` into a single integer using bit flags
 

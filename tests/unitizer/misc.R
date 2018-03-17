@@ -101,3 +101,17 @@ unitizer_sect("utf8clen", {
   substr(utf8.bad.2, 1, 1)
   substr_ctl(utf8.bad.2, 1, 1)
 })
+unitizer_sect("C funs", {
+  fansi:::cleave(1:10)
+  fansi:::cleave(1:9)
+  fansi:::cleave(1:10 + .1)
+
+  # sort_chr doesn't guarantee that things will be sorted lexically, just that
+  # alike things will be contiguous
+
+  set.seed(42)
+  jumbled <- as.character(rep(1:10, 10))[sample(1:100)]
+  sorted <- fansi:::sort_chr(jumbled)
+
+  which(as.logical(diff(as.numeric(sorted))))
+})

@@ -20,7 +20,7 @@
 
 SEXP FANSI_unhandled_esc(SEXP x) {
   if(TYPEOF(x) != STRSXP)
-    error("Argument `x` must be a character vector.");
+    error("Argument `x` must be a character vector.");  // nocov
 
   R_xlen_t x_len = XLENGTH(x);
   if(x_len >= INT_MAX)
@@ -74,11 +74,13 @@ SEXP FANSI_unhandled_esc(SEXP x) {
             break;
           }
           if(esc_start == INT_MAX || state.pos_ansi == INT_MAX)
+            // nocov start
             error(
               "%s%s",
               "Internal error: computed offset is INT_MAX, shouldn't happen; ",
               "contact maintainer."
             );
+            // nocov end
           if(!has_errors) has_errors = 1;
 
           SEXP err_vals = PROTECT(allocVector(INTSXP, 5));

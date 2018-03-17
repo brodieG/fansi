@@ -103,10 +103,12 @@ static struct FANSI_prefix_dat drop_pre_indent(struct FANSI_prefix_dat dat) {
   dat.width = FANSI_ADD_INT(dat.width, -dat.indent);
   dat.indent = FANSI_ADD_INT(dat.indent, -dat.indent);
   if(dat.indent < 0)
+    // nocov start
     error(
       "Internal Error: cannot drop indent when there is none; contact ",
       "maintainer."
     );
+    // nocov end
   return dat;
 }
 /*
@@ -299,9 +301,10 @@ static SEXP strwrap(
 
   int width_tar = width_1;
 
-  if(width < 1) error("Internal Error: invalid width.");
+  if(width < 1)
+    error("Internal Error: invalid width."); // nocov
   if(width_1 < 0 || width_2 < 0)
-    error("Internal Error: incompatible width/indent/prefix.");
+    error("Internal Error: incompatible width/indent/prefix."); // nocov
 
   // Use LISTSXP so we don't have to do a two pass process to determine how many
   // items we're going to have, unless we're in first only in which case we know
@@ -505,9 +508,8 @@ SEXP FANSI_strwrap_ext(
     TYPEOF(tabs_as_spaces) != LGLSXP ||
     TYPEOF(tab_stops) != INTSXP ||
     TYPEOF(first_only) != LGLSXP
-  ) {
-    error("Internal Error: arg type error 1; contact maintainer.");
-  }
+  )
+    error("Internal Error: arg type error 1; contact maintainer.");  // nocov
 
   const char * pad = CHAR(asChar(pad_end));
   if(*pad != 0 && (*pad < 0x20 || *pad > 0x7e))
@@ -562,7 +564,7 @@ SEXP FANSI_strwrap_ext(
   pre_dat_raw = make_pre(prefix);
 
   const char * warn_base =
-    "`%s` contains illegal escape sequences (see `?illegal_esc`).";
+    "`%s` contains unhandled ctrl or UTF-8 sequences (see `?unhandled_ctl`).";
   if(warn_int && pre_dat_raw.warn) warning(warn_base, "prefix");
   if(prefix != initial) {
     ini_dat_raw = make_pre(initial);

@@ -525,7 +525,8 @@ int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
       // note this error is really too late, as we could have written past
       // allocation in the steps above
       error(
-        "Internal Error: tag mem allocation mismatch (%u, %u)", str_pos, buff_len
+        "Internal Error: tag mem allocation mismatch (%u, %u)",
+        str_pos, buff_len
       );
       // nocov end
     buff[str_pos - 1] = 'm';
@@ -609,19 +610,20 @@ SEXP FANSI_state_at_pos_ext(
   SEXP tabs_as_spaces, SEXP tab_stops,
   SEXP warn, SEXP term_cap
 ) {
+  // no errors should make it here, it should be handled R side
   if(TYPEOF(text) != STRSXP && XLENGTH(text) != 1)
-    error("Argument `text` must be character(1L)");
+    error("Argument `text` must be character(1L)");   // nocov
   if(TYPEOF(pos) != INTSXP)
-    error("Argument `pos` must be integer");
+    error("Argument `pos` must be integer");          // nocov
   if(TYPEOF(lag) != LGLSXP)
-    error("Argument `lag` must be logical");
+    error("Argument `lag` must be logical");          // nocov
   if(XLENGTH(pos) != XLENGTH(lag))
-    error("Argument `lag` must be the same length as `pos`");
+    error("Argument `lag` must be the same length as `pos`");  // nocov
   if(XLENGTH(pos) != XLENGTH(ends))
-    error("Argument `ends` must be the same length as `pos`");
-  if(TYPEOF(warn) != LGLSXP)
+    error("Argument `ends` must be the same length as `pos`"); // nocov
+  if(TYPEOF(warn) != LGLSXP)                          // nocov
     error("Argument `warn` must be integer");
-  if(TYPEOF(term_cap) != INTSXP)
+  if(TYPEOF(term_cap) != INTSXP)                      // nocov
     error("Argument `term.cap` must be integer");
 
   R_xlen_t len = XLENGTH(pos);
@@ -692,11 +694,15 @@ SEXP FANSI_state_at_pos_ext(
     R_CheckUserInterrupt();
     pos_i = INTEGER(pos)[i];
     if(text_chr == NA_STRING || pos_i == NA_INTEGER) {
-      for(R_xlen_t j = 0; j < res_cols; j++)
-        REAL(res_mx)[i * res_cols + j] = NA_REAL;
+      error("Internal Error: NAs not allowed"); // nocov
+      // // used to allow, leaving old code for ref
+      // for(R_xlen_t j = 0; j < res_cols; j++)
+      //   REAL(res_mx)[i * res_cols + j] = NA_REAL;
     } else {
       if(pos_i < pos_prev)
+        // nocov start
         error("Internal Error: `pos` must be sorted %d %d.", pos_i, pos_prev);
+        // nocov end
 
       // We need to allow the same position multiple times in case it shows up
       // as starts and ends, etc.

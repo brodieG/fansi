@@ -16,6 +16,7 @@ GNU General Public License for more details.
 Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 */
 
+#include <stdint.h>
 #include <R.h>
 #include <Rinternals.h>
 
