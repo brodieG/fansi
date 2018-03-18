@@ -318,11 +318,13 @@ static size_t html_check_overflow(
     int bytes_extra_extra = bytes_extra + span_extra;
 
     if(bytes_init + bytes_extra_extra < 0)
+      // nocov start
       error(
         "%s%s",
         "Internal Error: CSS would translate to negative length string; ",
         "this should not happen."
       );
+      // nocov end
   }
   bytes_final = (size_t) bytes_init + bytes_extra + span_extra + 1;
   return bytes_final;

@@ -130,7 +130,6 @@ SEXP FANSI_tabs_as_spaces(
         } else if (cur_chr == '\n') {
           state = FANSI_reset_width(state);
         }
-
         // Write string
 
         if(cur_chr == '\t' || !cur_chr) {

@@ -31,15 +31,18 @@ SEXP FANSI_set_int_max(SEXP x) {
   int x_int = asInteger(x);
 
   if(x_int < 1)
-    error("int_max value mus be positive");
+    error("int_max value must be positive"); // nocov
 
   int old_int = FANSI_int_max;
   FANSI_int_max = x_int;
   return ScalarInteger(old_int);
 }
+// nocov start
+// used only for debugging
 SEXP FANSI_get_int_max() {
   return ScalarInteger(FANSI_int_max);
 }
+// nocov end
 /*
  * Add integers while checking for overflow
  *

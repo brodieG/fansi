@@ -599,7 +599,6 @@ int FANSI_state_has_style_basic(struct FANSI_state state) {
 }
 /*
  * R interface for FANSI_state_at_position
- *
  * @param string we're interested in state of
  * @param pos integer positions along the string, one index, sorted
  */
@@ -624,16 +623,18 @@ SEXP FANSI_state_at_pos_ext(
     error("Argument `lag` must be the same length as `pos`");  // nocov
   if(XLENGTH(pos) != XLENGTH(ends))
     error("Argument `ends` must be the same length as `pos`"); // nocov
-  if(TYPEOF(warn) != LGLSXP)                          // nocov
-    error("Argument `warn` must be integer");
-  if(TYPEOF(term_cap) != INTSXP)                      // nocov
-    error("Argument `term.cap` must be integer");
+  if(TYPEOF(warn) != LGLSXP)
+    error("Argument `warn` must be integer");         // nocov
+  if(TYPEOF(term_cap) != INTSXP)
+    error("Argument `term.cap` must be integer");     // nocov
 
   R_xlen_t len = XLENGTH(pos);
 
   const int res_cols = 4;  // if change this, need to change rownames init
   if(len > R_XLEN_T_MAX / res_cols) {
+    // nocov start
     error("Argument `pos` may be no longer than R_XLEN_T_MAX / %d", res_cols);
+    // nocov end
   }
   struct FANSI_state_pair state_pair;
 
@@ -656,6 +657,7 @@ SEXP FANSI_state_at_pos_ext(
   SEXP res_mx = PROTECT(allocVector(REALSXP, res_cols * len));
   SEXP dim = PROTECT(allocVector(INTSXP, 2));
   SEXP dim_names = PROTECT(allocVector(VECSXP, 2));
+
   INTEGER(dim)[0] = res_cols;
   INTEGER(dim)[1] = len;
   setAttrib(res_mx, R_DimSymbol, dim);
