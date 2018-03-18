@@ -217,10 +217,11 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
 
     R_len_t len_j = LENGTH(STRING_ELT(res, i));
     int strip_this, to_strip, to_strip_nl, punct_prev, punct_prev_prev,
-        space_prev, space_start, para_start, newlines, newlines_start;
+        space_prev, space_start, para_start, newlines, newlines_start,
+        has_tab_or_nl;
 
     strip_this = to_strip = to_strip_nl = punct_prev = punct_prev_prev =
-      space_prev = space_start = newlines = newlines_start = 0;
+      space_prev = space_start = newlines = newlines_start = has_tab_or_nl = 0;
 
     para_start = 1;
 
@@ -235,16 +236,10 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
     // We purposefully allow ourselves to read up to the NULL terminator.
 
     for(R_len_t j = 0; j <= len_j; ++j) {
-
       int newline = string[j] == '\n';
       int tab = string[j] == '\t';
 
-      // TBD: PROBABLY GOING TO GIVE UP ON ESC SEQ PARSING:
-      // Handle ESC sequences; pretend they don't exist; some question whether
-      // we should only do the ANSI csi sequences to better align with what
-      // stwrap does, or also strip the C0 sequences.  Probably strip the C0
-      // sequences and recognize that we'll get different results if those are
-      // present.
+      has_tab_or_nl += newline + tab;
 
       if(newline) {
         if(!newlines) {
@@ -266,10 +261,9 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
       }
       /*
       Rprintf(
-        "pr_st: %d %d strip: %d to_strip: %d j: %d spc: %d %d %d w: %d strip_this: %d chr: %c\n",
-        para_start, newlines, strip, to_strip,
-        j, space, space_prev, space_start,
-        (!strip && to_strip) || (!string[j] && strip_this),
+        "pr_st: %d %d to_strip: %d j: %d spc: %d %d %d strip_this: %d chr: %c\n",
+        para_start, newlines, to_strip, j,
+        space, space_prev, space_start,
         strip_this,
         (string[j] ? string[j] : '~')
       );
@@ -277,8 +271,13 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
       // transcribe string if:
       if(
         // we've hit something that we don't need to strip, and we have accrued
-        // characters to strip
-        (!space && to_strip)
+        // characters to strip (more than one space, or more than two spaces if
+        // preceeded by punct
+        (
+          !space && (
+            ((to_strip > 1 && !punct_prev) || (to_strip > 2)) ||
+            has_tab_or_nl
+        ) )
         ||
         // string end and we've already stripped previously or ending in spaces
         (line_end && (strip_this || space_start))
@@ -291,6 +290,7 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
         }
         // Make sure buffer is big enough
         if(!strip_this) {
+          Rprintf("strip this %d\n", len_j);
           FANSI_size_buff(buff, (size_t) len_j + 1);
           buff_track = buff->buff;
           strip_this = 1;
@@ -338,9 +338,12 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
         }
         string_start = string + j;
         j_last = j;
-        to_strip = space_start = newlines = 0;
-      } else if(space) to_strip++;
-
+        to_strip = space_start = newlines = has_tab_or_nl = 0;
+      } else if(space) {
+        to_strip++;
+      } else {
+        to_strip = space_start = newlines = has_tab_or_nl = 0;
+      }
       para_start = newlines > 1;
       space_prev = space;
       punct_prev_prev = punct_prev;
