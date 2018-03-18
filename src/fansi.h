@@ -328,6 +328,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_add_int_ext(SEXP x, SEXP y);
 
   SEXP FANSI_set_int_max(SEXP x);
+  SEXP FANSI_get_int_max();
 
   // - Internal funs -----------------------------------------------------------
 

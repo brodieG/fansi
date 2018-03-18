@@ -37,6 +37,9 @@ SEXP FANSI_set_int_max(SEXP x) {
   FANSI_int_max = x_int;
   return ScalarInteger(old_int);
 }
+SEXP FANSI_get_int_max() {
+  return ScalarInteger(FANSI_int_max);
+}
 /*
  * Add integers while checking for overflow
  *
