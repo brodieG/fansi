@@ -218,12 +218,12 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
     R_len_t len_j = LENGTH(STRING_ELT(res, i));
     int strip_this, to_strip, to_strip_nl, punct_prev, punct_prev_prev,
         space_prev, space_start, para_start, newlines, newlines_start,
-        has_tab_or_nl;
+        has_tab_or_nl, leading_spaces;
 
     strip_this = to_strip = to_strip_nl = punct_prev = punct_prev_prev =
       space_prev = space_start = newlines = newlines_start = has_tab_or_nl = 0;
 
-    para_start = 1;
+    para_start = leading_spaces = 1;
 
     R_len_t j_last = 0;
 
@@ -272,10 +272,10 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
       if(
         // we've hit something that we don't need to strip, and we have accrued
         // characters to strip (more than one space, or more than two spaces if
-        // preceeded by punct
+        // preceeded by punct, or leading spaces
         (
           !space && (
-            ((to_strip > 1 && !punct_prev) || (to_strip > 2)) ||
+            ((to_strip && (!punct_prev || leading_spaces)) || (to_strip > 2)) ||
             has_tab_or_nl
         ) )
         ||
@@ -338,11 +338,11 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
         }
         string_start = string + j;
         j_last = j;
-        to_strip = space_start = newlines = has_tab_or_nl = 0;
+        to_strip = space_start = newlines = has_tab_or_nl = leading_spaces = 0;
       } else if(space) {
         to_strip++;
       } else {
-        to_strip = space_start = newlines = has_tab_or_nl = 0;
+        to_strip = space_start = newlines = has_tab_or_nl = leading_spaces = 0;
       }
       para_start = newlines > 1;
       space_prev = space;
