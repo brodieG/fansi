@@ -205,9 +205,9 @@ void FANSI_size_buff(struct FANSI_buff * buff, size_t size) {
     if(!buff->len) {
       if(size < 128 && FANSI_int_max > 128)
         size = 128;  // in theory little penalty to ask this minimum
-      else if(size > FANSI_int_max) {
+      else if(size > FANSI_int_max + 1) {
         error(
-          "Internal Error: requested buffer size %.0f greater than INT_MAX.",
+          "Internal Error: requested buff size %.0f greater than INT_MAX + 1.",
           (double) size
         );
       }
