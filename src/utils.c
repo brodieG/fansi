@@ -200,20 +200,38 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
  */
 void FANSI_size_buff(struct FANSI_buff * buff, size_t size) {
   if(size > buff->len) {
-    if(size < 128) size = 128;  // in theory little penalty to ask this minimum
+    // Special case for intial alloc
 
-    size_t tmp_double_size = 0;
-    if(buff->len > (size_t) FANSI_int_max + 1 - buff->len) {
-      tmp_double_size = (size_t) FANSI_int_max + 1;
-    } else {
-      tmp_double_size = buff->len + buff->len;
+    if(!buff->len) {
+      if(size < 128 && FANSI_int_max > 128)
+        size = 128;  // in theory little penalty to ask this minimum
+      else if(size > FANSI_int_max) {
+        error(
+          "Internal Error: requested buffer size %.0f greater than INT_MAX.",
+          (double) size
+        );
+      }
+      else buff->len = size;
     }
-    if(size > tmp_double_size) tmp_double_size = size;
+    // More generic case
 
-    if(tmp_double_size > (size_t) FANSI_int_max + 1)
-      error("Internal Error: max allowed buffer size is INT_MAX + 1."); // nocov
+    if(size > buff->len) {
+      size_t tmp_double_size = 0;
+      if(buff->len > (size_t) FANSI_int_max + 1 - buff->len) {
+        tmp_double_size = (size_t) FANSI_int_max + 1;
+      } else {
+        tmp_double_size = buff->len + buff->len;
+      }
+      if(size > tmp_double_size) tmp_double_size = size;
 
-    buff->len = tmp_double_size;
+      if(tmp_double_size > (size_t) FANSI_int_max + 1)
+        error(
+          "%s  Requesting %.0f",
+          "Internal Error: max allowed buffer size is INT_MAX + 1.",
+          (double) tmp_double_size
+        );
+      buff->len = tmp_double_size;
+    }
     buff->buff = R_alloc(buff->len, sizeof(char));
   }
 }
