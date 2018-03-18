@@ -275,7 +275,11 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
         // preceeded by punct, or leading spaces
         (
           !space && (
-            ((to_strip && (!punct_prev || leading_spaces)) || (to_strip > 2)) ||
+            (
+              (to_strip && leading_spaces) ||
+              (to_strip > 1 && (!punct_prev)) ||
+              (to_strip > 2)
+            ) ||
             has_tab_or_nl
         ) )
         ||
@@ -290,7 +294,6 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
         }
         // Make sure buffer is big enough
         if(!strip_this) {
-          Rprintf("strip this %d\n", len_j);
           FANSI_size_buff(buff, (size_t) len_j + 1);
           buff_track = buff->buff;
           strip_this = 1;
