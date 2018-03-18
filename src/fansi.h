@@ -284,7 +284,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn);
   SEXP FANSI_state_at_pos_ext(
     SEXP text, SEXP pos, SEXP type, SEXP lag, SEXP ends,
-    SEXP tabs_as_spaces, SEXP tab_stops,
     SEXP warn, SEXP term_cap
   );
   SEXP FANSI_strwrap_ext(

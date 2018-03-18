@@ -37,6 +37,9 @@ unitizer_sect("Multi-line", {
   )
   substr_ctl(str.m.0, (1:4) * 2, (3:8) * 2)
 })
+unitizer_sect("tabs", {
+  substr2_ctl("yo\tworld", 1, 8, tabs.as.spaces=TRUE)
+})
 unitizer_sect("Corner cases", {
   substr_ctl("hello", 0, -1)
   substr_ctl("hello", 0, 0)

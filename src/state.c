@@ -607,9 +607,12 @@ int FANSI_state_has_style_basic(struct FANSI_state state) {
 SEXP FANSI_state_at_pos_ext(
   SEXP text, SEXP pos, SEXP type,
   SEXP lag, SEXP ends,
-  SEXP tabs_as_spaces, SEXP tab_stops,
   SEXP warn, SEXP term_cap
 ) {
+  /*******************************************\
+  * IMPORTANT: INPUT MUST ALREADY BE IN UTF8! *
+  \*******************************************/
+
   // no errors should make it here, it should be handled R side
   if(TYPEOF(text) != STRSXP && XLENGTH(text) != 1)
     error("Argument `text` must be character(1L)");   // nocov
@@ -632,16 +635,6 @@ SEXP FANSI_state_at_pos_ext(
   if(len > R_XLEN_T_MAX / res_cols) {
     error("Argument `pos` may be no longer than R_XLEN_T_MAX / %d", res_cols);
   }
-  SEXP text_chr = asChar(text);
-  const char * string = CHAR(text_chr);
-
-  // Tabs as spaces
-
-  struct FANSI_buff buff = (struct FANSI_buff) {.len=0};
-  if(asInteger(tabs_as_spaces)) {
-    text = PROTECT(FANSI_tabs_as_spaces(text, tab_stops, &buff, warn, term_cap));
-  } else PROTECT(text);
-
   struct FANSI_state_pair state_pair;
 
   // Allocate result, will be a res_cols x n matrix.  A bit wasteful to record
@@ -742,6 +735,6 @@ SEXP FANSI_state_at_pos_ext(
   SET_VECTOR_ELT(res_list, 0, res_str);
   SET_VECTOR_ELT(res_list, 1, res_mx);
 
-  UNPROTECT(8);
+  UNPROTECT(7);
   return(res_list);
 }
