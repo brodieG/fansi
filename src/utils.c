@@ -212,7 +212,7 @@ void FANSI_size_buff(struct FANSI_buff * buff, size_t size) {
     if(!buff->len) {
       if(size < 128 && FANSI_int_max > 128)
         size = 128;  // in theory little penalty to ask this minimum
-      else if(size > FANSI_int_max + 1) {
+      else if(size > (size_t) FANSI_int_max + 1) {
         // nocov start
         // too difficult to test, all the code pretty much checks for overflow
         // before requesting memory
@@ -352,7 +352,7 @@ SEXP FANSI_cleave(SEXP x) {
     error("Internal error, need even length INTSXP.");  // nocov
 
   R_xlen_t len = XLENGTH(x) / 2;
-  if(len > SIZE_MAX)
+  if((size_t) len > SIZE_MAX)
     error("Internal error: vector too long to cleave"); // nocov
 
   SEXP a, b;
@@ -360,7 +360,7 @@ SEXP FANSI_cleave(SEXP x) {
   b = PROTECT(allocVector(INTSXP, len));
 
   size_t size = 0;
-  for(int i = 0; i < sizeof(int); ++i) {
+  for(int i = 0; i < (int) sizeof(int); ++i) {
     if(size > SIZE_MAX - len)
       error("Internal error: vector too long to cleave"); // nocov
     size += len;
@@ -393,7 +393,7 @@ SEXP FANSI_order(SEXP x) {
   R_xlen_t len = XLENGTH(x);
 
   size_t size = 0;
-  for(int i = 0; i < sizeof(struct datum); ++i) {
+  for(int i = 0; i < (int) sizeof(struct datum); ++i) {
     if(size > SIZE_MAX - len)
       error("Internal error: vector too long to order"); // nocov
     size += len;
@@ -412,17 +412,17 @@ SEXP FANSI_order(SEXP x) {
   UNPROTECT(1);
   return res;
 }
-static int cmpfun2 (const void * p, const void * q) {
-  int a = *(int *) p;
-  int b = *(int *) q;
-  return(a > b ? 1 : (a < b ? -1 : 0));
-}
 /*
  * Equivalent to `sort`, but less overhead.  May not be faster for longer
  * vectors but since we call it potentially repeatedly via our initial version
  * of strsplit, we want to do this to make somewhat less sub-optimal
  */
 // nocov start
+static int cmpfun2 (const void * p, const void * q) {
+  int a = *(int *) p;
+  int b = *(int *) q;
+  return(a > b ? 1 : (a < b ? -1 : 0));
+}
 SEXP FANSI_sort_int(SEXP x) {
   error("get rid of nocov if we start using");
   if(TYPEOF(x) != INTSXP)
@@ -463,11 +463,12 @@ SEXP FANSI_sort_chr(SEXP x) {
     error("Internal error: this sort only supports char vecs.");  // nocov
 
   R_xlen_t len = XLENGTH(x);
-  if(len > SIZE_MAX)
-    error("Internal error: vector too long to sort"); // nocov
+
+  // note we explictily check in assumptions that R_xlen_t is not bigger than
+  // size_t
 
   size_t size = 0;
-  for(int i = 0; i < sizeof(struct datum); ++i) {
+  for(int i = 0; i < (int) sizeof(struct datum); ++i) {
     if(size > SIZE_MAX - len)
       error("Internal error: vector too long to order"); // nocov
     size += len;

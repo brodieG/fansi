@@ -134,7 +134,10 @@ static int color_to_html(
             *(buff_track++) = lo;
           }
         }
-      } else error("Internal Error: invalid color code; contact maintainer.");
+      } else
+        // nocov start
+        error("Internal Error: invalid color code; contact maintainer.");
+        // nocov end
     } else {
       memcpy(buff_track, std_8[color], 6);
       buff_track += 6;

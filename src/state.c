@@ -417,9 +417,10 @@ unsigned int FANSI_color_write(
         );
       } else if (color_extra[0] == 5) {
         write_chrs = sprintf(string + str_off, "5;%d;", color_extra[1]);
-      } else error("Internal Error: unexpected color code.");
+      } else error("Internal Error: unexpected color code.");  // nocov
 
-      if(write_chrs < 0) error("Internal Error: failed writing color code.");
+      if(write_chrs < 0)
+        error("Internal Error: failed writing color code.");  // nocov
       str_off += write_chrs;
     }
   } else if(color >= 100 && color <= 107) {
