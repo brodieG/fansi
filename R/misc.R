@@ -27,12 +27,13 @@
 #'   interpreted, particularly if you are getting unexpected results.
 #' @export
 #' @inheritParams substr_ctl
-#' @param x character vector to replace tabs in.
-#' @param tab.stops integer(1:n) indicating position of tab stops to use when
-#'   converting tabs to spaces.  If there are more tabs in a line than defined
-#'   tab stops the last tab stop is re-used.  For the purposes of applying tab
-#'   stops, each input line is considered a line and the character count begins
-#'   from the beginning of the input line.
+#' @param x character vector or object coercible to character; any tabs therein
+#'   will be replaced.
+#' @param tab.stops integer(1:n) indicating position of tab stops to use
+#'   when converting tabs to spaces.  If there are more tabs in a line than
+#'   defined tab stops the last tab stop is re-used.  For the purposes of
+#'   applying tab stops, each input line is considered a line and the character
+#'   count begins from the beginning of the input line.
 #' @return character, `x` with tabs replaced by spaces, with elements
 #'   possibly converted to UTF-8.
 #' @examples
@@ -57,7 +58,13 @@
 tabs_as_spaces <- function(
   x, tab.stops=getOption('fansi.tab.stops'), warn=getOption('fansi.warn')
 ) {
-  vetr(character(), tab.stops=INT.POS.STR && length(.) > 0, warn=LGL.1)
+  if(!is.character(x)) x <- as.character(x)
+  if(!is.logical(warn)) warn <- as.logical(warn)
+  if(length(warn) != 1L || is.na(warn))
+    stop("Argument `warn` must be TRUE or FALSE.")
+  if(!is.numeric(tab.stops) || !length(tab.stops) || any(tab.stops < 1))
+    stop("Argument `tab.stops` must be numeric and strictly positive")
+
   term.cap.int <- seq_along(VALID.TERM.CAP)
   .Call(FANSI_tabs_as_spaces, x, as.integer(tab.stops), warn, term.cap.int)
 }
@@ -106,24 +113,13 @@ term_cap_test <- function() {
   writeLines(res.fin)
   invisible(res)
 }
-## A version of unique that isn't terrible for very long strings that are
-## actually the same
-
-unique_chr <- function(x) .Call(FANSI_unique_chr, sort.int(x))
-
-## Testing interface for color code to HTML conversion
-
-esc_color_code_to_html <- function(x) {
-  vetr(matrix(integer(), 5))
-  .Call(FANSI_color_to_html, as.integer(x))
-}
 #' Colorize Character Vectors
 #'
 #' Color each element in input with one of the 256 color ANSI CSI SGR codes.
 #' This is intended for testing and demo purposes.
 #'
 #' @export
-#' @param txt character to color
+#' @param txt character vector or object that can be coerced to character vector
 #' @param step integer(1L) how quickly to step through the color palette
 #' @return character vector with each element colored
 #' @examples
@@ -132,7 +128,11 @@ esc_color_code_to_html <- function(x) {
 #' writeLines(fansi_lines(NEWS[1:20], 8))
 
 fansi_lines <- function(txt, step=1) {
-  vetr(txt=character(), INT.1.POS.STR)
+  if(!is.character(txt)) txt <- as.character(txt)
+  if(!is.numeric(step) || length(step) != 1 || is.na(step) || step < 1)
+    stop("Argument `step` must be a strictly positive scalar integer.")
+
+  step <- as.integer(step)
   txt.c <- txt
   bg <- ceiling((seq_along(txt) * step) %% 215 + 1) + 16
   fg <- ifelse((((bg - 16) %/% 18) %% 2), 30, 37)
@@ -144,8 +144,3 @@ fansi_lines <- function(txt, step=1) {
   txt.c[nz] <- sprintf(tpl, fg[nz], bg[nz], txt[nz])
   txt.c
 }
-
-check_assumptions <- function() .Call(FANSI_check_assumptions)  # nocov
-digits_in_int <- function(x) .Call(FANSI_digits_in_int, x)
-
-add_int <- function(x, y) .Call(FANSI_add_int, as.integer(x), as.integer(y))

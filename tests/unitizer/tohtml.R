@@ -97,3 +97,12 @@ unitizer_sect("simple html conversion", {
   # tmp <- tempfile()
   # writeLines(c("<html><pre>", html_string, "</pre></html>"))
 })
+unitizer_sect("Corner cases", {
+  sgr_to_html("hello\033[0m")
+  sgr_to_html("hello\033[31m")
+
+  # A string that shrinks; multiple repeated SGRs reduced to a single span
+
+  sgrs <- paste0(rep("\033[31m", 20), collapse="")
+  sgr_to_html(sprintf("%shello world\033[m", sgrs))
+})

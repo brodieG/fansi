@@ -8,13 +8,14 @@ tabs_as_spaces(x, tab.stops = getOption("fansi.tab.stops"),
   warn = getOption("fansi.warn"))
 }
 \arguments{
-\item{x}{character vector to replace tabs in.}
+\item{x}{character vector or object coercible to character; any tabs therein
+will be replaced.}
 
-\item{tab.stops}{integer(1:n) indicating position of tab stops to use when
-converting tabs to spaces.  If there are more tabs in a line than defined
-tab stops the last tab stop is re-used.  For the purposes of applying tab
-stops, each input line is considered a line and the character count begins
-from the beginning of the input line.}
+\item{tab.stops}{integer(1:n) indicating position of tab stops to use
+when converting tabs to spaces.  If there are more tabs in a line than
+defined tab stops the last tab stop is re-used.  For the purposes of
+applying tab stops, each input line is considered a line and the character
+count begins from the beginning of the input line.}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic escape sequences are encountered.  These could cause the

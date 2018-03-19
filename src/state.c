@@ -31,14 +31,34 @@ struct FANSI_state FANSI_state_init_full(
   const char * string, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
   SEXP width
 ) {
-  if(
-    TYPEOF(warn) != LGLSXP || TYPEOF(term_cap) != INTSXP ||
-    TYPEOF(allowNA) != LGLSXP || TYPEOF(keepNA) != LGLSXP ||
-    TYPEOF(width) != INTSXP
-  )
-    // nocov start
-    error("Internal error: state_init with bad types; contact maintainer.");
-    // nocov end
+  // nocov start
+  if(TYPEOF(warn) != LGLSXP)
+    error(
+      "Internal error: state_init with bad type for warn (%s)",
+      type2char(TYPEOF(warn))
+    );
+  if(TYPEOF(term_cap) != INTSXP)
+    error(
+      "Internal error: state_init with bad type for term_cap (%s)",
+      type2char(TYPEOF(term_cap))
+    );
+  if(TYPEOF(allowNA) != LGLSXP)
+    error(
+      "Internal error: state_init with bad type for allowNA (%s)",
+      type2char(TYPEOF(allowNA))
+    );
+  if(TYPEOF(keepNA) != LGLSXP)
+    error(
+      "Internal error: state_init with bad type for keepNA (%s)",
+      type2char(TYPEOF(keepNA))
+    );
+  if(TYPEOF(width) != INTSXP)
+    error(
+      "Internal error: state_init with bad type for width (%s)",
+      type2char(TYPEOF(width))
+    );
+
+  // nocov end
 
   int * term_int = INTEGER(term_cap);
   int warn_int = asInteger(warn);
@@ -120,11 +140,13 @@ struct FANSI_state_pair FANSI_state_at_position(
   int pos, struct FANSI_state_pair state_pair, int type, int lag, int end
 ) {
   struct FANSI_state state = state_pair.cur;
-  if(pos < state.pos_raw)
+  int pos_init = type ? state.pos_width : state.pos_raw;
+  if(pos < pos_init)
     // nocov start
     error(
-      "Cannot re-use a state for a later position (%0f) than `pos` (%0f).",
-      (double) state.pos_raw, (double) pos
+      "Internal Error: %s (%d) than `pos` (%d)",
+      "Cannot re-use a state for a later position",
+      pos_init, pos
     );
     // nocov end
   int cond = 0;
@@ -155,7 +177,9 @@ struct FANSI_state_pair FANSI_state_at_position(
       // nocov end
 
     state = FANSI_read_next(state);
-    if(!state.string[state.pos_byte]) break;
+
+    // cond is just how many units we have left until our requested position.
+    // we can overshoot and it can be negative
 
     switch(type) {
       case 0: cond = pos - state.pos_raw; break;
@@ -174,14 +198,24 @@ struct FANSI_state_pair FANSI_state_at_position(
       state.pos_byte, state_prev.pos_byte
     );
     */
-    // We still have stuff to process
+    // If zero width advance, we want to update prev state to be the newest
+    // state
 
-    if(cond > 0) continue;
-    if(cond == 0) {
-      // some ambiguity as to whether the next `state_prev` will be valid, soe
-      // we store the current one just in case
-      state_prev_buff = state_prev;
-      continue;
+    if(state.pos_width == state_prev.pos_width) state_prev = state;
+
+    // We still have stuff to process, though keep in mind we can be at end of
+    // string with cond > 0 if we ask for position past end
+
+    if(cond >= 0) {
+      if(state.string[state.pos_byte]) {
+        // some ambiguity as to whether the next `state_prev` will be valid, so
+        // we store the current one just in case
+        state_prev_buff = state_prev;
+        continue;
+      }
+      // state_res = state_prev;
+      state_res = state;
+      break;
     }
     /*
      * A key problem here is that what constitues a valid offset depends on the
@@ -198,7 +232,9 @@ struct FANSI_state_pair FANSI_state_at_position(
           state_res = state_prev_buff;
         } else if (!end && cond != -state.last_char_width) {
           state_res = state;
-      } }
+        }
+      }
+      // This is the width we hoped to get originally
       state_res.pos_width_target = pos;
     } else if(cond < -1) {
       // nocov start
@@ -260,12 +296,6 @@ struct FANSI_state_pair FANSI_state_at_position(
   }
   // We return the state just before we overshot the end
 
-  /*
-  Rprintf(
-    "   return pos %2d width %d ansi %2d byte %2d\n",
-    pos, state_res.pos_width, state_res.pos_ansi, state_res.pos_byte
-  );
-  */
   return (struct FANSI_state_pair){.cur=state_res, .prev=state_prev_buff};
 }
 /*
@@ -306,43 +336,50 @@ int FANSI_color_size(int color, int * color_extra) {
  * for the NULL terminator.
  */
 int FANSI_state_size(struct FANSI_state state) {
-  int color_size = FANSI_color_size(state.color, state.color_extra);
-  int bg_color_size = FANSI_color_size(state.bg_color, state.bg_color_extra);
+  int size = 0;
+  if(FANSI_state_has_style(state)) {
+    int color_size = FANSI_color_size(state.color, state.color_extra);
+    int bg_color_size = FANSI_color_size(state.bg_color, state.bg_color_extra);
 
-  // styles are stored as bits
+    // styles are stored as bits, styles less than 10 correspond to 0-9, the
+    // others are random ones but will need one more byte, hence the
+    // `(2 + (i > 9))`
 
-  int style_size = 0;
-  if(state.style) {
-    for(int i = 1; i < 10; ++i){
-      style_size += ((state.style & (1 << i)) > 0) * 2;
+    int style_size = 0;
+    if(state.style) {
+      for(int i = 1; i <= FANSI_STYLE_MAX; ++i){
+        style_size +=
+          ((state.style & (1 << i)) > 0) *
+          (2 + (i > 9));
+    } }
+    // Some question of whether we are adding a slowdown to check for rarely use
+    // ESC sequences such as these...
+
+    // Border
+
+    int border_size = 0;
+    if(state.border) {
+      for(int i = 1; i < 4; ++i){
+        border_size += ((state.border & (1 << i)) > 0) * 3;
+      }
     }
-  }
-  // Some question of whether we are adding a slowdown to check for rarely use
-  // ESC sequences such as these...
+    // Ideogram
 
-  // Border
-
-  int border_size = 0;
-  if(state.border) {
-    for(int i = 1; i < 4; ++i){
-      border_size += ((state.border & (1 << i)) > 0) * 3;
+    int ideogram_size = 0;
+    if(state.ideogram) {
+      for(int i = 0; i < 5; ++i){
+        ideogram_size += ((state.ideogram & (1 << i)) > 0) * 3;
+      }
     }
+    // font
+
+    int font_size = 0;
+    if(state.font) font_size = 3;
+
+    size += color_size + bg_color_size + style_size +
+      border_size + ideogram_size + font_size + 2; // +2 for ESC[
   }
-  // Ideogram
-
-  int ideogram_size = 0;
-  if(state.ideogram) {
-    for(int i = 0; i < 5; ++i){
-      ideogram_size += ((state.ideogram & (1 << i)) > 0) * 3;
-    }
-  }
-  // font
-
-  int font_size = 0;
-  if(state.font) font_size = 3;
-
-  return color_size + bg_color_size + style_size +
-    border_size + ideogram_size + font_size + 2;  // +2 for ESC[
+  return size;
 }
 /*
  * Write extra color info to string
@@ -380,9 +417,10 @@ unsigned int FANSI_color_write(
         );
       } else if (color_extra[0] == 5) {
         write_chrs = sprintf(string + str_off, "5;%d;", color_extra[1]);
-      } else error("Internal Error: unexpected color code.");
+      } else error("Internal Error: unexpected color code.");  // nocov
 
-      if(write_chrs < 0) error("Internal Error: failed writing color code.");
+      if(write_chrs < 0)
+        error("Internal Error: failed writing color code.");  // nocov
       str_off += write_chrs;
     }
   } else if(color >= 100 && color <= 107) {
@@ -417,60 +455,83 @@ int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
   \****************************************************/
 
   int str_pos = 0;
-  buff[str_pos++] = 27;    // ESC
-  buff[str_pos++] = '[';
 
-  // styles
+  if(FANSI_state_has_style(state)) {
+    buff[str_pos++] = 27;    // ESC
+    buff[str_pos++] = '[';
+    // styles
 
-  for(int i = 1; i < 10; i++) {
-    if((1 << i) & state.style) {
-      buff[str_pos++] = '0' + i;
+    for(int i = 1; i < 10; i++) {
+      if((1 << i) & state.style) {
+        buff[str_pos++] = '0' + i;
+        buff[str_pos++] = ';';
+    } }
+    // styles outside 0-9
+
+    if(state.style & (1 << 10)) {
+      // fraktur
+      buff[str_pos++] = '2';
+      buff[str_pos++] = '0';
       buff[str_pos++] = ';';
-  } }
-  // colors
+    }
+    if(state.style & (1 << 11)) {
+      // double underline
+      buff[str_pos++] = '2';
+      buff[str_pos++] = '1';
+      buff[str_pos++] = ';';
+    }
+    if(state.style & (1 << 12)) {
+      // prop spacing
+      buff[str_pos++] = '2';
+      buff[str_pos++] = '6';
+      buff[str_pos++] = ';';
+    }
+    // colors
 
-  str_pos += FANSI_color_write(
-    &(buff[str_pos]), state.color, state.color_extra, 3
-  );
-  str_pos += FANSI_color_write(
-    &(buff[str_pos]), state.bg_color, state.bg_color_extra, 4
-  );
-  // Borders
-
-  if(state.border) {
-    for(int i = 1; i < 4; ++i){
-      if((1 << i) & state.border) {
-        buff[str_pos++] = '5';
-        buff[str_pos++] = '0' + i;
-        buff[str_pos++] = ';';
-  } } }
-  // Ideogram
-
-  if(state.ideogram) {
-    for(int i = 0; i < 5; ++i){
-      if((1 << i) & state.ideogram) {
-        buff[str_pos++] = '6';
-        buff[str_pos++] = '0' + i;
-        buff[str_pos++] = ';';
-  } } }
-  // font
-
-  if(state.font) {
-    buff[str_pos++] = '1';
-    buff[str_pos++] = '0' + (state.font % 10);
-    buff[str_pos++] = ';';
-  }
-  // Finalize
-
-  if(str_pos != buff_len)
-    // nocov start
-    // note this error is really too late, as we could have written past
-    // allocation in the steps above
-    error(
-      "Internal Error: tag mem allocation mismatch (%u, %u)", str_pos, buff_len
+    str_pos += FANSI_color_write(
+      &(buff[str_pos]), state.color, state.color_extra, 3
     );
-    // nocov end
-  buff[str_pos - 1] = 'm';
+    str_pos += FANSI_color_write(
+      &(buff[str_pos]), state.bg_color, state.bg_color_extra, 4
+    );
+    // Borders
+
+    if(state.border) {
+      for(int i = 1; i < 4; ++i){
+        if((1 << i) & state.border) {
+          buff[str_pos++] = '5';
+          buff[str_pos++] = '0' + i;
+          buff[str_pos++] = ';';
+    } } }
+    // Ideogram
+
+    if(state.ideogram) {
+      for(int i = 0; i < 5; ++i){
+        if((1 << i) & state.ideogram) {
+          buff[str_pos++] = '6';
+          buff[str_pos++] = '0' + i;
+          buff[str_pos++] = ';';
+    } } }
+    // font
+
+    if(state.font) {
+      buff[str_pos++] = '1';
+      buff[str_pos++] = '0' + (state.font % 10);
+      buff[str_pos++] = ';';
+    }
+    // Finalize
+
+    if(str_pos != buff_len)
+      // nocov start
+      // note this error is really too late, as we could have written past
+      // allocation in the steps above
+      error(
+        "Internal Error: tag mem allocation mismatch (%u, %u)",
+        str_pos, buff_len
+      );
+      // nocov end
+    buff[str_pos - 1] = 'm';
+  }
   return str_pos;
 }
 /*
@@ -539,7 +600,6 @@ int FANSI_state_has_style_basic(struct FANSI_state state) {
 }
 /*
  * R interface for FANSI_state_at_position
- *
  * @param string we're interested in state of
  * @param pos integer positions along the string, one index, sorted
  */
@@ -547,41 +607,37 @@ int FANSI_state_has_style_basic(struct FANSI_state state) {
 SEXP FANSI_state_at_pos_ext(
   SEXP text, SEXP pos, SEXP type,
   SEXP lag, SEXP ends,
-  SEXP tabs_as_spaces, SEXP tab_stops,
   SEXP warn, SEXP term_cap
 ) {
+  /*******************************************\
+  * IMPORTANT: INPUT MUST ALREADY BE IN UTF8! *
+  \*******************************************/
+
+  // no errors should make it here, it should be handled R side
   if(TYPEOF(text) != STRSXP && XLENGTH(text) != 1)
-    error("Argument `text` must be character(1L)");
+    error("Argument `text` must be character(1L)");   // nocov
   if(TYPEOF(pos) != INTSXP)
-    error("Argument `pos` must be integer");
+    error("Argument `pos` must be integer");          // nocov
   if(TYPEOF(lag) != LGLSXP)
-    error("Argument `lag` must be logical");
+    error("Argument `lag` must be logical");          // nocov
   if(XLENGTH(pos) != XLENGTH(lag))
-    error("Argument `lag` must be the same length as `pos`");
+    error("Argument `lag` must be the same length as `pos`");  // nocov
   if(XLENGTH(pos) != XLENGTH(ends))
-    error("Argument `ends` must be the same length as `pos`");
+    error("Argument `ends` must be the same length as `pos`"); // nocov
   if(TYPEOF(warn) != LGLSXP)
-    error("Argument `warn` must be integer");
+    error("Argument `warn` must be integer");         // nocov
   if(TYPEOF(term_cap) != INTSXP)
-    error("Argument `term.cap` must be integer");
+    error("Argument `term.cap` must be integer");     // nocov
 
   R_xlen_t len = XLENGTH(pos);
 
   const int res_cols = 4;  // if change this, need to change rownames init
   if(len > R_XLEN_T_MAX / res_cols) {
+    // nocov start
     error("Argument `pos` may be no longer than R_XLEN_T_MAX / %d", res_cols);
+    // nocov end
   }
-  SEXP text_chr = asChar(text);
-  const char * string = CHAR(text_chr);
-
-  // Tabs as spaces
-
-  struct FANSI_buff buff = (struct FANSI_buff) {.len=0};
-  if(asInteger(tabs_as_spaces)) {
-    text = PROTECT(FANSI_tabs_as_spaces(text, tab_stops, &buff, warn, term_cap));
-  } else PROTECT(text);
-
-  struct FANSI_state_pair state_pair, state_pair_old;
+  struct FANSI_state_pair state_pair;
 
   // Allocate result, will be a res_cols x n matrix.  A bit wasteful to record
   // all the color values given we'll rarely use them, but variable width
@@ -602,6 +658,7 @@ SEXP FANSI_state_at_pos_ext(
   SEXP res_mx = PROTECT(allocVector(REALSXP, res_cols * len));
   SEXP dim = PROTECT(allocVector(INTSXP, 2));
   SEXP dim_names = PROTECT(allocVector(VECSXP, 2));
+
   INTEGER(dim)[0] = res_cols;
   INTEGER(dim)[1] = len;
   setAttrib(res_mx, R_DimSymbol, dim);
@@ -612,7 +669,8 @@ SEXP FANSI_state_at_pos_ext(
   SEXP res_str = PROTECT(allocVector(STRSXP, len));
   SEXP res_chr, res_chr_prev = PROTECT(mkChar(""));
 
-  string = FANSI_string_as_utf8(text_chr).string;
+  SEXP text_chr = STRING_ELT(text, 0);
+  const char * string = CHAR(text_chr); // Should already be UTF-8 if needed
 
   SEXP R_true = PROTECT(ScalarLogical(1));
   struct FANSI_state state =
@@ -633,20 +691,21 @@ SEXP FANSI_state_at_pos_ext(
     R_CheckUserInterrupt();
     pos_i = INTEGER(pos)[i];
     if(text_chr == NA_STRING || pos_i == NA_INTEGER) {
-      for(R_xlen_t j = 0; j < res_cols; j++)
-        REAL(res_mx)[i * res_cols + j] = NA_REAL;
+      error("Internal Error: NAs not allowed"); // nocov
+      // // used to allow, leaving old code for ref
+      // for(R_xlen_t j = 0; j < res_cols; j++)
+      //   REAL(res_mx)[i * res_cols + j] = NA_REAL;
     } else {
       if(pos_i < pos_prev)
+        // nocov start
         error("Internal Error: `pos` must be sorted %d %d.", pos_i, pos_prev);
+        // nocov end
 
       // We need to allow the same position multiple times in case it shows up
       // as starts and ends, etc.
 
-      if(pos_i == pos_prev) {
-        state_pair = state_pair_old;
-      } else {
-        state_pair_old = state_pair;
-      }
+      if(pos_i == pos_prev) state_pair.cur = state_pair.prev;
+
       state_pair = FANSI_state_at_position(
         pos_i, state_pair, type_int, INTEGER(lag)[i], INTEGER(ends)[i]
       );
@@ -680,6 +739,6 @@ SEXP FANSI_state_at_pos_ext(
   SET_VECTOR_ELT(res_list, 0, res_str);
   SET_VECTOR_ELT(res_list, 1, res_mx);
 
-  UNPROTECT(8);
+  UNPROTECT(7);
   return(res_list);
 }

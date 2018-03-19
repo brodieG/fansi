@@ -24,7 +24,7 @@ R_CallMethodDef callMethods[] = {
   {"has_csi", (DL_FUNC) &FANSI_has, 3},
   {"strip_csi", (DL_FUNC) &FANSI_strip, 3},
   {"strwrap_csi", (DL_FUNC) &FANSI_strwrap_ext, 14},
-  {"state_at_pos_ext", (DL_FUNC) &FANSI_state_at_pos_ext, 9},
+  {"state_at_pos_ext", (DL_FUNC) &FANSI_state_at_pos_ext, 7},
   {"process", (DL_FUNC) &FANSI_process_ext, 1},
   {"check_assumptions", (DL_FUNC) &FANSI_check_assumptions, 0},
   {"digits_in_int", (DL_FUNC) &FANSI_digits_in_int_ext, 1},
@@ -35,6 +35,13 @@ R_CallMethodDef callMethods[] = {
   {"unique_chr", (DL_FUNC) &FANSI_unique_chr, 1},
   {"nzchar_esc", (DL_FUNC) &FANSI_nzchar, 4},
   {"add_int", (DL_FUNC) &FANSI_add_int_ext, 2},
+  {"strsplit", (DL_FUNC) &FANSI_strsplit, 3},
+  {"cleave", (DL_FUNC) &FANSI_cleave, 1},
+  {"order", (DL_FUNC) &FANSI_order, 1},
+  {"sort_int", (DL_FUNC) &FANSI_sort_int, 1},
+  {"sort_chr", (DL_FUNC) &FANSI_sort_chr, 1},
+  {"set_int_max", (DL_FUNC) &FANSI_set_int_max, 1},
+  {"get_int_max", (DL_FUNC) &FANSI_get_int_max, 0},
   {NULL, NULL, 0}
 };
 

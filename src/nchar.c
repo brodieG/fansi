@@ -25,7 +25,7 @@ SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap) {
     TYPEOF(warn) != LGLSXP ||
     TYPEOF(term_cap) != INTSXP
   )
-    error("Internal error: input type error; contact maintainer");
+    error("Internal error: input type error; contact maintainer"); // nocov
 
   int keepNA_int = asInteger(keepNA);
   int warn_int = asInteger(warn);

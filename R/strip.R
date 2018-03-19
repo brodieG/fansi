@@ -20,7 +20,7 @@
 #' strip all known _Control Sequences_, including ANSI CSI
 #' sequences, two character sequences starting with ESC, and all C0 control
 #' characters, including newlines.  You can fine tune this behavior with the
-#' `strip` parameter.
+#' `strip` parameter.  `strip_sgr` only strips ANSI CSI SGR sequences.
 #'
 #' The `strip` value contains the names of **non-overlapping** subsets of the
 #' known _Control Sequences_ (e.g. "csi" does not contain "sgr", and "c0" does
@@ -56,7 +56,19 @@
 #' strip_sgr(string)
 
 strip_ctl <- function(x, strip='all', warn=getOption('fansi.warn')) {
-  vetr(warn=LGL.1, strip=CHR)
+  if(!is.character(x)) x <- as.character(x)
+
+  if(!is.logical(warn)) warn <- as.logical(warn)
+  if(length(warn) != 1L || is.na(warn))
+    stop("Argument `warn` must be TRUE or FALSE.")
+
+  if(!is.character(strip))
+    stop("Argument `strip` must be character.")
+  if(!all(strip %in% VALID.STRIP))
+    stop(
+      "Argument `strip` may contain only values in `", deparse(VALID.STRIP), "`"
+    )
+
   if(length(strip)) {
     if(anyNA(strip.int <- match(strip, VALID.STRIP)))
       stop(
@@ -70,9 +82,14 @@ strip_ctl <- function(x, strip='all', warn=getOption('fansi.warn')) {
 #' @rdname strip_ctl
 
 strip_sgr <- function(x, warn=getOption('fansi.warn')) {
-  vetr(warn=LGL.1)
+  if(!is.character(x)) x <- as.character(x)
+  if(!is.logical(warn)) warn <- as.logical(warn)
+  if(length(warn) != 1L || is.na(warn))
+    stop("Argument `warn` must be TRUE or FALSE.")
+
   strip.int <- match("sgr", VALID.STRIP)
   if(anyNA(strip.int)) stop("Internal Error: invalid strip type")
+
   .Call(FANSI_strip_csi, x, strip.int, warn)
 }
 
