@@ -8,8 +8,15 @@ old_max <- fansi:::set_int_max(15)
 unitizer_sect('tabs', {
   tabs_as_spaces("\t1234567")
   tryCatch(tabs_as_spaces("\t12345678"), error=conditionMessage)
+
+  # we're trying to trigger the failover allocation mode for
+  # FANSI_size_buff, where double the requested size is over the max size
+
+  invisible(fansi:::set_int_max(12))
+  tabs_as_spaces(c("\t", "\t123"))
 })
 unitizer_sect('wrap', {
+  invisible(fansi:::set_int_max(15))
   string <- '0123456789'
   strwrap_ctl(string, 16)
   strwrap2_ctl(string, 16, pad.end=' ')
@@ -37,8 +44,6 @@ unitizer_sect('html', {
   tce(sgr_to_html("\033[31ma"))
   # Sequences alone over
   tce(sgr_to_html("\033[31m\033[42mhello"))
-
-
 })
 unitizer_sect('unhandled', {
   invisible(fansi:::set_int_max(10))

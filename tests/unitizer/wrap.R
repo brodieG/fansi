@@ -297,6 +297,11 @@ unitizer_sect("corner cases", {
     ),
     error=conditionMessage
   )
+  # Byte encoded strings not allowed
+
+  bytes <- "\xC0\xB1\xF0\xB1\xC0\xB1\xC0\xB1"
+  Encoding(bytes) <- "bytes"
+  tce(strwrap_ctl(bytes))
 })
 
 # Things to test:
