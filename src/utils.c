@@ -20,6 +20,10 @@
 /*
  * Used to set a global int_max value smaller than INT_MAX for testing
  * purposes
+ *
+ * This does not affect FANSI_add_int as that we can test separately, and
+ * setting it there prevents us from testing some of the downstream overflow
+ * logic.
  */
 
 int FANSI_int_max = INT_MAX;
@@ -52,7 +56,7 @@ SEXP FANSI_get_int_max() {
  */
 
 int FANSI_add_int(int x, int y, const char * file, int line) {
-  if((y >= 0 && (x > FANSI_int_max - y)) || (y < 0 && (x <= FANSI_int_min - y)))
+  if((y >= 0 && (x > INT_MAX - y)) || (y < 0 && (x <= INT_MIN - y)))
     error(
       "Integer overflow in file %s at line %d; %s", file, line,
       "contact maintainer."

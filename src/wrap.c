@@ -161,20 +161,26 @@ SEXP FANSI_writeline(
   }
   // If we are going to pad the end, adjust sizes and widths
 
+  if(target_size > (size_t) FANSI_int_max)
+    error(
+      "Substring to write (%.0f) is longer than INT_MAX.", (double) target_size
+    );
+
   if(target_width <= (size_t) tar_width && *pad_chr) {
     target_pad = tar_width - target_width;
     if(
-      (tar_width > FANSI_int_max - target_pad) ||
       (target_size > (size_t) (FANSI_int_max - target_pad))
     ) {
-      error("Attempting to create string longer than INT_MAX while padding.");
+      error(
+        "%s than INT_MAX while padding.",
+        "Attempting to create string longer"
+      );
     }
-    target_width = tar_width + target_pad;
     target_size = target_size + target_pad;
   }
   if(target_size > (size_t)(FANSI_int_max - pre_dat.bytes)) {
     error(
-      "%%",
+      "%s%s",
       "Attempting to create string longer than INT_MAX when adding ",
       "prefix/initial/indent/exdent."
     );
