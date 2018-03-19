@@ -353,7 +353,8 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
     int bytes_extra = 0;   // Net bytes being add via tags (css - ESC)
     size_t bytes_final = 0;
-    int has_esc = 0;
+    int has_esc, any_esc;
+    has_esc = any_esc = 0;
 
     // Process the strings in two passes, in pass 1 we compute how many bytes
     // we'll need to store the string, and in the second we actually write it.
@@ -363,6 +364,8 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
     // leave it and see if it becomes a major issue.
 
     while(*string && (string = strchr(string, 0x1b))) {
+      if(!any_esc) any_esc = 1;
+
       // Since we don't care about width, etc, we only use the state objects to
       // parse the ESC sequences, so we don't have to worry about UTF8
       // conversions.
@@ -382,10 +385,10 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
       state_prev = state;
       ++string;
     }
-    if(has_esc) {
+    if(any_esc) {
       // we will use an extra <span></span> to simplify logic
 
-      int span_end = 7;
+      int span_end = has_esc * 7;
 
       bytes_final = html_check_overflow(bytes_extra, bytes_init, span_end, i);
 
