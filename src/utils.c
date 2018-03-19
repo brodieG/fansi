@@ -18,6 +18,36 @@
 
 #include "fansi.h"
 /*
+ * Used to set a global int_max value smaller than INT_MAX for testing
+ * purposes
+ *
+ * This does not affect FANSI_add_int as that we can test separately, and
+ * setting it there prevents us from testing some of the downstream overflow
+ * logic.
+ */
+
+int FANSI_int_max = INT_MAX;
+int FANSI_int_min = INT_MIN;  // currently no external interface for this
+
+SEXP FANSI_set_int_max(SEXP x) {
+  if(TYPEOF(x) != INTSXP || XLENGTH(x) != 1)
+    error("invalid int_max value");  // nocov
+  int x_int = asInteger(x);
+
+  if(x_int < 1)
+    error("int_max value must be positive"); // nocov
+
+  int old_int = FANSI_int_max;
+  FANSI_int_max = x_int;
+  return ScalarInteger(old_int);
+}
+// nocov start
+// used only for debugging
+SEXP FANSI_get_int_max() {
+  return ScalarInteger(FANSI_int_max);
+}
+// nocov end
+/*
  * Add integers while checking for overflow
  *
  * Note we are stricter than necessary when y is negative because we want to
@@ -176,24 +206,47 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
  * before, or size `size` if that is greater than twice the size.
  */
 void FANSI_size_buff(struct FANSI_buff * buff, size_t size) {
-  // Rprintf("  buff_len %d size %d\n", buff->len, size);
   if(size > buff->len) {
-    if(size < 128) size = 128;  // in theory little penalty to ask this minimum
+    // Special case for intial alloc
 
-    size_t tmp_double_size = 0;
-    if(buff->len > (size_t) INT_MAX + 1 - buff->len) {
-      // too expensive to test
-      tmp_double_size = (size_t) INT_MAX + 1; // nocov
-    } else {
-      tmp_double_size = buff->len + buff->len;
+    if(!buff->len) {
+      if(size < 128 && FANSI_int_max > 128)
+        size = 128;  // in theory little penalty to ask this minimum
+      else if(size > (size_t) FANSI_int_max + 1) {
+        // nocov start
+        // too difficult to test, all the code pretty much checks for overflow
+        // before requesting memory
+        error(
+          "Internal Error: requested buff size %.0f greater than INT_MAX + 1.",
+          (double) size
+        );
+        // nocov end
+      }
+      else buff->len = size;
     }
-    if(size > tmp_double_size) tmp_double_size = size;
+    // More generic case
 
-    if(tmp_double_size > (size_t) INT_MAX + 1)
-      error("Internal Error: max allowed buffer size is INT_MAX + 1."); // nocov
+    if(size > buff->len) {
+      size_t tmp_double_size = 0;
+      if(buff->len > (size_t) FANSI_int_max + 1 - buff->len) {
+        tmp_double_size = (size_t) FANSI_int_max + 1;
+      } else {
+        tmp_double_size = buff->len + buff->len;
+      }
+      if(size > tmp_double_size) tmp_double_size = size;
 
-    buff->len = tmp_double_size;
-    // Rprintf("  Alloc to %d\n", buff->len);
+      if(tmp_double_size > (size_t) FANSI_int_max + 1)
+        // nocov start
+        // this can't really happen unless size starts off bigger than
+        // INT_MAX + 1
+        error(
+          "%s  Requesting %.0f",
+          "Internal Error: max allowed buffer size is INT_MAX + 1.",
+          (double) tmp_double_size
+        );
+        // nocov end
+      buff->len = tmp_double_size;
+    }
     buff->buff = R_alloc(buff->len, sizeof(char));
   }
 }
@@ -250,9 +303,11 @@ int FANSI_what_as_int(SEXP what) {
  * @return the position in choices that partial matches x, on a 0-index basis
  *   (ie. 0 == 1st, 1 == 2nd, etc.)
  */
+// nocov start
 int FANSI_pmatch(
   SEXP x, const char ** choices, int choice_count, const char * arg_name
 ) {
+  error("remove nocov if we start to use this");
   if(TYPEOF(x) != STRSXP || XLENGTH(x) != 1)
     error("Argument `%s` must be a length 1 character vector.", arg_name);
 
@@ -283,6 +338,7 @@ int FANSI_pmatch(
 
   return last_match_index;
 }
+// nocov end
 
 // concept borrowed from utf8-lite
 
@@ -293,10 +349,10 @@ void FANSI_interrupt(int i) {if(!(i % 1000)) R_CheckUserInterrupt();}
 
 SEXP FANSI_cleave(SEXP x) {
   if(TYPEOF(x) != INTSXP || XLENGTH(x) % 2)
-    error("Internal error, need even length INTSXP.");
+    error("Internal error, need even length INTSXP.");  // nocov
 
   R_xlen_t len = XLENGTH(x) / 2;
-  if(len > SIZE_MAX)
+  if((size_t) len > SIZE_MAX)
     error("Internal error: vector too long to cleave"); // nocov
 
   SEXP a, b;
@@ -304,7 +360,7 @@ SEXP FANSI_cleave(SEXP x) {
   b = PROTECT(allocVector(INTSXP, len));
 
   size_t size = 0;
-  for(int i = 0; i < sizeof(int); ++i) {
+  for(int i = 0; i < (int) sizeof(int); ++i) {
     if(size > SIZE_MAX - len)
       error("Internal error: vector too long to cleave"); // nocov
     size += len;
@@ -337,7 +393,7 @@ SEXP FANSI_order(SEXP x) {
   R_xlen_t len = XLENGTH(x);
 
   size_t size = 0;
-  for(int i = 0; i < sizeof(struct datum); ++i) {
+  for(int i = 0; i < (int) sizeof(struct datum); ++i) {
     if(size > SIZE_MAX - len)
       error("Internal error: vector too long to order"); // nocov
     size += len;
@@ -356,17 +412,19 @@ SEXP FANSI_order(SEXP x) {
   UNPROTECT(1);
   return res;
 }
-static int cmpfun2 (const void * p, const void * q) {
-  int a = *(int *) p;
-  int b = *(int *) q;
-  return(a > b ? 1 : (a < b ? -1 : 0));
-}
 /*
  * Equivalent to `sort`, but less overhead.  May not be faster for longer
  * vectors but since we call it potentially repeatedly via our initial version
  * of strsplit, we want to do this to make somewhat less sub-optimal
  */
+// nocov start
+static int cmpfun2 (const void * p, const void * q) {
+  int a = *(int *) p;
+  int b = *(int *) q;
+  return(a > b ? 1 : (a < b ? -1 : 0));
+}
 SEXP FANSI_sort_int(SEXP x) {
+  error("get rid of nocov if we start using");
   if(TYPEOF(x) != INTSXP)
     error("Internal error: this order only supports ints.");  // nocov
 
@@ -381,6 +439,7 @@ SEXP FANSI_sort_int(SEXP x) {
   UNPROTECT(1);
   return res;
 }
+// nocov end
 struct datum2 {SEXP val; R_xlen_t idx;};
 
 static int cmpfun3 (const void * p, const void * q) {
@@ -404,11 +463,12 @@ SEXP FANSI_sort_chr(SEXP x) {
     error("Internal error: this sort only supports char vecs.");  // nocov
 
   R_xlen_t len = XLENGTH(x);
-  if(len > SIZE_MAX)
-    error("Internal error: vector too long to sort"); // nocov
+
+  // note we explictily check in assumptions that R_xlen_t is not bigger than
+  // size_t
 
   size_t size = 0;
-  for(int i = 0; i < sizeof(struct datum); ++i) {
+  for(int i = 0; i < (int) sizeof(struct datum); ++i) {
     if(size > SIZE_MAX - len)
       error("Internal error: vector too long to order"); // nocov
     size += len;

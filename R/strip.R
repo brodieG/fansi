@@ -20,7 +20,7 @@
 #' strip all known _Control Sequences_, including ANSI CSI
 #' sequences, two character sequences starting with ESC, and all C0 control
 #' characters, including newlines.  You can fine tune this behavior with the
-#' `strip` parameter.
+#' `strip` parameter.  `strip_sgr` only strips ANSI CSI SGR sequences.
 #'
 #' The `strip` value contains the names of **non-overlapping** subsets of the
 #' known _Control Sequences_ (e.g. "csi" does not contain "sgr", and "c0" does

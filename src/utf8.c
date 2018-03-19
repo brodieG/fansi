@@ -18,18 +18,25 @@
 
 #include "fansi.h"
 /*
- * Assuming encoding is UTF-8, are there actually any non-ASCII chars in
- * string.
+ * We need to translate to UTF8 any time that we care about string width as we
+ * need to know how many bytes to select to feed through R_nchar.
  *
- * `x` must be NULL terminated.
+ * Other than that, we don't actually care about the string encoding, though the
+ * implicit assumption is that a) anything 127 and under is ASCII, and
+ * additionally that no Control Sequence is going to have anything abovce 127 in
+ * it.
  */
+
+// check whether any bytes are greater than 127; doesn't really actually confirm
+// this is UTF8
 
 int FANSI_has_utf8(const char * x) {
   while(*x) {if(*(x++) > 127) return 1;}
   return 0;
 }
-
+// nocov start
 int FANSI_is_utf8_loc() {
+  error("Current not in use");
   SEXP sys_getlocale = PROTECT(install("Sys.getlocale"));
   SEXP lc_ctype = PROTECT(mkString("LC_CTYPE"));
   SEXP loc_call = PROTECT(lang2(sys_getlocale, lc_ctype));
@@ -52,7 +59,7 @@ int FANSI_is_utf8_loc() {
 
   size_t loc_len = strlen(loc_string);
 
-  if(loc_len > INT_MAX)
+  if(loc_len > FANSI_int_max)
     // nocov start
     error(
       "%s%s",
@@ -71,6 +78,7 @@ int FANSI_is_utf8_loc() {
   UNPROTECT(4);
   return(res);
 }
+// nocov end
 
 /*
  * Translates a CHARSXP to a UTF8 char if necessary, otherwise returns

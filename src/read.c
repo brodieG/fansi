@@ -119,13 +119,9 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
   // Final interpretations; note that anything over 255 cannot be part of a
   // valid SGR sequence
 
-  if(last && (*string != 'm') && err_code < 4) {
-    // Not actually an SGR sequence
-    err_code = 4;
-  } else if(!err_code && (len - leading_zeros) > 3) {
+  if(!err_code && (len - leading_zeros) > 3) {
     err_code = 3;
   }
-  // Rprintf("    len: %d leading_zeros: %d\n", len, leading_zeros);
   if(!err_code) {
     int len2 = len - leading_zeros;
     while(len2--) {
@@ -164,7 +160,6 @@ static struct FANSI_state parse_colors(
   struct FANSI_tok_res res;
   int rgb[4] = {0};
   int col = 8;
-  int valid_col = 1;
   int i_max;
 
   // First, figure out if we are in true color or palette mode
@@ -182,6 +177,7 @@ static struct FANSI_state parse_colors(
       // terminal and iTerm)
 
       state.pos_byte -= (res.len);
+      state.err_code = 3;
     } else if (
       // terminal doesn't have 256 or true color capability
       (res.val == 2 && !(state.term_cap & (1 << 2))) ||
@@ -214,28 +210,26 @@ static struct FANSI_state parse_colors(
           if(res.val < 256 && !early_end) {
             rgb[i + 1] = res.val;
           } else {
-            // Not a valid color; doesn't break parsing so that we end up with
-            // the cursor at the right place
-
-            valid_col = 0;
-            break;
-      } } }
-      // Failure handling happens in the main loop, we just need to ensure the
-      // byte position and state is correct
+            // nocov start
+            error(
+              "Internal Error: invalid color without err_code; ",
+              "contact maintainer."
+            );
+            // nocov end
+          }
+        } else break;
+      }
+      // If there is an error code we do not change the color
 
       if(!state.err_code) {
-        if(!valid_col) {
-          for(int i = 0; i < 4; i++) rgb[i] = 0;
-          col = -1;
-          state.err_code = 3;  // invalid substring
-        }
         if(mode == 3) {
           state.color = col;
           for(int i = 0; i < 4; i++) state.color_extra[i] = rgb[i];
         } else if (mode == 4) {
           state.bg_color = col;
           for(int i = 0; i < 4; i++) state.bg_color_extra[i] = rgb[i];
-  } } } }
+        }
+  } } }
   return state;
 }
 /*
@@ -460,6 +454,14 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
             state.err_code = 3;  // unknown token
           }
         }
+        if(state.style > ((1 << (FANSI_STYLE_MAX + 1)) - 1))
+          // nocov start
+          error(
+            "Internal Error: style greater than FANSI_STYLE_MAX; ",
+            "contact maintainer."
+          );
+          // nocov end
+
         // `tok_res` value can't be used because code above, including
         // parse_colors can change the corresponding value in the `state`
         // struct, so better to deal with that directly

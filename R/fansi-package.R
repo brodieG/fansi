@@ -77,7 +77,7 @@
 #' do.
 #'
 #' The most likely source of problems will be 24-bit CSI SGR sequences.
-#' For example, a 24-bit color sequences such as "ESC&#91;38;2;31;42;4" is a
+#' For example, a 24-bit color sequence such as "ESC&#91;38;2;31;42;4" is a
 #' single foreground color to a terminal that supports it, or separate
 #' foreground, background, faint, and underline specifications for one that does
 #' not.  To mitigate this particular problem you can tell `fansi` what your
@@ -108,13 +108,16 @@
 #'
 #' @section Encodings / UTF-8:
 #'
-#' `fansi` will convert any non-ASCII strings to UTF-8.  These strings are
-#' interpreted in a manner intended to be consistent with base R.  There are
-#' three ways things may not work out exactly as desired:
+#' `fansi` will convert any non-ASCII strings to UTF-8 any time character width
+#' is important.  In other cases it will leave encoding unchanged.  This is not
+#' necessarily consistent with how base R does things.
 #'
-#' 1. `fansi` fails to treat a UTF-8 sequence the same way as R does.
-#' 2. R incorrectly treats a UTF-8 sequence.
-#' 3. Your display incorrectly handles a UTF-8 sequences.
+#' The actual interpretation of UTF-8 strings is intended to be consistent with
+#' base R.  There are three ways things may not work out exactly as desired:
+#'
+#' 1. `fansi` fails to handle a UTF-8 sequence the same way as R does.
+#' 2. R incorrectly handles a UTF-8 sequence.
+#' 3. Your display incorrectly handles a UTF-8 sequence.
 #'
 #' These issues are most likely to occur with invalid UTF-8 sequences,
 #' combining character sequences, and emoji.  For example, as of this writing R
@@ -129,18 +132,18 @@
 #' computations. `fansi` always computes width for each character
 #' individually, which assumes that the sum of the widths of each character is
 #' equal to the sum of the width of a sequence.  However, it is theoretically
-#' possible for character sequence that forms a single grapheme to break that
+#' possible for a character sequence that forms a single grapheme to break that
 #' assumption. In informal testing we have found this to be rare because in the
 #' most common multi-character graphemes the trailing characters are computed
 #' as zero width.
 #'
-#' As of R 3.4.0 `substr` appears to use UTF-8 byte widths as indicated by the
-#' leading byte, irrespective of whether the subsequent bytes lead to a valid
-#' sequence.  Additionally, UTF-8 byte sequences as long as 5 or 6 bytes are
-#' allowed, which is likely a holdover from older Unicode versions.  `fansi`
-#' mimics this behavior, although if new releases of R fix this there could be
-#' divergences.  In general, you should assume that `fansi` may not replicate
-#' base R exactly when there are illegal UTF-8 sequences present.
+#' As of R 3.4.0 `substr` appears to use UTF-8 character byte sizes as indicated
+#' by the leading byte, irrespective of whether the subsequent bytes lead to a
+#' valid sequence.  Additionally, UTF-8 byte sequences as long as 5 or 6 bytes
+#' are allowed, which is likely a holdover from older Unicode versions.  `fansi`
+#' mimics this behavior, although if new releases of R were to fix this there
+#' could be divergences.  In general, you should assume that `fansi` may not
+#' replicate base R exactly when there are illegal UTF-8 sequences present.
 #'
 #' Ultimately we would like to adopt a proper UTF-8 library like
 #'

@@ -17,8 +17,16 @@
  */
 
 #include "fansi.h"
+// nocov start
+// this is a temporarily un-used implementation, but we may re-use it later
 
 SEXP FANSI_strsplit(SEXP x, SEXP warn, SEXP term_cap) {
+  error("This code is disabled current");
+  warning("Handle UTF8");
+  // UTF8 is a little tricky here, we're now using read_next, but we don't
+  // really need it, so we could maybe have a version without read next that
+  // doesn't need to translate to UTF8.
+
   if(
     TYPEOF(x) != VECSXP || TYPEOF(warn) != LGLSXP ||
     TYPEOF(term_cap) != INTSXP
@@ -92,7 +100,7 @@ SEXP FANSI_strsplit(SEXP x, SEXP warn, SEXP term_cap) {
           // really shouldn't overflow
           chr_size = FANSI_ADD_INT(chr_size, 4);
 
-          if(chr_len > INT_MAX - chr_size) {
+          if(chr_len > FANSI_int_max - chr_size) {
             error(
               "%s%s",
               "Overflow while attempting to reformat styles on split string; ",
@@ -140,3 +148,4 @@ SEXP FANSI_strsplit(SEXP x, SEXP warn, SEXP term_cap) {
   UNPROTECT(1);
   return res_vec;
 }
+// nocov end
