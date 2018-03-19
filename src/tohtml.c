@@ -444,8 +444,12 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
       memcpy(buff_track, string_last, bytes_stub);
       buff_track += bytes_stub;
-      memcpy(buff_track, "</span>", span_end);
-      buff_track += span_end;
+
+      if(has_esc) {
+        // odd case where the only thing in the string is a null SGR
+        memcpy(buff_track, "</span>", span_end);
+        buff_track += span_end;
+      }
       *(buff_track) = '0';  // not strictly needed
 
       // Now create the charsxp what encoding to use.
