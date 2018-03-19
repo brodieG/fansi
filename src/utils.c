@@ -213,10 +213,14 @@ void FANSI_size_buff(struct FANSI_buff * buff, size_t size) {
       if(size < 128 && FANSI_int_max > 128)
         size = 128;  // in theory little penalty to ask this minimum
       else if(size > FANSI_int_max + 1) {
+        // nocov start
+        // too difficult to test, all the code pretty much checks for overflow
+        // before requesting memory
         error(
           "Internal Error: requested buff size %.0f greater than INT_MAX + 1.",
           (double) size
         );
+        // nocov end
       }
       else buff->len = size;
     }
@@ -232,11 +236,15 @@ void FANSI_size_buff(struct FANSI_buff * buff, size_t size) {
       if(size > tmp_double_size) tmp_double_size = size;
 
       if(tmp_double_size > (size_t) FANSI_int_max + 1)
+        // nocov start
+        // this can't really happen unless size starts off bigger than
+        // INT_MAX + 1
         error(
           "%s  Requesting %.0f",
           "Internal Error: max allowed buffer size is INT_MAX + 1.",
           (double) tmp_double_size
         );
+        // nocov end
       buff->len = tmp_double_size;
     }
     buff->buff = R_alloc(buff->len, sizeof(char));
