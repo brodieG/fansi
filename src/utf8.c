@@ -34,8 +34,9 @@ int FANSI_has_utf8(const char * x) {
   while(*x) {if(*(x++) > 127) return 1;}
   return 0;
 }
-
+// nocov start
 int FANSI_is_utf8_loc() {
+  error("Current not in use");
   SEXP sys_getlocale = PROTECT(install("Sys.getlocale"));
   SEXP lc_ctype = PROTECT(mkString("LC_CTYPE"));
   SEXP loc_call = PROTECT(lang2(sys_getlocale, lc_ctype));
@@ -77,6 +78,7 @@ int FANSI_is_utf8_loc() {
   UNPROTECT(4);
   return(res);
 }
+// nocov end
 
 /*
  * Translates a CHARSXP to a UTF8 char if necessary, otherwise returns
