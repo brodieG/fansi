@@ -165,7 +165,7 @@ static int state_as_html(struct FANSI_state state, int first, char * buff) {
     }
   } else {
     if(first) {
-      memcpy(buff, "<span style='", 20);
+      memcpy(buff, "<span style='", 13);
       buff += 13;
     } else {
       memcpy(buff, "</span><span style='", 20);
@@ -259,7 +259,7 @@ static int html_compute_size(
     if(bytes_extra > FANSI_int_max - bytes_net) {
       error(
         "%s%s %.0f %s",
-        "Expanding ESC sequences into CSS will create a string longer ",
+        "Expanding SGR sequences into CSS will create a string longer ",
         "than INT_MAX at position", (double) (i + 1),
         "which is not allowed by R."
       );
@@ -300,12 +300,12 @@ static size_t html_check_overflow(
   ) {
     error(
       "%s%s %.0f %s",
-      "Expanding ESC sequences into CSS will create a string longer ",
+      "String with SGR sequences as CSS is longer ",
       "than INT_MAX at position", (double) (i + 1),
       "which is not allowed by R."
     );
   } else if(bytes_extra < 0) {
-    if(bytes_extra <= FANSI_int_min - span_extra) {
+    if(bytes_extra <= FANSI_int_min + span_extra) {
       // nocov start
       error(
         "%s%s%s",
