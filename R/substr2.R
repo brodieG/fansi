@@ -95,6 +95,8 @@ substr2_ctl <- function(
   term.cap=getOption('fansi.term.cap')
 ) {
   x <- enc2utf8(as.character(x))
+  if(any(Encoding(x) == "bytes"))
+    stop("BYTE encoded strings are not supported.")
 
   if(!is.logical(tabs.as.spaces)) tabs.as.spaces <- as.logical(tabs.as.spaces)
   if(length(tabs.as.spaces) != 1L || is.na(tabs.as.spaces))

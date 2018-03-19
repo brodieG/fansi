@@ -338,14 +338,13 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
   struct FANSI_state state, state_prev, state_init;
   state = state_prev = state_init = FANSI_state_init("", warn, term_cap);
 
-  int is_utf8_loc = 0;
-
   SEXP res = PROTECT(x);
 
   for(R_xlen_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
 
     SEXP chrsxp = STRING_ELT(x, i);
+
     const char * string_start = CHAR(chrsxp);
     const char * string = string_start;
     state.string = state_prev.string = string;
@@ -365,7 +364,8 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
     while(*string && (string = strchr(string, 0x1b))) {
       // Since we don't care about width, etc, we only use the state objects to
-      // parse the ESC sequences
+      // parse the ESC sequences, so we don't have to worry about UTF8
+      // conversions.
 
       state.pos_byte = (string - string_start);
 
@@ -394,7 +394,6 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
       if(x == res) {
         UNPROTECT(1);
         res = PROTECT(duplicate(x));
-        is_utf8_loc = FANSI_is_utf8_loc();
       }
       // Allocate buffer and do second pass
 
@@ -439,6 +438,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
       int bytes_stub = bytes_init - (string_last - string_start);
       // Rprintf("last: '%s'\n", string_last);
       // Rprintf("stub %d string %d\n", bytes_stub, (string_last - string_start));
+
       memcpy(buff_track, string_last, bytes_stub);
       buff_track += bytes_stub;
       memcpy(buff_track, "</span>", span_end);
@@ -447,8 +447,6 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
       // Now create the charsxp what encoding to use.
 
-      cetype_t chr_type = CE_NATIVE;
-      if(state.has_utf8) chr_type = CE_UTF8;
       if(buff_track - buff.buff > FANSI_int_max)
         // nocov start
         error(
@@ -458,10 +456,10 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
         );
         // nocov end
 
+      cetype_t chr_type = getCharCE(chrsxp);
       SEXP chrsxp = PROTECT(
-        mkCharLenCE(
-          buff.buff, (int) (buff_track - buff.buff), chr_type
-      ) );
+        mkCharLenCE(buff.buff, (int) (buff_track - buff.buff), chr_type)
+      );
       SET_STRING_ELT(res, i, chrsxp);
       UNPROTECT(1);
     }

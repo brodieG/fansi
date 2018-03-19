@@ -47,6 +47,10 @@ SEXP FANSI_unhandled_esc(SEXP x) {
     SEXP chrsxp = STRING_ELT(x, i);
 
     if(chrsxp != NA_STRING && LENGTH(chrsxp)) {
+      // Need to convert to UTF8 because we're also looking for illegal UTF8
+      // sequences; otherwise we could just leave as is as we don't care about
+      // width.
+
       struct FANSI_string_as_utf8 string_dat = FANSI_string_as_utf8(chrsxp);
       const char * string, * string_start;
 
@@ -73,7 +77,7 @@ SEXP FANSI_unhandled_esc(SEXP x) {
             break_early = 1;
             break;
           }
-          if(esc_start == FANSI_int_max || state.pos_ansi == FANSI_int_max)
+          if(esc_start == INT_MAX || state.pos_ansi == INT_MAX)
             // nocov start
             error(
               "%s%s",

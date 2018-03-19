@@ -668,7 +668,8 @@ SEXP FANSI_state_at_pos_ext(
   SEXP res_str = PROTECT(allocVector(STRSXP, len));
   SEXP res_chr, res_chr_prev = PROTECT(mkChar(""));
 
-  string = FANSI_string_as_utf8(text_chr).string;
+  SEXP text_chr = STRING_ELT(text, 0);
+  const char * string = CHAR(text_chr); // Should already be UTF-8 if needed
 
   SEXP R_true = PROTECT(ScalarLogical(1));
   struct FANSI_state state =

@@ -37,7 +37,7 @@ struct FANSI_prefix_dat {
  */
 
 static struct FANSI_prefix_dat make_pre(SEXP x) {
-  const char * x_utf8 = FANSI_string_as_utf8(asChar(x)).string;
+  const char * x_utf8 = FANSI_string_as_utf8(STRING_ELT(x, 0)).string;
   // ideally we would IS_ASCII(x), but that's not available to extensions
   int x_has_utf8 = FANSI_has_utf8(x_utf8);
 
@@ -619,9 +619,11 @@ SEXP FANSI_strwrap_ext(
     FANSI_interrupt(i);
     SEXP chr = STRING_ELT(x, i);
     if(chr == NA_STRING) continue;
+    const char * chr_utf8 = FANSI_string_as_utf8(chr).string;
+
     SEXP str_i = PROTECT(
       strwrap(
-        CHAR(chr), width_int,
+        chr_utf8, width_int,
         i ? pre_first_dat : ini_first_dat,
         pre_next_dat,
         wrap_always_int, &buff,

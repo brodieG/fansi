@@ -18,11 +18,17 @@
 
 #include "fansi.h"
 /*
- * Assuming encoding is UTF-8, are there actually any non-ASCII chars in
- * string.
+ * We need to translate to UTF8 any time that we care about string width as we
+ * need to know how many bytes to select to feed through R_nchar.
  *
- * `x` must be NULL terminated.
+ * Other than that, we don't actually care about the string encoding, though the
+ * implicit assumption is that a) anything 127 and under is ASCII, and
+ * additionally that no Control Sequence is going to have anything abovce 127 in
+ * it.
  */
+
+// check whether any bytes are greater than 127; doesn't really actually confirm
+// this is UTF8
 
 int FANSI_has_utf8(const char * x) {
   while(*x) {if(*(x++) > 127) return 1;}

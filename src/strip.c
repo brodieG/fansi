@@ -22,6 +22,8 @@
  *
  * Assumes input is NULL terminated.
  *
+ * Since we do not use FANSI_read_next, we don't care about conversions to
+ * UTF8.
  *
  * @param warn normally TRUE or FALSE, but internally we allow it to be an
  *   integer so that we can use a special mode where if == 2 then we return the
