@@ -342,13 +342,16 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
   state = state_prev = state_init = FANSI_state_init("", warn, term_cap);
 
   SEXP res = x;
-  PROTECT_INDEX ipx;
-  PROTECT_WITH_INDEX(res, &ipx);  // reserve spot if we need to alloc later
+  // Reserve two spots on protection stack
+  PROTECT_INDEX ipx, ipx2;
+  PROTECT_WITH_INDEX(res, &ipx);
+  PROTECT_WITH_INDEX(R_NilValue, &ipx2);
 
   for(R_xlen_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
 
-    SEXP chrsxp = STRING_ELT(x, i);
+    SEXP chrsxp;
+    PROTECT_WITH_INDEX(chrsxp = STRING_ELT(x, i));
 
     const char * string_start = CHAR(chrsxp);
     const char * string = string_start;
@@ -474,7 +477,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
       UNPROTECT(1);
     }
   }
-  UNPROTECT(1);
+  UNPROTECT(2);
   return res;
 }
 /*
