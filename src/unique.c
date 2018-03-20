@@ -27,9 +27,7 @@
 SEXP FANSI_unique_chr(SEXP x) {
   if(TYPEOF(x) != STRSXP) error("Internal Error: type mismatch");
 
-  PROTECT_INDEX ipx;
   SEXP x_srt = PROTECT(FANSI_sort_chr(x));
-  PROTECT_WITH_INDEX(R_NilValue, &ipx);
 
   // Loop and check how many deltas there are
 
@@ -39,7 +37,7 @@ SEXP FANSI_unique_chr(SEXP x) {
 
   if(x_len > 2) {
     // Do a two pass version, not idealy but easier
-    REPROTECT(x_prev = STRING_ELT(x_srt, 0), ipx);
+    x_prev = STRING_ELT(x_srt, 0);
     for(R_xlen_t i = 1; i < x_len; ++i) {
       SEXP x_cur;
       x_cur = STRING_ELT(x_srt, i);
@@ -50,21 +48,18 @@ SEXP FANSI_unique_chr(SEXP x) {
     res = PROTECT(allocVector(STRSXP, u_count));
     SET_STRING_ELT(res, 0, STRING_ELT(x_srt, 0));
 
-    PROTECT(x_prev = STRING_ELT(x_srt, 0));
+    x_prev = STRING_ELT(x_srt, 0);
     u_count = 1;
     for(R_xlen_t i = 1; i < x_len; ++i) {
-      SEXP x_cur = PROTECT(STRING_ELT(x_srt, i));
+      SEXP x_cur = STRING_ELT(x_srt, i);
       if(x_prev != x_cur) {
         SET_STRING_ELT(res, u_count++, x_cur);
         x_prev = x_cur;
-      }
-      UNPROTECT(1);
-    }
-    UNPROTECT(1);
+    } }
   } else {
     res = PROTECT(x);
   }
-  UNPROTECT(3);
+  UNPROTECT(2);
   return res;
 }
 

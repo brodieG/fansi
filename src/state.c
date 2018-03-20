@@ -669,7 +669,7 @@ SEXP FANSI_state_at_pos_ext(
   SEXP res_str = PROTECT(allocVector(STRSXP, len));
   SEXP res_chr, res_chr_prev = PROTECT(mkChar(""));
   // PROTECT should not be needed here, but rchk complaining
-  SEXP text_chr = PROTECT(STRING_ELT(text, 0));
+  SEXP text_chr = STRING_ELT(text, 0);
   const char * string = CHAR(text_chr); // Should already be UTF-8 if needed
 
   SEXP R_true = PROTECT(ScalarLogical(1));
@@ -739,6 +739,6 @@ SEXP FANSI_state_at_pos_ext(
   SET_VECTOR_ELT(res_list, 0, res_str);
   SET_VECTOR_ELT(res_list, 1, res_mx);
 
-  UNPROTECT(8);
+  UNPROTECT(7);
   return(res_list);
 }
