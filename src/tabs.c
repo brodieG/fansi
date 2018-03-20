@@ -57,7 +57,7 @@ SEXP FANSI_tabs_as_spaces(
   int tabs_in_str = 0;
   int max_tab_stop = 1;
 
-  SEXP res_sxp = R_NilValue;
+  SEXP res_sxp = vec;
 
   PROTECT_INDEX ipx;
   PROTECT_WITH_INDEX(res_sxp, &ipx);  // reserve spot if we need to alloc later
@@ -74,7 +74,6 @@ SEXP FANSI_tabs_as_spaces(
     while(*source && (source = strchr(source, '\t'))) {
       if(!tabs_in_str) {
         tabs_in_str = 1;
-        UNPROTECT(1);
         REPROTECT(res_sxp = duplicate(vec), ipx);
         for(R_xlen_t j = 0; j < len_stops; ++j) {
           if(INTEGER(tab_stops)[j] > max_tab_stop)

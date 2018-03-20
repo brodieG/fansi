@@ -50,7 +50,7 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
 
   int what_int = FANSI_what_as_int(what);
   R_xlen_t i, len = xlength(x);
-  SEXP res_fin = R_NilValue;
+  SEXP res_fin = x;
 
   PROTECT_INDEX ipx;
   PROTECT_WITH_INDEX(res_fin, &ipx);  // reserve spot if we need to alloc later
@@ -210,18 +210,18 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
   if(TYPEOF(input) != STRSXP) error("Input is not a character vector.");
 
   PROTECT_INDEX ipx;
-  SEXP res = R_NilValue;
+  SEXP res = input;
   PROTECT_WITH_INDEX(res, &ipx);  // reserve spot if we need to alloc later
 
   int strip_any = 0;          // Have any elements in the STRSXP been stripped
 
   R_xlen_t len = XLENGTH(res);
   for(R_xlen_t i = 0; i < len; ++i) {
-    const char * string = CHAR(STRING_ELT(input, i));
+    const char * string = CHAR(STRING_ELT(res, i));
     const char * string_start = string;
     char * buff_track;
 
-    R_len_t len_j = LENGTH(STRING_ELT(input, i));
+    R_len_t len_j = LENGTH(STRING_ELT(res, i));
     int strip_this, to_strip, to_strip_nl, punct_prev, punct_prev_prev,
         space_prev, space_start, para_start, newlines, newlines_start,
         has_tab_or_nl, leading_spaces;
