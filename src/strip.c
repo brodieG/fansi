@@ -52,8 +52,10 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
   R_xlen_t i, len = xlength(x);
   SEXP res_fin = x;
 
-  PROTECT_INDEX ipx;
-  PROTECT_WITH_INDEX(res_fin, &ipx);  // reserve spot if we need to alloc later
+  PROTECT_INDEX ipx, ipx2;
+  // reserve spot if we need to alloc later
+  PROTECT_WITH_INDEX(res_fin, &ipx);
+  PROTECT_WITH_INDEX(R_NilValue, &ipx2);
 
   int any_ansi = 0;
   R_len_t mem_req = 0;          // how much memory we need for each ansi
@@ -78,7 +80,8 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
 
   for(i = 0; i < len; ++i) {
     FANSI_interrupt(i);
-    SEXP x_chr = STRING_ELT(x, i);
+    SEXP x_chr;
+    REPROTECT(x_chr = STRING_ELT(x, i), ipx2);  // not necessary, but rchk
     if(x_chr == NA_STRING) continue;
 
     int has_ansi = 0;
@@ -191,7 +194,7 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
         UNPROTECT(1);
         break;
   } } }
-  UNPROTECT(1);
+  UNPROTECT(2);
   return res_fin;
 }
 /*

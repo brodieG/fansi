@@ -36,15 +36,21 @@ SEXP FANSI_unhandled_esc(SEXP x) {
   SEXP no_warn = PROTECT(ScalarLogical(0));
   SEXP res, res_start;
   res = res_start = R_NilValue;
-  PROTECT_INDEX ipx;
-  PROTECT_WITH_INDEX(res, &ipx);  // reserve spot if we need to alloc later
+
+  // reserve spot if we need to alloc later
+
+  PROTECT_INDEX ipx, ipx2;
+  PROTECT_WITH_INDEX(res, &ipx);
+  PROTECT_WITH_INDEX(R_NilValue, &ipx2);
+
   int any_errors = 0;
   int err_count = 0;
   int break_early = 0;
 
   for(R_xlen_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
-    SEXP chrsxp = STRING_ELT(x, i);
+    SEXP chrsxp;
+    REPROTECT(chrsxp = STRING_ELT(x, i), ipx2);
 
     if(chrsxp != NA_STRING && LENGTH(chrsxp)) {
       // Need to convert to UTF8 because we're also looking for illegal UTF8
@@ -143,6 +149,6 @@ SEXP FANSI_unhandled_esc(SEXP x) {
   SET_VECTOR_ELT(res_fin, 2, res_esc_end);
   SET_VECTOR_ELT(res_fin, 3, res_err_code);
   SET_VECTOR_ELT(res_fin, 4, res_translated);
-  UNPROTECT(11);
+  UNPROTECT(12);
   return res_fin;
 }
