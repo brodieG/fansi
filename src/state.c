@@ -399,7 +399,7 @@ unsigned int FANSI_color_write(
     error("Internal Error: color mode must be 3 or 4");  // nocov
 
   unsigned int str_off = 0;
-  if(color >= 0 & color < 10) {
+  if(color >= 0 && color < 10) {
     string[str_off++] = mode == 3 ? '3' : '4';
 
     if(color != 8) {
