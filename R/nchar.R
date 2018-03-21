@@ -25,13 +25,13 @@
 #' is implemented in native code and is much faster than the otherwise
 #' equivalent `nzchar(strip_ctl(...))`.  You cannot change which _Control
 #' Sequences_ count in `nzchar_ctl`, but you can always resort to
-#' `nzchar(strip_ctl(..., strip='...'))` if you need that level of control.
+#' `nzchar(strip_ctl(..., strip='...'))` if that is important.
 #'
 #' These functions will warn if either malformed or non-CSI escape sequences are
 #' encountered, as these may be incorrectly interpreted.
 #'
-#' @inheritParams base::nchar
 #' @inheritParams strip_ctl
+#' @inheritParams base::nchar
 #' @export
 #' @param type character string, one of "chars", or "width".  For byte counts
 #'   use [base::nchar].

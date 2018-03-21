@@ -23,8 +23,12 @@
 #'
 #' Control characters and sequences are non-printing inline characters that can
 #' be used to modify terminal display and behavior, for example by changing text
-#' color or cursor position.  There are three types of control characters and
-#' sequences that `fansi` treats specially:
+#' color or cursor position.
+#'
+#' We will refer to ANSI control characters and sequences as "_Control
+#' Sequences_" hereafter.
+#'
+#' There are three types of _Control Sequences_ that `fansi` treats specially:
 #'
 #' * "C0" control characters, such as tabs and carriage returns (we include
 #'   delete in this set, even though technically it is not part of it).
@@ -34,14 +38,13 @@
 #' All of these are considered zero display-width for purposes of string width
 #' calculations.
 #'
-#' We will refer to ANSI control characters and sequences as "_Control Sequences_"
-#' hereafter.
-#'
 #' _Control Sequences_ starting with ESC are assumed to be two characters
 #' long (including the ESC) unless they are of the CSI variety, in which case
-#' their length is computed as per the ANSI CSI spec.  There are non-CSI escape
-#' sequences that may be longer than two characters, but `fansi` will
-#' (incorrectly) treat them as if they were two characters long.
+#' their length is computed as per the [ECMA-48
+#' specification](http://www.ecma-international.org/publications/standards/Ecma-048.htm).
+#' There are non-CSI escape sequences that may be longer than two characters,
+#' but `fansi` will (incorrectly) treat them as if they were two characters
+#' long.
 #'
 #' In theory it is possible to encode _Control Sequences_ with a single
 #' byte introducing character in the 0x40-0x5F range instead of the traditional
@@ -62,8 +65,8 @@
 #' Occasionally there may be mismatches between how `fansi` and a display
 #' interpret the CSI SGR sequences, which may produce display artifacts.  The
 #' most likely source of artifacts are _Control Sequences_ that move
-#' the cursor or change the display, or CSI SGR sequences `fansi` does not
-#' interpret such as:
+#' the cursor or change the display, or that `fansi` otherwise fails to
+#' interpret, such as:
 #'
 #' * Unknown SGR substrings.
 #' * "C0" control characters like tabs and carriage returns.
@@ -90,7 +93,8 @@
 #' off warnings via the `warn` parameter or via the "fansi.warn" global option.
 #'
 #' `fansi` can work around "C0" tab control characters by turning them into
-#' spaces first with [tabs_as_spaces] or with the `tabs.as.spaces` parameter.
+#' spaces first with [tabs_as_spaces] or with the `tabs.as.spaces` parameter
+#' available in some of the `fansi` functions.
 #'
 #' We chose to interpret ANSI CSI SGR sequences because this reduces how
 #' much string transcription we need to do during string manipulation.  If we do
@@ -109,13 +113,15 @@
 #' @section Encodings / UTF-8:
 #'
 #' `fansi` will convert any non-ASCII strings to UTF-8 any time character width
-#' is important.  In other cases it will leave encoding unchanged.  This is not
-#' necessarily consistent with how base R does things.
+#' is important.  In other cases it will leave encoding unchanged.  This may be
+#' different to what base R does.  For example, `substr` re-encodes substrings
+#' to their original encoding.
 #'
 #' The actual interpretation of UTF-8 strings is intended to be consistent with
 #' base R.  There are three ways things may not work out exactly as desired:
 #'
-#' 1. `fansi` fails to handle a UTF-8 sequence the same way as R does.
+#' 1. `fansi`, despite its best intentions,  handles a UTF-8 sequence
+#'    differently to the way R does.
 #' 2. R incorrectly handles a UTF-8 sequence.
 #' 3. Your display incorrectly handles a UTF-8 sequence.
 #'
@@ -129,38 +135,36 @@
 #' outside of the ASCII range using the native `R_nchar` function.  This will
 #' cause such characters to be processed slower than ASCII characters.
 #' Additionally, `fansi` character width computations can differ from R width
-#' computations. `fansi` always computes width for each character
-#' individually, which assumes that the sum of the widths of each character is
-#' equal to the sum of the width of a sequence.  However, it is theoretically
+#' computations despite the use of `R_nchar`. `fansi` always computes width for
+#' each character individually, which assumes that the sum of the widths of each
+#' character is equal to the width of a sequence.  However, it is theoretically
 #' possible for a character sequence that forms a single grapheme to break that
 #' assumption. In informal testing we have found this to be rare because in the
-#' most common multi-character graphemes the trailing characters are computed
-#' as zero width.
+#' most common multi-character graphemes the trailing characters are computed as
+#' zero width.
 #'
 #' As of R 3.4.0 `substr` appears to use UTF-8 character byte sizes as indicated
 #' by the leading byte, irrespective of whether the subsequent bytes lead to a
 #' valid sequence.  Additionally, UTF-8 byte sequences as long as 5 or 6 bytes
-#' are allowed, which is likely a holdover from older Unicode versions.  `fansi`
-#' mimics this behavior, although if new releases of R were to fix this there
-#' could be divergences.  In general, you should assume that `fansi` may not
-#' replicate base R exactly when there are illegal UTF-8 sequences present.
+#' may be allowed, which is likely a holdover from older Unicode versions.
+#' `fansi` mimics this behavior, although if new releases of R were to fix this
+#' there could be divergences.  In general, you should assume that `fansi` may
+#' not replicate base R exactly when there are illegal UTF-8 sequences present.
 #'
-#' Ultimately we would like to adopt a proper UTF-8 library like
-#'
-#' * [r-utf8](https://github.com/patperry/r-utf8/) or
-#' * [utf8lite](https://github.com/patperry/utf8lite)
+#' Our long term objective is to implement proper UTF-8 character width
+#' computations, but for simplicity and also because R and our terminal do not
+#' do it properly either we are deferring the issue for now.
 #'
 #' @section Miscellaneous:
 #'
 #' The native code in this package assumes that all strings are NULL terminated
-#' and no longer than INT_MAX (excluding the NULL).  This should be a safe
-#' assumption since the code is designed to work with STRSXPs and CHRSXPs.  Do
-#' not however expect it to be safe if you try to use it on other types of
-#' strings.
+#' and no longer than (32 bit) INT_MAX (excluding the NULL).  This should be a
+#' safe assumption since the code is designed to work with STRSXPs and CHRSXPs.
+#' Behavior is undefined and probably bad if you somehow manage to provide to
+#' `fansi` strings that do not adhere to these assumptions.
 #'
 #' @useDynLib fansi, .registration=TRUE, .fixes="FANSI_"
 #' @docType package
-#' @importFrom utils globalVariables
 #' @name fansi
 
 NULL

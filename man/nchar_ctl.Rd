@@ -11,8 +11,7 @@ nchar_ctl(x, type = "chars", allowNA = FALSE, keepNA = NA,
 nzchar_ctl(x, keepNA = NA, warn = getOption("fansi.warn"))
 }
 \arguments{
-\item{x}{character vector, or a vector to be coerced to a character
-    vector.  Giving a factor is an error.}
+\item{x}{a character vector or object that can be coerced to character.}
 
 \item{type}{character string, one of "chars", or "width".  For byte counts
 use \link[base:nchar]{base::nchar}.}
@@ -31,17 +30,18 @@ use \link[base:nchar]{base::nchar}.}
 
 \item{strip}{character, any combination of the following values (see details):
 \itemize{
-\item "nl": strip newlines
+\item "nl": strip newlines.
 \item "c0": strip all other "C0" control characters (i.e. x01-x1f), except for
-newlines and the actual ESC character
-\item "sgr": strip ANSI CSI SGR sequences
-\item "csi": strip all non-SGR csi sequences
-\item "esc": strip all other escape sequences
-\item "all": all of the above
+newlines and the actual ESC character.
+\item "sgr": strip ANSI CSI SGR sequences.
+\item "csi": strip all non-SGR csi sequences.
+\item "esc": strip all other escape sequences.
+\item "all": all of the above, except when used in combination with any of the
+above, in which case it means "all but" (see details).
 }}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
-problematic escape sequences are encountered.  These could cause the
+problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
 }
@@ -56,7 +56,7 @@ characters are not counted.
 is implemented in native code and is much faster than the otherwise
 equivalent \code{nzchar(strip_ctl(...))}.  You cannot change which \emph{Control
 Sequences} count in \code{nzchar_ctl}, but you can always resort to
-\code{nzchar(strip_ctl(..., strip='...'))} if you need that level of control.
+\code{nzchar(strip_ctl(..., strip='...'))} if that is important.
 
 These functions will warn if either malformed or non-CSI escape sequences are
 encountered, as these may be incorrectly interpreted.

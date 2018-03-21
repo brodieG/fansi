@@ -11,7 +11,7 @@ sgr_to_html(x, warn = getOption("fansi.warn"),
 \item{x}{a character vector or object that can be coerced to character.}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
-problematic escape sequences are encountered.  These could cause the
+problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
 
@@ -24,12 +24,12 @@ capabilities. See \link{term_cap_test} for details.}
 }
 \value{
 a character vector with all escape sequences removed and any basic
-ANSI CSI SGR escape sequences applied via SPAN html objects with specified
-css styles.
+ANSI CSI SGR escape sequences applied via SPAN html objects with
+inline css styles.
 }
 \description{
 Only the colors, background-colors, and basic styles (CSI SGR codes 1-9) are
-translated.  Others are ignored.
+translated.  Others are dropped silently.
 }
 \examples{
 sgr_to_html("hello\\033[31;42;1mworld\\033[m")
