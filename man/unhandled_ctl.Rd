@@ -54,6 +54,9 @@ the escape sequence shown.
 \item esc: character the unhandled escape sequence
 }
 }
+\note{
+Non-ASCII strings are converted to UTF-8 encoding.
+}
 \examples{
 string <- c(
   "\\033[41mhello world\\033[m", "foo\\033[22>m", "\\033[999mbar",

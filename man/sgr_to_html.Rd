@@ -31,6 +31,9 @@ inline css styles.
 Only the colors, background-colors, and basic styles (CSI SGR codes 1-9) are
 translated.  Others are dropped silently.
 }
+\note{
+Non-ASCII strings are converted to and returned in UTF-8 encoding.
+}
 \examples{
 sgr_to_html("hello\\033[31;42;1mworld\\033[m")
 }

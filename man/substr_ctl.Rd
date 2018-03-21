@@ -72,7 +72,7 @@ characters to be dropped irrespective whether they correspond to \code{start} or
 \code{stop}, and "both" could cause all of them to be included.
 }
 \note{
-non-ASCII strings are converted to and returned in UTF-8 encoding.
+Non-ASCII strings are converted to and returned in UTF-8 encoding.
 }
 \examples{
 substr_ctl("\\033[42mhello\\033[m world", 1, 9)

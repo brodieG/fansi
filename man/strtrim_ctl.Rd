@@ -40,7 +40,7 @@ newlines, carriage returns, etc., are treated as zero width.
 This is the only difference between \code{strtrim_ctl} and \code{strtrim2_ctl}.
 }
 \note{
-non-ASCII strings are converted to and returned in UTF-8 encoding.
+Non-ASCII strings are converted to and returned in UTF-8 encoding.
 }
 \examples{
 strtrim_ctl("\\033[42mHello world\\033[m", 6)

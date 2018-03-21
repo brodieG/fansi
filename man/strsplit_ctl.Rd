@@ -54,7 +54,9 @@ but should otherwise behave the same way except for CSI SGR sequence
 awareness.
 }
 \note{
-non-ASCII strings are converted to and returned in UTF-8 encoding.
+Non-ASCII strings are converted to and returned in UTF-8 encoding.  The
+split positions are computed after both \code{x} and \code{split} are converted to
+UTF-8.
 }
 \examples{
 strsplit_ctl("\\033[31mhello\\033[42m world!", " ")

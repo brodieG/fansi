@@ -22,7 +22,7 @@
 #' `strtrim2_ctl` adds the option of converting tabs to spaces before trimming.
 #' This is the only difference between `strtrim_ctl` and `strtrim2_ctl`.
 #'
-#' @note non-ASCII strings are converted to and returned in UTF-8 encoding.
+#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @export
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.

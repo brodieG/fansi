@@ -96,7 +96,7 @@ Additionally,\code{indent}, \code{exdent}, \code{initial}, and \code{prefix} wil
 computing tab positions.
 }
 \note{
-non-ASCII strings are converted and returned in UTF-8 encoding.
+Non-ASCII strings are converted to and returned in UTF-8 encoding.
 }
 \examples{
 hello.1 <- "hello \\033[41mred\\033[49m world"

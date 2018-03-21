@@ -51,6 +51,7 @@
 #'   the escape sequence shown.
 #' * esc: character the unhandled escape sequence
 #'
+#' @note Non-ASCII strings are converted to UTF-8 encoding.
 #' @export
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
