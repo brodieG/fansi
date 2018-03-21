@@ -391,24 +391,28 @@ SEXP FANSI_order(SEXP x) {
     error("Internal error: this order only supports ints.");  // nocov
 
   R_xlen_t len = XLENGTH(x);
+  SEXP res;
 
-  size_t size = 0;
-  for(int i = 0; i < (int) sizeof(struct datum); ++i) {
-    if(size > SIZE_MAX - len)
-      error("Internal error: vector too long to order"); // nocov
-    size += len;
+  if(len) {
+    size_t size = 0;
+    for(int i = 0; i < (int) sizeof(struct datum); ++i) {
+      if(size > SIZE_MAX - len)
+        error("Internal error: vector too long to order"); // nocov
+      size += len;
+    }
+    struct datum * data = (struct datum *) R_alloc(len, sizeof(struct datum));
+
+    for(R_xlen_t i = 0; i < len; ++i)
+      *(data + i) = (struct datum){.val=INTEGER(x)[i], .idx=i + 1};
+
+    qsort(data, (size_t) len, sizeof(struct datum), cmpfun);
+
+    res = PROTECT(allocVector(INTSXP, len));
+
+    for(R_xlen_t i = 0; i < len; ++i) INTEGER(res)[i] = (data + i)->idx;
+  } else {
+    res = PROTECT(allocVector(INTSXP, 0));
   }
-  struct datum * data = (struct datum *) R_alloc(len, sizeof(struct datum));
-
-  for(R_xlen_t i = 0; i < len; ++i)
-    *(data + i) = (struct datum){.val=INTEGER(x)[i], .idx=i + 1};
-
-  qsort(data, (size_t) len, sizeof(struct datum), cmpfun);
-
-  SEXP res = PROTECT(allocVector(INTSXP, len));
-
-  for(R_xlen_t i = 0; i < len; ++i) INTEGER(res)[i] = (data + i)->idx;
-
   UNPROTECT(1);
   return res;
 }
@@ -463,28 +467,31 @@ SEXP FANSI_sort_chr(SEXP x) {
     error("Internal error: this sort only supports char vecs.");  // nocov
 
   R_xlen_t len = XLENGTH(x);
+  SEXP res = x;
 
-  // note we explictily check in assumptions that R_xlen_t is not bigger than
-  // size_t
+  if(len > 2) {
+    // note we explictily check in assumptions that R_xlen_t is not bigger than
+    // size_t
 
-  size_t size = 0;
-  for(int i = 0; i < (int) sizeof(struct datum); ++i) {
-    if(size > SIZE_MAX - len)
-      error("Internal error: vector too long to order"); // nocov
-    size += len;
+    size_t size = 0;
+    for(int i = 0; i < (int) sizeof(struct datum); ++i) {
+      if(size > SIZE_MAX - len)
+        error("Internal error: vector too long to order"); // nocov
+      size += len;
+    }
+    struct datum2 * data = (struct datum2 *) R_alloc(len, sizeof(struct datum2));
+
+    for(R_xlen_t i = 0; i < len; ++i)
+      *(data + i) = (struct datum2){.val=STRING_ELT(x, i), .idx=i};
+
+    qsort(data, (size_t) len, sizeof(struct datum2), cmpfun3);
+
+    res = PROTECT(allocVector(STRSXP, len));
+
+    for(R_xlen_t i = 0; i < len; ++i)
+      SET_STRING_ELT(res, i, STRING_ELT(x, (data + i)->idx));
+
+    UNPROTECT(1);
   }
-  struct datum2 * data = (struct datum2 *) R_alloc(len, sizeof(struct datum2));
-
-  for(R_xlen_t i = 0; i < len; ++i)
-    *(data + i) = (struct datum2){.val=STRING_ELT(x, i), .idx=i};
-
-  qsort(data, (size_t) len, sizeof(struct datum2), cmpfun3);
-
-  SEXP res = PROTECT(allocVector(STRSXP, len));
-
-  for(R_xlen_t i = 0; i < len; ++i)
-    SET_STRING_ELT(res, i, STRING_ELT(x, (data + i)->idx));
-
-  UNPROTECT(1);
   return res;
 }

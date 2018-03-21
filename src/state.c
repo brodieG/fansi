@@ -399,7 +399,7 @@ unsigned int FANSI_color_write(
     error("Internal Error: color mode must be 3 or 4");  // nocov
 
   unsigned int str_off = 0;
-  if(color >= 0 & color < 10) {
+  if(color >= 0 && color < 10) {
     string[str_off++] = mode == 3 ? '3' : '4';
 
     if(color != 8) {
@@ -668,7 +668,7 @@ SEXP FANSI_state_at_pos_ext(
 
   SEXP res_str = PROTECT(allocVector(STRSXP, len));
   SEXP res_chr, res_chr_prev = PROTECT(mkChar(""));
-
+  // PROTECT should not be needed here, but rchk complaining
   SEXP text_chr = STRING_ELT(text, 0);
   const char * string = CHAR(text_chr); // Should already be UTF-8 if needed
 

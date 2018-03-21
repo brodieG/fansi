@@ -319,7 +319,6 @@ static SEXP strwrap(
   SEXP char_list_start, char_list;
   char_list_start = char_list = PROTECT(list1(R_NilValue));
 
-  int prev_newline = 0;     // tracks if last non blank character was newline
   int prev_boundary = 0;    // tracks if previous char was a boundary
   int has_boundary = 0;     // tracks if at least one boundary in a line
   int para_start = 1;
@@ -365,7 +364,6 @@ static SEXP strwrap(
       // Rprintf("Bound @ %d\n", state_bound.pos_byte - state_start.pos_byte);
     } else {
       prev_boundary = 0;
-      prev_newline = 0;
     }
     // Write the line
 
@@ -424,9 +422,6 @@ static SEXP strwrap(
         char_list = CDR(char_list);
         UNPROTECT(1);
       } else break;
-
-      if(state.string[state.pos_byte] == '\n') prev_newline = 1;
-
       // overflow should be impossible here since string is at most int long
 
       ++size;

@@ -39,7 +39,8 @@ SEXP FANSI_unique_chr(SEXP x) {
     // Do a two pass version, not idealy but easier
     x_prev = STRING_ELT(x_srt, 0);
     for(R_xlen_t i = 1; i < x_len; ++i) {
-      SEXP x_cur = STRING_ELT(x_srt, i);
+      SEXP x_cur;
+      x_cur = STRING_ELT(x_srt, i);
       if(x_prev != x_cur) {
         ++u_count;
         x_prev = x_cur;

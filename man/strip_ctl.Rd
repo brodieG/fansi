@@ -14,17 +14,18 @@ strip_sgr(x, warn = getOption("fansi.warn"))
 
 \item{strip}{character, any combination of the following values (see details):
 \itemize{
-\item "nl": strip newlines
+\item "nl": strip newlines.
 \item "c0": strip all other "C0" control characters (i.e. x01-x1f), except for
-newlines and the actual ESC character
-\item "sgr": strip ANSI CSI SGR sequences
-\item "csi": strip all non-SGR csi sequences
-\item "esc": strip all other escape sequences
-\item "all": all of the above
+newlines and the actual ESC character.
+\item "sgr": strip ANSI CSI SGR sequences.
+\item "csi": strip all non-SGR csi sequences.
+\item "esc": strip all other escape sequences.
+\item "all": all of the above, except when used in combination with any of the
+above, in which case it means "all but" (see details).
 }}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
-problematic escape sequences are encountered.  These could cause the
+problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
 }
@@ -37,7 +38,7 @@ Removes \emph{Control Sequences} from strings.  By default it will
 strip all known \emph{Control Sequences}, including ANSI CSI
 sequences, two character sequences starting with ESC, and all C0 control
 characters, including newlines.  You can fine tune this behavior with the
-\code{strip} parameter.
+\code{strip} parameter.  \code{strip_sgr} only strips ANSI CSI SGR sequences.
 }
 \details{
 The \code{strip} value contains the names of \strong{non-overlapping} subsets of the
@@ -52,7 +53,9 @@ strip_ctl(string)
 strip_ctl(string, c("nl", "c0", "sgr", "csi", "esc")) # equivalently
 strip_ctl(string, "sgr")
 strip_ctl(string, c("c0", "esc"))
-## everything but C0 controls (recall "nl" is not part of "c0")
+
+## everything but C0 controls, we need to specify "nl"
+## in addition to "c0" since "nl" is not part of "c0"
 ## as far as the `strip` argument is concerned
 strip_ctl(string, c("all", "nl", "c0"))
 

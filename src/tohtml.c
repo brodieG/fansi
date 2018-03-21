@@ -341,7 +341,10 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
   struct FANSI_state state, state_prev, state_init;
   state = state_prev = state_init = FANSI_state_init("", warn, term_cap);
 
-  SEXP res = PROTECT(x);
+  SEXP res = x;
+  // Reserve spot on protection stack
+  PROTECT_INDEX ipx;
+  PROTECT_WITH_INDEX(res, &ipx);
 
   for(R_xlen_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
@@ -397,10 +400,8 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
       // Allocate target vector if it hasn't been yet
 
-      if(x == res) {
-        UNPROTECT(1);
-        res = PROTECT(duplicate(x));
-      }
+      if(res == x) REPROTECT(res = duplicate(x), ipx);
+
       // Allocate buffer and do second pass
 
       FANSI_size_buff(&buff, bytes_final);

@@ -50,9 +50,11 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
 
   int what_int = FANSI_what_as_int(what);
   R_xlen_t i, len = xlength(x);
-  PROTECT_INDEX ipx;
-  PROTECT_WITH_INDEX(x, &ipx);  // reserve spot if we need to alloc later
   SEXP res_fin = x;
+
+  PROTECT_INDEX ipx;
+  // reserve spot if we need to alloc later
+  PROTECT_WITH_INDEX(res_fin, &ipx);
 
   int any_ansi = 0;
   R_len_t mem_req = 0;          // how much memory we need for each ansi
@@ -208,7 +210,10 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
 SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
   if(TYPEOF(input) != STRSXP) error("Input is not a character vector.");
 
-  SEXP res = PROTECT(input);  // dummy PROTECT
+  PROTECT_INDEX ipx;
+  SEXP res = input;
+  PROTECT_WITH_INDEX(res, &ipx);  // reserve spot if we need to alloc later
+
   int strip_any = 0;          // Have any elements in the STRSXP been stripped
 
   R_xlen_t len = XLENGTH(res);
@@ -290,8 +295,7 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
       ) {
         // need to copy entire STRSXP since we haven't done that yet
         if(!strip_any) {
-          UNPROTECT(1);  // input is still protected
-          res = PROTECT(duplicate(input));
+          REPROTECT(res = duplicate(input), ipx);
           strip_any = 1;
         }
         // Make sure buffer is big enough

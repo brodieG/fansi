@@ -14,8 +14,12 @@ the effects of ANSI text formatting control sequences.
 
 Control characters and sequences are non-printing inline characters that can
 be used to modify terminal display and behavior, for example by changing text
-color or cursor position.  There are three types of control characters and
-sequences that \code{fansi} treats specially:
+color or cursor position.
+
+We will refer to ANSI control characters and sequences as "\emph{Control
+Sequences}" hereafter.
+
+There are three types of \emph{Control Sequences} that \code{fansi} treats specially:
 \itemize{
 \item "C0" control characters, such as tabs and carriage returns (we include
 delete in this set, even though technically it is not part of it).
@@ -26,14 +30,12 @@ delete in this set, even though technically it is not part of it).
 All of these are considered zero display-width for purposes of string width
 calculations.
 
-We will refer to ANSI control characters and sequences as "\emph{Control Sequences}"
-hereafter.
-
 \emph{Control Sequences} starting with ESC are assumed to be two characters
 long (including the ESC) unless they are of the CSI variety, in which case
-their length is computed as per the ANSI CSI spec.  There are non-CSI escape
-sequences that may be longer than two characters, but \code{fansi} will
-(incorrectly) treat them as if they were two characters long.
+their length is computed as per the \href{http://www.ecma-international.org/publications/standards/Ecma-048.htm}{ECMA-48specification}.
+There are non-CSI escape sequences that may be longer than two characters,
+but \code{fansi} will (incorrectly) treat them as if they were two characters
+long.
 
 In theory it is possible to encode \emph{Control Sequences} with a single
 byte introducing character in the 0x40-0x5F range instead of the traditional
@@ -56,8 +58,8 @@ preserved.  In most cases this should be transparent to the user.
 Occasionally there may be mismatches between how \code{fansi} and a display
 interpret the CSI SGR sequences, which may produce display artifacts.  The
 most likely source of artifacts are \emph{Control Sequences} that move
-the cursor or change the display, or CSI SGR sequences \code{fansi} does not
-interpret such as:
+the cursor or change the display, or that \code{fansi} otherwise fails to
+interpret, such as:
 \itemize{
 \item Unknown SGR substrings.
 \item "C0" control characters like tabs and carriage returns.
@@ -85,7 +87,8 @@ interpret or that might conflict with terminal capabilities.  You can turn
 off warnings via the \code{warn} parameter or via the "fansi.warn" global option.
 
 \code{fansi} can work around "C0" tab control characters by turning them into
-spaces first with \link{tabs_as_spaces} or with the \code{tabs.as.spaces} parameter.
+spaces first with \link{tabs_as_spaces} or with the \code{tabs.as.spaces} parameter
+available in some of the \code{fansi} functions.
 
 We chose to interpret ANSI CSI SGR sequences because this reduces how
 much string transcription we need to do during string manipulation.  If we do
@@ -106,13 +109,15 @@ pick another one).
 
 
 \code{fansi} will convert any non-ASCII strings to UTF-8 any time character width
-is important.  In other cases it will leave encoding unchanged.  This is not
-necessarily consistent with how base R does things.
+is important.  In other cases it will leave encoding unchanged.  This may be
+different to what base R does.  For example, \code{substr} re-encodes substrings
+to their original encoding.
 
 The actual interpretation of UTF-8 strings is intended to be consistent with
 base R.  There are three ways things may not work out exactly as desired:
 \enumerate{
-\item \code{fansi} fails to handle a UTF-8 sequence the same way as R does.
+\item \code{fansi}, despite its best intentions,  handles a UTF-8 sequence
+differently to the way R does.
 \item R incorrectly handles a UTF-8 sequence.
 \item Your display incorrectly handles a UTF-8 sequence.
 }
@@ -127,36 +132,34 @@ Internally, \code{fansi} computes the width of every UTF-8 character sequence
 outside of the ASCII range using the native \code{R_nchar} function.  This will
 cause such characters to be processed slower than ASCII characters.
 Additionally, \code{fansi} character width computations can differ from R width
-computations. \code{fansi} always computes width for each character
-individually, which assumes that the sum of the widths of each character is
-equal to the sum of the width of a sequence.  However, it is theoretically
+computations despite the use of \code{R_nchar}. \code{fansi} always computes width for
+each character individually, which assumes that the sum of the widths of each
+character is equal to the width of a sequence.  However, it is theoretically
 possible for a character sequence that forms a single grapheme to break that
 assumption. In informal testing we have found this to be rare because in the
-most common multi-character graphemes the trailing characters are computed
-as zero width.
+most common multi-character graphemes the trailing characters are computed as
+zero width.
 
 As of R 3.4.0 \code{substr} appears to use UTF-8 character byte sizes as indicated
 by the leading byte, irrespective of whether the subsequent bytes lead to a
 valid sequence.  Additionally, UTF-8 byte sequences as long as 5 or 6 bytes
-are allowed, which is likely a holdover from older Unicode versions.  \code{fansi}
-mimics this behavior, although if new releases of R were to fix this there
-could be divergences.  In general, you should assume that \code{fansi} may not
-replicate base R exactly when there are illegal UTF-8 sequences present.
+may be allowed, which is likely a holdover from older Unicode versions.
+\code{fansi} mimics this behavior, although if new releases of R were to fix this
+there could be divergences.  In general, you should assume that \code{fansi} may
+not replicate base R exactly when there are illegal UTF-8 sequences present.
 
-Ultimately we would like to adopt a proper UTF-8 library like
-\itemize{
-\item \href{https://github.com/patperry/r-utf8/}{r-utf8} or
-\item \href{https://github.com/patperry/utf8lite}{utf8lite}
-}
+Our long term objective is to implement proper UTF-8 character width
+computations, but for simplicity and also because R and our terminal do not
+do it properly either we are deferring the issue for now.
 }
 
 \section{Miscellaneous}{
 
 
 The native code in this package assumes that all strings are NULL terminated
-and no longer than INT_MAX (excluding the NULL).  This should be a safe
-assumption since the code is designed to work with STRSXPs and CHRSXPs.  Do
-not however expect it to be safe if you try to use it on other types of
-strings.
+and no longer than (32 bit) INT_MAX (excluding the NULL).  This should be a
+safe assumption since the code is designed to work with STRSXPs and CHRSXPs.
+Behavior is undefined and probably bad if you somehow manage to provide to
+\code{fansi} strings that do not adhere to these assumptions.
 }
 

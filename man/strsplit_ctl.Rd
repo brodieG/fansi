@@ -34,7 +34,7 @@ be coerced to character.}
     (see \code{\link{Encoding}}).}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
-problematic escape sequences are encountered.  These could cause the
+problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
 
@@ -53,8 +53,8 @@ A drop-in replacement for \link[base:strsplit]{base::strsplit}.  It will be noti
 but should otherwise behave the same way except for CSI SGR sequence
 awareness.
 }
-\details{
-Non-ASCII strings are converted to UTF-8.
+\note{
+non-ASCII strings are converted to and returned in UTF-8 encoding.
 }
 \examples{
 strsplit_ctl("\\033[31mhello\\033[42m world!", " ")

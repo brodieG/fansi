@@ -36,8 +36,12 @@ SEXP FANSI_unhandled_esc(SEXP x) {
   SEXP no_warn = PROTECT(ScalarLogical(0));
   SEXP res, res_start;
   res = res_start = R_NilValue;
+
+  // reserve spot if we need to alloc later
+
   PROTECT_INDEX ipx;
-  PROTECT_WITH_INDEX(res, &ipx);  // reserve spot if we need to alloc later
+  PROTECT_WITH_INDEX(res, &ipx);
+
   int any_errors = 0;
   int err_count = 0;
   int break_early = 0;
