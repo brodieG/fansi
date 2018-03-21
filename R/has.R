@@ -41,7 +41,7 @@ has_ctl <- function(x, which='all', warn=getOption('fansi.warn')) {
         "Argument `which` may contain only values in `",
         deparse(VALID.STRIP), "`"
       )
-    .Call(FANSI_has_csi, x, which.int, warn)
+    .Call(FANSI_has_csi, enc2utf8(as.character(x)), which.int, warn)
   } else rep(FALSE, length(x))
 }
 #' @export

@@ -67,7 +67,7 @@
 #' unhandled_ctl(string)
 
 unhandled_ctl <- function(x) {
-  res <- .Call(FANSI_unhandled_esc, x)
+  res <- .Call(FANSI_unhandled_esc, enc2utf8(x))
   names(res) <- c("index", "start", "stop", "error", "translated")
   errors <- c(
     'exceed-term-cap', 'special', 'unknown', 'non-SGR', 'malformed-CSI',

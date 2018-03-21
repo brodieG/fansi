@@ -45,6 +45,6 @@ sgr_to_html <- function(
       deparse(VALID.TERM.CAP)
     )
 
-  .Call(FANSI_esc_to_html, x, warn, term.cap.int)
+  .Call(FANSI_esc_to_html, enc2utf8(x), warn, term.cap.int)
 }
 

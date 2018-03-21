@@ -135,8 +135,8 @@ strwrap_ctl <- function(
 
   res <- .Call(
     FANSI_strwrap_csi,
-    x, width, indent, exdent,
-    prefix, initial,
+    enc2utf8(x), width, indent, exdent,
+    enc2utf8(prefix), enc2utf8(initial),
     FALSE, "",
     TRUE,
     FALSE, 8L,
@@ -222,9 +222,9 @@ strwrap2_ctl <- function(
 
   res <- .Call(
     FANSI_strwrap_csi,
-    x, width,
+    enc2utf8(x), width,
     indent, exdent,
-    prefix, initial,
+    enc2utf8(prefix), enc2utf8(initial),
     wrap.always, pad.end,
     strip.spaces,
     tabs.as.spaces, tab.stops,

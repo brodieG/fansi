@@ -51,7 +51,7 @@ strtrim_ctl <- function(x, width, warn=getOption('fansi.warn')){
 
   res <- .Call(
     FANSI_strwrap_csi,
-    x, width,
+    enc2utf8(x), width,
     0L, 0L,    # indent, exdent
     "", "",    # prefix, initial
     TRUE, "",  # wrap always
@@ -96,7 +96,7 @@ strtrim2_ctl <- function(
 
   res <- .Call(
     FANSI_strwrap_csi,
-    x, width,
+    enc2utf8(x), width,
     0L, 0L,    # indent, exdent
     "", "",    # prefix, initial
     TRUE, "",  # wrap always

@@ -156,6 +156,7 @@ substr2_ctl <- function(
 }
 ## Lower overhead version of the function for use by strwrap
 ##
+## @x must already have been converted to UTF8
 ## @param type.int is supposed to be the matched version of type, minus 1
 
 substr_ctl_internal <- function(

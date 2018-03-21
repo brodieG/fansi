@@ -42,8 +42,8 @@ SEXP FANSI_check_assumptions() {
   // This is supposedly enforced by R, and we rely on it in several places (e.g.
   // to ensure bitmask large enough for styles)
 
-  if(sizeof(int) < 4)
-    warningcall(R_NilValue, err_base, "ints are not at least 32 bits", "");
+  if(sizeof(int) != 4)
+    warningcall(R_NilValue, err_base, "ints are not 32 bits", "");
 
   // If this is not TRUE, there could be alignment issues for some of our
   // structs that use size_t elements given that R_alloc only guarantees double
