@@ -14,7 +14,6 @@ library(fansi)
 [![](https://travis-ci.org/brodieG/fansi.svg?branch=master)](https://travis-ci.org/brodieG/fansi)
 [![](https://codecov.io/github/brodieG/fansi/coverage.svg?branch=master)](https://codecov.io/github/brodieG/fansi?branch=master)
 [![](http://www.r-pkg.org/badges/version/fansi)](https://cran.r-project.org/package=fansi)
-[![Project Status: WIP - Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](http://www.repostatus.org/badges/latest/wip.svg)](http://www.repostatus.org/#wip)
 
 Counterparts to R string manipulation functions that account for the effects of
 ANSI text formatting control sequences.
@@ -44,10 +43,10 @@ for details, particularly if you are getting unexpected results.
 ANSI control characters and sequences (_Control Sequences_ hereafter) break the
 relationship between byte/character position in a string and display position.
 
-For example, in `"Hello \033[42mWorld, Good\033[m Night Moon!"` the `,`
-after "World" is thirteenth displayed character, but the eighteenth in
-memory.  If we try to split the string after the comma with `substr` things go
-wrong in several ways:
+For example, in `"Hello \033[42mWorld, Good\033[m Night Moon!"` the space
+after "World," is thirteenth displayed character, but the eighteenth actual
+character ("\033" is a single character, the ESC).  If we try to split the
+string after the space with `substr` things go wrong in several ways:
 
 ```{r echo=FALSE, eval=FALSE}
 ## code for reference
@@ -85,9 +84,9 @@ counterparts, except for the _Control Sequence_ awareness.
 utility functions such as `strip_ctl` to remove _Control Sequences_ and `has_ctl`
 to detect whether strings contain them.
 
-Most of `fansi` is in C so you should find performance of the `fansi` functions
-to be comparable to the base functions.  `strwrap_ctl` is much faster, and
-`strsplit_ctl` is somewhat slower than the corresponding base functions.
+Most of `fansi` is written in C so you should find performance of the `fansi`
+functions to be comparable to the base functions.  `strwrap_ctl` is much faster,
+and `strsplit_ctl` is somewhat slower than the corresponding base functions.
 
 ## HTML Translation
 
@@ -109,7 +108,15 @@ browseURL(f)
 
 ## Installation
 
-This package is currently only available on Github.  You can install it with `devtools::install_github('brodieg/fansi')` or:
+This package is available on CRAN:
+
+```{r eval=FALSE}
+install.packages('fansi')
+```
+
+It has no dependencies.
+
+For the development version use: `devtools::install_github('brodieg/fansi')` or:
 
 ```{r eval=FALSE}
 fansi.dl <- tempfile()

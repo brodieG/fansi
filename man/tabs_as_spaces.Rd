@@ -18,7 +18,7 @@ applying tab stops, each input line is considered a line and the character
 count begins from the beginning of the input line.}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
-problematic escape sequences are encountered.  These could cause the
+problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
 }
@@ -34,6 +34,9 @@ spaces that produce the same horizontal offset.
 Since we do not know of a reliable cross platform means of detecting tab
 stops you will need to provide them yourself if you are using anything
 outside of the standard tab stop every 8 characters that is the default.
+}
+\note{
+non-ASCII strings are converted to and returned in UTF-8 encoding.
 }
 \examples{
 string <- '1\\t12\\t123\\t1234\\t12345678'

@@ -15,11 +15,11 @@ fansi_lines(txt, step = 1)
 character vector with each element colored
 }
 \description{
-Color each element in input with one of the 256 color ANSI CSI SGR codes.
+Color each element in input with one of the "256 color" ANSI CSI SGR codes.
 This is intended for testing and demo purposes.
 }
 \examples{
 NEWS <- readLines(file.path(R.home('doc'), 'NEWS'))
 writeLines(fansi_lines(NEWS[1:20]))
-writeLines(fansi_lines(NEWS[1:20], 8))
+writeLines(fansi_lines(NEWS[1:20], step=8))
 }

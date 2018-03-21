@@ -32,8 +32,8 @@
 #' * error: the reason why the sequence was not handled:
 #'     * exceed-term-cap: contains color codes not supported by the terminal
 #'       (see [term_cap_test]).
-#'     * special: contains uncommon characters in ":<=>".
-#'     * unknown: a substring with a value that does not correspond to a known
+#'     * special: SGR substring contains uncommon characters in ":<=>".
+#'     * unknown: SGR substring with a value that does not correspond to a known
 #'       SGR code.
 #'     * non-SGR: a non-SGR CSI sequence.
 #'     * non-CSI: a non-CSI escape sequence, i.e. one where the ESC is

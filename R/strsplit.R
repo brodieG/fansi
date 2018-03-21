@@ -20,8 +20,7 @@
 #' but should otherwise behave the same way except for CSI SGR sequence
 #' awareness.
 #'
-#' Non-ASCII strings are converted to UTF-8.
-#'
+#' @note non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results,
 #'   [base::strsplit] for details on the splitting.

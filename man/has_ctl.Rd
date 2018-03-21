@@ -12,11 +12,11 @@ has_sgr(x, warn = getOption("fansi.warn"))
 \arguments{
 \item{x}{a character vector or object that can be coerced to character.}
 
-\item{which}{character, what Control Sequences to check for; see \code{strip}
+\item{which}{character, what \emph{Control Sequences} to check for; see \code{strip}
 parameter for \link{strip_ctl} for details.}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
-problematic escape sequences are encountered.  These could cause the
+problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
 }
