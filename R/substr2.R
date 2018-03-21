@@ -95,6 +95,8 @@ substr2_ctl <- function(
   term.cap=getOption('fansi.term.cap')
 ) {
   x <- enc2utf8(as.character(x))
+  if(any(Encoding(x) == "bytes"))
+    stop("BYTE encoded strings are not supported.")
 
   if(!is.logical(tabs.as.spaces)) tabs.as.spaces <- as.logical(tabs.as.spaces)
   if(length(tabs.as.spaces) != 1L || is.na(tabs.as.spaces))
@@ -165,6 +167,9 @@ substr_ctl_internal <- function(
   # For each unique string, compute the state at each start and stop position
   # and re-map the positions to "ansi" space
 
+  if(tabs.as.spaces)
+    x <- .Call(FANSI_tabs_as_spaces, x, tab.stops, warn, term.cap.int)
+
   res <- character(x.len)
   s.s.valid <- stop >= start & stop
 
@@ -191,7 +196,6 @@ substr_ctl_internal <- function(
       FANSI_state_at_pos_ext,
       u, e.sort - 1L, type.int,
       e.lag, e.ends,
-      tabs.as.spaces, tab.stops,
       warn, term.cap.int
     )
     # Recover the matching values for e.sort

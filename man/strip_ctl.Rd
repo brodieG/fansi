@@ -37,7 +37,7 @@ Removes \emph{Control Sequences} from strings.  By default it will
 strip all known \emph{Control Sequences}, including ANSI CSI
 sequences, two character sequences starting with ESC, and all C0 control
 characters, including newlines.  You can fine tune this behavior with the
-\code{strip} parameter.
+\code{strip} parameter.  \code{strip_sgr} only strips ANSI CSI SGR sequences.
 }
 \details{
 The \code{strip} value contains the names of \strong{non-overlapping} subsets of the

@@ -37,7 +37,7 @@ struct FANSI_prefix_dat {
  */
 
 static struct FANSI_prefix_dat make_pre(SEXP x) {
-  const char * x_utf8 = FANSI_string_as_utf8(asChar(x)).string;
+  const char * x_utf8 = FANSI_string_as_utf8(STRING_ELT(x, 0)).string;
   // ideally we would IS_ASCII(x), but that's not available to extensions
   int x_has_utf8 = FANSI_has_utf8(x_utf8);
 
@@ -103,10 +103,12 @@ static struct FANSI_prefix_dat drop_pre_indent(struct FANSI_prefix_dat dat) {
   dat.width = FANSI_ADD_INT(dat.width, -dat.indent);
   dat.indent = FANSI_ADD_INT(dat.indent, -dat.indent);
   if(dat.indent < 0)
+    // nocov start
     error(
       "Internal Error: cannot drop indent when there is none; contact ",
       "maintainer."
     );
+    // nocov end
   return dat;
 }
 /*
@@ -140,8 +142,8 @@ SEXP FANSI_writeline(
     // nocov start
     error("Internal Error: boundary leading position; contact maintainer.");
     // nocov end
-  if(tar_width < 0)
-    error("Internal Errorr: tar_width must be positive."); // nocov
+
+  if(tar_width < 0) tar_width = 0;
 
   size_t target_size = state_bound.pos_byte - state_start.pos_byte;
   size_t target_width = state_bound.pos_width - state_start.pos_width;
@@ -159,20 +161,26 @@ SEXP FANSI_writeline(
   }
   // If we are going to pad the end, adjust sizes and widths
 
+  if(target_size > (size_t) FANSI_int_max)
+    error(
+      "Substring to write (%.0f) is longer than INT_MAX.", (double) target_size
+    );
+
   if(target_width <= (size_t) tar_width && *pad_chr) {
     target_pad = tar_width - target_width;
     if(
-      (tar_width > INT_MAX - target_pad) ||
-      (target_size > (size_t) (INT_MAX - target_pad))
+      (target_size > (size_t) (FANSI_int_max - target_pad))
     ) {
-      error("Attempting to create string longer than INT_MAX while padding.");
+      error(
+        "%s than INT_MAX while padding.",
+        "Attempting to create string longer"
+      );
     }
-    target_width = tar_width + target_pad;
     target_size = target_size + target_pad;
   }
-  if(target_size > (size_t)(INT_MAX - pre_dat.bytes)) {
+  if(target_size > (size_t)(FANSI_int_max - pre_dat.bytes)) {
     error(
-      "%%",
+      "%s%s",
       "Attempting to create string longer than INT_MAX when adding ",
       "prefix/initial/indent/exdent."
     );
@@ -186,7 +194,7 @@ SEXP FANSI_writeline(
     state_start_size = FANSI_state_size(state_start);
     start_close += state_start_size;  // this can't possibly overflow
   }
-  if(target_size > (size_t)(INT_MAX - start_close)) {
+  if(target_size > (size_t)(FANSI_int_max - start_close)) {
     error(
       "%s%s",
       "Attempting to create string longer than INT_MAX while adding leading ",
@@ -245,7 +253,7 @@ SEXP FANSI_writeline(
   cetype_t chr_type = CE_NATIVE;
   if((state_bound.has_utf8 || pre_dat.has_utf8)) chr_type = CE_UTF8;
 
-  if(buff_track - buff->buff > INT_MAX)
+  if(buff_track - buff->buff > FANSI_int_max)
     // nocov start
     error(
       "%s%s",
@@ -299,9 +307,10 @@ static SEXP strwrap(
 
   int width_tar = width_1;
 
-  if(width < 1) error("Internal Error: invalid width.");
-  if(width_1 < 0 || width_2 < 0)
-    error("Internal Error: incompatible width/indent/prefix.");
+  if(width < 1 && wrap_always)
+    error("Internal Error: invalid width."); // nocov
+  if(wrap_always && (width_1 < 0 || width_2 < 0))
+    error("Internal Error: incompatible width/indent/prefix."); // nocov
 
   // Use LISTSXP so we don't have to do a two pass process to determine how many
   // items we're going to have, unless we're in first only in which case we know
@@ -310,7 +319,6 @@ static SEXP strwrap(
   SEXP char_list_start, char_list;
   char_list_start = char_list = PROTECT(list1(R_NilValue));
 
-  int prev_newline = 0;     // tracks if last non blank character was newline
   int prev_boundary = 0;    // tracks if previous char was a boundary
   int has_boundary = 0;     // tracks if at least one boundary in a line
   int para_start = 1;
@@ -356,7 +364,6 @@ static SEXP strwrap(
       // Rprintf("Bound @ %d\n", state_bound.pos_byte - state_start.pos_byte);
     } else {
       prev_boundary = 0;
-      prev_newline = 0;
     }
     // Write the line
 
@@ -415,9 +422,6 @@ static SEXP strwrap(
         char_list = CDR(char_list);
         UNPROTECT(1);
       } else break;
-
-      if(state.string[state.pos_byte] == '\n') prev_newline = 1;
-
       // overflow should be impossible here since string is at most int long
 
       ++size;
@@ -505,9 +509,8 @@ SEXP FANSI_strwrap_ext(
     TYPEOF(tabs_as_spaces) != LGLSXP ||
     TYPEOF(tab_stops) != INTSXP ||
     TYPEOF(first_only) != LGLSXP
-  ) {
-    error("Internal Error: arg type error 1; contact maintainer.");
-  }
+  )
+    error("Internal Error: arg type error 1; contact maintainer.");  // nocov
 
   const char * pad = CHAR(asChar(pad_end));
   if(*pad != 0 && (*pad < 0x20 || *pad > 0x7e))
@@ -562,7 +565,7 @@ SEXP FANSI_strwrap_ext(
   pre_dat_raw = make_pre(prefix);
 
   const char * warn_base =
-    "`%s` contains illegal escape sequences (see `?illegal_esc`).";
+    "`%s` contains unhandled ctrl or UTF-8 sequences (see `?unhandled_ctl`).";
   if(warn_int && pre_dat_raw.warn) warning(warn_base, "prefix");
   if(prefix != initial) {
     ini_dat_raw = make_pre(initial);
@@ -617,9 +620,11 @@ SEXP FANSI_strwrap_ext(
     FANSI_interrupt(i);
     SEXP chr = STRING_ELT(x, i);
     if(chr == NA_STRING) continue;
+    const char * chr_utf8 = FANSI_string_as_utf8(chr).string;
+
     SEXP str_i = PROTECT(
       strwrap(
-        CHAR(chr), width_int,
+        chr_utf8, width_int,
         i ? pre_first_dat : ini_first_dat,
         pre_next_dat,
         wrap_always_int, &buff,

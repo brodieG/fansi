@@ -19,4 +19,10 @@ unitizer_sect("has", {
   has_ctl("hello\nworld")
   has_sgr("hello\nworld")
   has_sgr(in.end)
+  # no warning from has_ctl
+  has_ctl("hello\033p world")
+})
+unitizer_sect("corner cases", {
+  tryCatch(has_ctl("hello\033[31#0mworld"), warning=conditionMessage)
+  suppressWarnings(has_ctl("hello\033[31#0mworld"))
 })

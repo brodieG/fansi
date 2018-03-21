@@ -52,6 +52,9 @@ strsplit_ctl <- function(
   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
 ) {
   x <- enc2utf8(as.character(x))
+  if(any(Encoding(x) == "bytes"))
+    stop("BYTE encoded strings are not supported.")
+
   split <- as.character(enc2utf8(split))
   if(!length(split)) split <- ""
   if(anyNA(split)) stop("Argument `split` may not contain NAs.")

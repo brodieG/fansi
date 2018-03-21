@@ -134,13 +134,16 @@ static int color_to_html(
             *(buff_track++) = lo;
           }
         }
-      } else error("Internal Error: invalid color code; contact maintainer.");
+      } else
+        // nocov start
+        error("Internal Error: invalid color code; contact maintainer.");
+        // nocov end
     } else {
       memcpy(buff_track, std_8[color], 6);
       buff_track += 6;
     }
   } else {
-    error("Internal Error: invalid color code %d", color);
+    error("Internal Error: invalid color code %d", color); // nocov
   }
   *buff_track = '0';
   return res_bytes;
@@ -156,14 +159,16 @@ static int state_as_html(struct FANSI_state state, int first, char * buff) {
   const char * buff_start = buff;
   if(!FANSI_state_has_style_basic(state)) {
     if(first)
+      // nocov start
       error("Internal Error: no state in first span; contact maintainer.");
+      // nocov end
     if(state.string[state.pos_byte]) {
       memcpy(buff, "</span><span>", 13);
       buff += 13;
     }
   } else {
     if(first) {
-      memcpy(buff, "<span style='", 20);
+      memcpy(buff, "<span style='", 13);
       buff += 13;
     } else {
       memcpy(buff, "</span><span style='", 20);
@@ -210,7 +215,10 @@ static int state_size_as_html(struct FANSI_state state, int first) {
   int size = 0;
   if(!FANSI_state_has_style_basic(state)) {
     if(first)
+      // nocov start
       error("Internal Error: no state in first span; contact maintainer.");
+      // nocov end
+
     // Only need to re-open tag if not at end of string
     if(state.string[state.pos_byte]) {
       size = 13;  // </span><span>
@@ -251,17 +259,17 @@ static int html_compute_size(
   int bytes_net = bytes_html - bytes_esc;
 
   if(bytes_net >= 0) {
-    if(bytes_extra > INT_MAX - bytes_net) {
+    if(bytes_extra > FANSI_int_max - bytes_net) {
       error(
         "%s%s %.0f %s",
-        "Expanding ESC sequences into CSS will create a string longer ",
+        "Expanding SGR sequences into CSS will create a string longer ",
         "than INT_MAX at position", (double) (i + 1),
         "which is not allowed by R."
       );
     }
     bytes_extra += bytes_net;
   } else {
-    if(bytes_extra < INT_MIN - bytes_net) {
+    if(bytes_extra < FANSI_int_min - bytes_net) {
       // This should actually be impossible as a string that is only ESC
       // sequences with no SGR is the only way to get that big a decrease,
       // and if it doesn't have SGR then it wouldn't enter this loop
@@ -290,17 +298,17 @@ static size_t html_check_overflow(
   if(bytes_init < 0) error("Internal error: bytes_init must be positive.");
   if(
     bytes_extra >= 0 && (
-      bytes_init > INT_MAX - bytes_extra - span_extra
+      bytes_init > FANSI_int_max - bytes_extra - span_extra
     )
   ) {
     error(
       "%s%s %.0f %s",
-      "Expanding ESC sequences into CSS will create a string longer ",
+      "String with SGR sequences as CSS is longer ",
       "than INT_MAX at position", (double) (i + 1),
       "which is not allowed by R."
     );
   } else if(bytes_extra < 0) {
-    if(bytes_extra <= INT_MIN - span_extra) {
+    if(bytes_extra <= FANSI_int_min + span_extra) {
       // nocov start
       error(
         "%s%s%s",
@@ -313,32 +321,36 @@ static size_t html_check_overflow(
     int bytes_extra_extra = bytes_extra + span_extra;
 
     if(bytes_init + bytes_extra_extra < 0)
+      // nocov start
       error(
         "%s%s",
         "Internal Error: CSS would translate to negative length string; ",
         "this should not happen."
       );
+      // nocov end
   }
   bytes_final = (size_t) bytes_init + bytes_extra + span_extra + 1;
   return bytes_final;
 }
 SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
   if(TYPEOF(x) != STRSXP)
-    error("Argument `x` must be a character vector");
+    error("Internal Error: `x` must be a character vector");  // nocov
 
   R_xlen_t x_len = XLENGTH(x);
   struct FANSI_buff buff = {.len=0};
   struct FANSI_state state, state_prev, state_init;
   state = state_prev = state_init = FANSI_state_init("", warn, term_cap);
 
-  int is_utf8_loc = 0;
-
-  SEXP res = PROTECT(x);
+  SEXP res = x;
+  // Reserve spot on protection stack
+  PROTECT_INDEX ipx;
+  PROTECT_WITH_INDEX(res, &ipx);
 
   for(R_xlen_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
 
     SEXP chrsxp = STRING_ELT(x, i);
+
     const char * string_start = CHAR(chrsxp);
     const char * string = string_start;
     state.string = state_prev.string = string;
@@ -347,7 +359,8 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
     int bytes_extra = 0;   // Net bytes being add via tags (css - ESC)
     size_t bytes_final = 0;
-    int has_esc = 0;
+    int has_esc, any_esc;
+    has_esc = any_esc = 0;
 
     // Process the strings in two passes, in pass 1 we compute how many bytes
     // we'll need to store the string, and in the second we actually write it.
@@ -357,8 +370,11 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
     // leave it and see if it becomes a major issue.
 
     while(*string && (string = strchr(string, 0x1b))) {
+      if(!any_esc) any_esc = 1;
+
       // Since we don't care about width, etc, we only use the state objects to
-      // parse the ESC sequences
+      // parse the ESC sequences, so we don't have to worry about UTF8
+      // conversions.
 
       state.pos_byte = (string - string_start);
 
@@ -375,20 +391,17 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
       state_prev = state;
       ++string;
     }
-    if(has_esc) {
+    if(any_esc) {
       // we will use an extra <span></span> to simplify logic
 
-      int span_end = 7;
+      int span_end = has_esc * 7;
 
       bytes_final = html_check_overflow(bytes_extra, bytes_init, span_end, i);
 
       // Allocate target vector if it hasn't been yet
 
-      if(x == res) {
-        UNPROTECT(1);
-        res = PROTECT(duplicate(x));
-        is_utf8_loc = FANSI_is_utf8_loc();
-      }
+      if(res == x) REPROTECT(res = duplicate(x), ipx);
+
       // Allocate buffer and do second pass
 
       FANSI_size_buff(&buff, bytes_final);
@@ -432,17 +445,20 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
       int bytes_stub = bytes_init - (string_last - string_start);
       // Rprintf("last: '%s'\n", string_last);
       // Rprintf("stub %d string %d\n", bytes_stub, (string_last - string_start));
+
       memcpy(buff_track, string_last, bytes_stub);
       buff_track += bytes_stub;
-      memcpy(buff_track, "</span>", span_end);
-      buff_track += span_end;
+
+      if(has_esc) {
+        // odd case where the only thing in the string is a null SGR
+        memcpy(buff_track, "</span>", span_end);
+        buff_track += span_end;
+      }
       *(buff_track) = '0';  // not strictly needed
 
       // Now create the charsxp what encoding to use.
 
-      cetype_t chr_type = CE_NATIVE;
-      if(state.has_utf8) chr_type = CE_UTF8;
-      if(buff_track - buff.buff > INT_MAX)
+      if(buff_track - buff.buff > FANSI_int_max)
         // nocov start
         error(
           "%s%s",
@@ -451,10 +467,10 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
         );
         // nocov end
 
+      cetype_t chr_type = getCharCE(chrsxp);
       SEXP chrsxp = PROTECT(
-        mkCharLenCE(
-          buff.buff, (int) (buff_track - buff.buff), chr_type
-      ) );
+        mkCharLenCE(buff.buff, (int) (buff_track - buff.buff), chr_type)
+      );
       SET_STRING_ELT(res, i, chrsxp);
       UNPROTECT(1);
     }
@@ -471,10 +487,11 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
 SEXP FANSI_color_to_html_ext(SEXP x) {
   if(TYPEOF(x) != INTSXP)
-    error("Argument must be integer.");
+    error("Argument must be integer.");  // nocov
 
   R_xlen_t len = XLENGTH(x);
-  if(len % 5) error("Argument length not a multipe of 5");
+  if(len % 5)
+    error("Argument length not a multipe of 5"); // nocov
 
   struct FANSI_buff buff = {.len = 0};
   FANSI_size_buff(&buff, 8);

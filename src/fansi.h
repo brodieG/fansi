@@ -16,13 +16,32 @@ GNU General Public License for more details.
 Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 */
 
+#include <stdint.h>
 #include <R.h>
 #include <Rinternals.h>
 
 #ifndef _FANSI_H
 #define _FANSI_H
 
+  // - Constants / Macros ------------------------------------------------------
+
   #define FANSI_STRIP_ALL 31 // 1 + 2 + 4 + 8 + 16
+  #define FANSI_STYLE_MAX 12 // 12 is double underline
+
+  // symbols
+
+  SEXP FANSI_warn_sym;
+
+  // macros
+
+  #define FANSI_ADD_INT(x, y) FANSI_add_int((x), (y), __FILE__, __LINE__)
+
+  // Global variables (see utils.c)
+
+  int FANSI_int_max;
+  int FANSI_int_min;
+
+  // - Structs -----------------------------------------------------------------
   /*
    * Buffer used for writing strings
    *
@@ -107,6 +126,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * - n ==  9: crossout
      * - n == 10: fraktur
      * - n == 11: double underline
+     * - n == 12: prop spacing
+     *
+     * UPDATE FANSI_STYLE_MAX if we add more here!!, make sure to check the
+     * size, read, and write funs any time this changes
      */
     unsigned int style;
 
@@ -255,15 +278,12 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     cetype_t type;
   };
 
-  struct FANSI_csi_pos FANSI_find_esc(const char * x, int what);
-
-  // External funs
+  // - External funs -----------------------------------------------------------
 
   SEXP FANSI_has(SEXP x, SEXP what, SEXP warn);
   SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn);
   SEXP FANSI_state_at_pos_ext(
     SEXP text, SEXP pos, SEXP type, SEXP lag, SEXP ends,
-    SEXP tabs_as_spaces, SEXP tab_stops,
     SEXP warn, SEXP term_cap
   );
   SEXP FANSI_strwrap_ext(
@@ -289,15 +309,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   );
   SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap);
   SEXP FANSI_strsplit(SEXP x, SEXP warn, SEXP term_cap);
-
-  // Internal
-
   SEXP FANSI_tabs_as_spaces(
     SEXP vec, SEXP tab_stops, struct FANSI_buff * buff, SEXP warn,
     SEXP term_cap
   );
-
-  // Utilities
+  // utility
 
   SEXP FANSI_cleave(SEXP x);
   SEXP FANSI_order(SEXP x);
@@ -308,6 +324,14 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_digits_in_int_ext(SEXP y);
   SEXP FANSI_unique_chr(SEXP x);
 
+  SEXP FANSI_add_int_ext(SEXP x, SEXP y);
+
+  SEXP FANSI_set_int_max(SEXP x);
+  SEXP FANSI_get_int_max();
+
+  // - Internal funs -----------------------------------------------------------
+
+  struct FANSI_csi_pos FANSI_find_esc(const char * x, int what);
   struct FANSI_state FANSI_inc_width(struct FANSI_state state, int inc);
   struct FANSI_state FANSI_reset_pos(struct FANSI_state state);
   struct FANSI_state FANSI_reset_width(struct FANSI_state state);
@@ -341,14 +365,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   struct FANSI_state FANSI_read_next(struct FANSI_state state);
 
   int FANSI_add_int(int x, int y, const char * file, int line);
-  SEXP FANSI_add_int_ext(SEXP x, SEXP y);
+
+  // Utilities
 
   int FANSI_has_utf8(const char * x);
   void FANSI_interrupt(int i);
 
-  // symbols
-
-  SEXP FANSI_warn_sym;
-
-  #define FANSI_ADD_INT(x, y) FANSI_add_int((x), (y), __FILE__, __LINE__)
 #endif

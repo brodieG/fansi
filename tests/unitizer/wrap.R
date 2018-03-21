@@ -44,7 +44,7 @@ unitizer_sect("Basic Ansi", {
   strwrap_ctl(hello2.0, 10)
 
   identical(
-    strwrap_ctl(strip_ctl(hello2.0, "sgr"), 10), 
+    strwrap_ctl(strip_ctl(hello2.0, "sgr"), 10),
     strwrap(strip_ctl(hello2.0, "sgr"), 10)
   )
   # turn off tag generic
@@ -262,6 +262,46 @@ unitizer_sect("corner cases", {
   utf8.bad <- "hello \xF0 world, goodnight moon"
   Encoding(utf8.bad) <- "UTF-8"
   strwrap_ctl(utf8.bad, 10)
+
+  # bad prefix values
+
+  utf8.bad.2 <- "\xF0"
+  Encoding(utf8.bad.2) <- "UTF-8"
+
+  tryCatch(
+    strwrap_ctl("hello world", 6, prefix=utf8.bad.2),
+    warning=conditionMessage
+  )
+  suppressWarnings(strwrap_ctl("hello world", 6, prefix=utf8.bad.2))
+  tryCatch(
+    strwrap_ctl("hello world", 6, prefix="\033p"),
+    warning=conditionMessage
+  )
+  suppressWarnings(strwrap_ctl("hello world", 6, prefix="\033p"))
+
+  # Invalid inputs (checks in C)
+
+  tryCatch(
+    strwrap2_ctl("hello world", 8, pad.end='\t'), error=conditionMessage
+  )
+  tryCatch(
+    strwrap2_ctl("hello world", 8, pad.end='  '), error=conditionMessage
+  )
+  strwrap2_ctl("goodbye moon", 8, indent=5, prefix='> hello >')
+  strwrap2_ctl(
+    "goodbye moon", 16, indent=5, prefix='> hello >', wrap.always=TRUE
+  )
+  tryCatch(
+    strwrap2_ctl(
+      "goodbye moon", 15, indent=5, prefix='> hello >', wrap.always=TRUE
+    ),
+    error=conditionMessage
+  )
+  # Byte encoded strings not allowed
+
+  bytes <- "\xC0\xB1\xF0\xB1\xC0\xB1\xC0\xB1"
+  Encoding(bytes) <- "bytes"
+  tce(strwrap_ctl(bytes))
 })
 
 # Things to test:

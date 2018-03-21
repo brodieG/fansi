@@ -20,10 +20,10 @@
 
 SEXP FANSI_unhandled_esc(SEXP x) {
   if(TYPEOF(x) != STRSXP)
-    error("Argument `x` must be a character vector.");
+    error("Argument `x` must be a character vector.");  // nocov
 
   R_xlen_t x_len = XLENGTH(x);
-  if(x_len >= INT_MAX)
+  if(x_len >= FANSI_int_max)
     // nocov start
     error(
       "This function does not support vectors of length INT_MAX or longer."
@@ -36,8 +36,12 @@ SEXP FANSI_unhandled_esc(SEXP x) {
   SEXP no_warn = PROTECT(ScalarLogical(0));
   SEXP res, res_start;
   res = res_start = R_NilValue;
+
+  // reserve spot if we need to alloc later
+
   PROTECT_INDEX ipx;
-  PROTECT_WITH_INDEX(res, &ipx);  // reserve spot if we need to alloc later
+  PROTECT_WITH_INDEX(res, &ipx);
+
   int any_errors = 0;
   int err_count = 0;
   int break_early = 0;
@@ -47,6 +51,10 @@ SEXP FANSI_unhandled_esc(SEXP x) {
     SEXP chrsxp = STRING_ELT(x, i);
 
     if(chrsxp != NA_STRING && LENGTH(chrsxp)) {
+      // Need to convert to UTF8 because we're also looking for illegal UTF8
+      // sequences; otherwise we could just leave as is as we don't care about
+      // width.
+
       struct FANSI_string_as_utf8 string_dat = FANSI_string_as_utf8(chrsxp);
       const char * string, * string_start;
 
@@ -64,7 +72,7 @@ SEXP FANSI_unhandled_esc(SEXP x) {
         int esc_start = state.pos_ansi;
         state = FANSI_read_next(state);
         if(state.err_code) {
-          if(err_count == INT_MAX) {
+          if(err_count == FANSI_int_max) {
             warning(
               "%s%s",
               "There are more than INT_MAX unhandled sequences, returning ",
@@ -74,11 +82,13 @@ SEXP FANSI_unhandled_esc(SEXP x) {
             break;
           }
           if(esc_start == INT_MAX || state.pos_ansi == INT_MAX)
+            // nocov start
             error(
               "%s%s",
               "Internal error: computed offset is INT_MAX, shouldn't happen; ",
               "contact maintainer."
             );
+            // nocov end
           if(!has_errors) has_errors = 1;
 
           SEXP err_vals = PROTECT(allocVector(INTSXP, 5));
