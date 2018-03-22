@@ -38,6 +38,8 @@ SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap) {
   for(R_len_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
     SEXP string_elt = STRING_ELT(x, i);
+    FANSI_check_enc(string_elt, i);
+
     if(string_elt == R_NaString) {
       if(keepNA_int == 1) {
         LOGICAL(res)[i] = NA_LOGICAL;

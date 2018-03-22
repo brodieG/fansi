@@ -133,31 +133,6 @@ unitizer_sect("prefix / initial with ESC", {
   wrap.nrm.3 <- strwrap(hello.8b, 14, prefix="+ ", initial="> ")
 
   identical(strip_ctl(wrap.csi.3, "sgr"), wrap.nrm.3)
-
-  # With UTF8
-
-  pre.2 <- "\x1b[32m\xd0\x9f \x1b[0m"
-  ini.2 <- "\x1b[33m\xd1\x80 \x1b[0m"
-  hello.8c <- "hello Привет world"
-
-  Encoding(pre.2) <- "UTF-8"
-  Encoding(ini.2) <- "UTF-8"
-  Encoding(hello.8c) <- "UTF-8"
-
-  wrap.csi.4 <- strwrap_ctl(hello.8c, 15, prefix=pre.2, initial=ini.2)
-  wrap.csi.4
-  wrap.nrm.4 <- strwrap(hello.8c, 15, prefix="\xd0\x9f ", initial="\xd1\x80 ")
-
-  identical(strip_ctl(wrap.csi.4, "sgr"), wrap.nrm.4)
-})
-unitizer_sect("wrap with wide UTF8 and ESC", {
-  wrap.mix <- strwrap_ctl(lorem.mix, 25)
-  wrap.mix
-  identical(strwrap(strip_ctl(lorem.mix, "sgr"), 25), strip_ctl(wrap.mix, "sgr"))
-
-  string <- "\033[37;48;5;32m國官方認定的民族現有56個\033[39;49m"
-  Encoding(string) <- "UTF-8"
-  strwrap2_ctl(string, 24, wrap.always=TRUE, pad.end=" ")
 })
 unitizer_sect("wrap2", {
   # Examples
@@ -252,27 +227,7 @@ unitizer_sect("corner cases", {
   strwrap2_ctl("a", -1, wrap.always=TRUE)
   strwrap2_ctl("a", 0, wrap.always=TRUE)
   strwrap2_ctl("a", 1, wrap.always=TRUE)
-  strwrap2_ctl("\u76F4", 1, wrap.always=TRUE)
-  strwrap2_ctl("\u76F4", 2, wrap.always=TRUE)
-  strwrap2_ctl("\u76F4", 3, wrap.always=TRUE)
 
-  strwrap_ctl("lovelyday.", 10)
-  strwrap2_ctl("lovelyday.", 10, wrap.always=TRUE)
-
-  utf8.bad <- "hello \xF0 world, goodnight moon"
-  Encoding(utf8.bad) <- "UTF-8"
-  strwrap_ctl(utf8.bad, 10)
-
-  # bad prefix values
-
-  utf8.bad.2 <- "\xF0"
-  Encoding(utf8.bad.2) <- "UTF-8"
-
-  tryCatch(
-    strwrap_ctl("hello world", 6, prefix=utf8.bad.2),
-    warning=conditionMessage
-  )
-  suppressWarnings(strwrap_ctl("hello world", 6, prefix=utf8.bad.2))
   tryCatch(
     strwrap_ctl("hello world", 6, prefix="\033p"),
     warning=conditionMessage
@@ -297,13 +252,4 @@ unitizer_sect("corner cases", {
     ),
     error=conditionMessage
   )
-  # Byte encoded strings not allowed
-
-  bytes <- "\xC0\xB1\xF0\xB1\xC0\xB1\xC0\xB1"
-  Encoding(bytes) <- "bytes"
-  tce(strwrap_ctl(bytes))
 })
-
-# Things to test:
-#
-# * Special/control characters

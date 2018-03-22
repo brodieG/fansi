@@ -84,7 +84,9 @@ int FANSI_is_utf8_loc() {
  * Translates a CHARSXP to a UTF8 char if necessary, otherwise returns
  * the char
  */
+// nocov start
 struct FANSI_string_as_utf8 FANSI_string_as_utf8(SEXP x) {
+  error("Currently not in use.");
   if(TYPEOF(x) != CHARSXP)
     error("Internal Error: expect CHARSXP."); // nocov
 
@@ -115,6 +117,34 @@ struct FANSI_string_as_utf8 FANSI_string_as_utf8(SEXP x) {
   return (struct FANSI_string_as_utf8) {
     .string=string, .len=len, .translated=translated
   };
+}
+// nocov end
+
+/*
+ * Confirm encoding is not obviously wrong
+ */
+
+void FANSI_check_enc(SEXP x, R_xlen_t i) {
+  cetype_t type = getCharCE(x);
+  if(type != CE_NATIVE && type != CE_UTF8) {
+    if(type == CE_BYTES)
+      error(
+        "%s at index %.0f. %s.",
+        "Byte encoded string encountered", (double) i + 1,
+        "Byte encoded strings are not supported"
+      );
+    else
+      // nocov start
+      // this should only happen if somehow a string not converted to UTF8
+      // sneaks in.
+      error(
+        "%d encountered at index %.0f. %s.",
+        "Internal Error: unexpected encoding ", type,
+        (double) i + 1,
+        "Contact maintainer"
+      );
+      // nocov end
+  }
 }
 
 /*

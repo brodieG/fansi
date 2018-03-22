@@ -38,7 +38,7 @@
 #' characters to be dropped irrespective whether they correspond to `start` or
 #' `stop`, and "both" could cause all of them to be included.
 #'
-#' @note non-ASCII strings are converted to and returned in UTF-8 encoding.
+#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @inheritParams base::substr
 #' @inheritParams tabs_as_spaces
 #' @export
@@ -156,6 +156,7 @@ substr2_ctl <- function(
 }
 ## Lower overhead version of the function for use by strwrap
 ##
+## @x must already have been converted to UTF8
 ## @param type.int is supposed to be the matched version of type, minus 1
 
 substr_ctl_internal <- function(

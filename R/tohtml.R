@@ -19,6 +19,7 @@
 #' Only the colors, background-colors, and basic styles (CSI SGR codes 1-9) are
 #' translated.  Others are dropped silently.
 #'
+#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @export
 #' @inheritParams substr_ctl
 #' @seealso [fansi] for details on how _Control Sequences_ are
@@ -45,6 +46,6 @@ sgr_to_html <- function(
       deparse(VALID.TERM.CAP)
     )
 
-  .Call(FANSI_esc_to_html, x, warn, term.cap.int)
+  .Call(FANSI_esc_to_html, enc2utf8(x), warn, term.cap.int)
 }
 

@@ -23,7 +23,7 @@
 #' stops you will need to provide them yourself if you are using anything
 #' outside of the standard tab stop every 8 characters that is the default.
 #'
-#' @note non-ASCII strings are converted to and returned in UTF-8 encoding.
+#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
 #' @export
@@ -67,7 +67,9 @@ tabs_as_spaces <- function(
     stop("Argument `tab.stops` must be numeric and strictly positive")
 
   term.cap.int <- seq_along(VALID.TERM.CAP)
-  .Call(FANSI_tabs_as_spaces, x, as.integer(tab.stops), warn, term.cap.int)
+  .Call(
+    FANSI_tabs_as_spaces, enc2utf8(x), as.integer(tab.stops), warn, term.cap.int
+  )
 }
 #' Test Terminal Capabilities
 #'

@@ -20,6 +20,5 @@ unitizer_sect('corner cases', {
   tabs_as_spaces('')
   tabs_as_spaces('\t')
   tabs_as_spaces('\n')
-  tabs_as_spaces('\x80')
   tabs_as_spaces(c(string, string, string))
 })

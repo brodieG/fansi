@@ -36,7 +36,7 @@ stops you will need to provide them yourself if you are using anything
 outside of the standard tab stop every 8 characters that is the default.
 }
 \note{
-non-ASCII strings are converted to and returned in UTF-8 encoding.
+Non-ASCII strings are converted to and returned in UTF-8 encoding.
 }
 \examples{
 string <- '1\\t12\\t123\\t1234\\t12345678'

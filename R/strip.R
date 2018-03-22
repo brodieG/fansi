@@ -28,6 +28,7 @@
 #' known sequence.  If you combine "all" with any other option then everything
 #' **but** that option will be stripped.
 #'
+#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
 #' @inheritParams substr_ctl
@@ -78,7 +79,7 @@ strip_ctl <- function(x, strip='all', warn=getOption('fansi.warn')) {
         "Argument `strip` may contain only values in `",
         deparse(VALID.STRIP), "`"
       )
-    .Call(FANSI_strip_csi, x, strip.int, warn)
+    .Call(FANSI_strip_csi, enc2utf8(x), strip.int, warn)
   } else x
 }
 #' @export
@@ -93,12 +94,12 @@ strip_sgr <- function(x, warn=getOption('fansi.warn')) {
   strip.int <- match("sgr", VALID.STRIP)
   if(anyNA(strip.int)) stop("Internal Error: invalid strip type")
 
-  .Call(FANSI_strip_csi, x, strip.int, warn)
+  .Call(FANSI_strip_csi, enc2utf8(x), strip.int, warn)
 }
 
 ## Process String by Removing Unwanted Characters
 ##
 ## This is to simulate what `strwrap` does, exposed for testing purposes.
 
-process <- function(x) .Call(FANSI_process, x)
+process <- function(x) .Call(FANSI_process, enc2utf8(x))
 

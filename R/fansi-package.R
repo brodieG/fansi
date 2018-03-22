@@ -112,16 +112,16 @@
 #'
 #' @section Encodings / UTF-8:
 #'
-#' `fansi` will convert any non-ASCII strings to UTF-8 any time character width
-#' is important.  In other cases it will leave encoding unchanged.  This may be
-#' different to what base R does.  For example, `substr` re-encodes substrings
-#' to their original encoding.
+#' `fansi` will convert any non-ASCII strings to UTF-8 before processing them,
+#' and `fansi` functions that return strings will return them encoded in UTF-8.
+#' In some cases this will be different to what base R does.  For example,
+#' `substr` re-encodes substrings to their original encoding.
 #'
-#' The actual interpretation of UTF-8 strings is intended to be consistent with
-#' base R.  There are three ways things may not work out exactly as desired:
+#' Interpretation of UTF-8 strings is intended to be consistent with base R.
+#' There are three ways things may not work out exactly as desired:
 #'
-#' 1. `fansi`, despite its best intentions,  handles a UTF-8 sequence
-#'    differently to the way R does.
+#' 1. `fansi`, despite its best intentions, handles a UTF-8 sequence differently
+#'    to the way R does.
 #' 2. R incorrectly handles a UTF-8 sequence.
 #' 3. Your display incorrectly handles a UTF-8 sequence.
 #'
