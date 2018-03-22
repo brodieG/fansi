@@ -350,6 +350,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
     FANSI_interrupt(i);
 
     SEXP chrsxp = STRING_ELT(x, i);
+    FANSI_check_enc(chrsxp, i);
 
     const char * string_start = CHAR(chrsxp);
     const char * string = string_start;

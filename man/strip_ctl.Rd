@@ -47,6 +47,9 @@ not contain newlines).  The one exception is "all" which means strip every
 known sequence.  If you combine "all" with any other option then everything
 \strong{but} that option will be stripped.
 }
+\note{
+Non-ASCII strings are converted to and returned in UTF-8 encoding.
+}
 \examples{
 string <- "hello\\033k\\033[45p world\\n\\033[31mgoodbye\\a moon"
 strip_ctl(string)

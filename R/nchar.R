@@ -108,5 +108,5 @@ nzchar_ctl <- function(x, keepNA=NA, warn=getOption('fansi.warn')) {
     stop("Argument `keepNA` must be a scalar logical.")
 
   term.cap.int <- seq_along(VALID.TERM.CAP)
-  .Call(FANSI_nzchar_esc, x, keepNA, warn, term.cap.int)
+  .Call(FANSI_nzchar_esc, enc2utf8(x), keepNA, warn, term.cap.int)
 }
