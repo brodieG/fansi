@@ -21,7 +21,7 @@ substr2_ctl(x, start, stop, type = "chars", round = "start",
 \item{stop}{integer.  The last element to be replaced.}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
-problematic escape sequences are encountered.  These could cause the
+problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
 
@@ -72,7 +72,7 @@ characters to be dropped irrespective whether they correspond to \code{start} or
 \code{stop}, and "both" could cause all of them to be included.
 }
 \note{
-Non-ASCII strings are converted to UTF-8.
+Non-ASCII strings are converted to and returned in UTF-8 encoding.
 }
 \examples{
 substr_ctl("\\033[42mhello\\033[m world", 1, 9)

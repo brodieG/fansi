@@ -86,24 +86,6 @@ unitizer_sect("Corner cases", {
 
   substr_ctl(rep("\033[31mhello\033[m", 3), c(3,2,1), c(3,4,5))
 
-  # don't support byte encoded strings
-
-  bytes <- "\xC0\xB1\xF0\xB1\xC0\xB1\xC0\xB1"
-  Encoding(bytes) <- "bytes"
-
-  # need trycatch due to instability from C level `error` call in getting the
-  # function call
-
-  tryCatch(substr_ctl(bytes, 2, 3), error=conditionMessage)
-
-  # Let's try a latin one string
-
-  latin <- "H\xE9llo W\xD6rld!"
-  Encoding(latin) <- "latin1"
-
-  latin.utf8 <- substr_ctl(latin, 1, 9)
-  latin.utf8
-  Encoding(latin.utf8)
 })
 unitizer_sect("Obscure escapes", {
   # illegal 38/48

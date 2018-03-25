@@ -427,7 +427,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
           } else if(tok_res.val == 50) {
             // Turn off 26
             state.style &= ~(1U << 12U);
-          } else if(tok_res.val > 50 & tok_res.val < 60) {
+          } else if(tok_res.val > 50 && tok_res.val < 60) {
             // borders
 
             if(tok_res.val < 54) {
@@ -440,7 +440,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
             } else {
               state.err_code = 3;  // unknown token
             }
-          } else if(tok_res.val >= 60 & tok_res.val < 70) {
+          } else if(tok_res.val >= 60 && tok_res.val < 70) {
             // borders
 
             if(tok_res.val < 65) {
@@ -612,7 +612,7 @@ struct FANSI_state FANSI_read_next(struct FANSI_state state) {
   if(state.err_code) state.err_code = 0; // reset err code after each char
 
   // Normal ASCII characters
-  if(chr_val >= 0x20 & chr_val < 0x7F) state = read_ascii(state);
+  if(chr_val >= 0x20 && chr_val < 0x7F) state = read_ascii(state);
   // UTF8 characters (chr_val is signed, so > 0x7f will be negative)
   else if (chr_val < 0) state = read_utf8(state);
   // ESC sequences

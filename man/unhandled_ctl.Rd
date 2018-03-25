@@ -33,8 +33,8 @@ treated as one, even if some of those sequences are valid.
 \itemize{
 \item exceed-term-cap: contains color codes not supported by the terminal
 (see \link{term_cap_test}).
-\item special: contains uncommon characters in ":<=>".
-\item unknown: a substring with a value that does not correspond to a known
+\item special: SGR substring contains uncommon characters in ":<=>".
+\item unknown: SGR substring with a value that does not correspond to a known
 SGR code.
 \item non-SGR: a non-SGR CSI sequence.
 \item non-CSI: a non-CSI escape sequence, i.e. one where the ESC is
@@ -53,6 +53,9 @@ only worry about this if you cannot tie out the \code{start}/\code{stop} values 
 the escape sequence shown.
 \item esc: character the unhandled escape sequence
 }
+}
+\note{
+Non-ASCII strings are converted to UTF-8 encoding.
 }
 \examples{
 string <- c(

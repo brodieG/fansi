@@ -20,8 +20,9 @@
 #' but should otherwise behave the same way except for CSI SGR sequence
 #' awareness.
 #'
-#' Non-ASCII strings are converted to UTF-8.
-#'
+#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.  The
+#'   split positions are computed after both `x` and `split` are converted to
+#'   UTF-8.
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results,
 #'   [base::strsplit] for details on the splitting.
@@ -51,7 +52,7 @@ strsplit_ctl <- function(
   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
 ) {
-  x <- enc2utf8(as.character(x))
+  x <- as.character(x)
   if(any(Encoding(x) == "bytes"))
     stop("BYTE encoded strings are not supported.")
 

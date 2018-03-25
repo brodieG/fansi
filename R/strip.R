@@ -28,18 +28,20 @@
 #' known sequence.  If you combine "all" with any other option then everything
 #' **but** that option will be stripped.
 #'
+#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
 #' @inheritParams substr_ctl
 #' @export
 #' @param strip character, any combination of the following values (see details):
-#'   * "nl": strip newlines
+#'   * "nl": strip newlines.
 #'   * "c0": strip all other "C0" control characters (i.e. x01-x1f), except for
-#'     newlines and the actual ESC character
-#'   * "sgr": strip ANSI CSI SGR sequences
-#'   * "csi": strip all non-SGR csi sequences
-#'   * "esc": strip all other escape sequences
-#'   * "all": all of the above
+#'     newlines and the actual ESC character.
+#'   * "sgr": strip ANSI CSI SGR sequences.
+#'   * "csi": strip all non-SGR csi sequences.
+#'   * "esc": strip all other escape sequences.
+#'   * "all": all of the above, except when used in combination with any of the
+#'     above, in which case it means "all but" (see details).
 #' @return character vector of same length as x with ANSI escape sequences
 #'   stripped
 #' @examples
@@ -48,7 +50,9 @@
 #' strip_ctl(string, c("nl", "c0", "sgr", "csi", "esc")) # equivalently
 #' strip_ctl(string, "sgr")
 #' strip_ctl(string, c("c0", "esc"))
-#' ## everything but C0 controls (recall "nl" is not part of "c0")
+#'
+#' ## everything but C0 controls, we need to specify "nl"
+#' ## in addition to "c0" since "nl" is not part of "c0"
 #' ## as far as the `strip` argument is concerned
 #' strip_ctl(string, c("all", "nl", "c0"))
 #'
@@ -75,7 +79,7 @@ strip_ctl <- function(x, strip='all', warn=getOption('fansi.warn')) {
         "Argument `strip` may contain only values in `",
         deparse(VALID.STRIP), "`"
       )
-    .Call(FANSI_strip_csi, x, strip.int, warn)
+    .Call(FANSI_strip_csi, enc2utf8(x), strip.int, warn)
   } else x
 }
 #' @export
@@ -90,12 +94,12 @@ strip_sgr <- function(x, warn=getOption('fansi.warn')) {
   strip.int <- match("sgr", VALID.STRIP)
   if(anyNA(strip.int)) stop("Internal Error: invalid strip type")
 
-  .Call(FANSI_strip_csi, x, strip.int, warn)
+  .Call(FANSI_strip_csi, enc2utf8(x), strip.int, warn)
 }
 
 ## Process String by Removing Unwanted Characters
 ##
 ## This is to simulate what `strwrap` does, exposed for testing purposes.
 
-process <- function(x) .Call(FANSI_process, x)
+process <- function(x) .Call(FANSI_process, enc2utf8(x))
 

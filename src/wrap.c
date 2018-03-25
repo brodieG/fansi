@@ -37,7 +37,9 @@ struct FANSI_prefix_dat {
  */
 
 static struct FANSI_prefix_dat make_pre(SEXP x) {
-  const char * x_utf8 = FANSI_string_as_utf8(STRING_ELT(x, 0)).string;
+  SEXP chrsxp = STRING_ELT(x, 0);
+  FANSI_check_enc(chrsxp, 0);
+  const char * x_utf8 = CHAR(chrsxp);
   // ideally we would IS_ASCII(x), but that's not available to extensions
   int x_has_utf8 = FANSI_has_utf8(x_utf8);
 
@@ -319,7 +321,6 @@ static SEXP strwrap(
   SEXP char_list_start, char_list;
   char_list_start = char_list = PROTECT(list1(R_NilValue));
 
-  int prev_newline = 0;     // tracks if last non blank character was newline
   int prev_boundary = 0;    // tracks if previous char was a boundary
   int has_boundary = 0;     // tracks if at least one boundary in a line
   int para_start = 1;
@@ -365,7 +366,6 @@ static SEXP strwrap(
       // Rprintf("Bound @ %d\n", state_bound.pos_byte - state_start.pos_byte);
     } else {
       prev_boundary = 0;
-      prev_newline = 0;
     }
     // Write the line
 
@@ -424,9 +424,6 @@ static SEXP strwrap(
         char_list = CDR(char_list);
         UNPROTECT(1);
       } else break;
-
-      if(state.string[state.pos_byte] == '\n') prev_newline = 1;
-
       // overflow should be impossible here since string is at most int long
 
       ++size;
@@ -625,7 +622,8 @@ SEXP FANSI_strwrap_ext(
     FANSI_interrupt(i);
     SEXP chr = STRING_ELT(x, i);
     if(chr == NA_STRING) continue;
-    const char * chr_utf8 = FANSI_string_as_utf8(chr).string;
+    FANSI_check_enc(chr, i);
+    const char * chr_utf8 = CHAR(chr);
 
     SEXP str_i = PROTECT(
       strwrap(

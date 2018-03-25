@@ -33,6 +33,7 @@
 #' Additionally,`indent`, `exdent`, `initial`, and `prefix` will be ignored when
 #' computing tab positions.
 #'
+#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
 #' @inheritParams base::strwrap
@@ -83,7 +84,7 @@
 #' ## And a more involved example where we read the
 #' ## NEWS file, color it line by line, wrap it to
 #' ## 25 width and display some of it in 3 columns
-#' ## (works best on displays that support ANSI CSI
+#' ## (works best on displays that support 256 color
 #' ## SGR sequences)
 #'
 #' NEWS <- readLines(file.path(R.home('doc'), 'NEWS'))
@@ -134,8 +135,8 @@ strwrap_ctl <- function(
 
   res <- .Call(
     FANSI_strwrap_csi,
-    x, width, indent, exdent,
-    prefix, initial,
+    enc2utf8(x), width, indent, exdent,
+    enc2utf8(prefix), enc2utf8(initial),
     FALSE, "",
     TRUE,
     FALSE, 8L,
@@ -221,9 +222,9 @@ strwrap2_ctl <- function(
 
   res <- .Call(
     FANSI_strwrap_csi,
-    x, width,
+    enc2utf8(x), width,
     indent, exdent,
-    prefix, initial,
+    enc2utf8(prefix), enc2utf8(initial),
     wrap.always, pad.end,
     strip.spaces,
     tabs.as.spaces, tab.stops,

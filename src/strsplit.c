@@ -72,6 +72,7 @@ SEXP FANSI_strsplit(SEXP x, SEXP warn, SEXP term_cap) {
       FANSI_interrupt(j);
 
       SEXP chrsxp = STRING_ELT(string, j);
+      FANSI_check_enc(chrsxp, j);
 
       if(chrsxp != NA_STRING) {
         const char * chr = CHAR(chrsxp);

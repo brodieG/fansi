@@ -23,6 +23,7 @@
 #' stops you will need to provide them yourself if you are using anything
 #' outside of the standard tab stop every 8 characters that is the default.
 #'
+#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
 #' @export
@@ -66,7 +67,9 @@ tabs_as_spaces <- function(
     stop("Argument `tab.stops` must be numeric and strictly positive")
 
   term.cap.int <- seq_along(VALID.TERM.CAP)
-  .Call(FANSI_tabs_as_spaces, x, as.integer(tab.stops), warn, term.cap.int)
+  .Call(
+    FANSI_tabs_as_spaces, enc2utf8(x), as.integer(tab.stops), warn, term.cap.int
+  )
 }
 #' Test Terminal Capabilities
 #'
@@ -115,7 +118,7 @@ term_cap_test <- function() {
 }
 #' Colorize Character Vectors
 #'
-#' Color each element in input with one of the 256 color ANSI CSI SGR codes.
+#' Color each element in input with one of the "256 color" ANSI CSI SGR codes.
 #' This is intended for testing and demo purposes.
 #'
 #' @export
@@ -125,7 +128,7 @@ term_cap_test <- function() {
 #' @examples
 #' NEWS <- readLines(file.path(R.home('doc'), 'NEWS'))
 #' writeLines(fansi_lines(NEWS[1:20]))
-#' writeLines(fansi_lines(NEWS[1:20], 8))
+#' writeLines(fansi_lines(NEWS[1:20], step=8))
 
 fansi_lines <- function(txt, step=1) {
   if(!is.character(txt)) txt <- as.character(txt)

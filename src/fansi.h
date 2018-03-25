@@ -336,6 +336,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   struct FANSI_state FANSI_reset_pos(struct FANSI_state state);
   struct FANSI_state FANSI_reset_width(struct FANSI_state state);
 
+  void FANSI_check_enc(SEXP x, R_xlen_t i);
+
   int FANSI_what_as_int(SEXP what);
   void FANSI_size_buff(struct FANSI_buff * buff, size_t size);
 

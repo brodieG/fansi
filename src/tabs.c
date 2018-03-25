@@ -57,7 +57,10 @@ SEXP FANSI_tabs_as_spaces(
   int tabs_in_str = 0;
   int max_tab_stop = 1;
 
-  SEXP res_sxp = PROTECT(vec);
+  SEXP res_sxp = vec;
+
+  PROTECT_INDEX ipx;
+  PROTECT_WITH_INDEX(res_sxp, &ipx);  // reserve spot if we need to alloc later
 
   for(R_xlen_t i = 0; i < len; ++i) {
     FANSI_interrupt(i);
@@ -65,14 +68,14 @@ SEXP FANSI_tabs_as_spaces(
 
     SEXP chr = STRING_ELT(vec, i);
     if(chr == NA_STRING) continue;
+    FANSI_check_enc(chr, i);
 
     source = CHAR(chr);
 
     while(*source && (source = strchr(source, '\t'))) {
       if(!tabs_in_str) {
         tabs_in_str = 1;
-        UNPROTECT(1);
-        res_sxp = PROTECT(duplicate(vec));
+        REPROTECT(res_sxp = duplicate(vec), ipx);
         for(R_xlen_t j = 0; j < len_stops; ++j) {
           if(INTEGER(tab_stops)[j] > max_tab_stop)
             max_tab_stop = INTEGER(tab_stops)[j];
@@ -84,13 +87,12 @@ SEXP FANSI_tabs_as_spaces(
     if(tab_count) {
       // Need to convert to UTF8 so width calcs work
 
-      struct FANSI_string_as_utf8 buff_utf8 =
-        FANSI_string_as_utf8(STRING_ELT(vec, i));
+      const char * string = CHAR(chr);
 
       // Figure out possible size of buffer, allowing max_tab_stop for every
       // tab, which should over-allocate
 
-      size_t new_buff_size = buff_utf8.len;
+      size_t new_buff_size = LENGTH(chr);
       int tab_extra = max_tab_stop - 1;
 
       for(int k = 0; k < tab_count; ++k) {
@@ -109,7 +111,7 @@ SEXP FANSI_tabs_as_spaces(
       SEXP R_true = PROTECT(ScalarLogical(1));
       SEXP R_one = PROTECT(ScalarInteger(1));
       struct FANSI_state state = FANSI_state_init_full(
-        buff_utf8.string, warn, term_cap, R_true, R_true, R_one
+        string, warn, term_cap, R_true, R_true, R_one
       );
       UNPROTECT(2);
 

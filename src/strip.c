@@ -50,9 +50,11 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
 
   int what_int = FANSI_what_as_int(what);
   R_xlen_t i, len = xlength(x);
-  PROTECT_INDEX ipx;
-  PROTECT_WITH_INDEX(x, &ipx);  // reserve spot if we need to alloc later
   SEXP res_fin = x;
+
+  PROTECT_INDEX ipx;
+  // reserve spot if we need to alloc later
+  PROTECT_WITH_INDEX(res_fin, &ipx);
 
   int any_ansi = 0;
   R_len_t mem_req = 0;          // how much memory we need for each ansi
@@ -79,6 +81,7 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
     FANSI_interrupt(i);
     SEXP x_chr = STRING_ELT(x, i);
     if(x_chr == NA_STRING) continue;
+    FANSI_check_enc(x_chr, i);
 
     int has_ansi = 0;
     const char * chr = CHAR(x_chr);
@@ -208,16 +211,22 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
 SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
   if(TYPEOF(input) != STRSXP) error("Input is not a character vector.");
 
-  SEXP res = PROTECT(input);  // dummy PROTECT
+  PROTECT_INDEX ipx;
+  SEXP res = input;
+  PROTECT_WITH_INDEX(res, &ipx);  // reserve spot if we need to alloc later
+
   int strip_any = 0;          // Have any elements in the STRSXP been stripped
 
   R_xlen_t len = XLENGTH(res);
   for(R_xlen_t i = 0; i < len; ++i) {
-    const char * string = CHAR(STRING_ELT(res, i));
+    FANSI_interrupt(i);
+    SEXP chrsxp = STRING_ELT(res, i);
+    FANSI_check_enc(chrsxp, i);
+    const char * string = CHAR(chrsxp);
     const char * string_start = string;
     char * buff_track;
 
-    R_len_t len_j = LENGTH(STRING_ELT(res, i));
+    R_len_t len_j = LENGTH(chrsxp);
     int strip_this, to_strip, to_strip_nl, punct_prev, punct_prev_prev,
         space_prev, space_start, para_start, newlines, newlines_start,
         has_tab_or_nl, leading_spaces;
@@ -290,8 +299,7 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
       ) {
         // need to copy entire STRSXP since we haven't done that yet
         if(!strip_any) {
-          UNPROTECT(1);  // input is still protected
-          res = PROTECT(duplicate(input));
+          REPROTECT(res = duplicate(input), ipx);
           strip_any = 1;
         }
         // Make sure buffer is big enough

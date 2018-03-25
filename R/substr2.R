@@ -38,8 +38,7 @@
 #' characters to be dropped irrespective whether they correspond to `start` or
 #' `stop`, and "both" could cause all of them to be included.
 #'
-#' @note Non-ASCII strings are converted to UTF-8.
-#'
+#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @inheritParams base::substr
 #' @inheritParams tabs_as_spaces
 #' @export
@@ -54,7 +53,7 @@
 #' @param tabs.as.spaces FALSE (default) or TRUE, whether to convert tabs to
 #'   spaces.  This can only be set to TRUE if `strip.spaces` is FALSE.
 #' @param warn TRUE (default) or FALSE, whether to warn when potentially
-#'   problematic escape sequences are encountered.  These could cause the
+#'   problematic _Control Sequences_ are encountered.  These could cause the
 #'   assumptions `fansi` makes about how strings are rendered on your display
 #'   to be incorrect, for example by moving the cursor (see [fansi]).
 #' @param term.cap character a vector of the capabilities of the terminal, can
@@ -157,6 +156,7 @@ substr2_ctl <- function(
 }
 ## Lower overhead version of the function for use by strwrap
 ##
+## @x must already have been converted to UTF8
 ## @param type.int is supposed to be the matched version of type, minus 1
 
 substr_ctl_internal <- function(

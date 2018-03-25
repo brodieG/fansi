@@ -36,8 +36,12 @@ SEXP FANSI_unhandled_esc(SEXP x) {
   SEXP no_warn = PROTECT(ScalarLogical(0));
   SEXP res, res_start;
   res = res_start = R_NilValue;
+
+  // reserve spot if we need to alloc later
+
   PROTECT_INDEX ipx;
-  PROTECT_WITH_INDEX(res, &ipx);  // reserve spot if we need to alloc later
+  PROTECT_WITH_INDEX(res, &ipx);
+
   int any_errors = 0;
   int err_count = 0;
   int break_early = 0;
@@ -47,14 +51,10 @@ SEXP FANSI_unhandled_esc(SEXP x) {
     SEXP chrsxp = STRING_ELT(x, i);
 
     if(chrsxp != NA_STRING && LENGTH(chrsxp)) {
-      // Need to convert to UTF8 because we're also looking for illegal UTF8
-      // sequences; otherwise we could just leave as is as we don't care about
-      // width.
-
-      struct FANSI_string_as_utf8 string_dat = FANSI_string_as_utf8(chrsxp);
+      FANSI_check_enc(chrsxp, i);
       const char * string, * string_start;
 
-      string = string_start = string_dat.string;
+      string = string_start = CHAR(chrsxp);
 
       struct FANSI_state state = FANSI_state_init_full(
         string, no_warn, zero_vec, R_true, R_true, R_one
@@ -92,7 +92,7 @@ SEXP FANSI_unhandled_esc(SEXP x) {
           INTEGER(err_vals)[1] = esc_start + 1;
           INTEGER(err_vals)[2] = state.pos_ansi;
           INTEGER(err_vals)[3] = state.err_code;
-          INTEGER(err_vals)[4] = string_dat.translated;
+          INTEGER(err_vals)[4] = 0;
           SEXP err_vals_list = PROTECT(list1(err_vals));
 
           if(!any_errors) {

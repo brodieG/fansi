@@ -18,7 +18,7 @@ strtrim2_ctl(x, width, warn = getOption("fansi.warn"),
 \item{width}{Positive integer values: recycled to the length of \code{x}.}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
-problematic escape sequences are encountered.  These could cause the
+problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
 
@@ -39,10 +39,14 @@ newlines, carriage returns, etc., are treated as zero width.
 \code{strtrim2_ctl} adds the option of converting tabs to spaces before trimming.
 This is the only difference between \code{strtrim_ctl} and \code{strtrim2_ctl}.
 }
+\note{
+Non-ASCII strings are converted to and returned in UTF-8 encoding.
+}
 \examples{
 strtrim_ctl("\\033[42mHello world\\033[m", 6)
 }
 \seealso{
 \link{fansi} for details on how \emph{Control Sequences} are
 interpreted, particularly if you are getting unexpected results.
+\link{strwrap_ctl} is used internally by this function.
 }

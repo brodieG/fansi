@@ -43,7 +43,7 @@ strwrap2_ctl(x, width = 0.9 * getOption("width"), indent = 0, exdent = 0,
     each line except the first, for which \code{initial} is used.}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
-problematic escape sequences are encountered.  These could cause the
+problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
 
@@ -95,6 +95,9 @@ beginning of the input line, not the most recent wrap point.
 Additionally,\code{indent}, \code{exdent}, \code{initial}, and \code{prefix} will be ignored when
 computing tab positions.
 }
+\note{
+Non-ASCII strings are converted to and returned in UTF-8 encoding.
+}
 \examples{
 hello.1 <- "hello \\033[41mred\\033[49m world"
 hello.2 <- "hello\\t\\033[41mred\\033[49m\\tworld"
@@ -127,7 +130,7 @@ writeLines(strwrap2_ctl("hello how are you today", 10, pad.end="."))
 ## And a more involved example where we read the
 ## NEWS file, color it line by line, wrap it to
 ## 25 width and display some of it in 3 columns
-## (works best on displays that support ANSI CSI
+## (works best on displays that support 256 color
 ## SGR sequences)
 
 NEWS <- readLines(file.path(R.home('doc'), 'NEWS'))

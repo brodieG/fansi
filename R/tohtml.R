@@ -17,15 +17,16 @@
 #' Convert ANSI CSI SGR Escape Sequence to HTML Equivalents
 #'
 #' Only the colors, background-colors, and basic styles (CSI SGR codes 1-9) are
-#' translated.  Others are ignored.
+#' translated.  Others are dropped silently.
 #'
+#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @export
 #' @inheritParams substr_ctl
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
 #' @return a character vector with all escape sequences removed and any basic
-#'   ANSI CSI SGR escape sequences applied via SPAN html objects with specified
-#'   css styles.
+#'   ANSI CSI SGR escape sequences applied via SPAN html objects with
+#'   inline css styles.
 #' @examples
 #' sgr_to_html("hello\033[31;42;1mworld\033[m")
 
@@ -45,6 +46,6 @@ sgr_to_html <- function(
       deparse(VALID.TERM.CAP)
     )
 
-  .Call(FANSI_esc_to_html, x, warn, term.cap.int)
+  .Call(FANSI_esc_to_html, enc2utf8(x), warn, term.cap.int)
 }
 

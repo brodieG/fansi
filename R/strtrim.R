@@ -22,9 +22,11 @@
 #' `strtrim2_ctl` adds the option of converting tabs to spaces before trimming.
 #' This is the only difference between `strtrim_ctl` and `strtrim2_ctl`.
 #'
+#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @export
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
+#'   [strwrap_ctl] is used internally by this function.
 #' @inheritParams base::strtrim
 #' @inheritParams strwrap_ctl
 #' @examples
@@ -49,7 +51,7 @@ strtrim_ctl <- function(x, width, warn=getOption('fansi.warn')){
 
   res <- .Call(
     FANSI_strwrap_csi,
-    x, width,
+    enc2utf8(x), width,
     0L, 0L,    # indent, exdent
     "", "",    # prefix, initial
     TRUE, "",  # wrap always
@@ -94,7 +96,7 @@ strtrim2_ctl <- function(
 
   res <- .Call(
     FANSI_strwrap_csi,
-    x, width,
+    enc2utf8(x), width,
     0L, 0L,    # indent, exdent
     "", "",    # prefix, initial
     TRUE, "",  # wrap always
