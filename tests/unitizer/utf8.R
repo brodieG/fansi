@@ -164,8 +164,14 @@ unitizer_sect("Emoji combining", {
   nchar(flags, type='chars')
   nchar(flags, type='width')
 
-  substr2_ctl(flags, 1, 2)
-  substr2_ctl(flags, 1, 2, type='width')
+  nchar_ctl(flags, type='chars')
+  nchar_ctl(flags, type='width')
+
+  # can't lest stuff above BMP output as windows can get messed up by that,
+  # otherwise we wouldn't have to use nchar below
+
+  nchar(substr2_ctl(flags, 1, 2))
+  nchar(substr2_ctl(flags, 1, 2, type='width'))
 })
 unitizer_sect("Corner cases", {
   utf8.bad <- "hello \xF0 world, goodnight moon"
