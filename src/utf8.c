@@ -31,7 +31,7 @@
 // this is UTF8
 
 int FANSI_has_utf8(const char * x) {
-  while(*x) {if(*(x++) > 127) return 1;}
+  while(*x) {if(*(x++) < 0) return 1;}
   return 0;
 }
 // nocov start
@@ -59,7 +59,7 @@ int FANSI_is_utf8_loc() {
 
   size_t loc_len = strlen(loc_string);
 
-  if(loc_len > FANSI_int_max)
+  if(loc_len > (size_t) FANSI_int_max)
     // nocov start
     error(
       "%s%s",
