@@ -177,10 +177,15 @@ unitizer_sect("Corner cases", {
   utf8.bad <- "hello \xF0 world, goodnight moon"
   Encoding(utf8.bad) <- 'UTF-8'
 
-  substr_ctl(utf8.bad, 1, 7)
-  identical(substr_ctl(utf8.bad, 1, 7), substr(utf8.bad, 1, 7))
-  substr_ctl(utf8.bad, 5, 10)
+  # # have to remove these because of the change in substr behavior, use
+  # # state_at_pos instead
+  # substr_ctl(utf8.bad, 1, 7)
+  # identical(substr_ctl(utf8.bad, 1, 7), substr(utf8.bad, 1, 7))
+  # substr_ctl(utf8.bad, 5, 10)
 
+  fansi:::state_at_pos(utf8.bad, 1, 7)
+  fansi:::state_at_pos(utf8.bad, 5, 10)
+  
   # Need to use `tryCatch` because the warnings vascillate for no rhyme or
   # reason between showing the call and not.  Seems to be triggered by
   # re-installing package. now we're stuff with the try business to circumvent
@@ -190,7 +195,8 @@ unitizer_sect("Corner cases", {
     substr2_ctl(utf8.bad, 1, 7, type='width'),
     warning=function(e) conditionMessage(e)
   )
-  substr2_ctl(utf8.bad, 1, 7, type='width', warn=FALSE)
+  # # need to remove for changes in R3.6.0
+  # substr2_ctl(utf8.bad, 1, 7, type='width', warn=FALSE)
   tryCatch(
     substr2_ctl(utf8.bad, 5, 10, type='width'),
     warning=function(e) conditionMessage(e)
@@ -204,7 +210,8 @@ unitizer_sect("Corner cases", {
     substr2_ctl(chrs.2, 1, 10, type='width'),
     warning=function(e) conditionMessage(e)
   )
-  substr2_ctl(chrs.2, 1, 10, type='width', warn=FALSE)
+  # # need to remove for changes in R3.6.0
+  # substr2_ctl(chrs.2, 1, 10, type='width', warn=FALSE)
 
   # boundaries
 
@@ -325,8 +332,12 @@ unitizer_sect("utf8clen", {
   nchar(utf8.bad.2, allowNA=TRUE)
   nchar_ctl(utf8.bad.2, allowNA=TRUE)
 
-  substr(utf8.bad.2, 1, 1)
-  substr_ctl(utf8.bad.2, 1, 1)
+  ## remove for changes in R3.6.0
+  # substr(utf8.bad.2, 1, 1)
+  # substr_ctl(utf8.bad.2, 1, 1)
+
+  fansi:::state_at_pos(utf8.bad.2, 1, 1)
+
 })
 unitizer_sect("wrap corner cases", {
   # With UTF8
