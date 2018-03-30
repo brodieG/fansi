@@ -347,9 +347,9 @@ unitizer_sect("wrap corner cases", {
 
   wrap.csi.4 <- strwrap_ctl(hello.8c, 15, prefix=pre.2, initial=ini.2)
   wrap.csi.4
-  wrap.nrm.4 <- strwrap(hello.8c, 15, prefix=pre.3, initial=ini.3)
 
-  identical(strip_ctl(wrap.csi.4, "sgr"), wrap.nrm.4)
+  # wrap.nrm.4 <- strwrap(hello.8c, 15, prefix=pre.3, initial=ini.3)
+  # identical(strip_ctl(wrap.csi.4, "sgr"), wrap.nrm.4)
 
   utf8.chr <- "\u76F4"
   strwrap2_ctl(utf8.chr, 1, wrap.always=TRUE)
@@ -380,7 +380,9 @@ unitizer_sect("wrap corner cases", {
 unitizer_sect("wrap with wide UTF8 and ESC", {
   wrap.mix <- strwrap_ctl(lorem.mix, 25)
   wrap.mix
-  identical(strwrap(strip_ctl(lorem.mix, "sgr"), 25), strip_ctl(wrap.mix, "sgr"))
+  # identical(
+  #   strwrap(strip_ctl(lorem.mix, "sgr"), 25), strip_ctl(wrap.mix, "sgr")
+  # )
 
   string <- "\033[37;48;5;32m國官方認定的民族現有56個\033[39;49m"
   Encoding(string) <- "UTF-8"

@@ -75,6 +75,7 @@ lorem.cn.phrases.2 <- gsub("\\d", "", lorem.cn.phrases)
 lorem.cn.words <- substr(
   lorem.cn.phrases.2, 1, pmin(nchar(lorem.cn.phrases.2) - 1, c(2,3,4,5))
 )
+# not a grep split, so okay
 lorem.words <- unlist(strsplit(tolower(lorem), "[^a-z]+"))
 p0 <- function(...) paste0(..., collapse=' ')
 lorem.mix <- paste0(
@@ -90,8 +91,6 @@ lorem.mix <- paste0(
   ),
   collapse=""
 )
-# writeLines(strwrap(lorem.mix, 10))
-
 # From readLines(file.path(R.home("doc"), "THANKS"))
 
 lorem.r.thanks.2 <- c(
