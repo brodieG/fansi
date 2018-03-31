@@ -433,8 +433,6 @@ SEXP FANSI_sort_int(SEXP x) {
     error("Internal error: this order only supports ints.");  // nocov
 
   R_xlen_t len = XLENGTH(x);
-  if(len > SIZE_MAX)
-    error("Internal error: vector too long to sort"); // nocov
 
   SEXP res = PROTECT(duplicate(x));
 

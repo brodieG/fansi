@@ -66,6 +66,7 @@ SEXP FANSI_unhandled_esc(SEXP x) {
         // to parse the ESC sequences
 
         int esc_start = state.pos_ansi;
+        int esc_start_byte = state.pos_byte;
         state = FANSI_read_next(state);
         if(state.err_code) {
           if(err_count == FANSI_int_max) {
@@ -87,12 +88,16 @@ SEXP FANSI_unhandled_esc(SEXP x) {
             // nocov end
           if(!has_errors) has_errors = 1;
 
-          SEXP err_vals = PROTECT(allocVector(INTSXP, 5));
+          SEXP err_vals = PROTECT(allocVector(INTSXP, 7));
           INTEGER(err_vals)[0] = i + 1;
           INTEGER(err_vals)[1] = esc_start + 1;
           INTEGER(err_vals)[2] = state.pos_ansi;
           INTEGER(err_vals)[3] = state.err_code;
           INTEGER(err_vals)[4] = 0;
+          // need actual bytes so we can substring the problematic sequence, so
+          // we don't use 1 based indexing like with the earlier values
+          INTEGER(err_vals)[5] = esc_start_byte;
+          INTEGER(err_vals)[6] = state.pos_byte - 1;
           SEXP err_vals_list = PROTECT(list1(err_vals));
 
           if(!any_errors) {
@@ -112,12 +117,13 @@ SEXP FANSI_unhandled_esc(SEXP x) {
   }
   // Convert result to a list that we could easily turn into a DFs
 
-  SEXP res_fin = PROTECT(allocVector(VECSXP, 5));
+  SEXP res_fin = PROTECT(allocVector(VECSXP, 6));
   SEXP res_idx = PROTECT(allocVector(INTSXP, err_count));
   SEXP res_esc_start = PROTECT(allocVector(INTSXP, err_count));
   SEXP res_esc_end = PROTECT(allocVector(INTSXP, err_count));
   SEXP res_err_code = PROTECT(allocVector(INTSXP, err_count));
   SEXP res_translated = PROTECT(allocVector(LGLSXP, err_count));
+  SEXP res_string = PROTECT(allocVector(STRSXP, err_count));
 
   res = res_start;
 
@@ -136,6 +142,29 @@ SEXP FANSI_unhandled_esc(SEXP x) {
     INTEGER(res_esc_end)[i] = INTEGER(CAR(res))[2];
     INTEGER(res_err_code)[i] = INTEGER(CAR(res))[3];
     LOGICAL(res_translated)[i] = INTEGER(CAR(res))[4];
+
+    int byte_start = INTEGER(CAR(res))[5];
+    int byte_end = INTEGER(CAR(res))[6];
+
+    SEXP cur_chrsxp = STRING_ELT(x, INTEGER(res_idx)[i] - 1);
+
+    if(
+      byte_start < 0 || byte_end < 0 || byte_start >= LENGTH(cur_chrsxp) ||
+      byte_end >= LENGTH(cur_chrsxp)
+    )
+      // nocov start
+      error(
+        "%s%s",
+        "Internal Error: illegal byte offsets for extracting unhandled seq; ",
+        "contact maintainer."
+      );
+      // nocov end
+
+    SET_STRING_ELT(res_string, i,
+      mkCharLenCE(
+        CHAR(cur_chrsxp) + byte_start, byte_end - byte_start + 1,
+        getCharCE(cur_chrsxp)
+    ) );
     res = CDR(res);
   }
   SET_VECTOR_ELT(res_fin, 0, res_idx);
@@ -143,6 +172,7 @@ SEXP FANSI_unhandled_esc(SEXP x) {
   SET_VECTOR_ELT(res_fin, 2, res_esc_end);
   SET_VECTOR_ELT(res_fin, 3, res_err_code);
   SET_VECTOR_ELT(res_fin, 4, res_translated);
-  UNPROTECT(11);
+  SET_VECTOR_ELT(res_fin, 5, res_string);
+  UNPROTECT(12);
   return res_fin;
 }

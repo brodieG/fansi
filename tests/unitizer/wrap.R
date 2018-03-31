@@ -2,40 +2,50 @@ library(unitizer)
 library(fansi)
 
 unitizer_sect("Basic wrap", {
+  # We do not want to use `base::strwrap` because it triggers the pcre valgrind
+  # error on heap allocations (this is not a fansi problem)
+
   hello.0 <- "hello world this is a lovely day"
-  identical(strwrap_ctl(hello.0, width=10), strwrap(hello.0, width=10))
+  # identical(strwrap_ctl(hello.0, width=10), strwrap(hello.0, width=10))
+  strwrap_ctl(hello.0, width=10)
 
   hello.1 <- "hello  world  this  is.  a lovely day."
-  identical(strwrap_ctl(hello.1, width=10), strwrap(hello.1, width=10))
-
-  writeLines(strwrap_ctl(hello.1, width=10))
-  writeLines(strwrap(hello.1, width=10))
+  # identical(strwrap_ctl(hello.1, width=10), strwrap(hello.1, width=10))
+  strwrap_ctl(hello.1, width=10)
 
   hello.2 <- "hello\rworld\rthis  is.  a lovely day."
-  identical(strwrap(hello.2, width=10), strwrap_ctl(hello.2, width=10))
+  # identical(strwrap(hello.2, width=10), strwrap_ctl(hello.2, width=10))
+  strwrap_ctl(hello.2, width=10)
 
   hello.3 <- "hello\rworld\nthis  is.  a lovely\n day."
-  identical(strwrap(hello.3, width=10), strwrap_ctl(hello.3, width=10))
+  # identical(strwrap(hello.3, width=10), strwrap_ctl(hello.3, width=10))
+  strwrap_ctl(hello.3, width=10)
 
   hello.4 <- "  hello  world  this  is  a lovely day."
-  identical(strwrap(hello.4, width=10), strwrap_ctl(hello.4, width=10))
+  # identical(strwrap(hello.4, width=10), strwrap_ctl(hello.4, width=10))
+  strwrap_ctl(hello.4, width=10)
 
   hello.5 <- "hello.\n\n\nworld"
-  identical(strwrap(hello.5, width=10), strwrap_ctl(hello.5, width=10))
+  # identical(strwrap(hello.5, width=10), strwrap_ctl(hello.5, width=10))
+  strwrap_ctl(hello.5, width=10)
 
   hello.5a <- "hello.\n \n \nworld"
-  identical(strwrap(hello.5a, width=10), strwrap_ctl(hello.5a, width=10))
+  # identical(strwrap(hello.5a, width=10), strwrap_ctl(hello.5a, width=10))
+  strwrap_ctl(hello.5a, width=10)
 
   # special preserve of double space
 
   hello.6a <- 'hello."  there'
-  identical(strwrap(hello.6a, width=40), strwrap_ctl(hello.6a, width=40))
+  # identical(strwrap(hello.6a, width=40), strwrap_ctl(hello.6a, width=40))
+  strwrap_ctl(hello.6a, width=40)
 
   hello.6b <- 'hello.\'  there'
-  identical(strwrap(hello.6b, width=40), strwrap_ctl(hello.6b, width=40))
+  # identical(strwrap(hello.6b, width=40), strwrap_ctl(hello.6b, width=40))
+  strwrap_ctl(hello.6b, width=40)
 
   hello.6c <- 'hello.)  there'
-  identical(strwrap(hello.6c, width=40), strwrap_ctl(hello.6c, width=40))
+  # identical(strwrap(hello.6c, width=40), strwrap_ctl(hello.6c, width=40))
+  strwrap_ctl(hello.6c, width=40)
 
 })
 unitizer_sect("Basic Ansi", {
@@ -43,10 +53,12 @@ unitizer_sect("Basic Ansi", {
     paste0("hello ", red, "world ", grn.bg, " this is a  lovely", end, "day.")
   strwrap_ctl(hello2.0, 10)
 
-  identical(
-    strwrap_ctl(strip_ctl(hello2.0, "sgr"), 10),
-    strwrap(strip_ctl(hello2.0, "sgr"), 10)
-  )
+  # identical(
+  #   strwrap_ctl(strip_ctl(hello2.0, "sgr"), 10),
+  #   strwrap(strip_ctl(hello2.0, "sgr"), 10)
+  # )
+  strwrap_ctl(strip_ctl(hello2.0, "sgr"), 10)
+
   # turn off tag generic
 
   hello2.1 <- paste0("hello \033[41mworld\033[m how are you today")
@@ -71,10 +83,10 @@ unitizer_sect("Basic Ansi", {
   strwrap_ctl(hello.blinky, 10)
 })
 unitizer_sect("Long Wrap", {
-  wrap.nrm <- strwrap(strip_ctl(lorem.r.thanks, "sgr"), 40)
+  # wrap.nrm <- strwrap(strip_ctl(lorem.r.thanks, "sgr"), 40)
   wrap.csi <- strwrap_ctl(lorem.r.thanks, 40)
 
-  identical(wrap.nrm, strip_ctl(wrap.csi, "sgr"))
+  # identical(wrap.nrm, strip_ctl(wrap.csi, "sgr"))
   nchar(strip_ctl(wrap.csi, "sgr"))
   nchar(wrap.csi)
 })
@@ -99,22 +111,25 @@ unitizer_sect("Other Escapes", {
 unitizer_sect("prefix / initial simple", {
   # a version of lorem with paragraphs
 
-  lorem.sentence <- unlist(strsplit(lorem, "[.]\\K ", perl=TRUE))
+  lorem.sentence <- unlist(strsplit_ctl(lorem, "[.]\\K ", perl=TRUE))
   lorem.sentence <- gsub(",", ",\n", lorem.sentence, fixed=TRUE)
   lorem.para <- c(
     paste0(lorem.sentence[1:2], collapse="\n\n"),
     paste0(lorem.sentence[3:4], collapse="\n\t\n\t  \n")
   )
-  identical(
-    strwrap_ctl(lorem.para, indent=2), strwrap(lorem.para, indent=2)
-  )
-  identical(
-    strwrap_ctl(lorem.para, exdent=2), strwrap(lorem.para, exdent=2)
-  )
-  identical(
-    strwrap_ctl(lorem.para, indent=4, exdent=2),
-    strwrap(lorem.para, indent=4, exdent=2)
-  )
+  # identical(
+  #   strwrap_ctl(lorem.para, indent=2), strwrap(lorem.para, indent=2)
+  # )
+  # identical(
+  #   strwrap_ctl(lorem.para, exdent=2), strwrap(lorem.para, exdent=2)
+  # )
+  # identical(
+  #   strwrap_ctl(lorem.para, indent=4, exdent=2),
+  #   strwrap(lorem.para, indent=4, exdent=2)
+  # )
+  strwrap_ctl(lorem.para, indent=2)
+  strwrap_ctl(lorem.para, exdent=2)
+  strwrap_ctl(lorem.para, indent=4, exdent=2)
 })
 unitizer_sect("prefix / initial with ESC", {
   pre <- "\033[32m+ \033[0m"
@@ -124,15 +139,14 @@ unitizer_sect("prefix / initial with ESC", {
 
   wrap.csi.2 <- strwrap_ctl(hello.8a, 14, prefix=pre, initial=ini)
   wrap.csi.2
-  wrap.nrm.2 <- strwrap(hello.8a, 14, prefix="+ ", initial="> ")
-  identical(strip_ctl(wrap.csi.2, "sgr"), wrap.nrm.2)
+  # wrap.nrm.2 <- strwrap(hello.8a, 14, prefix="+ ", initial="> ")
+  # identical(strip_ctl(wrap.csi.2, "sgr"), wrap.nrm.2)
 
   hello.8b <- c(hello.8a, "oh my this has 2 elements")
   wrap.csi.3 <- strwrap_ctl(hello.8b, 14, prefix=pre, initial=ini)
   wrap.csi.3
-  wrap.nrm.3 <- strwrap(hello.8b, 14, prefix="+ ", initial="> ")
-
-  identical(strip_ctl(wrap.csi.3, "sgr"), wrap.nrm.3)
+  # wrap.nrm.3 <- strwrap(hello.8b, 14, prefix="+ ", initial="> ")
+  # identical(strip_ctl(wrap.csi.3, "sgr"), wrap.nrm.3)
 })
 unitizer_sect("wrap2", {
   # Examples
