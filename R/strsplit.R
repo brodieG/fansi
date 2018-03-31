@@ -100,7 +100,7 @@ strsplit_ctl <- function(
   # Find the split locations and widths
 
   for(i in s.seq) {
-    to.split <- s.x.seq == i
+    to.split <- s.x.seq == i & chars
     matches[to.split] <- if(!nzchar(split[i])) {
       # special handling for zero width split
       lapply(
