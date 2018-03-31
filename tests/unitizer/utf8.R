@@ -201,7 +201,8 @@ unitizer_sect("Corner cases", {
     substr2_ctl(utf8.bad, 5, 10, type='width'),
     warning=function(e) conditionMessage(e)
   )
-  substr2_ctl(utf8.bad, 5, 10, type='width', warn=FALSE)
+  # # need to remove for changes in R3.6.0
+  # substr2_ctl(utf8.bad, 5, 10, type='width', warn=FALSE)
   # ends early
 
   chrs.2 <- "hello\xee"
