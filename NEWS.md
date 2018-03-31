@@ -2,9 +2,10 @@
 
 ## v0.2.2
 
-* Address reported valgrind errors (although fansi code turned out not to be
-  responsible).
-*  
+* Remove valgrind uninitialized string errors by avoiding `strsplit`.
+* Reduce R dependency to >= 3.2.x (@gaborcsardi)
+* Update tests to handle potential change in `substr` behavior starting with
+  R-3.6.
 
 ## v0.2.1
 
