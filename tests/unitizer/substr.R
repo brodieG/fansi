@@ -86,6 +86,10 @@ unitizer_sect("Corner cases", {
 
   substr_ctl(rep("\033[31mhello\033[m", 3), c(3,2,1), c(3,4,5))
 
+  # Preserve attributes
+
+  str.3 <- structure("fu\033[42mba\033[0mr", class="foo", at="bar")
+  substr_ctl(str.3, 2, 3)
 })
 unitizer_sect("Obscure escapes", {
   # illegal 38/48

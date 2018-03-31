@@ -26,4 +26,8 @@ unitizer_sect("corner cases", {
   identical(lapply(str.spl3, strip_ctl), str.spl2)
 
   strsplit_ctl("", " ")
+  strsplit_ctl("", "")
+  strsplit_ctl(c("\033[31mab\033[0m", ""), "")
+
+  strsplit_ctl("hello", NULL)
 })
