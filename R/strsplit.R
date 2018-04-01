@@ -56,6 +56,7 @@ strsplit_ctl <- function(
   if(any(Encoding(x) == "bytes"))
     stop("BYTE encoded strings are not supported.")
 
+  if(is.null(split)) split <- ""
   split <- as.character(enc2utf8(split))
   if(!length(split)) split <- ""
   if(anyNA(split)) stop("Argument `split` may not contain NAs.")
@@ -99,7 +100,7 @@ strsplit_ctl <- function(
   # Find the split locations and widths
 
   for(i in s.seq) {
-    to.split <- s.x.seq == i
+    to.split <- s.x.seq == i & chars
     matches[to.split] <- if(!nzchar(split[i])) {
       # special handling for zero width split
       lapply(
