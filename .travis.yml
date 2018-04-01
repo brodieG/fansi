@@ -1,6 +1,6 @@
 language: r
 r:
-  - oldrel
+  - 3.2
   - release
   - devel
 
@@ -16,7 +16,6 @@ branches:
     - master
     - development
     - rc
-    - rdevel
 
 after_success:
   - Rscript covr.R

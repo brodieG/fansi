@@ -93,7 +93,8 @@ substr2_ctl <- function(
   warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap')
 ) {
-  x <- enc2utf8(as.character(x))
+  if(!is.character(x)) x <- as.character(x)
+  x <- enc2utf8(x)
   if(any(Encoding(x) == "bytes"))
     stop("BYTE encoded strings are not supported.")
 
@@ -140,7 +141,7 @@ substr2_ctl <- function(
   stop <- rep(as.integer(stop), length.out=x.len)
   start[start < 1L] <- 1L
 
-  res <- rep(NA_character_, x.len)
+  res <- x
   no.na <- !(is.na(x) | is.na(start & stop))
 
   res[no.na] <- substr_ctl_internal(
@@ -152,6 +153,7 @@ substr2_ctl <- function(
     round.stop=round == 'stop' || round == 'both',
     x.len=length(x)
   )
+  res[!no.na] <- NA_character_
   res
 }
 ## Lower overhead version of the function for use by strwrap
@@ -222,4 +224,20 @@ substr_ctl_internal <- function(
     )
   }
   res
+}
+
+## Need to expose this so we can test bad UTF8 handling because substr will
+## behave different with bad UTF8 pre and post R 3.6.0
+
+state_at_pos <- function(x, starts, ends, warn=getOption('fansi.warn')) {
+  is.start <- c(rep(TRUE, length(starts)), rep(FALSE, length(ends)))
+  .Call(
+    FANSI_state_at_pos_ext,
+    x, as.integer(c(starts, ends)) - 1L,
+    0L,      # character type
+    is.start,  # lags
+    !is.start, # ends
+    warn,
+    seq_along(VALID.TERM.CAP)
+  )
 }

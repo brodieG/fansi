@@ -69,17 +69,12 @@
 
 unhandled_ctl <- function(x) {
   res <- .Call(FANSI_unhandled_esc, enc2utf8(x))
-  names(res) <- c("index", "start", "stop", "error", "translated")
+  names(res) <- c("index", "start", "stop", "error", "translated", "esc")
   errors <- c(
     'exceed-term-cap', 'special', 'unknown', 'non-SGR', 'malformed-CSI',
     'non-CSI', 'malformed-ESC', 'C0', 'malformed-UTF8'
   )
   res[['error']] <- errors[res[['error']]]
-  res[['esc']] <- substring(
-    x[res[['index']]],
-    res[['start']],
-    res[['stop']]
-  )
   as.data.frame(res, stringsAsFactors=FALSE)
 }
 

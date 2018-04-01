@@ -147,9 +147,10 @@
 #' by the leading byte, irrespective of whether the subsequent bytes lead to a
 #' valid sequence.  Additionally, UTF-8 byte sequences as long as 5 or 6 bytes
 #' may be allowed, which is likely a holdover from older Unicode versions.
-#' `fansi` mimics this behavior, although if new releases of R were to fix this
-#' there could be divergences.  In general, you should assume that `fansi` may
-#' not replicate base R exactly when there are illegal UTF-8 sequences present.
+#' `fansi` mimics this behavior.  It is likely `substr` will start failing with
+#' invalid UTF-8 byte sequences with R 3.6.0 (as per SVN r74488).  In general,
+#' you should assume that `fansi` may not replicate base R exactly when there
+#' are illegal UTF-8 sequences present.
 #'
 #' Our long term objective is to implement proper UTF-8 character width
 #' computations, but for simplicity and also because R and our terminal do not
