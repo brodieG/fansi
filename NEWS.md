@@ -1,5 +1,10 @@
 # fansi Release Notes
 
+## v0.2.3
+
+* [#44](https://github.com/brodieG/fansi/issues/44): include bright color
+  support in HTML conversion.
+
 ## v0.2.2
 
 * Remove valgrind uninitialized string errors by avoiding `strsplit`.

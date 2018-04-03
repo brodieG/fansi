@@ -21,8 +21,48 @@ library(fansi)
 # ulysses <- readLines(
 #   "http://www.gutenberg.org/files/4300/4300-0.txt", encoding='UTF-8'
 # )
-ulysses <- readLines("~/Downloads/ulysses.txt", encoding='UTF-8')
-ulysses.f <- fansi_lines(ulysses)
+
+# Let's test fansi with a reasonable size text (from Project Guttenberg):
+
+raw.txt <- readLines("~/Downloads/ulysses.txt", encoding='UTF-8')
+ulysses <- tail(raw.txt, -30)
+length(ulysses)
+
+# To make it interesting we color each line with a color from the 256
+# color palette:
+
+ulysses.color <- fansi_lines(ulysses)
+writeLines(head(ulysses.color, 20))
+
+# Wrap our ANSI escape colored text:
+
+wrapped <- fansi::strwrap2_ctl(ulysses.color, 26, pad.end=" ")
+
+# and display in three columns:
+
+col.index <- sort(rep(1:3, length.out=length(wrapped)))
+in.cols <- do.call(paste, split(wrapped, col.index))
+writeLines(head(in.cols, 30))
+
+# We can even convert to HTML
+
+as.html <- fansi::sgr_to_html(head(in.cols, 30))
+as.page <- sprintf(
+  "<html><meta charset='UTF-8'><pre>%s</pre></html>",
+  paste0(as.html, collapse="\n")
+)
+writeLines(as.page, (f <- tempfile()))
+browseURL(f)
+
+# fansi functions are mostly comparable in speed to their base
+# counterparts, and in the case of strwrap much faster:
+
+system.time(wrapped.ctl <- strwrap_ctl(ulysses, 26))
+system.time(wrapped.base <- strwrap(ulysses, 26))
+
+identical(wrapped.base, wrapped.ctl)
+
+
 system.time(strsplit(ulysses, " "))
 system.time(strsplit_ctl(ulysses, " "))
 system.time(strwrap_ctl(ulysses, 25))

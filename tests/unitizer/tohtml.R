@@ -97,6 +97,11 @@ unitizer_sect("simple html conversion", {
   # tmp <- tempfile()
   # writeLines(c("<html><pre>", html_string, "</pre></html>"))
 })
+unitizer_sect("Bright Colors", {
+  sgr_to_html("hello\033[94;101m world\033[39m yow\033[49mza")
+  # oob color
+  sgr_to_html("hello\033[98;101m world\033[39m yow\033[49mza")
+})
 unitizer_sect("Corner cases", {
   sgr_to_html("hello\033[0m")
   sgr_to_html("hello\033[31m")
