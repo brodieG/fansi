@@ -19,6 +19,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #include <stdint.h>
 #include <R.h>
 #include <Rinternals.h>
+#include <Rversion.h>
+
 
 #ifndef _FANSI_H
 #define _FANSI_H
@@ -372,5 +374,17 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   int FANSI_has_utf8(const char * x);
   void FANSI_interrupt(int i);
+
+  // - Compatibility -----------------------------------------------------------
+
+  // R_nchar does not exist prior to 3.2.0, so we sub in this dummy
+
+  #if defined(R_VERSION) && R_VERSION >= R_Version(3, 2, 0)
+  #else
+  int R_nchar(SEXP string, nchar_type type_,
+              Rboolean allowNA, Rboolean keepNA, const char* msg_name) {
+    return 1;
+  };
+  #endif
 
 #endif
