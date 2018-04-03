@@ -1,0 +1,27 @@
+---
+title: "tibble tests"
+subtitle: "where to begin"
+author: "brodie"
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette
+---
+
+```{r, echo = F}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  error = TRUE,
+  warning = TRUE
+)
+options(crayon.enabled = TRUE)
+knitr::knit_hooks$set(output = function(x, options){
+  paste0(
+    "<pre class=\"r-output\"><code>",
+    fansi::sgr_to_html(x = x),
+    "</code></pre>"
+  )
+})
+```{r}
+library(pillar)
+pillar(x=c(-1, 100, 200))
+```
