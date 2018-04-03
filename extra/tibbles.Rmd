@@ -1,27 +1,13 @@
 ---
-title: "tibble tests"
-subtitle: "where to begin"
-author: "brodie"
-date: "`r Sys.Date()`"
-output:
-  rmarkdown::html_vignette
+title: "fansi tibble"
+output: rmarkdown::html_vignette
 ---
 
-```{r, echo = F}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  error = TRUE,
-  warning = TRUE
-)
+```{r}
 options(crayon.enabled = TRUE)
 knitr::knit_hooks$set(output = function(x, options){
-  paste0(
-    "<pre class=\"r-output\"><code>",
-    fansi::sgr_to_html(x = x),
-    "</code></pre>"
-  )
+  x <- gsub("<", "&lt;", gsub(">", "&gt;", x))
+  sprintf("<pre><code>%s</code></pre>", fansi::sgr_to_html(x))
 })
-```{r}
-library(pillar)
-pillar(x=c(-1, 100, 200))
+tibble::tibble(a=c(.01, -0.1, 0.51, -.99), b=c(1000, 0, 1e-5, -999))
 ```
