@@ -3,12 +3,12 @@
 ## v0.2.3
 
 * [#44](https://github.com/brodieG/fansi/issues/44): include bright color
-  support in HTML conversion.
+  support in HTML conversion (h/t [Will Landau](https://github.com/wlandau)).
 
 ## v0.2.2
 
 * Remove valgrind uninitialized string errors by avoiding `strsplit`.
-* Reduce R dependency to >= 3.2.x (@gaborcsardi)
+* Reduce R dependency to >= 3.2.x (@gaborcsardi).
 * Update tests to handle potential change in `substr` behavior starting with
   R-3.6.
 
