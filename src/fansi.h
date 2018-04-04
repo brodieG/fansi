@@ -381,10 +381,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   #if defined(R_VERSION) && R_VERSION >= R_Version(3, 2, 0)
   #else
+  typedef enum {Bytes, Chars, Width} nchar_type;
   int R_nchar(SEXP string, nchar_type type_,
-              Rboolean allowNA, Rboolean keepNA, const char* msg_name) {
-    return 1;
-  };
+              Rboolean allowNA, Rboolean keepNA, const char* msg_name);
   #endif
 
 #endif
