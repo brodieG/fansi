@@ -154,6 +154,18 @@ computations, but for simplicity and also because R and our terminal do not
 do it properly either we are deferring the issue for now.
 }
 
+\section{R 3.1.0 support}{
+
+
+Nominally you can build and run this package in R 3.1.  It should mostly
+work, but please be aware we do not run the test suite under that version of
+R.  One key degraded capability is width computation of wide-display
+characters.  Under R 3.1 \code{fansi} will assume every character is 1 display
+width.  Additionally, \code{fansi} may not always report malformed UTF-8
+sequences the as it usually does.  One exception to this is \code{nchar_ctl} as
+that is just a thin wrapper around \code{base::nchar}.
+}
+
 \section{Miscellaneous}{
 
 

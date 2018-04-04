@@ -23,6 +23,7 @@
 #' This is the only difference between `strtrim_ctl` and `strtrim2_ctl`.
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
+#'   Width calculations will not work correctly with R < 3.2.0.
 #' @export
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.

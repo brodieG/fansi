@@ -156,6 +156,16 @@
 #' computations, but for simplicity and also because R and our terminal do not
 #' do it properly either we are deferring the issue for now.
 #'
+#' @section R 3.1.0 support:
+#'
+#' Nominally you can build and run this package in R 3.1.  It should mostly
+#' work, but please be aware we do not run the test suite under that version of
+#' R.  One key degraded capability is width computation of wide-display
+#' characters.  Under R 3.1 `fansi` will assume every character is 1 display
+#' width.  Additionally, `fansi` may not always report malformed UTF-8
+#' sequences the as it usually does.  One exception to this is `nchar_ctl` as
+#' that is just a thin wrapper around `base::nchar`.
+#'
 #' @section Miscellaneous:
 #'
 #' The native code in this package assumes that all strings are NULL terminated
