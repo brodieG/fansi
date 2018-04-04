@@ -2,6 +2,9 @@
 
 ## v0.2.3
 
+* [#45](https://github.com/brodieG/fansi/issues/45): add capability to run under
+  R 3.1 [hadley](https://github.com/hadley), [Gábor
+  Csárdi](https://github.com/gaborcsardi).
 * [#44](https://github.com/brodieG/fansi/issues/44): include bright color
   support in HTML conversion (h/t [Will Landau](https://github.com/wlandau)).
 
