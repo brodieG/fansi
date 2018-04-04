@@ -14,8 +14,11 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-## Internal functions, used primarily for testing
+## Tracks whether we are running in R > 3.2 or not (see .onLoad)
 
+R.ver.gte.3.2 <- NA
+
+## Internal functions, used primarily for testing
 
 ## A version of unique that isn't terrible for very long strings that are
 ## actually the same

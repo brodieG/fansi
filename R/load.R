@@ -39,6 +39,7 @@
 
   existing.opts <- options()
   options(.default.opts[setdiff(names(.default.opts), names(existing.opts))])
+  R.ver.gte.3.2 <<- getRversion() >= "3.2.0"
 }
 
 .onUnload <- function(libpath) {
