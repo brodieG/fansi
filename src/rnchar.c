@@ -25,9 +25,11 @@
 
 #if defined(R_VERSION) && R_VERSION >= R_Version(3, 2, 0)
 #else
+// nocov start
 int R_nchar(SEXP string, nchar_type type_,
             Rboolean allowNA, Rboolean keepNA, const char* msg_name) {
   return 1;
 };
+// nocov end
 #endif
 

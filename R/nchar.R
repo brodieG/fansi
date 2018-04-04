@@ -32,6 +32,7 @@
 #'
 #' @inheritParams strip_ctl
 #' @inheritParams base::nchar
+#' @note the `keepNA` parameter is ignored for R < 3.2.
 #' @export
 #' @param type character string, one of "chars", or "width".  For byte counts
 #'   use [base::nchar].
@@ -92,7 +93,7 @@ nchar_ctl <- function(
 
   R.ver.gte.3.2 <- R.ver.gte.3.2 # "import" symbol from namespace
   if(R.ver.gte.3.2) nchar(stripped, type=type, allowNA=allowNA, keepNA=keepNA)
-  else nchar(stripped, type=type, allowNA=allowNA)
+  else nchar(stripped, type=type, allowNA=allowNA) # nocov
 }
 #' @export
 #' @rdname nchar_ctl

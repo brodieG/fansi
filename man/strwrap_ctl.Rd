@@ -97,6 +97,7 @@ computing tab positions.
 }
 \note{
 Non-ASCII strings are converted to and returned in UTF-8 encoding.
+Width calculations will not work correctly with R < 3.2.0.
 }
 \examples{
 hello.1 <- "hello \\033[41mred\\033[49m world"
