@@ -41,6 +41,7 @@ This is the only difference between \code{strtrim_ctl} and \code{strtrim2_ctl}.
 }
 \note{
 Non-ASCII strings are converted to and returned in UTF-8 encoding.
+Width calculations will not work correctly with R < 3.2.0.
 }
 \examples{
 strtrim_ctl("\\033[42mHello world\\033[m", 6)

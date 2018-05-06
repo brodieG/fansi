@@ -73,16 +73,18 @@ static int color_to_html(
     "808080", "FF0000", "00FF00", "FFFF00",
     "0000FF", "FF00FF", "00FFFF", "FFFFFF"
   };
-  // According to <https://en.wikipedia.org/wiki/ANSI_escape_code> this is the
-  // putty default
+  // According to <https://en.wikipedia.org/wiki/ANSI_escape_code> these are the
+  // putty defaults
 
   const char * std_8[8] = {
     "000000", "BB0000", "00BB00", "BBBB00",
     "0000BB", "BB00BB", "00BBBB", "BBBBBB"
   };
   const char * std_5[6] = {"00", "5F", "87", "AF", "D7", "FF"};
-  int res_bytes = 0;
-
+  const char * bright[8] = {
+    "555555", "FF5555", "55FF55", "FFFF55",
+    "5555FF", "FF55FF", "55FFFF", "FFFFFF"
+  };
   char * buff_track = buff;
 
   if(color == 9) {
@@ -91,7 +93,6 @@ static int color_to_html(
     );
   } else if(color >= 0 && color < 10) {
     *(buff_track++) = '#';
-    res_bytes = 7;
 
     if(color == 8) {
       if(color_extra[0] == 2) {
@@ -136,17 +137,27 @@ static int color_to_html(
         }
       } else
         // nocov start
-        error("Internal Error: invalid color code; contact maintainer.");
+        error(
+          "Internal Error: invalid 256 or tru color code; contact maintainer."
+        );
         // nocov end
     } else {
       memcpy(buff_track, std_8[color], 6);
       buff_track += 6;
     }
+  } else if(
+    (color >= 90 && color <= 97) ||
+    (color >= 100 && color <= 107)
+  ) {
+    *(buff_track++) = '#';
+    int c_bright = color >= 100 ? color - 100 : color - 90;
+    memcpy(buff_track, bright[c_bright], 6);
+    buff_track += 6;
   } else {
     error("Internal Error: invalid color code %d", color); // nocov
   }
-  *buff_track = '0';
-  return res_bytes;
+  *buff_track = 0;
+  return (int) (buff_track - buff);
 }
 
 static int state_as_html(struct FANSI_state state, int first, char * buff) {

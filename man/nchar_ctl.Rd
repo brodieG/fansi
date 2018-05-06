@@ -61,6 +61,9 @@ Sequences} count in \code{nzchar_ctl}, but you can always resort to
 These functions will warn if either malformed or non-CSI escape sequences are
 encountered, as these may be incorrectly interpreted.
 }
+\note{
+the \code{keepNA} parameter is ignored for R < 3.2.
+}
 \examples{
 nchar_ctl("\\033[31m123\\a\\r")
 ## with some wide characters

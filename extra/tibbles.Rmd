@@ -1,0 +1,23 @@
+---
+title: "ANSI CSI SGR -> HTML"
+output: rmarkdown::html_vignette
+---
+
+With `fansi::sgr_to_html` we can convert ANSI control sequence formatted text
+into CSS formatted HTML.  We illustrate here by adding `fansi::sgr_to_html` to a `knitr` hook to make a colorful rendered `Rmd` document:
+
+```{r}
+knitr::knit_hooks$set(output = function(x, options){
+  x <- htmltools::htmlEscape(x)
+  sprintf("<pre><code>%s</code></pre>", fansi::sgr_to_html(x))
+})
+options(crayon.enabled = TRUE)
+```
+
+Some colorful examples:
+
+```{r}
+tidyverse::tidyverse_logo()
+as.tibble(setNames(replicate(4, runif(5, -1e6, 1e6), simplify=FALSE), 1:4))
+crayon::show_ansi_colors()
+```
