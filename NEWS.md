@@ -8,6 +8,8 @@
 * [#44](https://github.com/brodieG/fansi/issues/44): include bright color
   support in HTML conversion (h/t [Will Landau](https://github.com/wlandau)).
 
+Other minor fixes ([#43](https://github.com/brodieG/fansi/issues/43), [#46](https://github.com/brodieG/fansi/issues/46)).
+
 ## v0.2.2
 
 * Remove valgrind uninitialized string errors by avoiding `strsplit`.
