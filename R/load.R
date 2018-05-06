@@ -39,6 +39,14 @@
 
   existing.opts <- options()
   options(.default.opts[setdiff(names(.default.opts), names(existing.opts))])
+  R.ver.gte.3.2 <<- getRversion() >= "3.2.0"
+  if(!R.ver.gte.3.2) {
+    packageStartupMessage(
+      "`fansi` capabilities are degraded with R versions less than 3.2.0.  In ",
+      "particular string width calculations will be incorrect for wide and/or ",
+      "zero width characters."
+    )
+  }
 }
 
 .onUnload <- function(libpath) {

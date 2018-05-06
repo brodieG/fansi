@@ -1,0 +1,13 @@
+---
+title: "fansi tibble"
+output: rmarkdown::html_vignette
+---
+
+```{r}
+options(crayon.enabled = TRUE)
+knitr::knit_hooks$set(output = function(x, options){
+  x <- gsub("<", "&lt;", gsub(">", "&gt;", x))
+  sprintf("<pre><code>%s</code></pre>", fansi::sgr_to_html(x))
+})
+tibble::tibble(a=c(.01, -0.1, 0.51, -.99), b=c(1000, 0, 1e-5, -999))
+```

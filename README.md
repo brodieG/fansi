@@ -41,14 +41,14 @@ character ("\033" is a single character, the ESC).  If we try to split the
 string after the space with `substr` things go wrong in several ways:
 
 
-![bad substring](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/substr.png)
+![bad substring](https://raw.githubusercontent.com/brodieG/fansi/master/extra/images/substr.png)
 
 We end up cutting up our string in the middle of "World", and worse the
 formatting bleeds out of our string into the prompt line.  Compare to what
 happens when we use `substr_ctl`, the _Control Sequence_ aware version of
 `substr`:
 
-![good substring](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/substr_ctl.png)
+![good substring](https://raw.githubusercontent.com/brodieG/fansi/master/extra/images/substr_ctl.png)
 
 ## Functions
 
@@ -77,7 +77,7 @@ and `strsplit_ctl` is somewhat slower than the corresponding base functions.
 You can translate ANSI CSI SGR formatted strings into their HTML counterparts
 with `sgr_to_html`:
 
-![translate to html](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/sgr_to_html.png)
+![translate to html](https://raw.githubusercontent.com/brodieG/fansi/master/extra/images/sgr_to_html.png)
 
 ## Installation
 
@@ -90,17 +90,22 @@ install.packages('fansi')
 
 It has no dependencies.
 
-For the development version use: `devtools::install_github('brodieg/fansi')` or:
+For the development version use:
+`devtools::install_github('brodieg/fansi@development')` or:
 
 
 ```r
-fansi.dl <- tempfile()
-fansi.uz <- tempfile()
-download.file('https://github.com/brodieG/fansi/archive/master.zip', fansi.dl)
-unzip(fansi.dl, exdir=fansi.uz)
-install.packages(file.path(fansi.uz, 'fansi-master'), repos=NULL, type='source')
-unlink(c(fansi.dl, fansi.uz))
+f.dl <- tempfile()
+f.uz <- tempfile()
+github.url <- 'https://github.com/brodieG/fansi/archive/development.zip'
+download.file(github.url, f.dl)
+unzip(f.dl, exdir=f.uz)
+install.packages(file.path(f.uz, 'fansi-development'), repos=NULL, type='source')
+unlink(c(f.dl, f.uz))
 ```
+
+There is no guarantee that development versions are stable or even working, but
+you can check build status on Travis: [![](https://travis-ci.org/brodieG/fansi.svg?branch=development)](https://travis-ci.org/brodieG/fansi).
 
 ## Related Packages and References
 
@@ -132,11 +137,11 @@ unlink(c(fansi.dl, fansi.uz))
   [Rhub](https://github.com/r-hub), without which testing bugs on R-devel and
   other platforms would be a nightmare.
 * [Tomas Kalibera](https://github.com/kalibera) for
-  [rchk](https://github.com/kalibera/rchk) and rcnst to help detect errors in
-  compiled code.
+  [rchk](https://github.com/kalibera/rchk) and the accompanying vagrant image,
+  and rcnst to help detect errors in compiled code.
 * [Winston Chang](https://github.com/wch) for the
-  [r-debug](https://hub.docker.com/r/wch1/r-debug/) docker container,
-  especially now that valgrind is no longer working on my OSX system.
+  [r-debug](https://hub.docker.com/r/wch1/r-debug/) docker container, in
+  particular because of the valgrind level 2 instrumented version of R.
 * Hadley Wickham for [devtools](https://cran.r-project.org/package=devtools) and
   [roxygen2](https://cran.r-project.org/package=roxygen2).
 * [Yihui Xie](https://github.com/yihui) for
