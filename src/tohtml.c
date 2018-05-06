@@ -85,8 +85,6 @@ static int color_to_html(
     "555555", "FF5555", "55FF55", "FFFF55",
     "5555FF", "FF55FF", "55FFFF", "FFFFFF"
   };
-  int res_bytes = 0;
-
   char * buff_track = buff;
 
   if(color == 9) {
@@ -95,7 +93,6 @@ static int color_to_html(
     );
   } else if(color >= 0 && color < 10) {
     *(buff_track++) = '#';
-    res_bytes = 7;
 
     if(color == 8) {
       if(color_extra[0] == 2) {
