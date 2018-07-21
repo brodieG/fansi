@@ -32,7 +32,7 @@ calculations.
 
 \emph{Control Sequences} starting with ESC are assumed to be two characters
 long (including the ESC) unless they are of the CSI variety, in which case
-their length is computed as per the \href{http://www.ecma-international.org/publications/standards/Ecma-048.htm}{ECMA-48specification}.
+their length is computed as per the \href{http://www.ecma-international.org/publications/standards/Ecma-048.htm}{ECMA-48 specification}.
 There are non-CSI escape sequences that may be longer than two characters,
 but \code{fansi} will (incorrectly) treat them as if they were two characters
 long.
@@ -87,7 +87,7 @@ interpret or that might conflict with terminal capabilities.  You can turn
 off warnings via the \code{warn} parameter or via the "fansi.warn" global option.
 
 \code{fansi} can work around "C0" tab control characters by turning them into
-spaces first with \link{tabs_as_spaces} or with the \code{tabs.as.spaces} parameter
+spaces first with \code{\link[=tabs_as_spaces]{tabs_as_spaces()}} or with the \code{tabs.as.spaces} parameter
 available in some of the \code{fansi} functions.
 
 We chose to interpret ANSI CSI SGR sequences because this reduces how
@@ -154,15 +154,16 @@ computations, but for simplicity and also because R and our terminal do not
 do it properly either we are deferring the issue for now.
 }
 
-\section{R 3.1.0 support}{
+\section{R 3.1 support}{
 
 
 Nominally you can build and run this package in R 3.1.  It should mostly
 work, but please be aware we do not run the test suite under that version of
 R.  One key degraded capability is width computation of wide-display
-characters.  Under R 3.1 \code{fansi} will assume every character is 1 display
-width.  Additionally, \code{fansi} may not always report malformed UTF-8
-sequences the as it usually does.  One exception to this is \code{nchar_ctl} as
+characters.  Under early versions of R, \code{fansi} will assume that every
+character has a display width of 1.
+Additionally, \code{fansi} may not always report malformed UTF-8
+sequences as it usually does.  One exception to this is \code{\link[=nchar_ctl]{nchar_ctl()}} as
 that is just a thin wrapper around \code{base::nchar}.
 }
 
