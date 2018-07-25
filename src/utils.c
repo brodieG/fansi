@@ -116,7 +116,7 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
     int found_this = 0;
 
     // If not normal ASCII or UTF8, examine whether we need to found
-    if(!((x_val > 31 && x_val < 127) || x_val < 0)) {
+    if(!((x_val > 31 && x_val < 127) || x_val < 0 || x_val > 127)) {
       if(!found) {
         // Keep resetting strip start point until we find something we want to
         // mark
