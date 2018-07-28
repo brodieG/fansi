@@ -104,8 +104,8 @@ install.packages(file.path(f.uz, 'fansi-development'), repos=NULL, type='source'
 unlink(c(f.dl, f.uz))
 ```
 
-There is no guarantee that development versions are stable or even working, but
-you can check build status on Travis: [![](https://travis-ci.org/brodieG/fansi.svg?branch=development)](https://travis-ci.org/brodieG/fansi).
+There is no guarantee that development versions are stable or even working
+(Travis build status: [![](https://travis-ci.org/brodieG/fansi.svg?branch=development)](https://travis-ci.org/brodieG/fansi)).  The master branch typically mirrors CRAN and should be stable.
 
 ## Related Packages and References
 

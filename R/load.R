@@ -40,6 +40,8 @@
   existing.opts <- options()
   options(.default.opts[setdiff(names(.default.opts), names(existing.opts))])
   R.ver.gte.3.2 <<- getRversion() >= "3.2.0"
+}
+.onAttach <- function(libname, pkgname) {
   if(!R.ver.gte.3.2) {
     packageStartupMessage(
       "`fansi` capabilities are degraded with R versions less than 3.2.0.  In ",
@@ -48,7 +50,6 @@
     )
   }
 }
-
 .onUnload <- function(libpath) {
   library.dynam.unload("fansi", libpath)
 }
