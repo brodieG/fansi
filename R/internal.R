@@ -16,7 +16,7 @@
 
 ## Tracks whether we are running in R > 3.2 or not (see .onLoad)
 
-R.ver.gte.3.2 <- NA
+R.ver.gte.3.2.2 <- NA
 
 ## Internal functions, used primarily for testing
 
