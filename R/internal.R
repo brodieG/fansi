@@ -14,7 +14,7 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-## Tracks whether we are running in R > 3.2 or not (see .onLoad)
+## Tracks whether we are running in R > 3.2.2 or not (see .onLoad)
 
 R.ver.gte.3.2.2 <- NA
 

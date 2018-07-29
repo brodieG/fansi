@@ -1,8 +1,8 @@
 # to avoid variability on terminals with different capabilities
 # plus generally random options being set
 
-if(getRversion() < "3.2.0") {
-  warning("Cannot run tests with R version less than 3.2.0.")
+if(getRversion() < "3.2.2") {
+  warning("Cannot run tests with R version less than 3.2.2.")
 } else if(suppressWarnings(require('unitizer'))) {
   old.opt <- options(
     fansi.tabs.as.spaces=FALSE,

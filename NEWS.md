@@ -1,5 +1,10 @@
 # fansi Release Notes
 
+## v0.2.4
+
+* [#47](https://github.com/brodieG/fansi/issues/47): compatibility with R
+  versions 3.2.0 and 3.2.1 (@andreadega).
+
 ## v0.2.3
 
 * [#45](https://github.com/brodieG/fansi/issues/45): add capability to run under
