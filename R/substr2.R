@@ -46,7 +46,7 @@
 #'   interpreted, particularly if you are getting unexpected results.
 #' @param x a character vector or object that can be coerced to character.
 #' @param type character(1L) partial matching `c("chars", "width")`, although
-#'   `type="width"` only works correctly with R >= 3.2.0.
+#'   `type="width"` only works correctly with R >= 3.2.2.
 #' @param round character(1L) partial matching
 #'   `c("start", "stop", "both", "neither")`, controls how to resolve
 #'   ambiguities when a `start` or `stop` value in "width" `type` mode falls
