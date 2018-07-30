@@ -76,6 +76,7 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
 
   int invalid_ansi = 0;
   int invalid_idx = 0;
+  char * chr_buff;
 
   for(i = 0; i < len; ++i) {
     FANSI_interrupt(i);
@@ -86,8 +87,14 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
     int has_ansi = 0;
     const char * chr = CHAR(x_chr);
     const char * chr_track = chr;
-    char * chr_buff;
     char * res_track = NULL, * res_start = NULL;
+
+    // We re-use the allocated buffer for every string in the character
+    // vector, which is why we re-assign to chr_buff here.  chr_buff will be
+    // allocated in the loop below the first time it is needed, but we need to
+    // re-assign re_start / res_track .
+
+    res_start = res_track = chr_buff;
 
     while(1) {
       csi = FANSI_find_esc(chr_track, what_int);
@@ -132,10 +139,10 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
             );
             // nocov end
 
+          // The character buffer is large enough for the largest element in the
+          // vector, and is re-used for every element in the vector.
+
           chr_buff = (char *) R_alloc(mem_req + 1, sizeof(char));
-        }
-        if(!has_ansi) {
-          has_ansi = 1;
           res_start = res_track = chr_buff;
         }
         // Is memcpy going to cause problems again by reading past end of
