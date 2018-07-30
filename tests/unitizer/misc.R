@@ -71,3 +71,9 @@ unitizer_sect("enc check", {
   Encoding(y) <- "bytes"
   fansi:::check_enc(y, 1)
 })
+unitizer_sect("what as int", {
+  fansi:::what_as_int(c(1, 2, 3, 4, 5))
+  fansi:::what_as_int(c(2, 3, 4, 5))
+  fansi:::what_as_int(c(1, 2, 3, 7))
+  fansi:::what_as_int(c(2, 3, 7))
+})

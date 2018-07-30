@@ -346,6 +346,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_check_enc_ext(SEXP x, SEXP i);
 
   int FANSI_what_as_int(SEXP what);
+  SEXP FANSI_what_as_int_ext(SEXP what);
+
   void FANSI_size_buff(struct FANSI_buff * buff, size_t size);
 
   int FANSI_pmatch(

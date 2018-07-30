@@ -278,19 +278,28 @@ SEXP FANSI_digits_in_int_ext(SEXP y) {
   return(res);
 }
 /*
- * Compresses the what vector into a single integer
+ * Compresses the what vector into a single integer by encoding each value of
+ * what as a bit.
  */
 
 int FANSI_what_as_int(SEXP what) {
   int what_int = 0;
   int flip_bits = 0;
   for(R_xlen_t i = 0; i < XLENGTH(what); ++i) {
+    // -2 because what is 1 indexed (from R), and position 1 means "all", so we
+    // need to shift by 1 for the 0 index, and then by one more for the position
+    // occupied by "all" that really means flip bits
     int what_val = INTEGER(what)[i] - 2;
+    if(what_val > 4)
+      error("Internal Error: max what value allowed is 4.");
     if(what_val < 0) flip_bits = 1;
     else what_int |= 1 << what_val;
   }
   if(flip_bits) what_int ^= FANSI_STRIP_ALL;
   return what_int;
+}
+SEXP FANSI_what_as_int_ext(SEXP what) {
+  return ScalarInteger(FANSI_what_as_int(what));
 }
 /*
  * Partial match a single string byte by byte
