@@ -63,3 +63,11 @@ unitizer_sect("C funs", {
 
   which(as.logical(diff(as.numeric(sorted))))
 })
+unitizer_sect("enc check", {
+  x <- y <- "He\x9f"
+  Encoding(x) <- "latin1"
+  fansi:::check_enc(x, 1)
+
+  Encoding(y) <- "bytes"
+  fansi:::check_enc(y, 1)
+})

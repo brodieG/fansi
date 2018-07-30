@@ -46,3 +46,8 @@ sort_chr <- function(x) .Call(FANSI_sort_chr, x)
 
 set_int_max <- function(x) .Call(FANSI_set_int_max, as.integer(x)[1])
 get_int_max <- function(x) .Call(FANSI_get_int_max)  # nocov for debug only
+
+## exposed internals for testing
+
+check_enc <- function(x, i) .Call(FANSI_check_enc, x, as.integer(i)[1])
+
