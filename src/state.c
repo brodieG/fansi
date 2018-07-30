@@ -66,7 +66,9 @@ struct FANSI_state FANSI_state_init_full(
 
   R_xlen_t i_len = XLENGTH(term_cap);
   for(R_xlen_t i = 0; i < i_len; ++i) {
-    if(term_int[i] > 32 || term_int[i] < 1)
+    // we limit term cap to 31 to avoid potential bit shift issues with a signed
+    // int.  In practice we shouldn't get anywhere close to this anwyay.
+    if(term_int[i] > 31 || term_int[i] < 1)
       // nocov start
       error("Internal Error: bit flag value for term_cap illegal.");
       // nocov end
