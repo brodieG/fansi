@@ -42,6 +42,7 @@ R_CallMethodDef callMethods[] = {
   {"sort_chr", (DL_FUNC) &FANSI_sort_chr, 1},
   {"set_int_max", (DL_FUNC) &FANSI_set_int_max, 1},
   {"get_int_max", (DL_FUNC) &FANSI_get_int_max, 0},
+  {"check_enc", (DL_FUNC) &FANSI_check_enc_ext, 2},
   {NULL, NULL, 0}
 };
 

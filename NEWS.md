@@ -2,6 +2,8 @@
 
 ## v0.2.4
 
+* [#48](https://github.com/brodieG/fansi/issues/48): malformed called to error
+  in FANSI_check_enc (@msannell).
 * [#47](https://github.com/brodieG/fansi/issues/47): compatibility with R
   versions 3.2.0 and 3.2.1 (@andreadega).
 
