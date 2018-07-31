@@ -23,25 +23,30 @@ sequences]().  Unfortunately these sequences are not recognized by web browser,
 and instead end up rendering weirdly, as in this example:
 
 ```{r}
-knitr::knit_hooks$get()
-```
-```{r}
-cat("\033[42mhello world\033[0m")  # this should output in green
+cat("\033[42mday > night\033[0m")  # this should output in green
 ```
 Instead of the expected:
 
 ```{r echo=FALSE, child='chunks/knit-hook.Rmd'}
 ```
-```{r echo=FALSE}
-cat("\033[42mhello world\033[0m")
+```{r echo=FALSE, fansi=TRUE, results='asis'}
+cat("\033[42mday > night\033[0m")
 ```
+
+## Output as HTML
 
 Among other things `fansi` provides the `sgr_to_html` function which converts
 the ANSI CSI SGR sequences into HTML markup:
 
 ```{r}
-fansi::sgr_to_html("\033[42mhello world\n\033[0m")
-cat(fansi::sgr_to_html("\033[42mhello world\033[0m"))
+fansi::sgr_to_html("\033[42mday > night\n\033[0m")
+```
+
+This however is insufficient as `knitr` / `rmarkdown` will escape all the HTML
+markup so the browser does not interpret it:
+
+```{r}
+cat(fansi::sgr_to_html("\033[42mday > night\033[0m"))
 ```
 
 ## Knitr Integration

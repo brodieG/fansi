@@ -3,12 +3,7 @@ html_esc <- function(x) {
   x <- gsub("<", "&lt;", x)
   x <- gsub(">", "&gt;", x)
 }
-sgr_wrap <- function(x, options){
-  paste0(
-    "<pre class=\"r-fansi-output\"><code>",
-    fansi::sgr_to_html(x = html_esc(x)),
-    "</code></pre>"
-  )
-}
-knitr::knit_hooks$set(output = sgr_wrap)
+knitr::knit_hooks$set(fansi = function(before, options, envir) {
+  if (before) fansi::sgr_to_html(x = html_esc(x))
+})
 ```
