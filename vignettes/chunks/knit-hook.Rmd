@@ -1,0 +1,10 @@
+```{r}
+sgr_wrap <- function(x, options){
+  paste0(
+    "<pre class=\"r-output\"><code>",
+    fansi::sgr_to_html(x = htmltools::htmlEscape(x)),
+    "</code></pre>"
+  )
+}
+knitr::knit_hooks$set(output = sgr_wrap, warning=sgr_wrap, message=sgr_wrap)
+```
