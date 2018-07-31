@@ -110,6 +110,7 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
         invalid_idx = i + 1;
       }
       if(csi.len) {
+        has_ansi = 1;
         if(csi.start - chr > FANSI_int_max - csi.len)
           // nocov start
           error(
@@ -119,7 +120,9 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
           );
           // nocov end
 
-        // As soon as we encounter ansi, allocate vector to track what has ansi
+        // As soon as we encounter ansi in any of the character vector elements,
+        // allocate vector to track what has ansi
+
         if(!any_ansi) {
           any_ansi = 1;
 
