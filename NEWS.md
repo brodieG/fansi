@@ -4,7 +4,9 @@
 
 * [#53](https://github.com/brodieG/fansi/issues/53): fix for systems where
   'char' is signed (found and fixed by @QuLogic).
-* [#48](https://github.com/brodieG/fansi/issues/48): malformed called to error
+* [#52](https://github.com/brodieG/fansi/issues/52): fix bad compilation under
+  ICC (@kazumits).
+* [#48](https://github.com/brodieG/fansi/issues/48): malformed call to error
   in FANSI_check_enc (@msannell).
 * [#47](https://github.com/brodieG/fansi/issues/47): compatibility with R
   versions 3.2.0 and 3.2.1 (@andreadega).
