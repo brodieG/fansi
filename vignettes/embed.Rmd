@@ -23,120 +23,38 @@ sequences]().  Unfortunately these sequences are not recognized by web browser,
 and instead end up rendering weirdly, as in this example:
 
 ```{r}
-cat(`"\033[42mhello world\n\033[0m"`)  # this should output in green
+knitr::knit_hooks$get()
 ```
-
+```{r}
+cat("\033[42mhello world\033[0m")  # this should output in green
+```
 Instead of the expected:
 
-
-## Basic Requirements
-
-Any R chunks that produce diffs should include the `results='asis'` option,
-e.g.:
-
-    ```{r results='asis'}
-    # R code here
-    ```
-
-## Easy but Ugly
-
-This is what a basic code block should look like:
-
-    ```{r results='asis'}
-    cat(                                 # output to screen
-      as.character(                      # convert to diff to character vector
-        diffPrint(                       # run diff
-          1:5, 2:6,
-          format="html",                 # specify html output
-          style=list(
-            html.output="diff.w.style"   # configure html style
-          )
-    ) ) )
-    ```
-
-Here we use this same code as an actual markdown R code block:
-
-```{r results='asis'}
-cat(
-  as.character(
-    diffPrint(
-      1:5, 2:6,
-      format="html",
-      style=list(html.output="diff.w.style")
-) ) )
+```{r echo=FALSE, child='chunks/knit-hook.Rmd'}
+```
+```{r echo=FALSE}
+cat("\033[42mhello world\033[0m")
 ```
 
-This is an ugly implementation because it produces illegal HTML.  The styles are
-directly embedded in the body of the document, outside of the HEAD tags.
-Although this is illegal HTML, it seems to work in most browsers.  Another
-problem is that every diff you use in your document will inject the same CSS
-code over and over.
+Among other things `fansi` provides the `sgr_to_html` function which converts
+the ANSI CSI SGR sequences into HTML markup:
 
-## A Cleaner Option
-
-A better option is to provide the CSS directly by modifying the `output`
-portion of the [YAML
-header](https://bookdown.org/yihui/rmarkdown/r-package-vignette.html):
-
-```
----
-output:
-    rmarkdown::html_vignette:
-        toc: true
-        css: !expr diffobj::diffobj_css()
----
+```{r}
+fansi::sgr_to_html("\033[42mhello world\n\033[0m")
+cat(fansi::sgr_to_html("\033[42mhello world\033[0m"))
 ```
 
-In reality you will probably want to specify multiple CSS files, including the
-original `rmarkdown` one:
+## Knitr Integration
 
-```
----
-output:
-    rmarkdown::html_vignette:
-        toc: true
-        css:
-          - !expr diffobj::diffobj_css()
-          - !expr system.file("rmarkdown", "templates", "html_vignette", "resources", "vignette.css", package = "rmarkdown")
----
-```
-
-Once you set this up then you can use:
-
-```{r results='asis'}
-cat(
-  as.character(
-    diffPrint(
-      1:5, 2:6,
-      format="html",
-      style=list(html.output="diff.only")   # notice this changed
-) ) )
-```
-
-This will omit the CSS, but since we include it via the YAML everything should
-work as expected.
-
-## Use Options
-
-Almost all `diffobj` parameters can be specified via options:
+`knitr` allows us to set hooks that process the output of evaluated R code
+chunks:
 
 ```{r eval=FALSE}
-options(
-  diffobj.format="html",
-  diffobj.style=list(html.output="diff.only")
-)
+knitr::knit_hooks$set(output = FUN)
 ```
-```{r echo=FALSE}
-old.opts <- options(
-  diffobj.format="html",
-  diffobj.style=list(html.output="diff.only")
-)
-```
-Then you can just run the diff as normal:
-```{r results='asis'}
-cat(as.character(diffPrint(1:5, 2:6)))
-```
-```{r echo=FALSE}
-options(old.opts)
-```
+
+`FUN` is a function that takes the raw screen output (captured as text) produced
+by the R code chunk and modifies it for display in the Styling
+
+## Styling
 
