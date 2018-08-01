@@ -29,7 +29,7 @@ Instead of the expected:
 
 ```{r echo=FALSE, child='chunks/knit-hook.Rmd'}
 ```
-```{r echo=FALSE, fansi=TRUE, results='asis'}
+```{r echo=FALSE, fansi=TRUE}
 cat("\033[42mday > night\033[0m")
 ```
 
