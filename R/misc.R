@@ -203,7 +203,8 @@ html_code_block <- function(x, class='fansi-output') {
 #'
 #' This function overrides the knitr output hooks and replaces them with ones
 #' that convert ANSI CSI SGR sequences into HTML.  It is intended for use in
-#' `rmarkdown` vignettes and similar.
+#' `rmarkdown` vignettes and similar.  It also will output to stdout a STYLE
+#' HTML block.  These two actions are side effects.
 #'
 #' @export
 #' @param knit_hooks list, you should pass the `knitr::knit_hooks` object; we
@@ -212,7 +213,11 @@ html_code_block <- function(x, class='fansi-output') {
 #'   replaced, defaults to 'output', but can contain also contain 'warning', and
 #'   'error'
 #' @param proc.fun function that will be applied to output that contains ANSI
-#'   CSI SGR sequences.
+#'   CSI SGR sequences.  Should accept parameters `x` and `class`, where `x` is
+#'   the output, and `class` is the CSS class that should be applied to
+#'   the <PRE><CODE> blocks the output will be placed in.
+#' @param style character a vector of CSS styles; these will be output inside
+#'   HTML <STYLE> tags as a side effect.
 #' @return named list with the prior output hooks for each of `which`
 #' @examples
 #' \dontrun{
@@ -221,7 +226,10 @@ html_code_block <- function(x, class='fansi-output') {
 
 fansi_knit_hooks <- function(
   hooks, which='output',
-  proc.fun=function(x) html_code_block(sgr_to_html(html_esc(x)))
+  proc.fun=function(x, class)
+    html_code_block(sgr_to_html(html_esc(x)), class=class),
+  class=sprintf("fansi fansi-%s", which),
+  style="PRE.fansi SPAN {padding-top: .25em; padding-bottom: .25em};"
 ) {
   if(
     !is.list(hooks) ||
@@ -237,20 +245,25 @@ fansi_knit_hooks <- function(
       "Argument `which` must be character containing values in ",
       deparse(which.vals)
     )
+  if(anyDuplicated(which))
+    stop(
+      "Argument `which` may not contain duplicate values (",
+      which[anyDuplicated(which)], ")."
+    )
 
-  which <- sort(unique(which))
   old.hook.list <- setNames(vector('list', length(which)), which)
   new.hook.list <- setNames(vector('list', length(which)), which)
   base.err <-
     "are you sure you passed `knitr::knit_hooks` as the `hooks` argument?"
 
-  make_hook <- function(old.hook) {
+  make_hook <- function(old.hook, class) {
     force(old.hook)
+    force(class)
     function(x, options) {
       # If the output has SGR in it, then convert to HTML and wrap
       # in PRE/CODE tags
 
-      if(any(has_sgr(x))) proc.fun(x)
+      if(any(has_sgr(x))) proc.fun(x=x, class=class)
 
       # If output doesn't have SGR, then use the default hook
 
@@ -277,11 +290,12 @@ fansi_knit_hooks <- function(
       )
       break
     }
-    new.hook.list[[i]] <- make_hook(old.hook)
+    new.hook.list[[i]] <- make_hook(old.hook, class[[i]])
     old.hook.list[[i]] <- old.hook
   }
   if(inherits(try(do.call(hooks[['set']], new.hook.list)), 'try-error'))
     warning("Failure while trying to set hooks; see prior error; ", base.err)
 
+  writeLines(c("<STYLE type='text/css' scoped>", style, "</STYLE>"))
   old.hook.list
 }

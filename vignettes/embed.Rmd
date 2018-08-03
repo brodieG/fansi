@@ -33,12 +33,10 @@ writeLines(sgr.string)  # this should output in yellow and blue
 ```
 Instead of the expected:
 
-```{r echo=FALSE, child='./chunks/helper-funs.Rmd'}
-```
-```{r echo=FALSE, child='./chunks/knit-hook.Rmd'}
-```
 ```{r echo=FALSE}
+old.hooks <- fansi::fansi_knit_hooks(knitr::knit_hooks)
 writeLines(sgr.string)
+do.call(knitr::knit_hooks[['set']], old.hooks)
 ```
 
 ## Output as HTML
@@ -69,15 +67,15 @@ knitr::knit_hooks$set(output = FUN)
 by the R code chunk and modifies it for further processing by `pandoc` into the
 final output.
 
-In our case we prefer to only handle output that contains ANSI CSI SGR, and let
-`knitr` do its thing the rest of the time.  The best way we have found to do
-this is unfortunately a little awkward:
+`fansi` provides `fansi_knit_hooks` which automatically sets the hooks that
+process the ANSI CSI SGR into HTML for you provided you pass it the
+`knitr::knit_hooks` object:
 
-```{r eval=TRUE, child='./chunks/knit-hook.Rmd'}
+```{r comment="", results='asis'}
+fansi::fansi_knit_hooks(knitr::knit_hooks)
 ```
 
-The helper functions `html_esc` and `code_block` are defined in the
-[appendix](#appendix).
+See `?fansi::fansi_knit_hooks` for details.
 
 Now, we get the desired output:
 
@@ -98,14 +96,5 @@ These are the helper functions we used in our knit hook.  A couple of notes;
   which may cause code output with SGR in it to be formatted differently than
   code output without it.
 
-```{r child='./chunks/helper-funs.Rmd', echo=TRUE, eval=TRUE}
-```
-
 blay blah blah
 
-```{css}
-PRE.r-fansi-output SPAN {
-  padding-top: .25em;
-  padding-bottom: .25em;
-}
-```
