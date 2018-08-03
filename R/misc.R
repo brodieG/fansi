@@ -204,4 +204,89 @@ html_code_block <- function(x, html.esc=TRUE, class='fansi-output') {
   )
 }
 
+#' Set an Output Hook to Convert ANSI CSI SGR to HTML
+#'
+#' This function overrides the knitr output hooks and replaces them with ones
+#' that convert ANSI CSI SGR sequences into HTML.  It is intended for use in
+#' `rmarkdown` vignettes and similar.
+#'
+#' @export
+#' @param knit_hooks list, you should pass the `knitr::knit_hooks` object; we
+#'   require you pass this to avoid a run-time dependency on `knitr`.
+#' @param which character vector with the names of the hooks that should be
+#'   replaced, defaults to 'output', but can contain also contain 'warning', and
+#'   'error'
+#' @param proc.fun function that will be applied to output that contains ANSI
+#'   CSI SGR sequences.
+#' @return named list with the prior output hooks for each of `which`
+#' @examples
+#' \dontrun{
+#' if(require(knitr)) fansi_knit_hooks(knit::knit_hooks)
+#' }
 
+fansi_knit_hooks <- function(
+  hooks, which='output',
+  proc.fun=function(x) html_code_block(sgr_to_html(html_esc(x)))
+) {
+  if(
+    !is.list(hooks) ||
+    !all(c('get', 'set') %in% names(hooks)) ||
+    !is.function(hooks[['get']]) ||
+    !is.function(hooks[['set']])
+  )
+    stop("Argument `hooks` does not appear to be `knitr::knit_hooks`.")
+
+  which.vals <- c('output', 'warning', 'error', 'message')
+  if(!is.character(which) || !all(which %in% which.vals))
+    stop(
+      "Argument `which` must be character containing values in ",
+      deparse(which.vals)
+    )
+
+  which <- sort(unique(which))
+  old.hook.list <- setNames(vector('list', length(which)), which)
+  new.hook.list <- setNames(vector('list', length(which)), which)
+  base.err <-
+    "are you sure you passed `knitr::knit_hooks` as the `hooks` argument?"
+
+  make_hook <- function(old.hook) {
+    force(old.hook)
+    function(x, options) {
+      # If the output has SGR in it, then convert to HTML and wrap
+      # in PRE/CODE tags
+
+      if(any(has_sgr(x))) proc.fun(x)
+
+      # If output doesn't have SGR, then use the default hook
+
+      else old.hook(x, options)
+    }
+  }
+  for(i in seq_along(which)) {
+    hook.name <- which[i]
+    old.hook <- try(hooks$get(hook.name))
+    base.err.2 <-
+      sprintf("Quitting after setting %d/%d hooks", (i - 1), length(which))
+
+    if(inherits(old.hook, 'try-error')) {
+      warning(
+        "Failed retrieving '", hook.name, "' hook from the knit hooks; ",
+        base.err, base.err.2
+      )
+      break
+    }
+    if(!is.function(old.hook)) {
+      warning(
+        "Retrieved '", hook.name, "' hook is not a function; ",
+        base.err, base.err.2
+      )
+      break
+    }
+    new.hook.list[[i]] <- make_hook(old.hook)
+    old.hook.list[[i]] <- old.hook
+  }
+  if(inherits(try(do.call(hooks[['set']], new.hook.list)), 'try-error'))
+    warning("Failure while trying to set hooks; see prior error; ", base.err)
+
+  old.hook.list
+}
