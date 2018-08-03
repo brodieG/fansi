@@ -176,8 +176,6 @@ html_esc <- function(x) {
 #'
 #' @export
 #' @param x character vector
-#' @param html.esc TRUE (default) or FALSE, whether to apply [`html_esc`] to `x`
-#'   prior to wrapping in PRE and CODE HTML tags.
 #' @param class character vectors of classes to apply to the PRE HTML tags.  It
 #'   is the users responsibility to ensure the classes are valid CSS class
 #'   names.
@@ -188,19 +186,16 @@ html_esc <- function(x) {
 #' html_code_block(c("day > night", "hello world"), html.esc=FALSE)
 #' html_code_block(c("day > night", "hello world"), class="pretty")
 
-html_code_block <- function(x, html.esc=TRUE, class='fansi-output') {
+html_code_block <- function(x, class='fansi-output') {
   if(!is.character(x))
     stop("Argument `x` must be character, is ", typeof(x), ".")
-  if(!isTRUE(html.esc %in% c(TRUE, FALSE)))
-    stop("Argument `html.esc` must be TRUE or FALSE")
   if(!is.character(class))
     stop("Argument `class` must be character, is ", typeof(class), ".")
 
   class.all <- sprintf("class=\"%s\"", paste0(class, collapse=" "))
-  x.proc <- if(html.esc) html_esc(x) else x
 
   sprintf(
-    "<PRE %s><CODE>%s</CODE></PRE>", class.all, paste0(x.proc, collapse='\n')
+    "<PRE %s><CODE>%s</CODE></PRE>", class.all, paste0(x, collapse='\n')
   )
 }
 
