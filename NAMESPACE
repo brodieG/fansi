@@ -3,6 +3,8 @@
 export(fansi_lines)
 export(has_ctl)
 export(has_sgr)
+export(html_code_block)
+export(html_esc)
 export(nchar_ctl)
 export(nzchar_ctl)
 export(sgr_to_html)

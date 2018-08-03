@@ -147,3 +147,61 @@ fansi_lines <- function(txt, step=1) {
   txt.c[nz] <- sprintf(tpl, fg[nz], bg[nz], txt[nz])
   txt.c
 }
+#' Escape Characters With Special HTML Meaning
+#'
+#' This allows displaying strings that contain them in HTML without disrupting
+#' the HTML.  It is assumed that the string to be escaped does not contain
+#' actual HTML as this function would destroy it.
+#'
+#' @export
+#' @param x character vector
+#' @return character vector consisting of `x`, but with the "<", ">", and "&"
+#'   characters replaced by their HTML entity codes.
+#' @examples
+#' html_esc("day > night")
+#' html_esc("<SPAN>hello world</SPAN>")
+
+html_esc <- function(x) {
+  if(!is.character(x))
+    stop("Argument `x` must be character, is ", typeof(x), ".")
+  gsub("<", "&lt;", gsub(">", "&gt;", gsub("&", "&amp;", x)))
+}
+
+#' Wrap Character Vector in PRE and CODE Tags
+#'
+#' This simulates what `rmarkdown` / `knitr` do to the output of an R markdown
+#' chunk, at least as of `rmarkdown` 1.10.  It is useful when we override the
+#' `knitr` output hooks so that we can have a result that still looks as if it
+#' was run by `knitr`.
+#'
+#' @export
+#' @param x character vector
+#' @param html.esc TRUE (default) or FALSE, whether to apply [`html_esc`] to `x`
+#'   prior to wrapping in PRE and CODE HTML tags.
+#' @param class character vectors of classes to apply to the PRE HTML tags.  It
+#'   is the users responsibility to ensure the classes are valid CSS class
+#'   names.
+#' @return character(1L) `x`, with <PRE> and <CODE> tags applied and collapsed
+#'   into one line with newlines as the line separator.
+#' @examples
+#' html_code_block(c("day > night", "hello world"))
+#' html_code_block(c("day > night", "hello world"), html.esc=FALSE)
+#' html_code_block(c("day > night", "hello world"), class="pretty")
+
+html_code_block <- function(x, html.esc=TRUE, class='fansi-output') {
+  if(!is.character(x))
+    stop("Argument `x` must be character, is ", typeof(x), ".")
+  if(!isTRUE(html.esc %in% c(TRUE, FALSE)))
+    stop("Argument `html.esc` must be TRUE or FALSE")
+  if(!is.character(class))
+    stop("Argument `class` must be character, is ", typeof(class), ".")
+
+  class.all <- sprintf("class=\"%s\"", paste0(class, collapse=" "))
+  x.proc <- if(html.esc) html_esc(x) else x
+
+  sprintf(
+    "<PRE %s><CODE>%s</CODE></PRE>", class.all, paste0(x.proc, collapse='\n')
+  )
+}
+
+

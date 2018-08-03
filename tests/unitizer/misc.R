@@ -77,3 +77,25 @@ unitizer_sect("what as int", {
   fansi:::what_as_int(c(1, 2, 3, 7))
   fansi:::what_as_int(c(2, 3, 7))
 })
+unitizer_sect("HTML helper", {
+  html_esc(character())
+  html_esc(1:10)
+  html_esc(NA_character_)
+  html_esc("<he&llo>")
+  html_esc("ow&wo")
+  html_esc(c("hello", "wor<ld>s", NA, ""))
+  html_esc("<<<<")
+
+  txt <- c(
+    "day > night",
+    "hello world"
+  )
+  html_code_block(character())
+  html_code_block(txt)
+  html_code_block(1:10)
+  html_code_block(txt, html.esc=FALSE)
+  html_code_block(txt, html.esc=logical())
+  html_code_block(txt, html.esc=NULL)
+  html_code_block(txt, class=c('not-fansi', 'plain'))
+  html_code_block(txt, class=NULL)
+})
