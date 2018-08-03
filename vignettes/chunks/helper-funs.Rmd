@@ -1,0 +1,14 @@
+```{r}
+## Escape HTML entities in raw *input* so they are not interpreted by the
+## browser
+
+html_esc <- function(x) gsub(">", "&gt;", gsub("<", "&lt;", x))
+
+## Wrap the *output* in <code> and <pre> tags.
+
+code_block <- function(x)
+  sprintf(
+    "<pre class=\"r-fansi-output\"><code>%s</code></pre>",
+    paste0(x, collapse="\n")
+  )
+```

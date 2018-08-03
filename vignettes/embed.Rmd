@@ -5,6 +5,7 @@ output:
     rmarkdown::html_vignette:
         toc: true
         css: styles.css
+mathjax: local
 vignette: >
   %\VignetteIndexEntry{Embed Diffs in R Markdown}
   %\VignetteEngine{knitr::rmarkdown}
@@ -17,20 +18,27 @@ library(fansi)
 
 ## Introduction
 
-Over the past few years color has been gaining traction in the R terminal.  
+Over the past few years color has been gaining traction in the R terminal.
 Gábor Csárdi's [crayon]() made it easy to format text with [ANSI CSI SGR
 sequences]().  Unfortunately these sequences are not recognized by web browser,
 and instead end up rendering weirdly, as in this example:
 
 ```{r}
-cat("\033[42mday > night\033[0m")  # this should output in green
+sgr.string <- c(
+  "\033[43;34mday > night\033[0m",
+  "\033[44;33mdawn < dusk\033[0m",
+  "boom boom"
+)
+writeLines(sgr.string)  # this should output in yellow and blue
 ```
 Instead of the expected:
 
-```{r echo=FALSE, child='chunks/knit-hook.Rmd'}
+```{r echo=FALSE, child='./chunks/helper-funs.Rmd'}
 ```
-```{r echo=FALSE, fansi=TRUE}
-cat("\033[42mday > night\033[0m")
+```{r echo=FALSE, child='./chunks/knit-hook.Rmd'}
+```
+```{r echo=FALSE}
+writeLines(sgr.string)
 ```
 
 ## Output as HTML
@@ -39,17 +47,16 @@ Among other things `fansi` provides the `sgr_to_html` function which converts
 the ANSI CSI SGR sequences into HTML markup:
 
 ```{r}
-fansi::sgr_to_html("\033[42mday > night\n\033[0m")
+fansi::sgr_to_html(sgr.string)
 ```
 
-This however is insufficient as `knitr` / `rmarkdown` will escape all the HTML
-markup so the browser does not interpret it:
-
-```{r}
-cat(fansi::sgr_to_html("\033[42mday > night\033[0m"))
-```
+This however is insufficient as `knitr` / `rmarkdown`  / `pandoc` escape all the
+HTML markup so the browser does not interpret.
 
 ## Knitr Integration
+
+Thankfully Yihui Xie built a lot of flexibility into `knitr` so we can override
+the existing output handler
 
 `knitr` allows us to set hooks that process the output of evaluated R code
 chunks:
@@ -59,7 +66,46 @@ knitr::knit_hooks$set(output = FUN)
 ```
 
 `FUN` is a function that takes the raw screen output (captured as text) produced
-by the R code chunk and modifies it for display in the Styling
+by the R code chunk and modifies it for further processing by `pandoc` into the
+final output.
+
+In our case we prefer to only handle output that contains ANSI CSI SGR, and let
+`knitr` do its thing the rest of the time.  The best way we have found to do
+this is unfortunately a little awkward:
+
+```{r eval=TRUE, child='./chunks/knit-hook.Rmd'}
+```
+
+The helper functions `html_esc` and `code_block` are defined in the
+[appendix](#appendix).
+
+Now, we get the desired output:
+
+```{r}
+writeLines(sgr.string)
+```
 
 ## Styling
 
+## Appendix
+
+These are the helper functions we used in our knit hook.  A couple of notes;
+
+* You should use a proper HTML escape function such as `htmltools::htmlEscape`;
+  we do not do so here to avoid an additional dependency.
+* As far as we can tell `pandoc` when outputting chunk output uses unclassed
+  &lt;PRE&gt; and &lt;CODE&gt; HTML tags.  In the future this might change,
+  which may cause code output with SGR in it to be formatted differently than
+  code output without it.
+
+```{r child='./chunks/helper-funs.Rmd', echo=TRUE, eval=TRUE}
+```
+
+blay blah blah
+
+```{css}
+PRE.r-fansi-output SPAN {
+  padding-top: .25em;
+  padding-bottom: .25em;
+}
+```

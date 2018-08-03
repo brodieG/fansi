@@ -16,6 +16,11 @@ body {
   line-height: 1.5;
 }
 
+/*
+PRE.r-fansi-output {
+  line-height: 1.2;
+}
+*/
 #header {
   text-align: center;
 }

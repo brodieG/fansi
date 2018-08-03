@@ -1,18 +1,17 @@
 ```{r}
-html_esc <- function(x) {
-  x <- gsub("<", "&lt;", x)
-  x <- gsub(">", "&gt;", x)
-}
 old.hook <- knitr::knit_hooks$get("output")
 new.hook <- function(x, options){
-  if(isTRUE(options[['fansi']])) {
-    paste0(
-      "<pre class=\"r-fansi-output\"><code>",
-      fansi::sgr_to_html(x = html_esc(x)),
-      "</code></pre>"
-    )
-  } else {
-    old.hook(x, options)
+
+  # If the output has SGR in it, then:
+  if(any(fansi::has_sgr(x))) {
+    code_block(                  # add <PRE> & <CODE> HTML tags
+      fansi::sgr_to_html(        # convert SGR to HTML
+        x = html_esc(x)          # escape HTML special chars in input
+    ) )
+  }
+  # If output doesn't have SGR, then:
+  else {
+    old.hook(x, options)         # use the default output hook
   }
 }
 knitr::knit_hooks$set(output = new.hook)
