@@ -41,7 +41,7 @@
 #' _Control Sequences_ starting with ESC are assumed to be two characters
 #' long (including the ESC) unless they are of the CSI variety, in which case
 #' their length is computed as per the [ECMA-48
-#' specification](http://www.ecma-international.org/publications/standards/Ecma-048.htm).
+#'  specification](http://www.ecma-international.org/publications/standards/Ecma-048.htm).
 #' There are non-CSI escape sequences that may be longer than two characters,
 #' but `fansi` will (incorrectly) treat them as if they were two characters
 #' long.
