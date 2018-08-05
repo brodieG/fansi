@@ -84,9 +84,9 @@ CSS styles.
     styles <- c(
       getOption('fansi.style'),  # default style
       "PRE.fansi CODE {background-color: transparent;}",
-      "PRE.fansi-error {background-color: #DD5555;}",
-      "PRE.fansi-warning {background-color: #DDDD55;}",
-      "PRE.fansi-message {background-color: #EEEEEE;}"
+      "PRE.fansi-error {background-color: #DDAAAA;}",
+      "PRE.fansi-warning {background-color: #DDDDAA;}",
+      "PRE.fansi-message {background-color: #AAAADD;}"
     )
     old.hooks <- c(
       old.hooks,
@@ -100,9 +100,9 @@ CSS styles.
 styles <- c(
   getOption('fansi.style'),  # default style
   "PRE.fansi CODE {background-color: transparent;}",
-  "PRE.fansi-error {background-color: #DD5555;}",
-  "PRE.fansi-warning {background-color: #DDDD55;}",
-  "PRE.fansi-message {background-color: #EEEEEE;}"
+  "PRE.fansi-error {background-color: #DDAAAA;}",
+  "PRE.fansi-warning {background-color: #DDDDAA;}",
+  "PRE.fansi-message {background-color: #AAAADD;}"
 )
 old.hooks <- c(
   old.hooks,
