@@ -198,24 +198,41 @@ html_code_block <- function(x, class='fansi-output') {
     "<PRE %s><CODE>%s</CODE></PRE>", class.all, paste0(x, collapse='\n')
   )
 }
-
-#' Set an Output Hook to Convert ANSI CSI SGR to HTML
+#' Set an Output Hook to Display ANSI CSI SGR in Rmarkdown
 #'
-#' This is a convenince function is designed to be called within an `rmarkdown`
-#' document.  It overrides the knitr output hooks and replaces them with ones
-#' that convert ANSI CSI SGR sequences into HTML.  It is intended for use in
-#' `rmarkdown` vignettes and similar.  It also will output to stdout a STYLE
-#' HTML block.  These two actions are side effects.
+#' This is a convenience function designed for use within an `rmarkdown`
+#' document.  It overrides the `knitr` output hooks by using
+#' `knitr::knit_hooks$set`.  It replaces the hooks with ones that convert ANSI
+#' CSI SGR sequences into HTML.  In addition to replacing the hook functions,
+#' this will output a <STYLE> HTML block to stdout.  These two actions are side
+#' effects as a result of which R chunks in the `rmarkdown` document that
+#' contain ANSI CSI SGR are shown in their HTML equivalent form.
+#'
+#' The replacement hook function tests for the presence of ANSI CSI SGR
+#' sequences in chunk output with [`has_sgr`], and if it is detected then
+#' processes it with the user provided `proc.fun`.  Chunks that do not contain
+#' ANSI CSI SGR are passed off to the previously set hook function.  The default
+#' `proc.fun` will run the output through [`html_esc`], [`sgr_to_html`], and
+#' finally [`html_code_block`].
 #'
 #' If you require more control than this function provides you can set the
 #' `knitr` hooks manually with `knitr::knit_hooks$set`.
 #'
+#' @note Since we do not formally import the `knitr` functions we do not
+#'   guarantee that this function will always work properly with `knitr` /
+#'   `rmarkdown`.
+#'
 #' @export
-#' @param knit_hooks list, you should pass the `knitr::knit_hooks` object; we
+#' @seealso [`sgr_to_html`], [`html_esc`], [`html_code_block`], ADD LINKS TO
+#'   KNITR DOCUMENTATION.
+#' @param knit_hooks list, this should the be `knitr::knit_hooks` object; we
 #'   require you pass this to avoid a run-time dependency on `knitr`.
 #' @param which character vector with the names of the hooks that should be
-#'   replaced, defaults to 'output', but can contain also contain
+#'   replaced, defaults to 'output', but can also contain values
 #'   'message', 'warning', and 'error'.
+#' @param class character the CSS class to give the output chunks.  Each type of
+#'   output chunk specified in `which` will be matched position-wise to the
+#'   classes specified here.  This vector should be the same length as `which`.
 #' @param proc.fun function that will be applied to output that contains ANSI
 #'   CSI SGR sequences.  Should accept parameters `x` and `class`, where `x` is
 #'   the output, and `class` is the CSS class that should be applied to
@@ -227,23 +244,39 @@ html_code_block <- function(x, class='fansi-output') {
 #' @return named list with the prior output hooks for each of `which`.
 #' @examples
 #' \dontrun{
-#' if(require(knitr)) {
-#'   ## Change output hook to handle ANSI CSI SGR
-#'   old.hooks <- set_knit_hooks(knit::knit_hooks)
-#'   ## Do the same with the warning, error, and message, and add styles for
-#'   ## them
+#' ## The following should be done within an `rmarkdown` document chunk with
+#' ## chunk option `results` set to 'asis' and the chunk option `comment` set
+#' ## to ''.
 #'
-#'   styles <- c(
-#'     "PRE.fansi-error {background-color: #DD5555;}",
-#'     "PRE.fansi-warning {background-color: #DDDD55;}",
-#'     "PRE.fansi-message {background-color: #EEEEEE;}"
-#'   )
-#'   old.hooks.2 <- set_knit_hooks(
-#'     knit::hooks, which=c('warning', 'error', 'message'), style=styles
-#'   )
-#'   ## Restore Hooks
-#'   do.call(knitr::knit_hooks$set, c(old.hooks, old.hooks.2))
-#' }
+#' ```{r comment="", results='asis', echo=FALSE}
+#' ## Change the "output" hook to handle ANSI CSI SGR
+#'
+#' old.hooks <- set_knit_hooks(knitr::knit_hooks)
+#'
+#' ## Do the same with the warning, error, and message, and add styles for
+#' ## them (alternatively we could have done output as part of this call too)
+#'
+#' styles <- c(
+#'   getOption('fansi.style'),  # default style
+#'   "PRE.fansi CODE {background-color: transparent;}",
+#'   "PRE.fansi-error {background-color: #DD5555;}",
+#'   "PRE.fansi-warning {background-color: #DDDD55;}",
+#'   "PRE.fansi-message {background-color: #EEEEEE;}"
+#' )
+#' old.hooks <- c(
+#'   old.hooks,
+#'   fansi::set_knit_hooks(
+#'     knitr::knit_hooks,
+#'     which=c('warning', 'error', 'message'),
+#'     style=styles
+#' ) )
+#' ```
+#' ## You may restore old hooks with the following chunk
+#'
+#' ## Restore Hooks
+#' ```{r}
+#' do.call(knitr::knit_hooks$set, old.hooks)
+#' ```
 #' }
 
 set_knit_hooks <- function(
@@ -274,12 +307,17 @@ set_knit_hooks <- function(
     )
 
   if(
-    !is.function(prof.fun) ||
+    !is.function(proc.fun) ||
     !all(c('x', 'class') %in% names(formals(proc.fun)))
   )
     stop(
-      "Argument `prof.cun` must be a function with formals named ",
+      "Argument `proc.fun` must be a function with formals named ",
       "`x` and `class`."
+    )
+  if(!is.character(class) || (length(class) != length(which)))
+    stop(
+      "Argument `class` should be a character vector the same length as ",
+      "`which`."
     )
 
   old.hook.list <- setNames(vector('list', length(which)), which)
