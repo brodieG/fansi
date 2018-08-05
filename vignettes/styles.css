@@ -15,12 +15,6 @@ body {
   font-size: 14px;
   line-height: 1.5;
 }
-
-/*
-PRE.r-fansi-output {
-  line-height: 1.2;
-}
-*/
 #header {
   text-align: center;
 }
@@ -136,6 +130,8 @@ pre {
   */
   margin: 5px 0px;
   padding: 5px 10px;
+}
+code {
   font-size: 85%;
 }
 pre:not([class]) {

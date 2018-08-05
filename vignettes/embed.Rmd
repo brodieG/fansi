@@ -1,5 +1,5 @@
 ---
-title: "ANSI CSI SGR Text in Vignettes"
+title: "ANSI CSI SGR in Rmarkdown"
 author: "Brodie Gaslam"
 output:
     rmarkdown::html_vignette:
@@ -7,7 +7,7 @@ output:
         css: styles.css
 mathjax: local
 vignette: >
-  %\VignetteIndexEntry{Embed Diffs in R Markdown}
+  %\VignetteIndexEntry{ANSI CSI SGR in Rmarkdown}
   %\VignetteEngine{knitr::rmarkdown}
   \usepackage[utf8]{inputenc}
 ---
@@ -16,85 +16,120 @@ vignette: >
 library(fansi)
 ```
 
-## Introduction
+## ANSI CSI SGR to HTML
 
 Over the past few years color has been gaining traction in the R terminal.
 Gábor Csárdi's [crayon]() made it easy to format text with [ANSI CSI SGR
-sequences]().  Unfortunately these sequences are not recognized by web browser,
-and instead end up rendering weirdly, as in this example:
+sequences]().  Unfortunately these sequences are not recognized by web browsers,
+and instead end up rendering weirdly:
 
 ```{r}
 sgr.string <- c(
   "\033[43;34mday > night\033[0m",
-  "\033[44;33mdawn < dusk\033[0m",
-  "boom boom"
+  "\033[44;33mdawn < dusk\033[0m"
 )
-writeLines(sgr.string)  # this should output in yellow and blue
-```
-Instead of the expected:
-
-```{r echo=FALSE}
-old.hooks <- fansi::fansi_knit_hooks(knitr::knit_hooks)
 writeLines(sgr.string)
-do.call(knitr::knit_hooks[['set']], old.hooks)
 ```
 
-## Output as HTML
-
-Among other things `fansi` provides the `sgr_to_html` function which converts
-the ANSI CSI SGR sequences into HTML markup:
+`fansi` provides the `sgr_to_html` function which converts the ANSI CSI SGR
+sequences into HTML markup:
 
 ```{r}
 fansi::sgr_to_html(sgr.string)
 ```
 
-This however is insufficient as `knitr` / `rmarkdown`  / `pandoc` escape all the
-HTML markup so the browser does not interpret.
+As is obvious from the above output this on its own is insufficient.
+We need to instruct `knitr` / `rmarkdown` to interpret the HTML as HTML.
 
-## Knitr Integration
+## Knitr Hooks
 
 Thankfully Yihui Xie built a lot of flexibility into `knitr` so we can override
-the existing output handler
-
-`knitr` allows us to set hooks that process the output of evaluated R code
-chunks:
+the existing output handler with:
 
 ```{r eval=FALSE}
 knitr::knit_hooks$set(output = FUN)
 ```
 
-`FUN` is a function that takes the raw screen output (captured as text) produced
-by the R code chunk and modifies it for further processing by `pandoc` into the
-final output.
+Any output from an R hunk will be passed to `FUN`, and the return value of that
+will be passed on to `pandoc` for final processing.
 
-`fansi` provides `fansi_knit_hooks` which automatically sets the hooks that
-process the ANSI CSI SGR into HTML for you provided you pass it the
-`knitr::knit_hooks` object:
+`fansi` takes advantage of this in `set_knit_hooks`.  It automatically sets
+the hooks that process the ANSI CSI SGR, and also outputs some CSS styles.  You
+should call it with the:
 
-```{r comment="", results='asis'}
-fansi::fansi_knit_hooks(knitr::knit_hooks)
+  * Chunk option `results` set to "asis".
+  * Chunk option `comments` set to "".
+  * The `knitr::knit_hooks` object as an argument (this allows `fansi` to avoid
+    a run-time dependency on `knitr`).
+
+The corresponding `rmarkdown` hunk should look as follows:
+
+    ```{r comment="", results='asis'}
+    old.hooks <- fansi::set_knit_hooks(knitr::knit_hooks)
+    ```
+
+```{r comment='', results='asis', echo=FALSE}
+old.hooks <- fansi::set_knit_hooks(knitr::knit_hooks)
 ```
-
-See `?fansi::fansi_knit_hooks` for details.
-
 Now, we get the desired output:
 
 ```{r}
 writeLines(sgr.string)
 ```
 
-## Styling
+We can also set hooks for the other types of outputs, and add some additional
+CSS styles.
 
-## Appendix
+    ```{r comment="", results='asis'}
+    styles <- c(
+      getOption('fansi.style'),  # default style
+      "PRE.fansi CODE {background-color: transparent;}",
+      "PRE.fansi-error {background-color: #DD5555;}",
+      "PRE.fansi-warning {background-color: #DDDD55;}",
+      "PRE.fansi-message {background-color: #EEEEEE;}"
+    )
+    old.hooks <- c(
+      old.hooks,
+      fansi::set_knit_hooks(
+        knitr::knit_hooks,
+        which=c('warning', 'error', 'message'),
+        style=styles
+    ) )
+    ```
+```{r comment="", results='asis', echo=FALSE}
+styles <- c(
+  getOption('fansi.style'),  # default style
+  "PRE.fansi CODE {background-color: transparent;}",
+  "PRE.fansi-error {background-color: #DD5555;}",
+  "PRE.fansi-warning {background-color: #DDDD55;}",
+  "PRE.fansi-message {background-color: #EEEEEE;}"
+)
+old.hooks <- c(
+  old.hooks,
+  fansi::set_knit_hooks(
+    knitr::knit_hooks,
+    which=c('warning', 'error', 'message'),
+    style=styles
+) )
+```
+```{r error=TRUE}
+message(paste0(sgr.string, collapse="\n"))
+warning(paste0(c("", sgr.string), collapse="\n"))
+stop(paste0(c("", sgr.string), collapse="\n"))
+```
 
-These are the helper functions we used in our knit hook.  A couple of notes;
+You can restore the old hooks at any time in your document with:
 
-* You should use a proper HTML escape function such as `htmltools::htmlEscape`;
-  we do not do so here to avoid an additional dependency.
-* As far as we can tell `pandoc` when outputting chunk output uses unclassed
-  &lt;PRE&gt; and &lt;CODE&gt; HTML tags.  In the future this might change,
-  which may cause code output with SGR in it to be formatted differently than
-  code output without it.
+```{r}
+do.call(knitr::knit_hooks$set, old.hooks)
+writeLines(sgr.string)
+```
 
-blay blah blah
+See `?fansi::set_knit_hooks` for details.
+
+## Crayon
+
+If you use `crayon` to generate your ANSI CSI SGR style strings you may need to
+set `options(crayon.enabled=TRUE)`, as in some cases `crayon` suppresses the
+markdown if it think it is not outputting to a ANSI CSI SGR aware terminal.
 
