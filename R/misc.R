@@ -167,7 +167,7 @@ html_esc <- function(x) {
   gsub("<", "&lt;", gsub(">", "&gt;", gsub("&", "&amp;", x)))
 }
 
-#' Wrap Character Vector in PRE and CODE Tags
+#' Format Character Vector for Display as Code in HTML
 #'
 #' This simulates what `rmarkdown` / `knitr` do to the output of an R markdown
 #' chunk, at least as of `rmarkdown` 1.10.  It is useful when we override the
@@ -179,12 +179,11 @@ html_esc <- function(x) {
 #' @param class character vectors of classes to apply to the PRE HTML tags.  It
 #'   is the users responsibility to ensure the classes are valid CSS class
 #'   names.
-#' @return character(1L) `x`, with <PRE> and <CODE> tags applied and collapsed
-#'   into one line with newlines as the line separator.
+#' @return character(1L) `x`, with <PRE> and <CODE> HTML tags applied and
+#'   collapsed into one line with newlines as the line separator.
 #' @examples
-#' html_code_block(c("day > night", "hello world"))
-#' html_code_block(c("day > night", "hello world"), html.esc=FALSE)
-#' html_code_block(c("day > night", "hello world"), class="pretty")
+#' html_code_block(c("hello world"))
+#' html_code_block(c("hello world"), class="pretty")
 
 html_code_block <- function(x, class='fansi-output') {
   if(!is.character(x))
@@ -223,8 +222,10 @@ html_code_block <- function(x, class='fansi-output') {
 #'   `rmarkdown`.
 #'
 #' @export
-#' @seealso [`sgr_to_html`], [`html_esc`], [`html_code_block`], ADD LINKS TO
-#'   KNITR DOCUMENTATION.
+#' @seealso [`has_sgr`], [`sgr_to_html`], [`html_esc`], [`html_code_block`],
+#'   [`knitr` output hooks](https://yihui.name/knitr/hooks/#output-hooks),
+#'   [embedding CSS in
+#'   Rmd](https://bookdown.org/yihui/rmarkdown/language-engines.html#javascript-and-css).
 #' @param knit_hooks list, this should the be `knitr::knit_hooks` object; we
 #'   require you pass this to avoid a run-time dependency on `knitr`.
 #' @param which character vector with the names of the hooks that should be
@@ -241,6 +242,7 @@ html_code_block <- function(x, class='fansi-output') {
 #'   HTML <STYLE> tags as a side effect.  The default value is designed to
 #'   ensure that there is no visible gap in background color with lines with
 #'   height 1.5 (as is the default setting in `rmarkdown` documents v1.1).
+#' @param .test TRUE or FALSE, for internal testing use only.
 #' @return named list with the prior output hooks for each of `which`.
 #' @examples
 #' \dontrun{
@@ -284,7 +286,8 @@ set_knit_hooks <- function(
   proc.fun=function(x, class)
     html_code_block(sgr_to_html(html_esc(x)), class=class),
   class=sprintf("fansi fansi-%s", which),
-  style=getOption("fansi.css")
+  style=getOption("fansi.css"),
+  .test=FALSE
 ) {
   if(
     !is.list(hooks) ||
@@ -320,6 +323,9 @@ set_knit_hooks <- function(
       "`which`."
     )
 
+  if(!is.character(style))
+    stop("Argument `style` must be character.")
+
   old.hook.list <- setNames(vector('list', length(which)), which)
   new.hook.list <- setNames(vector('list', length(which)), which)
   base.err <-
@@ -350,7 +356,7 @@ set_knit_hooks <- function(
     hook.name <- which[i]
     old.hook <- try(hooks$get(hook.name))
     base.err.2 <-
-      sprintf("Quitting after setting %d/%d hooks", (i - 1), length(which))
+      sprintf("  Quitting after setting %d/%d hooks", (i - 1), length(which))
 
     if(inherits(old.hook, 'try-error')) {
       warning(
@@ -369,9 +375,14 @@ set_knit_hooks <- function(
     new.hook.list[[i]] <- make_hook(old.hook, class[[i]])
     old.hook.list[[i]] <- old.hook
   }
-  if(inherits(try(do.call(hooks[['set']], new.hook.list)), 'try-error'))
+  if(
+    inherits(
+      set.res <- try(do.call(hooks[['set']], new.hook.list)), 'try-error'
+  ) )
     warning("Failure while trying to set hooks; see prior error; ", base.err)
 
   writeLines(c("<STYLE type='text/css' scoped>", style, "</STYLE>"))
-  old.hook.list
+
+  if(.test) list(old.hooks=old.hook.list, new.hooks=new.hook.list, res=set.res)
+  else old.hook.list
 }
