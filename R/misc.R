@@ -229,7 +229,7 @@ fansi_knit_hooks <- function(
   proc.fun=function(x, class)
     html_code_block(sgr_to_html(html_esc(x)), class=class),
   class=sprintf("fansi fansi-%s", which),
-  style="PRE.fansi SPAN {padding-top: .25em; padding-bottom: .25em};"
+  style=getOption("fansi.css")
 ) {
   if(
     !is.list(hooks) ||
