@@ -201,30 +201,52 @@ html_code_block <- function(x, class='fansi-output') {
 
 #' Set an Output Hook to Convert ANSI CSI SGR to HTML
 #'
-#' This function overrides the knitr output hooks and replaces them with ones
+#' This is a convenince function is designed to be called within an `rmarkdown`
+#' document.  It overrides the knitr output hooks and replaces them with ones
 #' that convert ANSI CSI SGR sequences into HTML.  It is intended for use in
 #' `rmarkdown` vignettes and similar.  It also will output to stdout a STYLE
 #' HTML block.  These two actions are side effects.
+#'
+#' If you require more control than this function provides you can set the
+#' `knitr` hooks manually with `knitr::knit_hooks$set`.
 #'
 #' @export
 #' @param knit_hooks list, you should pass the `knitr::knit_hooks` object; we
 #'   require you pass this to avoid a run-time dependency on `knitr`.
 #' @param which character vector with the names of the hooks that should be
-#'   replaced, defaults to 'output', but can contain also contain 'warning', and
-#'   'error'
+#'   replaced, defaults to 'output', but can contain also contain
+#'   'message', 'warning', and 'error'.
 #' @param proc.fun function that will be applied to output that contains ANSI
 #'   CSI SGR sequences.  Should accept parameters `x` and `class`, where `x` is
 #'   the output, and `class` is the CSS class that should be applied to
 #'   the <PRE><CODE> blocks the output will be placed in.
 #' @param style character a vector of CSS styles; these will be output inside
-#'   HTML <STYLE> tags as a side effect.
-#' @return named list with the prior output hooks for each of `which`
+#'   HTML <STYLE> tags as a side effect.  The default value is designed to
+#'   ensure that there is no visible gap in background color with lines with
+#'   height 1.5 (as is the default setting in `rmarkdown` documents v1.1).
+#' @return named list with the prior output hooks for each of `which`.
 #' @examples
 #' \dontrun{
-#' if(require(knitr)) fansi_knit_hooks(knit::knit_hooks)
+#' if(require(knitr)) {
+#'   ## Change output hook to handle ANSI CSI SGR
+#'   old.hooks <- set_knit_hooks(knit::knit_hooks)
+#'   ## Do the same with the warning, error, and message, and add styles for
+#'   ## them
+#'
+#'   styles <- c(
+#'     "PRE.fansi-error {background-color: #DD5555;}",
+#'     "PRE.fansi-warning {background-color: #DDDD55;}",
+#'     "PRE.fansi-message {background-color: #EEEEEE;}"
+#'   )
+#'   old.hooks.2 <- set_knit_hooks(
+#'     knit::hooks, which=c('warning', 'error', 'message'), style=styles
+#'   )
+#'   ## Restore Hooks
+#'   do.call(knitr::knit_hooks$set, c(old.hooks, old.hooks.2))
+#' }
 #' }
 
-fansi_knit_hooks <- function(
+set_knit_hooks <- function(
   hooks, which='output',
   proc.fun=function(x, class)
     html_code_block(sgr_to_html(html_esc(x)), class=class),
@@ -251,6 +273,15 @@ fansi_knit_hooks <- function(
       which[anyDuplicated(which)], ")."
     )
 
+  if(
+    !is.function(prof.fun) ||
+    !all(c('x', 'class') %in% names(formals(proc.fun)))
+  )
+    stop(
+      "Argument `prof.cun` must be a function with formals named ",
+      "`x` and `class`."
+    )
+
   old.hook.list <- setNames(vector('list', length(which)), which)
   new.hook.list <- setNames(vector('list', length(which)), which)
   base.err <-
@@ -263,8 +294,15 @@ fansi_knit_hooks <- function(
       # If the output has SGR in it, then convert to HTML and wrap
       # in PRE/CODE tags
 
-      if(any(has_sgr(x))) proc.fun(x=x, class=class)
-
+      if(any(has_sgr(x))) {
+        res <- try(proc.fun(x=x, class=class))
+        if(inherits(res, "try-error"))
+          stop(
+            "Argument `proc.fun` for `set_knit_hooks` caused an error when ",
+            "processing output; see prior error."
+          )
+        res
+      }
       # If output doesn't have SGR, then use the default hook
 
       else old.hook(x, options)
