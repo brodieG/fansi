@@ -6,7 +6,8 @@
 \usage{
 set_knit_hooks(hooks, which = "output", proc.fun = function(x, class)
   html_code_block(sgr_to_html(html_esc(x)), class = class),
-  class = sprintf("fansi fansi-\%s", which), style = getOption("fansi.css"))
+  class = sprintf("fansi fansi-\%s", which), style = getOption("fansi.css"),
+  .test = FALSE)
 }
 \arguments{
 \item{which}{character vector with the names of the hooks that should be
@@ -26,6 +27,8 @@ classes specified here.  This vector should be the same length as \code{which}.}
 HTML <STYLE> tags as a side effect.  The default value is designed to
 ensure that there is no visible gap in background color with lines with
 height 1.5 (as is the default setting in \code{rmarkdown} documents v1.1).}
+
+\item{.test}{TRUE or FALSE, for internal testing use only.}
 
 \item{knit_hooks}{list, this should the be \code{knitr::knit_hooks} object; we
 require you pass this to avoid a run-time dependency on \code{knitr}.}
@@ -96,6 +99,7 @@ do.call(knitr::knit_hooks$set, old.hooks)
 }
 }
 \seealso{
-\code{\link{sgr_to_html}}, \code{\link{html_esc}}, \code{\link{html_code_block}}, ADD LINKS TO
-KNITR DOCUMENTATION.
+\code{\link{has_sgr}}, \code{\link{sgr_to_html}}, \code{\link{html_esc}}, \code{\link{html_code_block}},
+\href{https://yihui.name/knitr/hooks/#output-hooks}{knitr output hooks},
+\href{https://bookdown.org/yihui/rmarkdown/language-engines.html#javascript-and-css}{embedding CSS inRmd}.
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/misc.R
 \name{html_code_block}
 \alias{html_code_block}
-\title{Wrap Character Vector in PRE and CODE Tags}
+\title{Format Character Vector for Display as Code in HTML}
 \usage{
 html_code_block(x, class = "fansi-output")
 }
@@ -14,8 +14,8 @@ is the users responsibility to ensure the classes are valid CSS class
 names.}
 }
 \value{
-character(1L) \code{x}, with <PRE> and <CODE> tags applied and collapsed
-into one line with newlines as the line separator.
+character(1L) \code{x}, with <PRE> and <CODE> HTML tags applied and
+collapsed into one line with newlines as the line separator.
 }
 \description{
 This simulates what \code{rmarkdown} / \code{knitr} do to the output of an R markdown
@@ -24,7 +24,6 @@ chunk, at least as of \code{rmarkdown} 1.10.  It is useful when we override the
 was run by \code{knitr}.
 }
 \examples{
-html_code_block(c("day > night", "hello world"))
-html_code_block(c("day > night", "hello world"), html.esc=FALSE)
-html_code_block(c("day > night", "hello world"), class="pretty")
+html_code_block(c("hello world"))
+html_code_block(c("hello world"), class="pretty")
 }
