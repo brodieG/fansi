@@ -4,13 +4,10 @@
 \alias{html_code_block}
 \title{Wrap Character Vector in PRE and CODE Tags}
 \usage{
-html_code_block(x, html.esc = TRUE, class = "fansi-output")
+html_code_block(x, class = "fansi-output")
 }
 \arguments{
 \item{x}{character vector}
-
-\item{html.esc}{TRUE (default) or FALSE, whether to apply \code{\link{html_esc}} to \code{x}
-prior to wrapping in PRE and CODE HTML tags.}
 
 \item{class}{character vectors of classes to apply to the PRE HTML tags.  It
 is the users responsibility to ensure the classes are valid CSS class
