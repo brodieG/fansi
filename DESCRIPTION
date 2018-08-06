@@ -16,8 +16,11 @@ License: GPL (>=2)
 LazyData: true
 URL: https://github.com/brodieG/fansi
 BugReports: https://github.com/brodieG/fansi/issues
+VignetteBuilder: knitr
 Suggests:
-    unitizer
+    unitizer,
+    knitr,
+    rmarkdown
 RoxygenNote: 6.0.1
 Roxygen: list(markdown = TRUE)
 Collate:

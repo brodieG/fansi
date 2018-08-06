@@ -147,3 +147,242 @@ fansi_lines <- function(txt, step=1) {
   txt.c[nz] <- sprintf(tpl, fg[nz], bg[nz], txt[nz])
   txt.c
 }
+#' Escape Characters With Special HTML Meaning
+#'
+#' This allows displaying strings that contain them in HTML without disrupting
+#' the HTML.  It is assumed that the string to be escaped does not contain
+#' actual HTML as this function would destroy it.
+#'
+#' @export
+#' @param x character vector
+#' @return character vector consisting of `x`, but with the "<", ">", and "&"
+#'   characters replaced by their HTML entity codes.
+#' @examples
+#' html_esc("day > night")
+#' html_esc("<SPAN>hello world</SPAN>")
+
+html_esc <- function(x) {
+  if(!is.character(x))
+    stop("Argument `x` must be character, is ", typeof(x), ".")
+  gsub("<", "&lt;", gsub(">", "&gt;", gsub("&", "&amp;", x)))
+}
+
+#' Format Character Vector for Display as Code in HTML
+#'
+#' This simulates what `rmarkdown` / `knitr` do to the output of an R markdown
+#' chunk, at least as of `rmarkdown` 1.10.  It is useful when we override the
+#' `knitr` output hooks so that we can have a result that still looks as if it
+#' was run by `knitr`.
+#'
+#' @export
+#' @param x character vector
+#' @param class character vectors of classes to apply to the PRE HTML tags.  It
+#'   is the users responsibility to ensure the classes are valid CSS class
+#'   names.
+#' @return character(1L) `x`, with <PRE> and <CODE> HTML tags applied and
+#'   collapsed into one line with newlines as the line separator.
+#' @examples
+#' html_code_block(c("hello world"))
+#' html_code_block(c("hello world"), class="pretty")
+
+html_code_block <- function(x, class='fansi-output') {
+  if(!is.character(x))
+    stop("Argument `x` must be character, is ", typeof(x), ".")
+  if(!is.character(class))
+    stop("Argument `class` must be character, is ", typeof(class), ".")
+
+  class.all <- sprintf("class=\"%s\"", paste0(class, collapse=" "))
+
+  sprintf(
+    "<PRE %s><CODE>%s</CODE></PRE>", class.all, paste0(x, collapse='\n')
+  )
+}
+#' Set an Output Hook to Display ANSI CSI SGR in Rmarkdown
+#'
+#' This is a convenience function designed for use within an `rmarkdown`
+#' document.  It overrides the `knitr` output hooks by using
+#' `knitr::knit_hooks$set`.  It replaces the hooks with ones that convert ANSI
+#' CSI SGR sequences into HTML.  In addition to replacing the hook functions,
+#' this will output a <STYLE> HTML block to stdout.  These two actions are side
+#' effects as a result of which R chunks in the `rmarkdown` document that
+#' contain ANSI CSI SGR are shown in their HTML equivalent form.
+#'
+#' The replacement hook function tests for the presence of ANSI CSI SGR
+#' sequences in chunk output with [`has_sgr`], and if it is detected then
+#' processes it with the user provided `proc.fun`.  Chunks that do not contain
+#' ANSI CSI SGR are passed off to the previously set hook function.  The default
+#' `proc.fun` will run the output through [`html_esc`], [`sgr_to_html`], and
+#' finally [`html_code_block`].
+#'
+#' If you require more control than this function provides you can set the
+#' `knitr` hooks manually with `knitr::knit_hooks$set`.
+#'
+#' @note Since we do not formally import the `knitr` functions we do not
+#'   guarantee that this function will always work properly with `knitr` /
+#'   `rmarkdown`.
+#'
+#' @export
+#' @seealso [`has_sgr`], [`sgr_to_html`], [`html_esc`], [`html_code_block`],
+#'   [`knitr` output hooks](https://yihui.name/knitr/hooks/#output-hooks),
+#'   [embedding CSS in
+#'   Rmd](https://bookdown.org/yihui/rmarkdown/language-engines.html#javascript-and-css).
+#' @param hooks list, this should the be `knitr::knit_hooks` object; we
+#'   require you pass this to avoid a run-time dependency on `knitr`.
+#' @param which character vector with the names of the hooks that should be
+#'   replaced, defaults to 'output', but can also contain values
+#'   'message', 'warning', and 'error'.
+#' @param class character the CSS class to give the output chunks.  Each type of
+#'   output chunk specified in `which` will be matched position-wise to the
+#'   classes specified here.  This vector should be the same length as `which`.
+#' @param proc.fun function that will be applied to output that contains ANSI
+#'   CSI SGR sequences.  Should accept parameters `x` and `class`, where `x` is
+#'   the output, and `class` is the CSS class that should be applied to
+#'   the <PRE><CODE> blocks the output will be placed in.
+#' @param style character a vector of CSS styles; these will be output inside
+#'   HTML <STYLE> tags as a side effect.  The default value is designed to
+#'   ensure that there is no visible gap in background color with lines with
+#'   height 1.5 (as is the default setting in `rmarkdown` documents v1.1).
+#' @param .test TRUE or FALSE, for internal testing use only.
+#' @return named list with the prior output hooks for each of `which`.
+#' @examples
+#' \dontrun{
+#' ## The following should be done within an `rmarkdown` document chunk with
+#' ## chunk option `results` set to 'asis' and the chunk option `comment` set
+#' ## to ''.
+#'
+#' ```{r comment="", results='asis', echo=FALSE}
+#' ## Change the "output" hook to handle ANSI CSI SGR
+#'
+#' old.hooks <- set_knit_hooks(knitr::knit_hooks)
+#'
+#' ## Do the same with the warning, error, and message, and add styles for
+#' ## them (alternatively we could have done output as part of this call too)
+#'
+#' styles <- c(
+#'   getOption('fansi.style'),  # default style
+#'   "PRE.fansi CODE {background-color: transparent;}",
+#'   "PRE.fansi-error {background-color: #DD5555;}",
+#'   "PRE.fansi-warning {background-color: #DDDD55;}",
+#'   "PRE.fansi-message {background-color: #EEEEEE;}"
+#' )
+#' old.hooks <- c(
+#'   old.hooks,
+#'   fansi::set_knit_hooks(
+#'     knitr::knit_hooks,
+#'     which=c('warning', 'error', 'message'),
+#'     style=styles
+#' ) )
+#' ```
+#' ## You may restore old hooks with the following chunk
+#'
+#' ## Restore Hooks
+#' ```{r}
+#' do.call(knitr::knit_hooks$set, old.hooks)
+#' ```
+#' }
+
+set_knit_hooks <- function(
+  hooks, which='output',
+  proc.fun=function(x, class)
+    html_code_block(sgr_to_html(html_esc(x)), class=class),
+  class=sprintf("fansi fansi-%s", which),
+  style=getOption("fansi.css"),
+  .test=FALSE
+) {
+  if(
+    !is.list(hooks) ||
+    !all(c('get', 'set') %in% names(hooks)) ||
+    !is.function(hooks[['get']]) ||
+    !is.function(hooks[['set']])
+  )
+    stop("Argument `hooks` does not appear to be `knitr::knit_hooks`.")
+
+  which.vals <- c('output', 'warning', 'error', 'message')
+  if(!is.character(which) || !all(which %in% which.vals))
+    stop(
+      "Argument `which` must be character containing values in ",
+      deparse(which.vals)
+    )
+  if(anyDuplicated(which))
+    stop(
+      "Argument `which` may not contain duplicate values (",
+      which[anyDuplicated(which)], ")."
+    )
+
+  if(
+    !is.function(proc.fun) ||
+    !all(c('x', 'class') %in% names(formals(proc.fun)))
+  )
+    stop(
+      "Argument `proc.fun` must be a function with formals named ",
+      "`x` and `class`."
+    )
+  if(!is.character(class) || (length(class) != length(which)))
+    stop(
+      "Argument `class` should be a character vector the same length as ",
+      "`which`."
+    )
+
+  if(!is.character(style))
+    stop("Argument `style` must be character.")
+
+  old.hook.list <- setNames(vector('list', length(which)), which)
+  new.hook.list <- setNames(vector('list', length(which)), which)
+  base.err <-
+    "are you sure you passed `knitr::knit_hooks` as the `hooks` argument?"
+
+  make_hook <- function(old.hook, class) {
+    force(old.hook)
+    force(class)
+    function(x, options) {
+      # If the output has SGR in it, then convert to HTML and wrap
+      # in PRE/CODE tags
+
+      if(any(has_sgr(x))) {
+        res <- try(proc.fun(x=x, class=class))
+        if(inherits(res, "try-error"))
+          stop(
+            "Argument `proc.fun` for `set_knit_hooks` caused an error when ",
+            "processing output; see prior error."
+          )
+        res
+      }
+      # If output doesn't have SGR, then use the default hook
+
+      else old.hook(x, options)
+    }
+  }
+  for(i in seq_along(which)) {
+    hook.name <- which[i]
+    old.hook <- try(hooks$get(hook.name))
+    base.err.2 <-
+      sprintf("  Quitting after setting %d/%d hooks", (i - 1), length(which))
+
+    if(inherits(old.hook, 'try-error')) {
+      warning(
+        "Failed retrieving '", hook.name, "' hook from the knit hooks; ",
+        base.err, base.err.2
+      )
+      break
+    }
+    if(!is.function(old.hook)) {
+      warning(
+        "Retrieved '", hook.name, "' hook is not a function; ",
+        base.err, base.err.2
+      )
+      break
+    }
+    new.hook.list[[i]] <- make_hook(old.hook, class[[i]])
+    old.hook.list[[i]] <- old.hook
+  }
+  if(
+    inherits(
+      set.res <- try(do.call(hooks[['set']], new.hook.list)), 'try-error'
+  ) )
+    warning("Failure while trying to set hooks; see prior error; ", base.err)
+
+  writeLines(c("<STYLE type='text/css' scoped>", style, "</STYLE>"))
+
+  if(.test) list(old.hooks=old.hook.list, new.hooks=new.hook.list, res=set.res)
+  else old.hook.list
+}

@@ -33,7 +33,8 @@
       if(isTRUE(Sys.getenv('COLORTERM') %in% c('truecolor', '24bit')))
       'truecolor',
       'bright', '256'
-    )
+    ),
+    fansi.css="PRE.fansi SPAN {padding-top: .25em; padding-bottom: .25em};"
   )
   # Scheme defaults are fairly complex...
 
