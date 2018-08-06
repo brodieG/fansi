@@ -7,6 +7,8 @@
   'char' is signed (found and fixed by @QuLogic).
 * [#52](https://github.com/brodieG/fansi/issues/52): fix bad compilation under
   ICC (@kazumits).
+* [#50](https://github.com/brodieG/fansi/issues/50): run tests on R 3.1 - 3.4
+  tests for the rc branch only.
 * [#48](https://github.com/brodieG/fansi/issues/48): malformed call to error
   in FANSI_check_enc (@msannell).
 * [#47](https://github.com/brodieG/fansi/issues/47): compatibility with R
