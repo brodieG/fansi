@@ -10,32 +10,22 @@ r_packages:
 after_success:
   - Rscript covr.R
 
+branches:
+  only:
+    - master
+    - development
+    - rc
+    - issue50
+
 matrix:
   include:
     - r: 3.1
-      branches:
-        only: rc
+      if: branch = rc
     - r: 3.2
-      branches:
-        only: rc
+      if: branch = rc
     - r: 3.3
-      branches:
-        only: rc
+      if: branch = rc
     - r: oldrel
-      branches:
-        only: rc
+      if: branch = rc
     - r: release
-      branches:
-        only:
-          - master
-          - development
-          - rc
-          - issue50
     - r: devel
-      branches:
-        only:
-          - master
-          - development
-          - rc
-          - issue50
-
