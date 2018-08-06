@@ -33,7 +33,7 @@ escape sequences, so you should ensure that it matches your terminal
 capabilities. See \link{term_cap_test} for details.}
 
 \item{type}{character(1L) partial matching \code{c("chars", "width")}, although
-\code{type="width"} only works correctly with R >= 3.2.0.}
+\code{type="width"} only works correctly with R >= 3.2.2.}
 
 \item{round}{character(1L) partial matching
 \code{c("start", "stop", "both", "neither")}, controls how to resolve

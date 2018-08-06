@@ -63,3 +63,99 @@ unitizer_sect("C funs", {
 
   which(as.logical(diff(as.numeric(sorted))))
 })
+unitizer_sect("enc check", {
+  x <- y <- "He\x9f"
+  Encoding(x) <- "latin1"
+  fansi:::check_enc(x, 1)
+
+  Encoding(y) <- "bytes"
+  fansi:::check_enc(y, 1)
+})
+unitizer_sect("what as int", {
+  fansi:::what_as_int(c(1, 2, 3, 4, 5))
+  fansi:::what_as_int(c(2, 3, 4, 5))
+  fansi:::what_as_int(c(1, 2, 3, 7))
+  fansi:::what_as_int(c(2, 3, 7))
+})
+unitizer_sect("HTML helper", {
+  html_esc(character())
+  html_esc(1:10)
+  html_esc(NA_character_)
+  html_esc("<he&llo>")
+  html_esc("ow&wo")
+  html_esc(c("hello", "wor<ld>s", NA, ""))
+  html_esc("<<<<")
+
+  txt <- c(
+    "day > night",
+    "hello world"
+  )
+  html_code_block(character())
+  html_code_block(txt)
+  html_code_block(1:10)
+  html_code_block(txt, class=c('not-fansi', 'plain'))
+  html_code_block(txt, class=NULL)
+})
+unitizer_sect("hooks", {
+  h.1 <- list(
+    set=function(...) cat("Set hooks: ", names(list(...)), "\n"),
+    get=function(...) function(...) "old.hook"
+  )
+  h.2 <- list(
+    set=function(...) cat("Set hooks: ", names(list(...)), "\n"),
+    get=function(...) "not a function"
+  )
+  h.3 <- list(
+    set=function(...) cat("Set hooks: ", names(list(...)), "\n"),
+    get=function(...) stop("error in get")
+  )
+  h.4 <- list(
+    set=function(...) stop("error in set"),
+    get=function(...) function() "old.hook"
+  )
+  ## Works
+
+  set_knit_hooks(list(1, 2))
+  set_knit_hooks(list(function() NULL, function() NULL))
+  res1 <- set_knit_hooks(h.1, .test=TRUE)
+  res1[['new.hooks']][['output']]("hello")
+  res1[['new.hooks']][['output']]("hello\033[31m world")
+
+  p.f.2 <- function(x, y) NULL
+  p.f.3 <- function(x, class) sprintf("new proc fun, '%s'", class)
+  p.f.4 <- function(x, class) stop("new proc fun")
+
+  ## bad proc fun sig
+
+  set_knit_hooks(h.1, proc.fun=p.f.2)
+
+  res2 <- set_knit_hooks(
+    h.1, which=c('output', 'message'), class=c('f-output', 'f-message'),
+    proc.fun=p.f.3, .test=TRUE
+  )
+  ## works
+
+  res2[['new.hooks']][['message']]("hello")
+  res2[['new.hooks']][['message']]("hello\033[31m world")
+  res2[['new.hooks']][['output']]("hello\033[31m world")
+
+  ## error in proc.fun
+
+  res3 <- set_knit_hooks(
+    h.1, which=c('message', 'warning'), proc.fun=p.f.4, .test=TRUE
+  )
+  res3[['new.hooks']][['warning']]("hello")
+
+  ## hook errors
+
+  set_knit_hooks(h.2)
+  set_knit_hooks(h.3)
+  set_knit_hooks(h.4)
+
+  ## Other errors
+
+  set_knit_hooks(h.1, style=NULL)
+  set_knit_hooks(h.1, class=1:10)
+  set_knit_hooks(h.1, class=letters)
+  set_knit_hooks(h.1, which=c('output', 'message', 'output'))
+})

@@ -27,11 +27,16 @@
  * it.
  */
 
-// check whether any bytes are greater than 127; doesn't really actually confirm
-// this is UTF8
+// Check whether any bytes are greater than 127; doesn't really actually confirm
+// this is UTF8. Note, char may be signed, so > 127 means < 0.
 
 int FANSI_has_utf8(const char * x) {
-  while(*x) {if(*(x++) < 0) return 1;}
+  while(*x) {
+    if(*x < 0 || *x > 127) {
+      return 1;
+    }
+    x++;
+  }
   return 0;
 }
 // nocov start
@@ -134,17 +139,21 @@ void FANSI_check_enc(SEXP x, R_xlen_t i) {
         "Byte encoded strings are not supported"
       );
     else
-      // nocov start
       // this should only happen if somehow a string not converted to UTF8
       // sneaks in.
       error(
-        "%d encountered at index %.0f. %s.",
-        "Internal Error: unexpected encoding ", type,
-        (double) i + 1,
-        "Contact maintainer"
+        "%s %d encountered at index %.0f. %s.",
+        "Internal Error: unexpected encoding", type,
+        (double) i + 1, "Contact maintainer"
       );
-      // nocov end
   }
+}
+/*
+ * Testing interface
+ */
+SEXP FANSI_check_enc_ext(SEXP x, SEXP i) {
+  FANSI_check_enc(STRING_ELT(x, asInteger(i) - 1), asInteger(i) - 1);
+  return ScalarLogical(1);
 }
 
 /*

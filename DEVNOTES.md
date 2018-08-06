@@ -2,6 +2,13 @@
 
 These are internal developer notes.
 
+## TIL
+
+* char vs unsigned char vs signed char
+* the compiler is always right
+* ICC is proprietary
+* just because you are paranoid
+
 ## SGR Capabilities
 
 * 256 colors     (yes)

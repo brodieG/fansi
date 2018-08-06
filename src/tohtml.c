@@ -205,7 +205,7 @@ static int state_as_html(struct FANSI_state state, int first, char * buff) {
       buff += color_to_html(bg_color, bg_color_extra, buff);
       *(buff++) = ';';
     }
-    // Styles (need to go after color for trnasparent to work)
+    // Styles (need to go after color for transparent to work)
 
     for(int i = 1; i < 10; ++i) {
       if(state.style & (1 << i)) {
@@ -324,7 +324,7 @@ static size_t html_check_overflow(
       error(
         "%s%s%s",
         "Internal error: integer overflow when trying to compute net ",
-        "additional bytes requires by conversion of SGR to HTML. "
+        "additional bytes requires by conversion of SGR to HTML. ",
         "Contact maintainer"
       );
       // nocov end

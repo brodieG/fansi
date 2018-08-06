@@ -19,11 +19,11 @@
 #include "fansi.h"
 
 /*
- * We need a stub version of R_nchar for R < 3.2 since it is not exposed in
+ * We need a stub version of R_nchar for R < 3.2.2 since it is not exposed in
  * those.
  */
 
-#if defined(R_VERSION) && R_VERSION >= R_Version(3, 2, 0)
+#if defined(R_VERSION) && R_VERSION >= R_Version(3, 2, 2)
 #else
 // nocov start
 int R_nchar(SEXP string, nchar_type type_,
