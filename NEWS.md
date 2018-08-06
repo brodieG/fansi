@@ -2,6 +2,7 @@
 
 ## v0.2.4
 
+* New vignette illustrating how to embed ANSI CSI SGR in `rmarkdown` documents.
 * [#53](https://github.com/brodieG/fansi/issues/53): fix for systems where
   'char' is signed (found and fixed by @QuLogic).
 * [#52](https://github.com/brodieG/fansi/issues/52): fix bad compilation under
@@ -10,6 +11,9 @@
   in FANSI_check_enc (@msannell).
 * [#47](https://github.com/brodieG/fansi/issues/47): compatibility with R
   versions 3.2.0 and 3.2.1 (@andreadega).
+
+Also, special thanks to @krlmlr for pointing out deficiencies in the docs, and
+for his his help with several of the issues resolved in this release.
 
 ## v0.2.3
 
