@@ -1,6 +1,8 @@
 language: r
 r:
   - 3.1
+  - 3.2
+  - 3.3
   - oldrel
   - release
   - devel
@@ -17,6 +19,26 @@ branches:
     - master
     - development
     - rc
+    - issue50
+
+matrix:
+  exclude:
+    - r: 3.1
+      branches:
+        - development
+        - issue50
+    - r: 3.2
+      branches:
+        - development
+        - issue50
+    - r: 3.3
+      branches:
+        - development
+        - issue50
+    - r: oldrel
+      branches:
+        - development
+        - issue50
 
 after_success:
   - Rscript covr.R
