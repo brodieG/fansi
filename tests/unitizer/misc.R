@@ -98,15 +98,15 @@ unitizer_sect("HTML helper", {
 })
 unitizer_sect("hooks", {
   h.1 <- list(
-    set=function(...) message("Set hooks: ", names(list(...))),
+    set=function(...) cat("Set hooks: ", names(list(...)), "\n"),
     get=function(...) function(...) "old.hook"
   )
   h.2 <- list(
-    set=function(...) message("Set hooks: ", names(list(...))),
+    set=function(...) cat("Set hooks: ", names(list(...)), "\n"),
     get=function(...) "not a function"
   )
   h.3 <- list(
-    set=function(...) message("Set hooks: ", names(list(...))),
+    set=function(...) cat("Set hooks: ", names(list(...)), "\n"),
     get=function(...) stop("error in get")
   )
   h.4 <- list(
