@@ -1,7 +1,4 @@
 language: r
-r:
-  - release
-  - devel
 
 sudo: false
 
@@ -10,24 +7,35 @@ cache: packages
 r_packages:
   - covr
 
-branches:
-  only:
-    - master
-    - development
-    - rc
-    - issue50
-
 after_success:
   - Rscript covr.R
 
 matrix:
   include:
     - r: 3.1
-      branches: rc
+      branches:
+        only: rc
     - r: 3.2
-      branches: rc
+      branches:
+        only: rc
     - r: 3.3
-      branches: rc
+      branches:
+        only: rc
     - r: oldrel
-      branches: rc
+      branches:
+        only: rc
+    - r: release
+      branches:
+        only:
+          - master
+          - development
+          - rc
+          - issue50
+    - r: devel
+      branches:
+        only:
+          - master
+          - development
+          - rc
+          - issue50
 
