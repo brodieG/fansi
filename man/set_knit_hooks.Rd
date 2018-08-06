@@ -10,6 +10,9 @@ set_knit_hooks(hooks, which = "output", proc.fun = function(x, class)
   .test = FALSE)
 }
 \arguments{
+\item{hooks}{list, this should the be \code{knitr::knit_hooks} object; we
+require you pass this to avoid a run-time dependency on \code{knitr}.}
+
 \item{which}{character vector with the names of the hooks that should be
 replaced, defaults to 'output', but can also contain values
 'message', 'warning', and 'error'.}
@@ -29,9 +32,6 @@ ensure that there is no visible gap in background color with lines with
 height 1.5 (as is the default setting in \code{rmarkdown} documents v1.1).}
 
 \item{.test}{TRUE or FALSE, for internal testing use only.}
-
-\item{knit_hooks}{list, this should the be \code{knitr::knit_hooks} object; we
-require you pass this to avoid a run-time dependency on \code{knitr}.}
 }
 \value{
 named list with the prior output hooks for each of \code{which}.
