@@ -11,6 +11,7 @@ unitizer_sect("Strip ansi", {
 
   strip_ctl(string)
   strip_sgr(string)
+  strip_sgr(1:3)
 })
 unitizer_sect("Corner cases", {
   strip_ctl("hello\033")
@@ -22,6 +23,12 @@ unitizer_sect("Corner cases", {
 
   strip_ctl("hello\033[31##3m illegal")
   strip_ctl("hello\033[31##m legal")
+
+  # non-char inputs; really should just coerce to char and move on since we know
+  # these can't contain the sequences (actually, only true of numerics; other
+  # objects e.g. Diff can produce chars with sequences)
+
+  strip_ctl(1:3)
 })
 unitizer_sect("Whitespace", {
   fansi:::process('hello     world')
@@ -80,6 +87,10 @@ unitizer_sect("Selective stripping", {
   strip_ctl(string.0, c("c0", "esc"))
   strip_ctl(string.0, c("nl"))
 
+  # don't strip anything (null op)
+
+  strip_ctl(string.0, character())
+
   # negations
 
   strip_ctl(string.0, c("all", "c0", "esc"))
@@ -109,4 +120,13 @@ unitizer_sect("Selective stripping", {
   string.3 <- "hello world\033k\033[45p\a\n\033[31m"
   strip_ctl(string.3)
   strip_ctl(string.3, "sgr")
+
+})
+unitizer_sect("Bad Inputs", {
+  strip_ctl("hello\033[41mworld", warn=1:3)
+  strip_ctl("hello\033[41mworld", strip=1:3)
+  strip_ctl("hello\033[41mworld", strip="bananas")
+
+  strip_sgr("hello\033[41mworld", warn=1:3)
+
 })

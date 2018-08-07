@@ -110,4 +110,16 @@ unitizer_sect("Corner cases", {
 
   sgrs <- paste0(rep("\033[31m", 20), collapse="")
   sgr_to_html(sprintf("%shello world\033[m", sgrs))
+
+  # non character inputs
+
+  sgr_to_html(1:3)
+})
+unitizer_sect("Bad inputs", {
+  fansi:::esc_color_code_to_html(matrix(1:12, 4))
+
+  sgr_to_html(1:3)
+  sgr_to_html("a", warn=1:3)
+  sgr_to_html("a", term.cap=1:3)
+  sgr_to_html("a", term.cap="hello")
 })

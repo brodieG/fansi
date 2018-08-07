@@ -81,6 +81,12 @@ unitizer_sect("Basic Ansi", {
     "normal \033[6mblinking quickly oh my\033[25m normal"
   )
   strwrap_ctl(hello.blinky, 10)
+
+  # simplify
+
+  hello2.3 <- c(hello2.1, hello2.2)
+  strwrap_ctl(hello2.3, 10, simplify=FALSE)
+  strwrap2_ctl(hello2.3, 10, simplify=FALSE)
 })
 unitizer_sect("Long Wrap", {
   # wrap.nrm <- strwrap(strip_ctl(lorem.r.thanks, "sgr"), 40)
@@ -266,4 +272,41 @@ unitizer_sect("corner cases", {
     ),
     error=conditionMessage
   )
+})
+unitizer_sect("bad inputs", {
+  strwrap_ctl(1:3)
+  strwrap_ctl(hello2.0, width="35")
+  strwrap_ctl(hello2.0, width=NA_integer_)
+  strwrap_ctl(hello2.0, indent=NA_integer_)
+  strwrap_ctl(hello2.0, indent=-3)
+  strwrap_ctl(hello2.0, exdent=-3)
+  strwrap_ctl(hello2.0, exdent=1:3)
+  strwrap_ctl(hello2.0, prefix=1:3)
+  strwrap_ctl(hello2.0, initial=1:3)
+  strwrap_ctl(hello2.0, warn=NULL)
+  strwrap_ctl(hello2.0, term.cap=1:3)
+  strwrap_ctl(hello2.0, term.cap="bananas")
+
+  strwrap2_ctl(1:3)
+  strwrap2_ctl(hello2.0, width="35")
+  strwrap2_ctl(hello2.0, width=NA_integer_)
+  strwrap2_ctl(hello2.0, indent=NA_integer_)
+  strwrap2_ctl(hello2.0, indent=-3)
+  strwrap2_ctl(hello2.0, exdent=-3)
+  strwrap2_ctl(hello2.0, exdent=1:3)
+  strwrap2_ctl(hello2.0, prefix=1:3)
+  strwrap2_ctl(hello2.0, initial=1:3)
+  strwrap2_ctl(hello2.0, warn=NULL)
+  strwrap2_ctl(hello2.0, term.cap=1:3)
+  strwrap2_ctl(hello2.0, term.cap="bananas")
+
+  strwrap2_ctl(hello2.0, wrap.always=1:3)
+  strwrap2_ctl(hello2.0, wrap.always=NA)
+  strwrap2_ctl(hello2.0, tabs.as.spaces=NA)
+  strwrap2_ctl(hello2.0, tabs.as.spaces=1)
+  strwrap2_ctl(hello2.0, tab.stops=-(1:3))
+  strwrap2_ctl(hello2.0, tab.stops=0)
+  strwrap2_ctl(hello2.0, strip.spaces=1:3)
+  strwrap2_ctl(hello2.0, tabs.as.spaces=TRUE, strip.spaces=TRUE)
+
 })
