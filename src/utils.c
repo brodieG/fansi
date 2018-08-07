@@ -26,7 +26,7 @@
  * logic.
  */
 int FANSI_int_max = INT_MAX;
-int FANSI_int_min = INT_MAX;  // no way to change this externally
+int FANSI_int_min = INT_MIN;  // no way to change this externally
 
 SEXP FANSI_set_int_max(SEXP x) {
   if(TYPEOF(x) != INTSXP || XLENGTH(x) != 1)
