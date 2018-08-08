@@ -44,7 +44,7 @@
 <li>The <code>knitr::knit_hooks</code> object as an argument.</li>
 </ul>
 <p>The corresponding <code>rmarkdown</code> hunk should look as follows:</p>
-<pre><code>```{r comment=&quot;&quot;, results=&quot;asis&quot;}
+<pre><code>```{r comment=&quot;&quot;, results=&quot;asis&quot;}
 old.hooks &lt;- fansi::set_knit_hooks(knitr::knit_hooks)
 ```</code></pre>
 <p>We run this function for its side effects, which cause the output to be displayed as intended:</p>
@@ -53,7 +53,7 @@ old.hooks &lt;- fansi::set_knit_hooks(knitr::knit_hooks)
 ## </span><span style="color: #BBBB00;background-color: #0000BB;">dawn &lt; dusk</span><span>
 </span></CODE></PRE>
 <p>We can also set hooks for the other types of outputs, and add some additional CSS styles.</p>
-<pre><code>```{r comment=&quot;&quot;, results=&quot;asis&quot;}
+<pre><code>```{r comment=&quot;&quot;, results=&quot;asis&quot;}
 styles &lt;- c(
   getOption(&quot;fansi.style&quot;),  # default style
   &quot;PRE.fansi CODE {background-color: transparent;}&quot;,
