@@ -47,7 +47,7 @@ The corresponding `rmarkdown` hunk should look as follows:
     ```
 
 ```{r comment="", results="asis", echo=FALSE}
-old.hooks <- fansi::set_knit_hooks(knitr::knit_hooks)
+old.hooks <- fansi::set_knit_hooks(knitr::knit_hooks, style="")
 ```
 We run this function for its side effects, which cause the output to be
 displayed as intended:
@@ -88,7 +88,7 @@ old.hooks <- c(
   fansi::set_knit_hooks(
     knitr::knit_hooks,
     which=c("warning", "error", "message"),
-    style=styles
+    style=""
 ) )
 ```
 ```{r error=TRUE}

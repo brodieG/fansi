@@ -9,7 +9,7 @@ sgr.string <- c(
 writeLines(sgr.string)
 
 ## ----comment="", results="asis", echo=FALSE------------------------------
-old.hooks <- fansi::set_knit_hooks(knitr::knit_hooks)
+old.hooks <- fansi::set_knit_hooks(knitr::knit_hooks, style="")
 
 ## ------------------------------------------------------------------------
 writeLines(sgr.string)
@@ -27,7 +27,7 @@ old.hooks <- c(
   fansi::set_knit_hooks(
     knitr::knit_hooks,
     which=c("warning", "error", "message"),
-    style=styles
+    style=""
 ) )
 
 ## ----error=TRUE----------------------------------------------------------

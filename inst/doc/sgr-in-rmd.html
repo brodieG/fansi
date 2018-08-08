@@ -332,7 +332,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 old.hooks &lt;- fansi::set_knit_hooks(knitr::knit_hooks)
 ```</code></pre>
 <STYLE type="text/css" scoped>
-PRE.fansi SPAN {padding-top: .25em; padding-bottom: .25em};
+
 </STYLE>
 <p>We run this function for its side effects, which cause the output to be displayed as intended:</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" data-line-number="1"><span class="kw">writeLines</span>(sgr.string)</a></code></pre></div>
@@ -357,10 +357,7 @@ old.hooks &lt;- c(
 ) )
 ```</code></pre>
 <STYLE type="text/css" scoped>
-PRE.fansi CODE {background-color: transparent;}
-PRE.fansi-error {background-color: #DDAAAA;}
-PRE.fansi-warning {background-color: #DDDDAA;}
-PRE.fansi-message {background-color: #AAAADD;}
+
 </STYLE>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" data-line-number="1"><span class="kw">message</span>(<span class="kw">paste0</span>(sgr.string, <span class="dt">collapse=</span><span class="st">&quot;</span><span class="ch">\n</span><span class="st">&quot;</span>))</a></code></pre></div>
 <PRE class="fansi fansi-message"><CODE>## <span style="color: #0000BB;background-color: #BBBB00;">day &gt; night</span><span>
