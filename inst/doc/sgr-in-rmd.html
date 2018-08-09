@@ -312,7 +312,10 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 
 
-<p>Over the past few years color has been gaining traction in the R terminal. Gábor Csárdi’s <a href="https://github.com/r-lib/crayon">crayon</a> made it easy to format text with <a href="https://en.wikipedia.org/wiki/ANSI_escape_code">ANSI CSI SGR sequences</a>. Unfortunately these sequences are not recognized by web browsers, and instead end up rendering weirdly:</p>
+<div id="browsers-do-not-interpret-ansi-csi-sgr" class="section level3">
+<h3>Browsers Do Not Interpret ANSI CSI SGR</h3>
+<p>Over the past few years color has been gaining traction in the R terminal, particularly since Gábor Csárdi’s <a href="https://github.com/r-lib/crayon">crayon</a> made it easy to format text with <a href="https://en.wikipedia.org/wiki/ANSI_escape_code">ANSI CSI SGR sequences</a>. At the same time the advent and increased adoption of JJ Alaire and Yihui Xie <code>rmarkdown</code> and <code>knitr</code> packages it also became easy to automatically incorporate R code and output in HTML documents.</p>
+<p>Unfortunately these ANSI CSI SGR sequences are not recognized by web browsers, and instead end up rendering weirdly<a href="#f1"><sup>1</sub></a>:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" data-line-number="1">sgr.string &lt;-<span class="st"> </span><span class="kw">c</span>(</a>
 <a class="sourceLine" id="cb1-2" data-line-number="2">  <span class="st">&quot;</span><span class="ch">\033</span><span class="st">[43;34mday &gt; night</span><span class="ch">\033</span><span class="st">[0m&quot;</span>,</a>
 <a class="sourceLine" id="cb1-3" data-line-number="3">  <span class="st">&quot;</span><span class="ch">\033</span><span class="st">[44;33mdawn &lt; dusk</span><span class="ch">\033</span><span class="st">[0m&quot;</span></a>
@@ -320,6 +323,9 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <a class="sourceLine" id="cb1-5" data-line-number="5"><span class="kw">writeLines</span>(sgr.string)</a></code></pre></div>
 <pre><code>## �[43;34mday &gt; night�[0m
 ## �[44;33mdawn &lt; dusk�[0m</code></pre>
+</div>
+<div id="automatically-convert-ansi-csi-sgr-to-html" class="section level3">
+<h3>Automatically Convert ANSI CSI SGR to HTML</h3>
 <p><code>fansi</code> provides the <code>sgr_to_html</code> function which converts the ANSI CSI SGR sequences into HTML markup. When we combine it with <code>knitr::knit_hooks</code> we can modify the rendering of the <code>rmarkdown</code> document such that ANSI CSI SGR encoding is shown in the equivalent HTML.</p>
 <p><code>fansi::set_knit_hooks</code> is a convenience function that does just this. You should call it in an <code>rmarkdown</code> document with the:</p>
 <ul>
@@ -382,7 +388,13 @@ PRE.fansi-message {background-color: #AAAADD;}
 <pre><code>## �[43;34mday &gt; night�[0m
 ## �[44;33mdawn &lt; dusk�[0m</code></pre>
 <p>See <code>?fansi::set_knit_hooks</code> for details.</p>
-<p><strong>A note on <code>crayon</code></strong>: if you use <code>crayon</code> to generate your ANSI CSI SGR style strings you may need to set <code>options(crayon.enabled=TRUE)</code>, as in some cases <code>crayon</code> suppresses the SGR markup if it think it is not outputting to a terminal.</p>
+</div>
+<div id="crayon" class="section level3">
+<h3>Crayon</h3>
+<p>If you use <code>crayon</code> to generate your ANSI CSI SGR style strings you may need to set <code>options(crayon.enabled=TRUE)</code>, as in some cases <code>crayon</code> suppresses the SGR markup if it think it is not outputting to a terminal.</p>
+<hr />
+<p><a name="f1"></a><sup>1</sup>For illustrative purposes we output raw ANSI CSI SGR sequences in this document. However, because the ESC control character causes problems with some HTML rendering services we replace it with the � symbol. Depending on the browser and process it would normally not be visible at all, or substituted with some other symbol.</p>
+</div>
 
 
 
