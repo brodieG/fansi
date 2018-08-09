@@ -13,7 +13,7 @@
 <meta name="author" content="Brodie Gaslam" />
 
 
-<title>ANSI CSI SGR in Rmarkdown</title>
+<title>ANSI CSI SGR Sequences in Rmarkdown</title>
 
 
 
@@ -307,15 +307,15 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 
 
-<h1 class="title toc-ignore">ANSI CSI SGR in Rmarkdown</h1>
+<h1 class="title toc-ignore">ANSI CSI SGR Sequences in Rmarkdown</h1>
 <h4 class="author"><em>Brodie Gaslam</em></h4>
 
 
 
-<div id="browsers-do-not-interpret-ansi-csi-sgr" class="section level3">
-<h3>Browsers Do Not Interpret ANSI CSI SGR</h3>
+<div id="browsers-do-not-interpret-ansi-csi-sgr-sequences" class="section level3">
+<h3>Browsers Do Not Interpret ANSI CSI SGR Sequences</h3>
 <p>Over the past few years color has been gaining traction in the R terminal, particularly since Gábor Csárdi’s <a href="https://github.com/r-lib/crayon">crayon</a> made it easy to format text with <a href="https://en.wikipedia.org/wiki/ANSI_escape_code">ANSI CSI SGR sequences</a>. At the same time the advent of JJ Alaire and Yihui Xie <code>rmarkdown</code> and <code>knitr</code> packages, along with John MacFarlane <code>pandoc</code>, made it easy to automatically incorporate R code and output in HTML documents.</p>
-<p>Unfortunately these ANSI CSI SGR sequences are not recognized by web browsers, and instead end up rendering weirdly<a href="#f1"><sup>1</sub></a>:</p>
+<p>Unfortunately ANSI CSI SGR sequences are not recognized by web browsers and end up rendering weirdly<a href="#f1"><sup>1</sub></a>:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" data-line-number="1">sgr.string &lt;-<span class="st"> </span><span class="kw">c</span>(</a>
 <a class="sourceLine" id="cb1-2" data-line-number="2">  <span class="st">&quot;</span><span class="ch">\033</span><span class="st">[43;34mday &gt; night</span><span class="ch">\033</span><span class="st">[0m&quot;</span>,</a>
 <a class="sourceLine" id="cb1-3" data-line-number="3">  <span class="st">&quot;</span><span class="ch">\033</span><span class="st">[44;33mdawn &lt; dusk</span><span class="ch">\033</span><span class="st">[0m&quot;</span></a>
@@ -330,7 +330,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <p><code>fansi::set_knit_hooks</code> is a convenience function that does just this. You should call it in an <code>rmarkdown</code> document with the:</p>
 <ul>
 <li>Chunk option <code>results</code> set to “asis”.</li>
-<li>Chunk option <code>comments</code> set to “”.</li>
+<li>Chunk option <code>comments</code> set to “” (empty string).</li>
 <li>The <code>knitr::knit_hooks</code> object as an argument.</li>
 </ul>
 <p>The corresponding <code>rmarkdown</code> hunk should look as follows:</p>
