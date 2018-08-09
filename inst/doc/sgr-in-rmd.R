@@ -1,5 +1,6 @@
 ## ----echo=FALSE----------------------------------------------------------
 library(fansi)
+knitr::knit_hooks$set(document=function(x, options) gsub("\033", "\uFFFD", x))
 
 ## ------------------------------------------------------------------------
 sgr.string <- c(
@@ -9,7 +10,7 @@ sgr.string <- c(
 writeLines(sgr.string)
 
 ## ----comment="", results="asis", echo=FALSE------------------------------
-old.hooks <- fansi::set_knit_hooks(knitr::knit_hooks, style="")
+old.hooks <- fansi::set_knit_hooks(knitr::knit_hooks)
 
 ## ------------------------------------------------------------------------
 writeLines(sgr.string)
@@ -27,7 +28,7 @@ old.hooks <- c(
   fansi::set_knit_hooks(
     knitr::knit_hooks,
     which=c("warning", "error", "message"),
-    style=""
+    style=styles
 ) )
 
 ## ----error=TRUE----------------------------------------------------------

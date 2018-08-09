@@ -318,8 +318,8 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <a class="sourceLine" id="cb1-3" data-line-number="3">  <span class="st">&quot;</span><span class="ch">\033</span><span class="st">[44;33mdawn &lt; dusk</span><span class="ch">\033</span><span class="st">[0m&quot;</span></a>
 <a class="sourceLine" id="cb1-4" data-line-number="4">)</a>
 <a class="sourceLine" id="cb1-5" data-line-number="5"><span class="kw">writeLines</span>(sgr.string)</a></code></pre></div>
-<pre><code>## [43;34mday &gt; night[0m
-## [44;33mdawn &lt; dusk[0m</code></pre>
+<pre><code>## �[43;34mday &gt; night�[0m
+## �[44;33mdawn &lt; dusk�[0m</code></pre>
 <p><code>fansi</code> provides the <code>sgr_to_html</code> function which converts the ANSI CSI SGR sequences into HTML markup. When we combine it with <code>knitr::knit_hooks</code> we can modify the rendering of the <code>rmarkdown</code> document such that ANSI CSI SGR encoding is shown in the equivalent HTML.</p>
 <p><code>fansi::set_knit_hooks</code> is a convenience function that does just this. You should call it in an <code>rmarkdown</code> document with the:</p>
 <ul>
@@ -328,16 +328,19 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <li>The <code>knitr::knit_hooks</code> object as an argument.</li>
 </ul>
 <p>The corresponding <code>rmarkdown</code> hunk should look as follows:</p>
-<pre><code>```{r comment=&quot;&quot;, results=&quot;asis&quot;}
+<pre><code>```{r, comment=&quot;&quot;, results=&quot;asis&quot;}
 old.hooks &lt;- fansi::set_knit_hooks(knitr::knit_hooks)
 ```</code></pre>
+<STYLE type="text/css" scoped>
+PRE.fansi SPAN {padding-top: .25em; padding-bottom: .25em};
+</STYLE>
 <p>We run this function for its side effects, which cause the output to be displayed as intended:</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" data-line-number="1"><span class="kw">writeLines</span>(sgr.string)</a></code></pre></div>
 <PRE class="fansi fansi-output"><CODE>## <span style="color: #0000BB;background-color: #BBBB00;">day &gt; night</span><span>
 ## </span><span style="color: #BBBB00;background-color: #0000BB;">dawn &lt; dusk</span><span>
 </span></CODE></PRE>
 <p>We can also set hooks for the other types of outputs, and add some additional CSS styles.</p>
-<pre><code>```{r comment=&quot;&quot;, results=&quot;asis&quot;}
+<pre><code>```{r, comment=&quot;&quot;, results=&quot;asis&quot;}
 styles &lt;- c(
   getOption(&quot;fansi.style&quot;),  # default style
   &quot;PRE.fansi CODE {background-color: transparent;}&quot;,
@@ -353,6 +356,12 @@ old.hooks &lt;- c(
     style=styles
 ) )
 ```</code></pre>
+<STYLE type="text/css" scoped>
+PRE.fansi CODE {background-color: transparent;}
+PRE.fansi-error {background-color: #DDAAAA;}
+PRE.fansi-warning {background-color: #DDDDAA;}
+PRE.fansi-message {background-color: #AAAADD;}
+</STYLE>
 <div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" data-line-number="1"><span class="kw">message</span>(<span class="kw">paste0</span>(sgr.string, <span class="dt">collapse=</span><span class="st">&quot;</span><span class="ch">\n</span><span class="st">&quot;</span>))</a></code></pre></div>
 <PRE class="fansi fansi-message"><CODE>## <span style="color: #0000BB;background-color: #BBBB00;">day &gt; night</span><span>
 ## </span><span style="color: #BBBB00;background-color: #0000BB;">dawn &lt; dusk</span><span>
@@ -370,13 +379,22 @@ old.hooks &lt;- c(
 <p>You can restore the old hooks at any time in your document with:</p>
 <div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb9-1" data-line-number="1"><span class="kw">do.call</span>(knitr<span class="op">::</span>knit_hooks<span class="op">$</span>set, old.hooks)</a>
 <a class="sourceLine" id="cb9-2" data-line-number="2"><span class="kw">writeLines</span>(sgr.string)</a></code></pre></div>
-<pre><code>## [43;34mday &gt; night[0m
-## [44;33mdawn &lt; dusk[0m</code></pre>
+<pre><code>## �[43;34mday &gt; night�[0m
+## �[44;33mdawn &lt; dusk�[0m</code></pre>
 <p>See <code>?fansi::set_knit_hooks</code> for details.</p>
 <p><strong>A note on <code>crayon</code></strong>: if you use <code>crayon</code> to generate your ANSI CSI SGR style strings you may need to set <code>options(crayon.enabled=TRUE)</code>, as in some cases <code>crayon</code> suppresses the SGR markup if it think it is not outputting to a terminal.</p>
 
 
 
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
 
 </body>
 </html>

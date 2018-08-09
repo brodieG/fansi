@@ -13,6 +13,7 @@ vignette: >
 
 ```{r echo=FALSE}
 library(fansi)
+knitr::knit_hooks$set(document=function(x, options) gsub("\033", "\uFFFD", x))
 ```
 
 Over the past few years color has been gaining traction in the R terminal.
@@ -42,12 +43,14 @@ should call it in an `rmarkdown` document with the:
 
 The corresponding `rmarkdown` hunk should look as follows:
 
-    ```{r comment="", results="asis"}
-    old.hooks <- fansi::set_knit_hooks(knitr::knit_hooks)
-    ```
+````
+```{r, comment="", results="asis"}`r ''`
+old.hooks <- fansi::set_knit_hooks(knitr::knit_hooks)
+```
+````
 
 ```{r comment="", results="asis", echo=FALSE}
-old.hooks <- fansi::set_knit_hooks(knitr::knit_hooks, style="")
+old.hooks <- fansi::set_knit_hooks(knitr::knit_hooks)
 ```
 We run this function for its side effects, which cause the output to be
 displayed as intended:
@@ -59,22 +62,24 @@ writeLines(sgr.string)
 We can also set hooks for the other types of outputs, and add some additional
 CSS styles.
 
-    ```{r comment="", results="asis"}
-    styles <- c(
-      getOption("fansi.style"),  # default style
-      "PRE.fansi CODE {background-color: transparent;}",
-      "PRE.fansi-error {background-color: #DDAAAA;}",
-      "PRE.fansi-warning {background-color: #DDDDAA;}",
-      "PRE.fansi-message {background-color: #AAAADD;}"
-    )
-    old.hooks <- c(
-      old.hooks,
-      fansi::set_knit_hooks(
-        knitr::knit_hooks,
-        which=c("warning", "error", "message"),
-        style=styles
-    ) )
-    ```
+````
+```{r, comment="", results="asis"}`r ''`
+styles <- c(
+  getOption("fansi.style"),  # default style
+  "PRE.fansi CODE {background-color: transparent;}",
+  "PRE.fansi-error {background-color: #DDAAAA;}",
+  "PRE.fansi-warning {background-color: #DDDDAA;}",
+  "PRE.fansi-message {background-color: #AAAADD;}"
+)
+old.hooks <- c(
+  old.hooks,
+  fansi::set_knit_hooks(
+    knitr::knit_hooks,
+    which=c("warning", "error", "message"),
+    style=styles
+) )
+```
+````
 ```{r comment="", results="asis", echo=FALSE}
 styles <- c(
   getOption("fansi.style"),  # default style
@@ -88,7 +93,7 @@ old.hooks <- c(
   fansi::set_knit_hooks(
     knitr::knit_hooks,
     which=c("warning", "error", "message"),
-    style=""
+    style=styles
 ) )
 ```
 ```{r error=TRUE}
