@@ -44,8 +44,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   // Global variables (see utils.c)
 
-  int FANSI_int_max;
-  int FANSI_int_min;
+  extern int FANSI_int_max;
+  extern int FANSI_int_min;  // no way to change this externally
 
   // - Structs -----------------------------------------------------------------
   /*

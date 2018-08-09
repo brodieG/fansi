@@ -57,7 +57,7 @@ strsplit_ctl <- function(
     stop("BYTE encoded strings are not supported.")
 
   if(is.null(split)) split <- ""
-  split <- as.character(enc2utf8(split))
+  split <- enc2utf8(as.character(split))
   if(!length(split)) split <- ""
   if(anyNA(split)) stop("Argument `split` may not contain NAs.")
 

@@ -68,12 +68,9 @@ strip_ctl <- function(x, strip='all', warn=getOption('fansi.warn')) {
 
   if(!is.character(strip))
     stop("Argument `strip` must be character.")
-  if(!all(strip %in% VALID.STRIP))
-    stop(
-      "Argument `strip` may contain only values in `", deparse(VALID.STRIP), "`"
-    )
 
   if(length(strip)) {
+    # duplicate values in `strip` are okay, so save a call to `unique` here
     if(anyNA(strip.int <- match(strip, VALID.STRIP)))
       stop(
         "Argument `strip` may contain only values in `",
@@ -92,7 +89,8 @@ strip_sgr <- function(x, warn=getOption('fansi.warn')) {
     stop("Argument `warn` must be TRUE or FALSE.")
 
   strip.int <- match("sgr", VALID.STRIP)
-  if(anyNA(strip.int)) stop("Internal Error: invalid strip type")
+  if(anyNA(strip.int))
+    stop("Internal Error: invalid strip type; contact maintainer.") # nocov
 
   .Call(FANSI_strip_csi, enc2utf8(x), strip.int, warn)
 }

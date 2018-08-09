@@ -18,7 +18,7 @@ library(fansi)
 Counterparts to R string manipulation functions that account for the effects of
 ANSI text formatting control sequences.
 
-## Formatting String with Control Sequences
+## Formatting Strings with Control Sequences
 
 Many terminals will recognize special sequences of characters in strings and
 change display behavior as a result.  For example, on my terminal the sequence
@@ -106,6 +106,14 @@ browseURL(f)
 ```
 ![translate to html](https://raw.githubusercontent.com/brodieG/fansi/master/extra/images/sgr_to_html.png)
 
+## Rmarkdown
+
+It is possible to set `knitr` hooks such that R output that contains ANSI CSI
+SGR is automatically converted to the HTML formatted equivalent and displayed as
+intended.  See the
+[vignette](http://htmlpreview.github.io/?https://raw.githubusercontent.com/brodieG/fansi/6cbfdaa/inst/doc/sgr-in-rmd.html)
+for details.
+
 ## Installation
 
 This package is available on CRAN:
@@ -114,7 +122,7 @@ This package is available on CRAN:
 install.packages('fansi')
 ```
 
-It has no dependencies.
+It has no runtime dependencies.
 
 For the development version use:
 `devtools::install_github('brodieg/fansi@development')` or:

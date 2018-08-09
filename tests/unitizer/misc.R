@@ -48,6 +48,24 @@ unitizer_sect("strtrim", {
   strtrim_ctl("\033[42m\thello\rworld\033[m foobar", 12)
 
   strtrim2_ctl("\033[42m\thello world\033[m foobar", 12, tabs.as.spaces=TRUE)
+
+  # bad args
+
+  hello2.0 <- "\033[42m\thello world\033[m foobar"
+  strtrim_ctl(1:3, width=10)
+  strtrim_ctl(hello2.0, width="35")
+  strtrim_ctl(hello2.0, width=NA_integer_)
+  strtrim_ctl(hello2.0, width=10, warn=NULL)
+
+  strtrim2_ctl(1:3, width=10)
+  strtrim2_ctl(hello2.0, width="35")
+  strtrim2_ctl(hello2.0, width=NA_integer_)
+  strtrim2_ctl(hello2.0, width=10, warn=NULL)
+
+  strtrim2_ctl(hello2.0, width=10, tabs.as.spaces=NA)
+  strtrim2_ctl(hello2.0, width=10, tabs.as.spaces=1:3)
+  strtrim2_ctl(hello2.0, width=10, tab.stops=-(1:3))
+  strtrim2_ctl(hello2.0, width=10, tab.stops=0)
 })
 unitizer_sect("C funs", {
   fansi:::cleave(1:10)
@@ -125,15 +143,18 @@ unitizer_sect("hooks", {
   p.f.3 <- function(x, class) sprintf("new proc fun, '%s'", class)
   p.f.4 <- function(x, class) stop("new proc fun")
 
-  ## bad proc fun sig
+  ## bad inputs
 
   set_knit_hooks(h.1, proc.fun=p.f.2)
+  set_knit_hooks(h.1, which="hello")
+  set_knit_hooks(h.1, which=NULL)
+
+  ## works
 
   res2 <- set_knit_hooks(
     h.1, which=c('output', 'message'), class=c('f-output', 'f-message'),
     proc.fun=p.f.3, .test=TRUE
   )
-  ## works
 
   res2[['new.hooks']][['message']]("hello")
   res2[['new.hooks']][['message']]("hello\033[31m world")
@@ -145,6 +166,7 @@ unitizer_sect("hooks", {
     h.1, which=c('message', 'warning'), proc.fun=p.f.4, .test=TRUE
   )
   res3[['new.hooks']][['warning']]("hello")
+  res3[['new.hooks']][['warning']]("hello\033[31mworld")
 
   ## hook errors
 
@@ -158,4 +180,8 @@ unitizer_sect("hooks", {
   set_knit_hooks(h.1, class=1:10)
   set_knit_hooks(h.1, class=letters)
   set_knit_hooks(h.1, which=c('output', 'message', 'output'))
+})
+unitizer_sect("fansi lines", {
+  fansi_lines(1:3)
+  fansi_lines(1:3, step='hello')
 })

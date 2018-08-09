@@ -33,7 +33,7 @@ has_ctl <- function(x, which='all', warn=getOption('fansi.warn')) {
   if(!is.logical(warn)) warn <- as.logical(warn)
   if(length(warn) != 1L || is.na(warn))
     stop("Argument `warn` must be TRUE or FALSE.")
-  if(!is.character('which')) stop("Argument `which` must be character.")
+  if(!is.character(which)) stop("Argument `which` must be character.")
 
   if(length(which)) {
     if(anyNA(which.int <- match(which, VALID.STRIP)))

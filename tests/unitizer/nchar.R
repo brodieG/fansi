@@ -3,6 +3,7 @@ library(fansi)
 unitizer_sect('basic tests', {
   nchar_ctl(c('hello', 'world'))
   nchar_ctl(c('hello', 'world'), type='width')
+  nchar_ctl(c('hello', 'world'), type='wi') # partial match
 
   # Keep NA
 
@@ -25,4 +26,17 @@ unitizer_sect('with escapes', {
 
   nzchar_ctl(esc.2)
   nzchar_ctl(esc.2, warn=FALSE)
+})
+unitizer_sect('bad inputs', {
+  nchar_ctl(9:10, warn=1:3)
+  nchar_ctl("hello\033[31m world", allowNA=1:3)
+  nchar_ctl("hello\033[31m world", keepNA=1:3)
+  nchar_ctl("hello\033[31m world", strip=1:3)
+  nchar_ctl("hello\033[31m world", strip="bananas")
+  nchar_ctl("hello\033[31m world", type=NA_character_)
+  nchar_ctl("hello\033[31m world", type=1)
+  nchar_ctl("hello\033[31m world", type="bananas")
+
+  nzchar_ctl(9:10, warn=1:3)
+  nzchar_ctl("hello\033[31m world", keepNA=1:3)
 })
