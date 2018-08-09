@@ -22,8 +22,8 @@ Over the past few years color has been gaining traction in the R terminal,
 particularly since Gábor Csárdi's [crayon](https://github.com/r-lib/crayon)
 made it easy to format text with [ANSI CSI SGR
 sequences](https://en.wikipedia.org/wiki/ANSI_escape_code).  At the
-same time the advent and increased adoption of JJ Alaire and Yihui Xie
-`rmarkdown` and `knitr` packages it also became easy to automatically
+same time the advent of JJ Alaire and Yihui Xie `rmarkdown` and `knitr`
+packages, along with John MacFarlane `pandoc`, made it easy to automatically
 incorporate R code and output in HTML documents.
 
 Unfortunately these ANSI CSI SGR sequences are not recognized by web browsers,
@@ -125,7 +125,7 @@ See `?fansi::set_knit_hooks` for details.
 
 If you use `crayon` to generate your ANSI CSI SGR style strings you may need to
 set `options(crayon.enabled=TRUE)`, as in some cases `crayon` suppresses the SGR
-markup if it think it is not outputting to a terminal.
+markup if it thinks it is not outputting to a terminal.
 
 ----
 <a name='f1'></a><sup>1</sup>For illustrative purposes we output raw ANSI
