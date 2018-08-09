@@ -1,5 +1,6 @@
 ## ----echo=FALSE----------------------------------------------------------
 library(fansi)
+knitr::knit_hooks$set(document=function(x, options) gsub("\033", "\uFFFD", x))
 
 ## ------------------------------------------------------------------------
 sgr.string <- c(

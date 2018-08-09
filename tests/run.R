@@ -3,7 +3,13 @@
 
 if(getRversion() < "3.2.2") {
   warning("Cannot run tests with R version less than 3.2.2.")
-} else if(suppressWarnings(require('unitizer'))) {
+} else if(!suppressWarnings(require('fansi'))) {
+  # this is to avoid accidentally running tests under valgrind without fansi
+  # installed... (no, we've never done this...)
+  warning("Cannot run tests without package `fansi`")
+} else if(!suppressWarnings(require('unitizer'))) {
+  warning("Cannot run tests without package `unitizer`")
+} else {
   old.opt <- options(
     fansi.tabs.as.spaces=FALSE,
     fansi.tab.stops=8L,
@@ -25,6 +31,4 @@ if(getRversion() < "3.2.2") {
   if(!grepl("solaris|sun", Sys.info()[['sysname']], ignore.case=TRUE)) {
     unitize('unitizer/utf8.R')
   }
-} else {
-  warning("Cannot run tests without package `unitizer`")
 }
