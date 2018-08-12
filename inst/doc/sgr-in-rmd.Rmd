@@ -1,12 +1,12 @@
 ---
-title: "ANSI CSI SGR in Rmarkdown"
+title: "ANSI CSI SGR Sequences in Rmarkdown"
 author: "Brodie Gaslam"
 output:
     rmarkdown::html_vignette:
         css: styles.css
 mathjax: local
 vignette: >
-  %\VignetteIndexEntry{ANSI CSI SGR in Rmarkdown}
+  %\VignetteIndexEntry{ANSI CSI SGR Sequences in Rmarkdown}
   %\VignetteEngine{knitr::rmarkdown}
   \usepackage[utf8]{inputenc}
 ---
@@ -16,7 +16,7 @@ library(fansi)
 knitr::knit_hooks$set(document=function(x, options) gsub("\033", "\uFFFD", x))
 ```
 
-### Browsers Do Not Interpret ANSI CSI SGR
+### Browsers Do Not Interpret ANSI CSI SGR Sequences
 
 Over the past few years color has been gaining traction in the R terminal,
 particularly since Gábor Csárdi's [crayon](https://github.com/r-lib/crayon)
@@ -26,8 +26,8 @@ same time the advent of JJ Alaire and Yihui Xie `rmarkdown` and `knitr`
 packages, along with John MacFarlane `pandoc`, made it easy to automatically
 incorporate R code and output in HTML documents.
 
-Unfortunately these ANSI CSI SGR sequences are not recognized by web browsers,
-and instead end up rendering weirdly<a href=#f1><sup>1</sub></a>:
+Unfortunately ANSI CSI SGR sequences are not recognized by web browsers and end
+up rendering weirdly<a href=#f1><sup>1</sub></a>:
 
 ```{r}
 sgr.string <- c(
@@ -48,7 +48,7 @@ encoding is shown in the equivalent HTML.
 should call it in an `rmarkdown` document with the:
 
   * Chunk option `results` set to "asis".
-  * Chunk option `comments` set to "".
+  * Chunk option `comments` set to "" (empty string).
   * The `knitr::knit_hooks` object as an argument.
 
 The corresponding `rmarkdown` hunk should look as follows:

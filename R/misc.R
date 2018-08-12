@@ -326,8 +326,11 @@ set_knit_hooks <- function(
   if(!is.character(style))
     stop("Argument `style` must be character.")
 
-  old.hook.list <- setNames(vector('list', length(which)), which)
-  new.hook.list <- setNames(vector('list', length(which)), which)
+  old.hook.list <- vector('list', length(which))
+  names(old.hook.list) <- which
+  new.hook.list <- vector('list', length(which))
+  names(new.hook.list) <- which
+
   base.err <-
     "are you sure you passed `knitr::knit_hooks` as the `hooks` argument?"
 
