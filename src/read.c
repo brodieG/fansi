@@ -613,8 +613,8 @@ struct FANSI_state FANSI_read_next(struct FANSI_state state) {
 
   // Normal ASCII characters
   if(chr_val >= 0x20 && chr_val < 0x7F) state = read_ascii(state);
-  // UTF8 characters (chr_val is signed, so > 0x7f will be negative)
-  else if (chr_val < 0) state = read_utf8(state);
+  // UTF8 characters (if chr_val is signed, then > 0x7f will be negative)
+  else if (chr_val < 0 || chr_val > 0x7f) state = read_utf8(state);
   // ESC sequences
   else if (chr_val == 0x1B) state = read_esc(state);
   // C0 escapes (e.g. \t, \n, etc)

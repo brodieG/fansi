@@ -14,9 +14,9 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-## Tracks whether we are running in R > 3.2 or not (see .onLoad)
+## Tracks whether we are running in R > 3.2.2 or not (see .onLoad)
 
-R.ver.gte.3.2 <- NA
+R.ver.gte.3.2.2 <- NA
 
 ## Internal functions, used primarily for testing
 
@@ -46,3 +46,12 @@ sort_chr <- function(x) .Call(FANSI_sort_chr, x)
 
 set_int_max <- function(x) .Call(FANSI_set_int_max, as.integer(x)[1])
 get_int_max <- function(x) .Call(FANSI_get_int_max)  # nocov for debug only
+
+## exposed internals for testing
+
+check_enc <- function(x, i) .Call(FANSI_check_enc, x, as.integer(i)[1])
+
+## make sure what compression working
+
+what_as_int <- function(x) .Call(FANSI_what_as_int, as.integer(x))
+

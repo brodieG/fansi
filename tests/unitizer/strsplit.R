@@ -31,3 +31,15 @@ unitizer_sect("corner cases", {
 
   strsplit_ctl("hello", NULL)
 })
+unitizer_sect('bad intputs', {
+  str.bytes <- "\xDE"
+  Encoding(str.bytes) <- "bytes"
+  strsplit_ctl(str.bytes, "")
+  strsplit_ctl(str.2, NA)
+  strsplit_ctl(str.2, "", warn=NULL)
+  strsplit_ctl(str.2, "", fixed=NA_integer_)
+  strsplit_ctl(str.2, "", perl=NA_integer_)
+  strsplit_ctl(str.2, "", useBytes=NA_integer_)
+  strsplit_ctl(str.2, "", term.cap=1:3)
+  strsplit_ctl(str.2, "", term.cap="bananas")
+})

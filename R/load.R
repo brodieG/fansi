@@ -33,18 +33,19 @@
       if(isTRUE(Sys.getenv('COLORTERM') %in% c('truecolor', '24bit')))
       'truecolor',
       'bright', '256'
-    )
+    ),
+    fansi.css="PRE.fansi SPAN {padding-top: .25em; padding-bottom: .25em};"
   )
   # Scheme defaults are fairly complex...
 
   existing.opts <- options()
   options(.default.opts[setdiff(names(.default.opts), names(existing.opts))])
-  R.ver.gte.3.2 <<- getRversion() >= "3.2.0"
+  R.ver.gte.3.2.2 <<- getRversion() >= "3.2.2"
 }
 .onAttach <- function(libname, pkgname) {
-  if(!R.ver.gte.3.2) {
+  if(!R.ver.gte.3.2.2) {
     packageStartupMessage(
-      "`fansi` capabilities are degraded with R versions less than 3.2.0.  In ",
+      "`fansi` capabilities are degraded with R versions less than 3.2.2.  In ",
       "particular string width calculations will be incorrect for wide and/or ",
       "zero width characters."
     )

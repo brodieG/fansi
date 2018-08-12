@@ -27,6 +27,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   // - Constants / Macros ------------------------------------------------------
 
+  // CAREFUL with these; if we get close to INT_MAX with 2^x we can have
+  // problems with signed/unsigned bit shifts.  Shouldn't be anywhere close tod
+  // that but something to keep in mind
+
   #define FANSI_STRIP_ALL 31 // 1 + 2 + 4 + 8 + 16
   #define FANSI_STYLE_MAX 12 // 12 is double underline
 
@@ -40,8 +44,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   // Global variables (see utils.c)
 
-  int FANSI_int_max;
-  int FANSI_int_min;
+  extern int FANSI_int_max;
+  extern int FANSI_int_min;  // no way to change this externally
 
   // - Structs -----------------------------------------------------------------
   /*
@@ -339,8 +343,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   struct FANSI_state FANSI_reset_width(struct FANSI_state state);
 
   void FANSI_check_enc(SEXP x, R_xlen_t i);
+  SEXP FANSI_check_enc_ext(SEXP x, SEXP i);
 
   int FANSI_what_as_int(SEXP what);
+  SEXP FANSI_what_as_int_ext(SEXP what);
+
   void FANSI_size_buff(struct FANSI_buff * buff, size_t size);
 
   int FANSI_pmatch(
@@ -377,9 +384,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   // - Compatibility -----------------------------------------------------------
 
-  // R_nchar does not exist prior to 3.2.0, so we sub in this dummy
+  // R_nchar does not exist prior to 3.2.2, so we sub in this dummy
 
-  #if defined(R_VERSION) && R_VERSION >= R_Version(3, 2, 0)
+  #if defined(R_VERSION) && R_VERSION >= R_Version(3, 2, 2)
   #else
   typedef enum {Bytes, Chars, Width} nchar_type;
   int R_nchar(SEXP string, nchar_type type_,

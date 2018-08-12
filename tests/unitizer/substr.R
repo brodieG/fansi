@@ -134,3 +134,18 @@ unitizer_sect("Obscure escapes", {
 
   substr_ctl(rep("\033[91mwor\033[101mld\033[m", 2), c(2, 4), c(3, 5))
 })
+unitizer_sect('bad args', {
+  # bad args
+
+  hello2.0 <- "\033[42m\thello world\033[m foobar"
+  substr2_ctl(hello2.0, 1, 2, warn=NULL)
+
+  substr2_ctl(hello2.0, 1, 2, tabs.as.spaces=1)
+  substr2_ctl(hello2.0, 1, 2, tabs.as.spaces=NA)
+  substr2_ctl(hello2.0, 1, 2, tab.stops=-(1:3))
+  substr2_ctl(hello2.0, 1, 2, tab.stops=0)
+  substr2_ctl(hello2.0, 1, 2, round='bananas')
+  substr2_ctl(hello2.0, 1, 2, term.cap=0)
+  substr2_ctl(hello2.0, 1, 2, term.cap='bananas')
+  substr2_ctl(hello2.0, 1, 2, type='bananas')
+})

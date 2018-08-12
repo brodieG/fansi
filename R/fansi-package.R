@@ -41,7 +41,7 @@
 #' _Control Sequences_ starting with ESC are assumed to be two characters
 #' long (including the ESC) unless they are of the CSI variety, in which case
 #' their length is computed as per the [ECMA-48
-#' specification](http://www.ecma-international.org/publications/standards/Ecma-048.htm).
+#'  specification](http://www.ecma-international.org/publications/standards/Ecma-048.htm).
 #' There are non-CSI escape sequences that may be longer than two characters,
 #' but `fansi` will (incorrectly) treat them as if they were two characters
 #' long.
@@ -93,7 +93,7 @@
 #' off warnings via the `warn` parameter or via the "fansi.warn" global option.
 #'
 #' `fansi` can work around "C0" tab control characters by turning them into
-#' spaces first with [tabs_as_spaces] or with the `tabs.as.spaces` parameter
+#' spaces first with [`tabs_as_spaces`] or with the `tabs.as.spaces` parameter
 #' available in some of the `fansi` functions.
 #'
 #' We chose to interpret ANSI CSI SGR sequences because this reduces how
@@ -156,15 +156,16 @@
 #' computations, but for simplicity and also because R and our terminal do not
 #' do it properly either we are deferring the issue for now.
 #'
-#' @section R 3.1.0 support:
+#' @section R < 3.2.2 support:
 #'
-#' Nominally you can build and run this package in R 3.1.  It should mostly
-#' work, but please be aware we do not run the test suite under that version of
-#' R.  One key degraded capability is width computation of wide-display
-#' characters.  Under R 3.1 `fansi` will assume every character is 1 display
-#' width.  Additionally, `fansi` may not always report malformed UTF-8
-#' sequences the as it usually does.  One exception to this is `nchar_ctl` as
-#' that is just a thin wrapper around `base::nchar`.
+#' Nominally you can build and run this package in R versions between 3.1.0 and
+#' 3.2.1.  Things should mostly work, but please be aware we do not run the test
+#' suite under versions of R less than 3.2.2.  One key degraded capability is
+#' width computation of wide-display characters.  Under R < 3.2.2 `fansi` will
+#' assume every character is 1 display width.  Additionally, `fansi` may not
+#' always report malformed UTF-8 sequences as it usually does.  One
+#' exception to this is [`nchar_ctl`] as that is just a thin wrapper around
+#' [`base::nchar`].
 #'
 #' @section Miscellaneous:
 #'
