@@ -365,6 +365,11 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
     const char * string_start = CHAR(chrsxp);
     const char * string = string_start;
+
+    // <span> are always closed at the end of a character vec element, so the
+    // state previous is blank.
+
+    state_prev = state_init;
     state.string = state_prev.string = string;
 
     R_len_t bytes_init = LENGTH(chrsxp);
