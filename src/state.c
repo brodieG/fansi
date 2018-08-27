@@ -601,6 +601,22 @@ int FANSI_state_has_style_basic(struct FANSI_state state) {
   return state.style || state.color >= 0 || state.bg_color >= 0;
 }
 /*
+ * Copy the style members from current to target
+ */
+struct FANSI_state FANSI_state_copy_style(
+  struct FANSI_state target, struct FANSI_state current
+) {
+  target.style = current.style;
+  target.border = current.border;
+  target.font = current.font;
+  target.ideogram = current.ideogram;
+  target.color = current.color;
+  target.color_extra = current.color_extra;
+  target.bgcolor = current.bgcolor;
+  target.color_extra = current.bgcolor_extra;
+  return target;
+}
+/*
  * R interface for FANSI_state_at_position
  * @param string we're interested in state of
  * @param pos integer positions along the string, one index, sorted
