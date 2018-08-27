@@ -372,6 +372,10 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
     state_prev = state_init;
     state.string = state_prev.string = string;
 
+    // Save what the state was at the end of the prior string
+
+    struct FANSI_state state_start = state;
+
     R_len_t bytes_init = LENGTH(chrsxp);
 
     int bytes_extra = 0;   // Net bytes being add via tags (css - ESC)
@@ -385,6 +389,15 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
     // the alternative is to track a growing list or some such of accrued parsed
     // sequences.  The latter might be faster, but more work for us so we'll
     // leave it and see if it becomes a major issue.
+
+    // It is possible for a state to be left over from prior string.
+
+    if(FANSI_state_has_style_basic(state_start)) {
+      bytes_extra = html_compute_size(state, bytes_extra, state.pos_byte, 0, i);
+      has_esc = any_esc = 1;
+      state_prev = state;
+    }
+    // Now check string proper
 
     while(*string && (string = strchr(string, 0x1b))) {
       if(!any_esc) any_esc = 1;
@@ -429,6 +442,16 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
       int first_esc = 1;
       char * buff_track = buff.buff;
+
+      // Handle state left-over from previous char elem
+
+      if(FANSI_state_has_style_basic(state_start)) {
+        int bytes_html = state_as_html(state_start, first_esc, buff_track);
+        buff_track += bytes_html;
+        state_prev = state;
+        first_esc = 0;
+      }
+      // Deal with state changes in this string
 
       while(*string && (string = strchr(string, 0x1b))) {
         state.pos_byte = (string - string_start);

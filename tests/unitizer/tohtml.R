@@ -123,3 +123,24 @@ unitizer_sect("Bad inputs", {
   sgr_to_html("a", term.cap=1:3)
   sgr_to_html("a", term.cap="hello")
 })
+unitizer_sect("issue54", {
+  string <- c("\033[31m", "\033[39m")
+  fansi::sgr_to_html(string)
+
+  string1 <- c("\033[31mhello", "world\033[39m moon")
+  fansi::sgr_to_html(string1)
+
+  string2 <- c("\033[3mhello\033[24m", "world\033[23m moon")
+  fansi::sgr_to_html(string2)
+
+  string3 <- c("\033[38;5;246m#&gt;\033[39m \033[38;5;246m# … with 6 more variables: \033[1mn_itr\033[22m \033[3m\033[38;5;246m&lt;int&gt;\033[38;5;246m\033[23m, \033[1mtotal_time\033[22m \033[3m\033[38;5;246m&lt;bch:tm&gt;\033[38;5;246m\033[23m,",
+  "\033[38;5;246m#&gt;\033[39m #   \033[1mresult\033[22m \033[3m\033[38;5;246m&lt;list&gt;\033[38;5;246m\033[23m, \033[1mmemory\033[22m \033[3m\033[38;5;246m&lt;list&gt;\033[38;5;246m\033[23m, \033[1mtime\033[22m \033[3m\033[38;5;246m&lt;list&gt;\033[38;5;246m\033[23m, \033[1mgc\033[22m \033[3m\033[38;5;246m&lt;list&gt;\033[38;5;246m\033[23m\033[39m"
+  )
+  fansi::sgr_to_html(string2)
+
+  # head <- "<html><head><meta charset='utf-8'/></head><pre>"
+  # f <- paste0(tempfile(), ".html")
+  # writeLines(c(head, fansi::sgr_to_html(string2), "</pre></html>"), f)
+  # browseURL(f)
+  # unlink(f)
+})
