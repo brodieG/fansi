@@ -78,6 +78,8 @@ unitizer_sect("simple html conversion", {
   sgr_to_html(
     "\033[1mbold\033[22m \033[2mfaint\033[22m \033[mitalic\033[24m\n"
   )
+  # similarly, we mistakenly seem to have thought below that 24 turns off
+  # italic, when it actually doesn't.
 
   csi_string <- c(
     "\033[1mbold\033[22m \033[2mfaint\033[22m \033[3mitalic\033[24m",
@@ -114,6 +116,9 @@ unitizer_sect("Corner cases", {
   # non character inputs
 
   sgr_to_html(1:3)
+
+
+
 })
 unitizer_sect("Bad inputs", {
   fansi:::esc_color_code_to_html(matrix(1:12, 4))
@@ -133,14 +138,22 @@ unitizer_sect("issue54", {
   string2 <- c("\033[3mhello\033[24m", "world\033[23m moon")
   fansi::sgr_to_html(string2)
 
-  string3 <- c("\033[38;5;246m#&gt;\033[39m \033[38;5;246m# … with 6 more variables: \033[1mn_itr\033[22m \033[3m\033[38;5;246m&lt;int&gt;\033[38;5;246m\033[23m, \033[1mtotal_time\033[22m \033[3m\033[38;5;246m&lt;bch:tm&gt;\033[38;5;246m\033[23m,",
-  "\033[38;5;246m#&gt;\033[39m #   \033[1mresult\033[22m \033[3m\033[38;5;246m&lt;list&gt;\033[38;5;246m\033[23m, \033[1mmemory\033[22m \033[3m\033[38;5;246m&lt;list&gt;\033[38;5;246m\033[23m, \033[1mtime\033[22m \033[3m\033[38;5;246m&lt;list&gt;\033[38;5;246m\033[23m, \033[1mgc\033[22m \033[3m\033[38;5;246m&lt;list&gt;\033[38;5;246m\033[23m\033[39m"
+  string3 <- c(
+    "\033[38;5;246m# … with 5 more variables: total_time \033[3m\033[38;5;246m<bch:tm>\033[38;5;246m\033[23m, result \033[3m\033[38;5;246m<list>\033[38;5;246m\033[23m, memory \033[3m\033[38;5;246m<list>\033[38;5;246m\033[23m,",
+    "#   time \033[3m\033[38;5;246m<list>\033[38;5;246m\033[23m, gc \033[3m\033[38;5;246m<list>\033[38;5;246m\033[23m\033[39m"
   )
-  fansi::sgr_to_html(string2)
+  fansi::sgr_to_html(string3)
 
   # head <- "<html><head><meta charset='utf-8'/></head><pre>"
   # f <- paste0(tempfile(), ".html")
-  # writeLines(c(head, fansi::sgr_to_html(string2), "</pre></html>"), f)
+  # writeLines(c(head, fansi::sgr_to_html(string3), "</pre></html>"), f)
   # browseURL(f)
   # unlink(f)
+
+  ## Other tests
+  ##
+  ## - How is this handled in the other functions (substr, wrap)?  In theory
+  ##   should work fine, need to confirm.
+  ## - Multi elt things with errors occurring (test how state resetting handles
+  ##   errors and warnings)
 })

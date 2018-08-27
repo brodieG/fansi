@@ -363,24 +363,17 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
     SEXP chrsxp = STRING_ELT(x, i);
     FANSI_check_enc(chrsxp, i);
 
-    error("Need to properly initialize state for each character element");
-    // IN PARTICULAR: what elements of state do we want to preserve, vs. not?
-    // It may be more than just the styles, like warnings and all that.  How do
-    // we reset this in a way that doesn't bork everything?
-
     const char * string_start = CHAR(chrsxp);
     const char * string = string_start;
-    struct FANSI_state state_start = FANSI_state_copy_style(state_init, state);
-    state = ;
 
-    // <span> are always closed at the end of a character vec element, so the
-    // state previous is blank.
+    // Reset position info and string; we want to preserve the rest of the state
+    // info so that SGR styles can spill across lines
 
-    state_prev = state_init;
-    state.string = state_prev.string = state_start.string = string;
+    state = FANSI_reset_pos(state);
+    state.string = string;
+    struct FANSI_state state_start = FANSI_reset_pos(state);
 
     // Save what the state was at the end of the prior string
-
 
     R_len_t bytes_init = LENGTH(chrsxp);
 
@@ -398,13 +391,14 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
     // It is possible for a state to be left over from prior string.
 
-    if(FANSI_state_has_style_basic(state_start)) {
+    if(FANSI_state_has_style_basic(state)) {
       bytes_extra = html_compute_size(
-        state_start, bytes_extra, state.pos_byte, 0, i
+        state, bytes_extra, state.pos_byte, 0, i
       );
       has_esc = any_esc = 1;
-      state_prev = state_start;
     }
+    state_prev = state;
+
     // Now check string proper
 
     while(*string && (string = strchr(string, 0x1b))) {
@@ -445,28 +439,21 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
       FANSI_size_buff(&buff, bytes_final);
       string = string_start;
       state_start.warn = state.warn;
-      state_start.string = string_start;
-      state = state_prev = state_start;
+      state = state_start;
 
-      Rprintf("string is '%s'\n", string_start);
-      Rprintf(
-        "state: %d prev: %d start: %d\n",
-        state.pos_byte, state_prev.pos_byte, state_start.pos_byte
-      );
+      // Rprintf("string is '%s'\n", state.string);
 
       int first_esc = 1;
       char * buff_track = buff.buff;
 
       // Handle state left-over from previous char elem
 
-      if(FANSI_state_has_style_basic(state_start)) {
-        Rprintf("Writing previous style\n");
-        int bytes_html = state_as_html(state_start, first_esc, buff_track);
+      if(FANSI_state_has_style_basic(state)) {
+        int bytes_html = state_as_html(state, first_esc, buff_track);
         buff_track += bytes_html;
-        state_prev = state;
         first_esc = 0;
       }
-      Rprintf("yow\n");
+      state_prev = state;
 
       // Deal with state changes in this string
 
@@ -475,26 +462,23 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
         // read all sequential ESC tags
 
-        Rprintf("bow\n");
         state = FANSI_read_next(state);
 
         // The text since the last ESC
 
-        Rprintf("prev_byte: %d\n", state_prev.pos_byte);
+        // Rprintf("prev_byte: %d\n", state_prev.pos_byte);
         const char * string_last = string_start + state_prev.pos_byte;
         int bytes_prev = string - string_last;
-        Rprintf("bytes prev: %d\n", bytes_prev);
-        Rprintf("write prev: '%.*s'\n", bytes_prev, string_last);
+        // Rprintf("bytes prev: %d\n", bytes_prev);
+        // Rprintf("write prev: '%.*s'\n", bytes_prev, string_last);
         memcpy(buff_track, string_last, bytes_prev);
         buff_track += bytes_prev;
 
         // If we have a change from the previous tag, write html/css
 
-        Rprintf("wow\n");
         if(FANSI_state_comp_basic(state, state_prev)) {
-          Rprintf("About to write state\n");
           int bytes_html = state_as_html(state, first_esc, buff_track);
-          Rprintf("write html: '%.*s'\n", bytes_html, buff_track);
+          // Rprintf("write html: '%.*s'\n", bytes_html, buff_track);
           buff_track += bytes_html;
           if(first_esc) first_esc = 0;
         }
@@ -505,8 +489,8 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
       const char * string_last = state_prev.string + state_prev.pos_byte;
       int bytes_stub = bytes_init - (string_last - string_start);
-      Rprintf("last: '%s'\n", string_last);
-      Rprintf("stub %d string %d\n", bytes_stub, (string_last - string_start));
+      // Rprintf("last: '%s'\n", string_last);
+      // Rprintf("stub %d string %d\n", bytes_stub, (string_last - string_start));
 
       memcpy(buff_track, string_last, bytes_stub);
       buff_track += bytes_stub;
