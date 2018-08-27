@@ -111,7 +111,23 @@ struct FANSI_state FANSI_inc_width(struct FANSI_state state, int inc) {
   state.pos_width_target += inc;
   return state;
 }
-
+/*
+ * Reset the position counters
+ *
+ * Intended so that all the state info is kept for when state persists from one
+ * element in a character vector to the next.
+ *
+ * We are not 100% sure we're resetting everything that needs to be reset.
+ */
+struct FANSI_state FANSI_reset_pos(struct FANSI_state state) {
+  state.pos_byte = 0;
+  state.pos_ansi = 0;
+  state.pos_raw = 0;
+  state.pos_width = 0;
+  state.pos_width_target = 0;
+  state.last_char_width = 0;
+  return state;
+}
 /*
  * Compute the state given a character position (raw position)
  *
