@@ -436,9 +436,11 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
       FANSI_size_buff(&buff, bytes_final);
       string = string_start;
-      state_init.warn = state.warn;
-      state_init.string = string_start;
-      state = state_prev = state_init;
+      state_start.warn = state.warn;
+      state_start.string = string_start;
+      state = state_prev = state_start;
+
+      Rprintf("hello\n");
 
       int first_esc = 1;
       char * buff_track = buff.buff;
@@ -451,6 +453,8 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
         state_prev = state;
         first_esc = 0;
       }
+      Rprintf("yow\n");
+
       // Deal with state changes in this string
 
       while(*string && (string = strchr(string, 0x1b))) {
@@ -458,21 +462,23 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
         // read all sequential ESC tags
 
+        Rprintf("bow\n");
         state = FANSI_read_next(state);
 
         // The text since the last ESC
 
         const char * string_last = string_start + state_prev.pos_byte;
         int bytes_prev = string - string_last;
-        // Rprintf("write prev: '%.*s'\n", bytes_prev, string_last);
+        Rprintf("write prev: '%.*s'\n", bytes_prev, string_last);
         memcpy(buff_track, string_last, bytes_prev);
         buff_track += bytes_prev;
 
         // If we have a change from the previous tag, write html/css
 
+        Rprintf("wow\n");
         if(FANSI_state_comp_basic(state, state_prev)) {
           int bytes_html = state_as_html(state, first_esc, buff_track);
-          // Rprintf("write html: '%.*s'\n", bytes_html, buff_track);
+           Rprintf("write html: '%.*s'\n", bytes_html, buff_track);
           buff_track += bytes_html;
           if(first_esc) first_esc = 0;
         }
@@ -483,8 +489,8 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
       const char * string_last = state_prev.string + state_prev.pos_byte;
       int bytes_stub = bytes_init - (string_last - string_start);
-      // Rprintf("last: '%s'\n", string_last);
-      // Rprintf("stub %d string %d\n", bytes_stub, (string_last - string_start));
+      Rprintf("last: '%s'\n", string_last);
+      Rprintf("stub %d string %d\n", bytes_stub, (string_last - string_start));
 
       memcpy(buff_track, string_last, bytes_stub);
       buff_track += bytes_stub;
