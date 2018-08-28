@@ -150,10 +150,11 @@ unitizer_sect("issue54", {
   # browseURL(f)
   # unlink(f)
 
-  ## Other tests
-  ##
-  ## - How is this handled in the other functions (substr, wrap)?  In theory
-  ##   should work fine, need to confirm.
-  ## - Multi elt things with errors occurring (test how state resetting handles
-  ##   errors and warnings)
+  # trigger warnings/errors
+
+  string4 <- c(
+    "wow \033[31m then", "hello\033[\x80;wow", "yo \033[m there",
+    "boom \033[41m"
+  )
+  sgr_to_html(string4)
 })
