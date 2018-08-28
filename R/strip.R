@@ -35,8 +35,8 @@
 #' @export
 #' @param strip character, any combination of the following values (see details):
 #'   * "nl": strip newlines.
-#'   * "c0": strip all other "C0" control characters (i.e. x01-x1f), except for
-#'     newlines and the actual ESC character.
+#'   * "c0": strip all other "C0" control characters (i.e. x01-x1f, x7F), 
+#'     except for newlines and the actual ESC character.
 #'   * "sgr": strip ANSI CSI SGR sequences.
 #'   * "csi": strip all non-SGR csi sequences.
 #'   * "esc": strip all other escape sequences.

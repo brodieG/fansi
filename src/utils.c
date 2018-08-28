@@ -90,7 +90,6 @@ SEXP FANSI_add_int_ext(SEXP x, SEXP y) {
  * @param what is a bit flag to line up against VALID.WHAT index values, so
  *   (what & (1 << 0)) is newlines, (what & (1 << 1)) is C0, etc, though note
  *   this does not act
- *
  */
 
 struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {

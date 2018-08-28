@@ -29,7 +29,7 @@
  */
 struct FANSI_state FANSI_state_init_full(
   const char * string, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
-  SEXP width
+  SEXP width, SEXP what
 ) {
   // nocov start
   if(TYPEOF(warn) != LGLSXP)
@@ -57,6 +57,11 @@ struct FANSI_state FANSI_state_init_full(
       "Internal error: state_init with bad type for width (%s)",
       type2char(TYPEOF(width))
     );
+  if(TYPEOF(what) != INTSXP)
+    error(
+      "Internal error: state_init with bad type for what (%s)",
+      type2char(TYPEOF(what))
+    );
 
   // nocov end
 
@@ -83,7 +88,8 @@ struct FANSI_state FANSI_state_init_full(
     .term_cap = term_cap_int,
     .allowNA = asLogical(allowNA),
     .keepNA = asLogical(keepNA),
-    .use_nchar = asInteger(width)  // 0 for chars, 1 for width
+    .use_nchar = asInteger(width),  // 0 for chars, 1 for width
+    .what = FANSI_what_as_int(what);
   };
 }
 struct FANSI_state FANSI_state_init(
@@ -96,7 +102,8 @@ struct FANSI_state FANSI_state_init(
     string, warn, term_cap,
     R_true,  // allowNA for invalid multibyte
     R_false,
-    R_zero   // Don't use width by default
+    R_zero,  // Don't use width by default
+    R_zero   // Don't treat any escapes as special by default
   );
   UNPROTECT(3);
   return res;
@@ -625,7 +632,7 @@ int FANSI_state_has_style_basic(struct FANSI_state state) {
 SEXP FANSI_state_at_pos_ext(
   SEXP text, SEXP pos, SEXP type,
   SEXP lag, SEXP ends,
-  SEXP warn, SEXP term_cap
+  SEXP warn, SEXP term_cap, SEXP what
 ) {
   /*******************************************\
   * IMPORTANT: INPUT MUST ALREADY BE IN UTF8! *
@@ -646,6 +653,8 @@ SEXP FANSI_state_at_pos_ext(
     error("Argument `warn` must be integer");         // nocov
   if(TYPEOF(term_cap) != INTSXP)
     error("Argument `term.cap` must be integer");     // nocov
+  if(TYPEOF(what) != INTSXP)
+    error("Argument `what` must be integer");         // nocov
 
   R_xlen_t len = XLENGTH(pos);
 
@@ -693,7 +702,7 @@ SEXP FANSI_state_at_pos_ext(
 
   SEXP R_true = PROTECT(ScalarLogical(1));
   struct FANSI_state state =
-    FANSI_state_init_full(string, warn, term_cap, R_true, R_true, type);
+    FANSI_state_init_full(string, warn, term_cap, R_true, R_true, type, what);
   UNPROTECT(1);
   struct FANSI_state state_prev = state;
 

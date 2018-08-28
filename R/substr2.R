@@ -17,7 +17,10 @@
 #' ANSI Control Sequence Aware Version of substr
 #'
 #' `substr_ctl` is a drop-in replacement for `substr`.  Performance is
-#' slightly slower than `substr`.
+#' slightly slower than `substr`.  ANSI CSI SGR sequences will be included in
+#' the substrings to reflect the format of the substring when it was embedded in
+#' the source string.  Additionally, other _Control Sequences_ are
+#' treated as zero-width (see ISSUE #56).
 #'
 #' `substr2_ctl` adds the ability to retrieve substrings based on display width,
 #' and byte width in addition to the normal character width.  `substr2_ctl` also

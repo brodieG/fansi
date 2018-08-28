@@ -20,6 +20,13 @@
 #' but should otherwise behave the same way except for CSI SGR sequence
 #' awareness.
 #'
+#' This function works by computing the position of the split points after
+#' removing _Control Sequences_, and uses those positions in conjunction with
+#' [`substr_ctl`] to extract the pieces.  An important implication of this is
+#' that you cannot split by _Control Sequences_.  You can control which types of
+#' _Control Sequences_ are stripped when computing split positions with the
+#' `strip` parameter.
+#'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.  The
 #'   split positions are computed after both `x` and `split` are converted to
 #'   UTF-8.
@@ -34,6 +41,11 @@
 #' @return list, see [base::strsplit].
 #' @examples
 #' strsplit_ctl("\033[31mhello\033[42m world!", " ")
+#'
+#' ## Next two examples allow splitting by newlines, which
+#' ## normally doesn't work as they are _Control Sequences_
+#' strsplit_sgr("\033[31mhello\033[42m\nworld!", "\n")
+#' strsplit_ctl("\033[31mhello\033[42m\nworld!", "\n", strip=c("all", "nl"))
 
 # strsplit_ctl <- function(
 #   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
@@ -48,9 +60,22 @@
 #   .Call(FANSI_strsplit, x.split, warn, term.cap.int)
 # }
 
-strsplit_ctl <- function(
+strsplit_sgr <- function(
   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+)
+  strsplit_ctl(
+    x=x, split=split, fixed=fixed, perl=perl, useBytes=useBytes,
+    warn=warn, term.cap=term.cap, strip='sgr'
+  )
+
+#' @export
+#' @rdname strsplit_sgr
+
+strsplit_ctl <- function(
+  x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
+  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
+  strip='all'
 ) {
   x <- as.character(x)
   if(any(Encoding(x) == "bytes"))
@@ -94,7 +119,7 @@ strsplit_ctl <- function(
   s.x.seq <- rep(s.seq, length.out=length(x)) * (!x.na)
 
   matches <- res <- vector("list", length(x))
-  x.strip <- strip_ctl(x, warn=warn)
+  x.strip <- strip_ctl(x, warn=warn, strip=strip)
   chars <- nchar(x.strip)
 
   # Find the split locations and widths
@@ -148,4 +173,5 @@ strsplit_ctl <- function(
   res[x.na] <- list(NA_character_)
   res
 }
+
 

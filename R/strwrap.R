@@ -96,7 +96,8 @@
 strwrap_ctl <- function(
   x, width = 0.9 * getOption("width"), indent = 0,
   exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
-  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
+  ctrl=getOption('fansi.ctrl')
 ) {
   if(!is.character(x)) x <- as.character(x)
 

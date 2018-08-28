@@ -21,7 +21,13 @@
 
 VALID.TERM.CAP <- c('bright', '256', 'truecolor')
 
-## Valid values for the `what` argument, REMEMBER TO UPDATE
-## FANSI_STRIP_ALL CONSTANT IF WE MODIFY THIS
+## Valid values for the `what` argument, 
+## * nl: newlines
+## * c0: other c0, including del
+## * sgr: SGR ANSI CSI
+## * csi: ANSI CSI, excluding SGR
+## * esc: other \033 escape sequences, we assume they are two long
+##
+## REMEMBER TO UPDATE FANSI_STRIP_ALL CONSTANT IF WE MODIFY THIS
 
 VALID.STRIP <- c("all", "nl", "c0", "sgr", "csi", "esc")

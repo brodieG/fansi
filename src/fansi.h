@@ -28,7 +28,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   // - Constants / Macros ------------------------------------------------------
 
   // CAREFUL with these; if we get close to INT_MAX with 2^x we can have
-  // problems with signed/unsigned bit shifts.  Shouldn't be anywhere close tod
+  // problems with signed/unsigned bit shifts.  Shouldn't be anywhere close to
   // that but something to keep in mind
 
   #define FANSI_STRIP_ALL 31 // 1 + 2 + 4 + 8 + 16
@@ -216,7 +216,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
     int last_char_width;
 
-    /* Internal Flags ---------------------------------------------------------
+    /* Control Flags -----------------------------------------------------------
      *
      * Used to communicate back from sub-processes that sub-parsing failed, the
      * sub-process is supposed to leave the state pointed at the failing
@@ -266,6 +266,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int keepNA;
     // invalid multi-byte char, a bit of duplication with err_code = 9;
     int nchar_err;
+    // what types of Control Sequences should have special treatment.  This
+    // mirrors the `what` parameter for `FANSI_find_esc`.
+
+    int what;
   };
   /*
    * Need to keep track of fallback state, so we need ability to return two
@@ -363,7 +367,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   );
   struct FANSI_state FANSI_state_init_full(
     const char * string, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
-    SEXP width
+    SEXP width, SEXP what
   );
   int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current);
   int FANSI_state_comp_basic(
