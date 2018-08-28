@@ -1,5 +1,10 @@
 # fansi Release Notes
 
+## v0.3.1
+
+* [#54](https://github.com/brodieG/fansi/issues/54): fix `sgr_to_html` so that
+  it can handle vector elements with un-terminated SGR sequences (@krlmlr).
+
 ## v0.3.0
 
 * `fansi::set_knit_hooks` makes it easy to automatically convert ANSI CSI SGR
