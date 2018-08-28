@@ -88,6 +88,8 @@ unitizer_sect("enc check", {
 
   Encoding(y) <- "bytes"
   fansi:::check_enc(y, 1)
+
+  fansi:::check_enc("hello", 1)
 })
 unitizer_sect("what as int", {
   fansi:::what_as_int(c(1, 2, 3, 4, 5))

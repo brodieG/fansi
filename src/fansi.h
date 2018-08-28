@@ -373,6 +373,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_state_has_style_basic(struct FANSI_state state);
   int FANSI_state_size(struct FANSI_state state);
   int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len);
+
   struct FANSI_state FANSI_read_next(struct FANSI_state state);
 
   int FANSI_add_int(int x, int y, const char * file, int line);
