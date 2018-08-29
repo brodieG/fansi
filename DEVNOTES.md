@@ -27,6 +27,16 @@ position in the signature, put `strip` at the end, and if `strip` is specified
 issue a message that it is deprecated.  The alternative is to live with it and
 then deal with the duplicate parameter docs.
 
+Need to add tests for:
+
+* use of 'ctl' parameter everywhere
+* use of deprecated 'strip'/'which' parameters everywhere
+* treatment of control sequences excluded
+
+BIG QUESTION: is behavior of the `_sgr` variety of functions going to change
+with respect to embedded control sequences (yes..., is okay to do this change,
+almost certainly no one will notice).
+
 ## TIL
 
 Some random thoughts for a possible post about the perils of compiler

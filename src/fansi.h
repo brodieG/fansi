@@ -31,7 +31,13 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   // problems with signed/unsigned bit shifts.  Shouldn't be anywhere close to
   // that but something to keep in mind
 
+  #define FANSI_CTL_NL 1
+  #define FANSI_CTL_C0 2
+  #define FANSI_CTL_SGR 4
+  #define FANSI_CTL_CSI 8
+  #define FANSI_CTL_ESC 16
   #define FANSI_CTL_ALL 31 // 1 + 2 + 4 + 8 + 16 == 2^0 + 2^1 + 2^2 + 2^3 + 2^4
+
   #define FANSI_STYLE_MAX 12 // 12 is double underline
 
   // symbols
