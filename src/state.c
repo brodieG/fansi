@@ -29,7 +29,7 @@
  */
 struct FANSI_state FANSI_state_init_full(
   const char * string, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
-  SEXP width, SEXP what
+  SEXP width, SEXP ctl
 ) {
   // nocov start
   if(TYPEOF(warn) != LGLSXP)
@@ -57,10 +57,10 @@ struct FANSI_state FANSI_state_init_full(
       "Internal error: state_init with bad type for width (%s)",
       type2char(TYPEOF(width))
     );
-  if(TYPEOF(what) != INTSXP)
+  if(TYPEOF(ctl) != INTSXP)
     error(
-      "Internal error: state_init with bad type for what (%s)",
-      type2char(TYPEOF(what))
+      "Internal error: state_init with bad type for ctl (%s)",
+      type2char(TYPEOF(ctl))
     );
 
   // nocov end
@@ -89,7 +89,7 @@ struct FANSI_state FANSI_state_init_full(
     .allowNA = asLogical(allowNA),
     .keepNA = asLogical(keepNA),
     .use_nchar = asInteger(width),  // 0 for chars, 1 for width
-    .what = FANSI_what_as_int(what);
+    .ctl = FANSI_ctl_as_int(ctl)
   };
 }
 struct FANSI_state FANSI_state_init(
@@ -632,7 +632,7 @@ int FANSI_state_has_style_basic(struct FANSI_state state) {
 SEXP FANSI_state_at_pos_ext(
   SEXP text, SEXP pos, SEXP type,
   SEXP lag, SEXP ends,
-  SEXP warn, SEXP term_cap, SEXP what
+  SEXP warn, SEXP term_cap, SEXP ctl
 ) {
   /*******************************************\
   * IMPORTANT: INPUT MUST ALREADY BE IN UTF8! *
@@ -653,8 +653,8 @@ SEXP FANSI_state_at_pos_ext(
     error("Argument `warn` must be integer");         // nocov
   if(TYPEOF(term_cap) != INTSXP)
     error("Argument `term.cap` must be integer");     // nocov
-  if(TYPEOF(what) != INTSXP)
-    error("Argument `what` must be integer");         // nocov
+  if(TYPEOF(ctl) != INTSXP)
+    error("Argument `ctl` must be integer");         // nocov
 
   R_xlen_t len = XLENGTH(pos);
 
@@ -702,7 +702,7 @@ SEXP FANSI_state_at_pos_ext(
 
   SEXP R_true = PROTECT(ScalarLogical(1));
   struct FANSI_state state =
-    FANSI_state_init_full(string, warn, term_cap, R_true, R_true, type, what);
+    FANSI_state_init_full(string, warn, term_cap, R_true, R_true, type, ctl);
   UNPROTECT(1);
   struct FANSI_state state_prev = state;
 

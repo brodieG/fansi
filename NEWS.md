@@ -1,7 +1,15 @@
 # fansi Release Notes
 
-## v0.3.1
+## v0.4.0
 
+* Systematized which control sequences are handled specially by adding the `ctl`
+  parameter to most functions.  Some functions such as `strip_ctl` had existing
+  parameters that did the same thing (e.g. `strip`, or `which`), and those have
+  been deprecated in favor of `ctl`.  While technically this is a change in the
+  API, it should be non-breaking.
+* [#55](https://github.com/brodieG/fansi/issues/55): `strsplit_ctl` can now work
+  with `split` parameters containing escape sequences provided those sequences
+  are excluded from by the `ctl` parameter.
 * [#54](https://github.com/brodieG/fansi/issues/54): fix `sgr_to_html` so that
   it can handle vector elements with un-terminated SGR sequences (@krlmlr).
 

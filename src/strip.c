@@ -31,11 +31,11 @@
  *   actually throwing the warning
  */
 
-SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
+SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
   if(TYPEOF(x) != STRSXP)
     error("Argument `x` should be a character vector.");  // nocov
-  if(TYPEOF(what) != INTSXP)
-    error("Internal Error: `what` should integer.");      // nocov
+  if(TYPEOF(ctl) != INTSXP)
+    error("Internal Error: `ctl` should integer.");      // nocov
   if(
     (TYPEOF(warn) != LGLSXP && TYPEOF(warn) != INTSXP) || XLENGTH(warn) != 1 ||
     INTEGER(warn)[0] == NA_INTEGER
@@ -46,9 +46,9 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
   if(warn_int < 0 || warn_int > 2)
     error("Argument `warn` must be between 0 and 2 if an integer.");  // nocov
 
-  // Compress `what` into a single integer using bit flags
+  // Compress `ctl` into a single integer using bit flags
 
-  int what_int = FANSI_what_as_int(what);
+  int ctl_int = FANSI_ctl_as_int(ctl);
   R_xlen_t i, len = xlength(x);
   SEXP res_fin = x;
 
@@ -97,13 +97,13 @@ SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn) {
     res_start = res_track = chr_buff;
 
     while(1) {
-      csi = FANSI_find_esc(chr_track, what_int);
+      csi = FANSI_find_esc(chr_track, ctl_int);
       // Currently we can't know for sure if a ESC seq that isn't a CSI is only
       // two long so we should warn if we hit one, or otherwise and invalid seq
       if(
         !invalid_ansi && (
           !csi.valid ||
-          ((csi.what & (1 << 4)) & what_int)
+          ((csi.ctl & (1 << 4)) & ctl_int)
         )
       ) {
         invalid_ansi = 1;

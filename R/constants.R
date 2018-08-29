@@ -21,13 +21,18 @@
 
 VALID.TERM.CAP <- c('bright', '256', 'truecolor')
 
-## Valid values for the `what` argument, 
+## Valid values for the `ctl` argument,
+##
 ## * nl: newlines
 ## * c0: other c0, including del
 ## * sgr: SGR ANSI CSI
 ## * csi: ANSI CSI, excluding SGR
 ## * esc: other \033 escape sequences, we assume they are two long
 ##
-## REMEMBER TO UPDATE FANSI_STRIP_ALL CONSTANT IF WE MODIFY THIS
+## These will eventually encoded in an integer as powers of 2, except for `all`
+## which acts as a negation (see FANSI_ctl_as_int), so "nl" is 2^0, "c0" is 2^1,
+## and so on.
+##
+## REMEMBER TO UPDATE FANSI_CTL_ALL CONSTANT IF WE MODIFY THIS
 
-VALID.STRIP <- c("all", "nl", "c0", "sgr", "csi", "esc")
+VALID.CTL <- c("all", "nl", "c0", "sgr", "csi", "esc")

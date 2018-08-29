@@ -34,6 +34,7 @@ SEXP FANSI_unhandled_esc(SEXP x) {
   SEXP R_true = PROTECT(ScalarLogical(1));
   SEXP R_one = PROTECT(ScalarInteger(1));
   SEXP no_warn = PROTECT(ScalarLogical(0));
+  SEXP ctl_all = PROTECT(ScalarInteger(FANSI_CTL_ALL));
   SEXP res, res_start;
   res = res_start = R_NilValue;
 
@@ -57,7 +58,7 @@ SEXP FANSI_unhandled_esc(SEXP x) {
       string = string_start = CHAR(chrsxp);
 
       struct FANSI_state state = FANSI_state_init_full(
-        string, no_warn, zero_vec, R_true, R_true, R_one
+        string, no_warn, zero_vec, R_true, R_true, R_one, ctl_all
       );
       int has_errors = 0;
 
@@ -173,6 +174,6 @@ SEXP FANSI_unhandled_esc(SEXP x) {
   SET_VECTOR_ELT(res_fin, 3, res_err_code);
   SET_VECTOR_ELT(res_fin, 4, res_translated);
   SET_VECTOR_ELT(res_fin, 5, res_string);
-  UNPROTECT(12);
+  UNPROTECT(13);
   return res_fin;
 }

@@ -18,34 +18,44 @@
 #'
 #' `has_ctl` checks for any _Control Sequence_, whereas `has_sgr` checks only
 #' for ANSI CSI SGR sequences.  You can check for different types of sequences
-#' with the `which` parameter.
+#' with the `ctl` parameter.
 #'
 #' @export
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
 #' @inheritParams strip_ctl
-#' @param which character, what _Control Sequences_ to check for; see `strip`
-#'   parameter for [strip_ctl] for details.
+#' @param which character, deprecated in favor of `ctl`.
 #' @return logical of same length as `x`; NA values in `x` result in NA values
 #'   in return
+#' @examples
+#' has_ctl("hello world")
+#' has_ctl("hello\nworld")
+#' has_ctl("hello\nworld", "sgr")
+#' has_ctl("hello\033[31mworld\033[m", "sgr")
+#' has_sgr("hello\033[31mworld\033[m")
+#' has_sgr("hello\nworld")
 
-has_ctl <- function(x, which='all', warn=getOption('fansi.warn')) {
+has_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), which) {
   if(!is.logical(warn)) warn <- as.logical(warn)
+  if(!is.missing(which)) {
+    message("Parameter `which` has been deprecated; use `ctl` instead.")
+    ctl <- which
+  }
   if(length(warn) != 1L || is.na(warn))
     stop("Argument `warn` must be TRUE or FALSE.")
-  if(!is.character(which)) stop("Argument `which` must be character.")
+  if(!is.character(ctl)) stop("Argument `ctl` must be character.")
 
-  if(length(which)) {
-    if(anyNA(which.int <- match(which, VALID.STRIP)))
+  if(length(ctl)) {
+    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
       stop(
-        "Argument `which` may contain only values in `",
-        deparse(VALID.STRIP), "`"
+        "Argument `ctl` may contain only values in `",
+        deparse(VALID.CTL), "`"
       )
-    .Call(FANSI_has_csi, enc2utf8(as.character(x)), which.int, warn)
+    .Call(FANSI_has_csi, enc2utf8(as.character(x)), ctl.int, warn)
   } else rep(FALSE, length(x))
 }
 #' @export
 #' @rdname has_ctl
 
 has_sgr <- function(x, warn=getOption('fansi.warn'))
-  has_ctl(x, which="sgr", warn=warn)
+  has_ctl(x, ctl="sgr", warn=warn)

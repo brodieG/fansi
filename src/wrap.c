@@ -46,8 +46,8 @@ static struct FANSI_prefix_dat make_pre(SEXP x) {
   // ideally would have an internal interface to strip so we don't need to
   // generate these SEXPs here
   SEXP warn = PROTECT(ScalarInteger(2));
-  SEXP what = PROTECT(ScalarInteger(1));
-  SEXP x_strip = PROTECT(FANSI_strip(x, what, warn));
+  SEXP ctl = PROTECT(ScalarInteger(1));
+  SEXP x_strip = PROTECT(FANSI_strip(x, ctl, warn));
   int x_width = R_nchar(
     asChar(x_strip), Width, TRUE, FALSE, "when computing display width"
   );
@@ -295,12 +295,12 @@ static SEXP strwrap(
   const char * pad_chr,
   int strip_spaces,
   SEXP warn, SEXP term_cap,
-  int first_only
+  int first_only, SEXP ctl
 ) {
   SEXP R_true = PROTECT(ScalarLogical(1));
   SEXP R_one = PROTECT(ScalarInteger(1));
   struct FANSI_state state = FANSI_state_init_full(
-    x, warn, term_cap, R_true, R_true, R_one
+    x, warn, term_cap, R_true, R_true, R_one, ctl
   );
   UNPROTECT(2);
 
@@ -498,7 +498,8 @@ SEXP FANSI_strwrap_ext(
   SEXP strip_spaces,
   SEXP tabs_as_spaces, SEXP tab_stops,
   SEXP warn, SEXP term_cap,
-  SEXP first_only
+  SEXP first_only,
+  SEXP ctl
 ) {
   if(
     TYPEOF(x) != STRSXP || TYPEOF(width) != INTSXP ||
@@ -510,7 +511,8 @@ SEXP FANSI_strwrap_ext(
     TYPEOF(strip_spaces) != LGLSXP ||
     TYPEOF(tabs_as_spaces) != LGLSXP ||
     TYPEOF(tab_stops) != INTSXP ||
-    TYPEOF(first_only) != LGLSXP
+    TYPEOF(first_only) != LGLSXP ||
+    TYPEOF(ctl) != INTSXP
   )
     error("Internal Error: arg type error 1; contact maintainer.");  // nocov
 
@@ -538,12 +540,12 @@ SEXP FANSI_strwrap_ext(
   // and tabs
 
   if(asInteger(tabs_as_spaces)) {
-    x = PROTECT(FANSI_tabs_as_spaces(x, tab_stops, &buff, warn, term_cap));
+    x = PROTECT(FANSI_tabs_as_spaces(x, tab_stops, &buff, warn, term_cap, ctl));
     prefix = PROTECT(
-      FANSI_tabs_as_spaces(prefix, tab_stops, &buff, warn, term_cap)
+      FANSI_tabs_as_spaces(prefix, tab_stops, &buff, warn, term_cap, ctl)
     );
     initial = PROTECT(
-      FANSI_tabs_as_spaces(initial, tab_stops, &buff, warn, term_cap)
+      FANSI_tabs_as_spaces(initial, tab_stops, &buff, warn, term_cap, ctl)
     );
   }
   else x = PROTECT(PROTECT(PROTECT(x)));  // PROTECT stack balance
@@ -634,7 +636,8 @@ SEXP FANSI_strwrap_ext(
         CHAR(asChar(pad_end)),
         strip_spaces_int,
         warn, term_cap,
-        first_only_int
+        first_only_int,
+        ctl
     ) );
     if(first_only_int) {
       SET_STRING_ELT(res, i, str_i);

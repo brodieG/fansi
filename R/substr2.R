@@ -84,8 +84,12 @@
 substr_ctl <- function(
   x, start, stop,
   warn=getOption('fansi.warn'),
-  term.cap=getOption('fansi.term.cap')
-) substr2_ctl(x=x, start=start, stop=stop, warn=warn, term.cap=term.cap)
+  term.cap=getOption('fansi.term.cap'),
+  ctl='all'
+)
+  substr2_ctl(
+    x=x, start=start, stop=stop, warn=warn, term.cap=term.cap, ctl=ctl
+  )
 
 #' @rdname substr_ctl
 #' @export
@@ -95,7 +99,8 @@ substr2_ctl <- function(
   tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
   tab.stops=getOption('fansi.tab.stops'),
   warn=getOption('fansi.warn'),
-  term.cap=getOption('fansi.term.cap')
+  term.cap=getOption('fansi.term.cap'),
+  ctl='all'
 ) {
   if(!is.character(x)) x <- as.character(x)
   x <- enc2utf8(x)
@@ -119,6 +124,17 @@ substr2_ctl <- function(
       "Argument `term.cap` may only contain values in ",
       deparse(VALID.TERM.CAP)
     )
+  if(!is.character(ctl))
+    stop("Argument `ctl` must be character.")
+  ctl.int <- integer()
+  if(length(ctl)) {
+    # duplicate values in `ctl` are okay, so save a call to `unique` here
+    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
+      stop(
+        "Argument `ctl` may contain only values in `",
+        deparse(VALID.CTL), "`"
+      )
+  }
 
   valid.round <- c('start', 'stop', 'both', 'neither')
   if(
@@ -155,7 +171,8 @@ substr2_ctl <- function(
     term.cap.int=term.cap.int,
     round.start=round == 'start' || round == 'both',
     round.stop=round == 'stop' || round == 'both',
-    x.len=length(x)
+    x.len=length(x),
+    ctl=ctl
   )
   res[!no.na] <- NA_character_
   res
@@ -168,13 +185,13 @@ substr2_ctl <- function(
 substr_ctl_internal <- function(
   x, start, stop, type.int, round, tabs.as.spaces,
   tab.stops, warn, term.cap.int, round.start, round.stop,
-  x.len
+  x.len, ctl
 ) {
   # For each unique string, compute the state at each start and stop position
   # and re-map the positions to "ansi" space
 
   if(tabs.as.spaces)
-    x <- .Call(FANSI_tabs_as_spaces, x, tab.stops, warn, term.cap.int)
+    x <- .Call(FANSI_tabs_as_spaces, x, tab.stops, warn, term.cap.int, ctl)
 
   res <- character(x.len)
   s.s.valid <- stop >= start & stop
@@ -202,7 +219,8 @@ substr_ctl_internal <- function(
       FANSI_state_at_pos_ext,
       u, e.sort - 1L, type.int,
       e.lag, e.ends,
-      warn, term.cap.int
+      warn, term.cap.int,
+      ctl
     )
     # Recover the matching values for e.sort
 

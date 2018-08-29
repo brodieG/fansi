@@ -40,7 +40,7 @@
 #' @inheritParams strwrap_ctl
 #' @return list, see [base::strsplit].
 #' @examples
-#' strsplit_ctl("\033[31mhello\033[42m world!", " ")
+#' strsplit_sgr("\033[31mhello\033[42m world!", " ")
 #'
 #' ## Next two examples allow splitting by newlines, which
 #' ## normally doesn't work as they are _Control Sequences_

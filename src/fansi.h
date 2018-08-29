@@ -31,7 +31,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   // problems with signed/unsigned bit shifts.  Shouldn't be anywhere close to
   // that but something to keep in mind
 
-  #define FANSI_STRIP_ALL 31 // 1 + 2 + 4 + 8 + 16
+  #define FANSI_CTL_ALL 31 // 1 + 2 + 4 + 8 + 16 == 2^0 + 2^1 + 2^2 + 2^3 + 2^4
   #define FANSI_STYLE_MAX 12 // 12 is double underline
 
   // symbols
@@ -74,8 +74,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int len;
     // whether the sequnce is complete or not
     int valid;
-    // what types of escapes were found
-    int what;
+    // what types of control sequences were found, seel also FANSI_state.ctl
+    int ctl;
   };
 
   /*
@@ -266,10 +266,12 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int keepNA;
     // invalid multi-byte char, a bit of duplication with err_code = 9;
     int nchar_err;
-    // what types of Control Sequences should have special treatment.  This
-    // mirrors the `what` parameter for `FANSI_find_esc`.
 
-    int what;
+    // what types of Control Sequences should have special treatment.  This
+    // mirrors the `ctl` parameter for `FANSI_find_esc`.  See `FANSI_ctl_as_int`
+    // for the encoding.
+
+    int ctl;
   };
   /*
    * Need to keep track of fallback state, so we need ability to return two
@@ -290,11 +292,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   // - External funs -----------------------------------------------------------
 
-  SEXP FANSI_has(SEXP x, SEXP what, SEXP warn);
-  SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn);
+  SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn);
+  SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn);
   SEXP FANSI_state_at_pos_ext(
     SEXP text, SEXP pos, SEXP type, SEXP lag, SEXP ends,
-    SEXP warn, SEXP term_cap
+    SEXP warn, SEXP term_cap, SEXP ctl
   );
   SEXP FANSI_strwrap_ext(
     SEXP x, SEXP width,
@@ -303,12 +305,12 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP strip_spaces,
     SEXP tabs_as_spaces, SEXP tab_stops,
     SEXP warn, SEXP term_cap,
-    SEXP first_only
+    SEXP first_only, SEXP ctl
   );
   SEXP FANSI_process(SEXP input, struct FANSI_buff * buff);
   SEXP FANSI_process_ext(SEXP input);
   SEXP FANSI_tabs_as_spaces_ext(
-    SEXP vec, SEXP tab_stops, SEXP warn, SEXP term_cap
+    SEXP vec, SEXP tab_stops, SEXP warn, SEXP term_cap, SEXP ctl
   );
   SEXP FANSI_color_to_html_ext(SEXP x);
   SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap);
@@ -321,7 +323,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_strsplit(SEXP x, SEXP warn, SEXP term_cap);
   SEXP FANSI_tabs_as_spaces(
     SEXP vec, SEXP tab_stops, struct FANSI_buff * buff, SEXP warn,
-    SEXP term_cap
+    SEXP term_cap, SEXP ctl
   );
   // utility
 
@@ -341,7 +343,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   // - Internal funs -----------------------------------------------------------
 
-  struct FANSI_csi_pos FANSI_find_esc(const char * x, int what);
+  struct FANSI_csi_pos FANSI_find_esc(const char * x, int ctl);
   struct FANSI_state FANSI_inc_width(struct FANSI_state state, int inc);
   struct FANSI_state FANSI_reset_pos(struct FANSI_state state);
   struct FANSI_state FANSI_reset_width(struct FANSI_state state);
@@ -349,8 +351,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   void FANSI_check_enc(SEXP x, R_xlen_t i);
   SEXP FANSI_check_enc_ext(SEXP x, SEXP i);
 
-  int FANSI_what_as_int(SEXP what);
-  SEXP FANSI_what_as_int_ext(SEXP what);
+  int FANSI_ctl_as_int(SEXP ctl);
+  SEXP FANSI_ctl_as_int_ext(SEXP ctl);
 
   void FANSI_size_buff(struct FANSI_buff * buff, size_t size);
 
@@ -367,7 +369,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   );
   struct FANSI_state FANSI_state_init_full(
     const char * string, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
-    SEXP width, SEXP what
+    SEXP width, SEXP ctl
   );
   int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current);
   int FANSI_state_comp_basic(

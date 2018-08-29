@@ -50,8 +50,8 @@ SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap) {
       const char * string = CHAR(string_elt);
 
       while((*string > 0 && *string < 32) || *string == 127) {
-        struct FANSI_csi_pos pos = FANSI_find_esc(string, FANSI_STRIP_ALL);
-        if(warn_int && !warned && (!pos.valid || (pos.what & (1 << 4)))) {
+        struct FANSI_csi_pos pos = FANSI_find_esc(string, FANSI_CTL_ALL);
+        if(warn_int && !warned && (!pos.valid || (pos.ctl & (1 << 4)))) {
           warned = 1;
           warning(
             "Encountered %s ESC sequence at index [%.0f], %s%s",

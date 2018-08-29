@@ -50,6 +50,15 @@
 #' @param strip.spaces TRUE (default) or FALSE, if TRUE, extraneous white spaces
 #'   (spaces, newlines, tabs) are removed in the same way as [base::strwrap]
 #'   does.
+#' @param ctrl character, any combination of the following values (see details):
+#'   * "nl": strip newlines.
+#'   * "c0": strip all other "C0" control characters (i.e. x01-x1f, x7F), 
+#'     except for newlines and the actual ESC character.
+#'   * "sgr": strip ANSI CSI SGR sequences.
+#'   * "csi": strip all non-SGR csi sequences.
+#'   * "esc": strip all other escape sequences.
+#'   * "all": all of the above, except when used in combination with any of the
+#'     above, in which case it means "all but" (see details).
 #' @param tabs.as.spaces FALSE (default) or TRUE, whether to convert tabs to
 #'   spaces.  This can only be set to TRUE if `strip.spaces` is FALSE.
 #' @export
@@ -97,7 +106,7 @@ strwrap_ctl <- function(
   x, width = 0.9 * getOption("width"), indent = 0,
   exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
-  ctrl=getOption('fansi.ctrl')
+  ctrl=getOption('fansi.ctrl'), ctl='all'
 ) {
   if(!is.character(x)) x <- as.character(x)
 
@@ -130,6 +139,17 @@ strwrap_ctl <- function(
       "Argument `term.cap` may only contain values in ",
       deparse(VALID.TERM.CAP)
     )
+  if(!is.character(ctl))
+    stop("Argument `ctl` must be character.")
+  ctl.int <- integer()
+  if(length(ctl)) {
+    # duplicate values in `ctl` are okay, so save a call to `unique` here
+    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
+      stop(
+        "Argument `ctl` may contain only values in `",
+        deparse(VALID.CTL), "`"
+      )
+  }
 
   width <- max(c(as.integer(width) - 1L, 1L))
   indent <- as.integer(indent)
