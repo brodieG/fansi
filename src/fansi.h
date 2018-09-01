@@ -218,7 +218,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
     int has_utf8;
 
-    // Track width of last character
+    // Track width of last character (this seems to be the display width)
 
     int last_char_width;
 
