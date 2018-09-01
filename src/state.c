@@ -635,11 +635,13 @@ struct FANSI_state FANSI_state_copy_style(
   target.ideogram = current.ideogram;
 
   target.color = current.color;
-  for(i = 0; i < 4; ++i) {target.color_extra[i] = current.color_extra[i];}
-
+  for(int i = 0; i < 4; ++i) {
+    target.color_extra[i] = current.color_extra[i];
+  }
   target.bg_color = current.bg_color;
-  for(i = 0; i < 4; ++i) {target.bg_color_extra[i] = current.bg_color_extra[i];}
-
+  for(int i = 0; i < 4; ++i) {
+    target.bg_color_extra[i] = current.bg_color_extra[i];
+  }
   return target;
 }
 /*

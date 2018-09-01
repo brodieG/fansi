@@ -242,6 +242,19 @@ static struct FANSI_state parse_colors(
   return state;
 }
 /*
+ * Read a Character Off when we know it is an ascii char, this is so we have a
+ * consistent way of advancing state.
+ */
+static struct FANSI_state read_ascii(struct FANSI_state state) {
+  ++state.pos_byte;
+  ++state.pos_ansi;
+  ++state.pos_raw;
+  ++state.pos_width;
+  ++state.pos_width_target;
+  state.last_char_width = 1;
+  return state;
+}
+/*
  * Parses ESC sequences
  *
  * In particular, special treatment for ANSI CSI SGR sequences.
@@ -502,7 +515,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       if(!sgr) {
         // CSI
         if(state.ctl & FANSI_CTL_CSI) {
-          state = FANSI_copy_style(state, state_prev);
+          state = FANSI_state_copy_style(state, state_prev);
           esc_recognized = 1;
         } else {
           state = state_prev;
@@ -628,19 +641,6 @@ static struct FANSI_state read_utf8(struct FANSI_state state) {
   state.pos_width += disp_size;
   state.pos_width_target += disp_size;
   state.has_utf8 = 1;
-  return state;
-}
-/*
- * Read a Character Off when we know it is an ascii char, this is so we have a
- * consistent way of advancing state.
- */
-static struct FANSI_state read_ascii(struct FANSI_state state) {
-  ++state.pos_byte;
-  ++state.pos_ansi;
-  ++state.pos_raw;
-  ++state.pos_width;
-  ++state.pos_width_target;
-  state.last_char_width = 1;
   return state;
 }
 /*
