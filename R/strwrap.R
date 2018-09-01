@@ -163,7 +163,8 @@ strwrap_ctl <- function(
     TRUE,
     FALSE, 8L,
     warn, term.cap.int,
-    FALSE   # first_only
+    FALSE,   # first_only
+    ctl.int
   )
   if(simplify) unlist(res) else res
 }
@@ -177,7 +178,8 @@ strwrap2_ctl <- function(
   strip.spaces=!tabs.as.spaces,
   tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
   tab.stops=getOption('fansi.tab.stops'),
-  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
+  ctl='all'
 ) {
   # {{{ validation
 
@@ -234,7 +236,19 @@ strwrap2_ctl <- function(
 
   if(tabs.as.spaces && strip.spaces)
     stop("`tabs.as.spaces` and `strip.spaces` should not both be TRUE.")
-    #
+
+  if(!is.character(ctl))
+    stop("Argument `ctl` must be character.")
+  ctl.int <- integer()
+
+  if(length(ctl)) {
+    # duplicate values in `ctl` are okay, so save a call to `unique` here
+    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
+      stop(
+        "Argument `ctl` may contain only values in `",
+        deparse(VALID.CTL), "`"
+      )
+  }
   # }}} end validation
 
   width <- max(c(as.integer(width) - 1L, 1L))
@@ -251,7 +265,8 @@ strwrap2_ctl <- function(
     strip.spaces,
     tabs.as.spaces, tab.stops,
     warn, term.cap.int,
-    FALSE   # first_only
+    FALSE,   # first_only
+    ctl.int
   )
   if(simplify) unlist(res) else res
 }
