@@ -149,3 +149,11 @@ unitizer_sect('bad args', {
   substr2_ctl(hello2.0, 1, 2, term.cap='bananas')
   substr2_ctl(hello2.0, 1, 2, type='bananas')
 })
+unitizer_sect('`ctl` related issues', {
+  # Things to test:
+  # - a string with ESC, C0, NL, CSI, SGR
+  # - #57 is fixed
+  # - SGR is not interpreted when not part of `ctl`
+  # - 
+  "reminder to add `ctl` tests"
+}

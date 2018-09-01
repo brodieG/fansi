@@ -50,3 +50,15 @@ unitizer_sect('bad intputs', {
   strsplit_ctl(str.2, "", term.cap=1:3)
   strsplit_ctl(str.2, "", term.cap="bananas")
 })
+unitizer_sect('issue 57', {
+  "reminder to add issue57 tests"
+
+  # can't work, should issue a warning
+
+  fansi::strsplit_ctl("hello\nworld", "\n")
+  fansi::strsplit_sgr("hello\033[31mworld", "\033[31m")
+
+  # should work
+
+  fansi::strsplit_sgr("hello\nworld", "\n")
+})
