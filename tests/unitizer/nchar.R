@@ -32,7 +32,7 @@ unitizer_sect('bad inputs', {
   nchar_ctl("hello\033[31m world", allowNA=1:3)
   nchar_ctl("hello\033[31m world", keepNA=1:3)
   nchar_ctl("hello\033[31m world", strip=1:3)
-  nchar_ctl("hello\033[31m world", strip="bananas")
+  nchar_ctl("hello\033[31m world", ctl="bananas")
   nchar_ctl("hello\033[31m world", type=NA_character_)
   nchar_ctl("hello\033[31m world", type=1)
   nchar_ctl("hello\033[31m world", type="bananas")

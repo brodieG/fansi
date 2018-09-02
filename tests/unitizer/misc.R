@@ -92,10 +92,10 @@ unitizer_sect("enc check", {
   fansi:::check_enc("hello", 1)
 })
 unitizer_sect("what as int", {
-  fansi:::what_as_int(c(1, 2, 3, 4, 5))
-  fansi:::what_as_int(c(2, 3, 4, 5))
-  fansi:::what_as_int(c(1, 2, 3, 7))
-  fansi:::what_as_int(c(2, 3, 7))
+  fansi:::ctl_as_int(c(1, 2, 3, 4, 5))
+  fansi:::ctl_as_int(c(2, 3, 4, 5))
+  fansi:::ctl_as_int(c(1, 2, 3, 7))
+  fansi:::ctl_as_int(c(2, 3, 7))
 })
 unitizer_sect("HTML helper", {
   html_esc(character())

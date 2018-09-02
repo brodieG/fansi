@@ -172,7 +172,7 @@ substr2_ctl <- function(
     round.start=round == 'start' || round == 'both',
     round.stop=round == 'stop' || round == 'both',
     x.len=length(x),
-    ctl=ctl
+    ctl=ctl.int
   )
   res[!no.na] <- NA_character_
   res
@@ -260,6 +260,7 @@ state_at_pos <- function(x, starts, ends, warn=getOption('fansi.warn')) {
     is.start,  # lags
     !is.start, # ends
     warn,
-    seq_along(VALID.TERM.CAP)
+    seq_along(VALID.TERM.CAP),
+    seq_along(VALID.CTL)
   )
 }
