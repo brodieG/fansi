@@ -2,10 +2,16 @@
 % Please edit documentation in R/strsplit.R
 \name{strsplit_ctl}
 \alias{strsplit_ctl}
+\alias{strsplit_sgr}
 \title{ANSI Control Sequence Aware Version of strsplit}
 \usage{
 strsplit_ctl(x, split, fixed = FALSE, perl = FALSE, useBytes = FALSE,
-  warn = getOption("fansi.warn"), term.cap = getOption("fansi.term.cap"))
+  warn = getOption("fansi.warn"),
+  term.cap = getOption("fansi.term.cap"), ctl = "all")
+
+strsplit_sgr(x, split, fixed = FALSE, perl = FALSE, useBytes = FALSE,
+  warn = getOption("fansi.warn"),
+  term.cap = getOption("fansi.term.cap"))
 }
 \arguments{
 \item{x}{a character vector, or, unlike \link[base:strsplit]{base::strsplit} an object that can
@@ -50,8 +56,16 @@ list, see \link[base:strsplit]{base::strsplit}.
 }
 \description{
 A drop-in replacement for \link[base:strsplit]{base::strsplit}.  It will be noticeably slower,
-but should otherwise behave the same way except for CSI SGR sequence
+but should otherwise behave the same way except for \emph{Control Sequence}
 awareness.
+}
+\details{
+This function works by computing the position of the split points after
+removing \emph{Control Sequences}, and uses those positions in conjunction with
+\code{\link{substr_ctl}} to extract the pieces.  An important implication of this is
+that you cannot split by \emph{Control Sequences} that are being treated as
+\emph{Control Sequences}.  You can however limit which control sequences are
+treated specially via the \code{ctl} parameters (see examples).
 }
 \note{
 Non-ASCII strings are converted to and returned in UTF-8 encoding.  The
@@ -59,7 +73,12 @@ split positions are computed after both \code{x} and \code{split} are converted 
 UTF-8.
 }
 \examples{
-strsplit_ctl("\\033[31mhello\\033[42m world!", " ")
+strsplit_sgr("\\033[31mhello\\033[42m world!", " ")
+
+## Next two examples allow splitting by newlines, which
+## normally doesn't work as newlines are _Control Sequences_
+strsplit_sgr("\\033[31mhello\\033[42m\\nworld!", "\\n")
+strsplit_ctl("\\033[31mhello\\033[42m\\nworld!", "\\n", strip=c("all", "nl"))
 }
 \seealso{
 \link{fansi} for details on how \emph{Control Sequences} are

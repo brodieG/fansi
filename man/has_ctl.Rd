@@ -5,20 +5,31 @@
 \alias{has_sgr}
 \title{Checks for Presence of Control Sequences}
 \usage{
-has_ctl(x, which = "all", warn = getOption("fansi.warn"))
+has_ctl(x, ctl = "all", warn = getOption("fansi.warn"), which)
 
 has_sgr(x, warn = getOption("fansi.warn"))
 }
 \arguments{
 \item{x}{a character vector or object that can be coerced to character.}
 
-\item{which}{character, what \emph{Control Sequences} to check for; see \code{strip}
-parameter for \link{strip_ctl} for details.}
+\item{ctl}{character, any combination of the following values (see details):
+\itemize{
+\item "nl": strip newlines.
+\item "c0": strip all other "C0" control characters (i.e. x01-x1f, x7F),
+except for newlines and the actual ESC character.
+\item "sgr": strip ANSI CSI SGR sequences.
+\item "csi": strip all non-SGR csi sequences.
+\item "esc": strip all other escape sequences.
+\item "all": all of the above, except when used in combination with any of the
+above, in which case it means "all but" (see details).
+}}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
+
+\item{which}{character, deprecated in favor of \code{ctl}.}
 }
 \value{
 logical of same length as \code{x}; NA values in \code{x} result in NA values
@@ -27,7 +38,15 @@ in return
 \description{
 \code{has_ctl} checks for any \emph{Control Sequence}, whereas \code{has_sgr} checks only
 for ANSI CSI SGR sequences.  You can check for different types of sequences
-with the \code{which} parameter.
+with the \code{ctl} parameter.
+}
+\examples{
+has_ctl("hello world")
+has_ctl("hello\\nworld")
+has_ctl("hello\\nworld", "sgr")
+has_ctl("hello\\033[31mworld\\033[m", "sgr")
+has_sgr("hello\\033[31mworld\\033[m")
+has_sgr("hello\\nworld")
 }
 \seealso{
 \link{fansi} for details on how \emph{Control Sequences} are

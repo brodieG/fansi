@@ -5,7 +5,7 @@
 \title{Replace Tabs With Spaces}
 \usage{
 tabs_as_spaces(x, tab.stops = getOption("fansi.tab.stops"),
-  warn = getOption("fansi.warn"))
+  warn = getOption("fansi.warn"), ctl = "all")
 }
 \arguments{
 \item{x}{character vector or object coercible to character; any tabs therein

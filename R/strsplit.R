@@ -47,30 +47,6 @@
 #' strsplit_sgr("\033[31mhello\033[42m\nworld!", "\n")
 #' strsplit_ctl("\033[31mhello\033[42m\nworld!", "\n", strip=c("all", "nl"))
 
-# strsplit_ctl <- function(
-#   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
-#   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
-# ) {
-#   x.split <- strsplit(x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE)
-#   if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
-#     stop(
-#       "Argument `term.cap` may only contain values in ",
-#       deparse(VALID.TERM.CAP)
-#     )
-#   .Call(FANSI_strsplit, x.split, warn, term.cap.int)
-# }
-
-strsplit_sgr <- function(
-  x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
-  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
-)
-  strsplit_ctl(
-    x=x, split=split, fixed=fixed, perl=perl, useBytes=useBytes,
-    warn=warn, term.cap=term.cap, ctl='sgr'
-  )
-
-#' @export
-#' @rdname strsplit_sgr
 
 strsplit_ctl <- function(
   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
@@ -184,5 +160,30 @@ strsplit_ctl <- function(
   res[x.na] <- list(NA_character_)
   res
 }
+#' @rdname strsplit_ctl
+#' @export
+
+strsplit_sgr <- function(
+  x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
+  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+)
+  strsplit_ctl(
+    x=x, split=split, fixed=fixed, perl=perl, useBytes=useBytes,
+    warn=warn, term.cap=term.cap, ctl='sgr'
+  )
+
+# # old interface to split happening directly in C code
+# strsplit_ctl <- function(
+#   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
+#   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+# ) {
+#   x.split <- strsplit(x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE)
+#   if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
+#     stop(
+#       "Argument `term.cap` may only contain values in ",
+#       deparse(VALID.TERM.CAP)
+#     )
+#   .Call(FANSI_strsplit, x.split, warn, term.cap.int)
+# }
 
 

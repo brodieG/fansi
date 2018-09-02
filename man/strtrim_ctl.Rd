@@ -5,11 +5,11 @@
 \alias{strtrim2_ctl}
 \title{ANSI Control Sequence Aware Version of strtrim}
 \usage{
-strtrim_ctl(x, width, warn = getOption("fansi.warn"))
+strtrim_ctl(x, width, warn = getOption("fansi.warn"), ctl = "all")
 
 strtrim2_ctl(x, width, warn = getOption("fansi.warn"),
   tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
-  tab.stops = getOption("fansi.tab.stops"))
+  tab.stops = getOption("fansi.tab.stops"), ctl = "all")
 }
 \arguments{
 \item{x}{a character vector, or an object which can be coerced to a

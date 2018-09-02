@@ -32,7 +32,7 @@ calculations.
 
 \emph{Control Sequences} starting with ESC are assumed to be two characters
 long (including the ESC) unless they are of the CSI variety, in which case
-their length is computed as per the \href{http://www.ecma-international.org/publications/standards/Ecma-048.htm}{ECMA-48specification}.
+their length is computed as per the \href{http://www.ecma-international.org/publications/standards/Ecma-048.htm}{ECMA-48 specification}.
 There are non-CSI escape sequences that may be longer than two characters,
 but \code{fansi} will (incorrectly) treat them as if they were two characters
 long.

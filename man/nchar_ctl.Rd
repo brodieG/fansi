@@ -6,7 +6,7 @@
 \title{ANSI Control Sequence Aware Version of nchar}
 \usage{
 nchar_ctl(x, type = "chars", allowNA = FALSE, keepNA = NA,
-  strip = "all", warn = getOption("fansi.warn"))
+  ctl = "all", warn = getOption("fansi.warn"), strip)
 
 nzchar_ctl(x, keepNA = NA, warn = getOption("fansi.warn"))
 }
@@ -28,11 +28,11 @@ use \link[base:nchar]{base::nchar}.}
   unless \code{type} is \code{"width"}.  Used to be (implicitly) hard
   coded to \code{FALSE} in \R versions \eqn{\le}{<=} 3.2.0.}
 
-\item{strip}{character, any combination of the following values (see details):
+\item{ctl}{character, any combination of the following values (see details):
 \itemize{
 \item "nl": strip newlines.
-\item "c0": strip all other "C0" control characters (i.e. x01-x1f), except for
-newlines and the actual ESC character.
+\item "c0": strip all other "C0" control characters (i.e. x01-x1f, x7F),
+except for newlines and the actual ESC character.
 \item "sgr": strip ANSI CSI SGR sequences.
 \item "csi": strip all non-SGR csi sequences.
 \item "esc": strip all other escape sequences.
@@ -44,6 +44,8 @@ above, in which case it means "all but" (see details).
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
+
+\item{strip}{character, deprecated in favor of \code{ctl}.}
 }
 \description{
 \code{nchar_ctl} counts all non \emph{Control Sequence} characters.
@@ -56,7 +58,7 @@ characters are not counted.
 is implemented in native code and is much faster than the otherwise
 equivalent \code{nzchar(strip_ctl(...))}.  You cannot change which \emph{Control
 Sequences} count in \code{nzchar_ctl}, but you can always resort to
-\code{nzchar(strip_ctl(..., strip='...'))} if that is important.
+\code{nzchar(strip_ctl(..., ctl='...'))} if that is important.
 
 These functions will warn if either malformed or non-CSI escape sequences are
 encountered, as these may be incorrectly interpreted.
@@ -74,10 +76,10 @@ nchar_ctl(cn.string, type='width')
 ## Remember newlines are not counted by default
 nchar_ctl("\\t\\n\\r")
 
-## The 'c0' value for the `strip` argument does
+## The 'c0' value for the `ctl` argument does
 ## not include newlines.
-nchar_ctl("\\t\\n\\r", strip="c0")
-nchar_ctl("\\t\\n\\r", strip=c("c0", "nl"))
+nchar_ctl("\\t\\n\\r", ctl="c0")
+nchar_ctl("\\t\\n\\r", ctl=c("c0", "nl"))
 
 ## All of the following are Control Sequences
 nzchar_ctl("\\n\\033[42;31m\\033[123P\\a")

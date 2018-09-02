@@ -6,12 +6,13 @@
 \title{ANSI Control Sequence Aware Version of substr}
 \usage{
 substr_ctl(x, start, stop, warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"))
+  term.cap = getOption("fansi.term.cap"), ctl = "all")
 
 substr2_ctl(x, start, stop, type = "chars", round = "start",
   tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
-  tab.stops = getOption("fansi.tab.stops"), warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"))
+  tab.stops = getOption("fansi.tab.stops"),
+  warn = getOption("fansi.warn"),
+  term.cap = getOption("fansi.term.cap"), ctl = "all")
 }
 \arguments{
 \item{x}{a character vector or object that can be coerced to character.}
@@ -51,7 +52,10 @@ count begins from the beginning of the input line.}
 }
 \description{
 \code{substr_ctl} is a drop-in replacement for \code{substr}.  Performance is
-slightly slower than \code{substr}.
+slightly slower than \code{substr}.  ANSI CSI SGR sequences will be included in
+the substrings to reflect the format of the substring when it was embedded in
+the source string.  Additionally, other \emph{Control Sequences} are
+treated as zero-width (see ISSUE #56).
 }
 \details{
 \code{substr2_ctl} adds the ability to retrieve substrings based on display width,

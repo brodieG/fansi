@@ -5,16 +5,19 @@
 \alias{strwrap2_ctl}
 \title{ANSI Control Sequence Aware Version of strwrap}
 \usage{
-strwrap_ctl(x, width = 0.9 * getOption("width"), indent = 0, exdent = 0,
-  prefix = "", simplify = TRUE, initial = prefix,
-  warn = getOption("fansi.warn"), term.cap = getOption("fansi.term.cap"))
+strwrap_ctl(x, width = 0.9 * getOption("width"), indent = 0,
+  exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
+  warn = getOption("fansi.warn"),
+  term.cap = getOption("fansi.term.cap"),
+  ctrl = getOption("fansi.ctrl"), ctl = "all")
 
-strwrap2_ctl(x, width = 0.9 * getOption("width"), indent = 0, exdent = 0,
-  prefix = "", simplify = TRUE, initial = prefix, wrap.always = FALSE,
-  pad.end = "", strip.spaces = !tabs.as.spaces,
+strwrap2_ctl(x, width = 0.9 * getOption("width"), indent = 0,
+  exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
+  wrap.always = FALSE, pad.end = "", strip.spaces = !tabs.as.spaces,
   tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
-  tab.stops = getOption("fansi.tab.stops"), warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"))
+  tab.stops = getOption("fansi.tab.stops"),
+  warn = getOption("fansi.warn"),
+  term.cap = getOption("fansi.term.cap"), ctl = "all")
 }
 \arguments{
 \item{x}{a character vector, or an object which can be converted to a
@@ -53,6 +56,18 @@ starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
 "38;2" or "48;2"). Changing this parameter changes how \code{fansi} interprets
 escape sequences, so you should ensure that it matches your terminal
 capabilities. See \link{term_cap_test} for details.}
+
+\item{ctrl}{character, any combination of the following values (see details):
+\itemize{
+\item "nl": strip newlines.
+\item "c0": strip all other "C0" control characters (i.e. x01-x1f, x7F),
+except for newlines and the actual ESC character.
+\item "sgr": strip ANSI CSI SGR sequences.
+\item "csi": strip all non-SGR csi sequences.
+\item "esc": strip all other escape sequences.
+\item "all": all of the above, except when used in combination with any of the
+above, in which case it means "all but" (see details).
+}}
 
 \item{wrap.always}{TRUE or FALSE (default), whether to hard wrap at requested
 width if no word breaks are detected within a line.  If set to TRUE then
