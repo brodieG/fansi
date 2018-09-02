@@ -647,15 +647,17 @@ static struct FANSI_state read_utf8(struct FANSI_state state) {
  * C0 ESC sequences treated as zero width and do not count as characters either
  */
 static struct FANSI_state read_c0(struct FANSI_state state) {
-  if(state.string[state.pos_byte] != '\n') {
+  int is_nl = state.string[state.pos_byte] == '\n';
+  if(!is_nl) {
+    // question: should we make the comment about tabs as spaces?
     state.err_msg = "a C0 control character";
     state.err_code = 8;
   }
   state = read_ascii(state);
   // If C0/NL are being actively processed, treat them as width zero
   if(
-    (state.string[state.pos_byte] == '\n' && (state.ctl & FANSI_CTL_NL)) ||
-    (state.string[state.pos_byte] != '\n' && (state.ctl & FANSI_CTL_C0))
+    (is_nl && (state.ctl & FANSI_CTL_NL)) ||
+    (!is_nl && (state.ctl & FANSI_CTL_C0))
   ) {
     --state.pos_raw;
     --state.pos_width;

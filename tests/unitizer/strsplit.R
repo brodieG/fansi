@@ -55,10 +55,10 @@ unitizer_sect('issue 57', {
 
   # can't work, should issue a warning
 
-  fansi::strsplit_ctl("hello\nworld", "\n")
-  fansi::strsplit_sgr("hello\033[31mworld", "\033[31m")
+  strsplit_ctl("hello\nworld", "\n")
+  strsplit_sgr("hello\033[31mworld", "\033[31m")
 
   # should work
 
-  fansi::strsplit_sgr("hello\nworld", "\n")
+  strsplit_sgr("hello\nworld", "\n")
 })
