@@ -36,7 +36,7 @@ unitizer_sect("corner cases", {
   str.sp14 <- c("\033[31mhello\nworld", "\ngoodbye\nmoon")
   strsplit_ctl(str.sp14, "\n")
   strsplit_sgr(str.sp14, "\n")
-  strsplit_ctl(str.sp14, "\n", strip=c('all', 'nl'))
+  strsplit_ctl(str.sp14, "\n", ctl=c('all', 'nl'))
 })
 unitizer_sect('bad intputs', {
   str.bytes <- "\xDE"

@@ -124,8 +124,9 @@ unitizer_sect("Selective stripping", {
 })
 unitizer_sect("Bad Inputs", {
   strip_ctl("hello\033[41mworld", warn=1:3)
-  strip_ctl("hello\033[41mworld", strip=1:3)
-  strip_ctl("hello\033[41mworld", strip="bananas")
+  strip_ctl("hello\033[41mworld", ctl=1:3)
+  strip_ctl("hello\033[41mworld", ctl="bananas")
+  strip_ctl("hello\033[41mworld", strip="sgr")
 
   strip_sgr("hello\033[41mworld", warn=1:3)
 
