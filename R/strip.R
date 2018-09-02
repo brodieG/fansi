@@ -61,7 +61,7 @@
 #' strip_sgr(string)
 
 strip_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), strip) {
-  if(!is.missing(strip)) {
+  if(!missing(strip)) {
     message("Parameter `strip` has been deprecated; use `ctl` instead.")
     ctl <- strip
   }

@@ -37,7 +37,7 @@
 
 has_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), which) {
   if(!is.logical(warn)) warn <- as.logical(warn)
-  if(!is.missing(which)) {
+  if(!missing(which)) {
     message("Parameter `which` has been deprecated; use `ctl` instead.")
     ctl <- which
   }

@@ -74,7 +74,7 @@ nchar_ctl <- function(
   if(length(keepNA) != 1L)
     stop("Argument `keepNA` must be a scalar logical.")
 
-  if(!is.missing(strip)) {
+  if(!missing(strip)) {
     message("Parameter `strip` has been deprecated; use `ctl` instead.")
     ctl <- strip
   }
