@@ -258,6 +258,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int term_cap;
     // Whether at end of a CSI escape sequence
     int last;
+    // Whether the last control sequence that was completely read is known to be
+    // an SGR sequence.  This is used as part of the `read_esc` process and is
+    // really intended to be internal.  It's really only meaningful when
+    // `state.last` is true.
+    int sgr;
     // Whether to issue warnings if err_code is non-zero, if -1 means that the
     // warning was issued at least once so may not need to be re-issued
     int warn;
@@ -272,11 +277,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int keepNA;
     // invalid multi-byte char, a bit of duplication with err_code = 9;
     int nchar_err;
-
     // what types of Control Sequences should have special treatment.  This
     // mirrors the `ctl` parameter for `FANSI_find_esc`.  See `FANSI_ctl_as_int`
     // for the encoding.
-
     int ctl;
   };
   /*

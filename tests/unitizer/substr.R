@@ -154,6 +154,6 @@ unitizer_sect('`ctl` related issues', {
   # - a string with ESC, C0, NL, CSI, SGR
   # - #57 is fixed
   # - SGR is not interpreted when not part of `ctl`
-  # - 
+  # - SGR of type '\033[31;m' correctly recognized as last
   "reminder to add `ctl` tests"
 })

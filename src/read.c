@@ -177,6 +177,7 @@ static struct FANSI_state parse_colors(
   state.pos_byte += res.len;
   state.last = res.last;
   state.err_code = res.err_code;
+  state.sgr = res.sgr;
 
   if(!state.err_code) {
     if((res.val != 2 && res.val != 5) || state.last) {
@@ -213,6 +214,7 @@ static struct FANSI_state parse_colors(
         state.pos_byte += res.len;
         state.last = res.last;
         state.err_code = res.err_code;
+        state.sgr = res.sgr;
 
         if(!state.err_code) {
           int early_end = res.last && i < (i_max - 1);
@@ -365,7 +367,6 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
 
       ++state.pos_byte;  // consume '['
       struct FANSI_tok_res tok_res = {.err_code = 0};
-      int sgr = 0;
 
       // Loop through the SGR; each token we process successfully modifies state
       // and advances to the next token
@@ -375,7 +376,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
         state.pos_byte += tok_res.len;
         state.last = tok_res.last;
         state.err_code = tok_res.err_code;
-        sgr = tok_res.sgr;
+        state.sgr = tok_res.sgr;
 
         // Note we use `state.err_code` instead of `tok_res.err_code` as
         // parse_colors internally calls FANSI_parse_token
@@ -512,7 +513,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       // Need to check that sequence actually is SGR, and if not, we need to
       // restore the state.
 
-      if(!sgr) {
+      if(!state.sgr) {
         // CSI
         if(state.ctl & FANSI_CTL_CSI) {
           state = FANSI_state_copy_style(state, state_prev);
