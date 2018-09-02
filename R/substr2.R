@@ -172,7 +172,7 @@ substr2_ctl <- function(
     round.start=round == 'start' || round == 'both',
     round.stop=round == 'stop' || round == 'both',
     x.len=length(x),
-    ctl=ctl.int
+    ctl.int=ctl.int
   )
   res[!no.na] <- NA_character_
   res
@@ -185,13 +185,13 @@ substr2_ctl <- function(
 substr_ctl_internal <- function(
   x, start, stop, type.int, round, tabs.as.spaces,
   tab.stops, warn, term.cap.int, round.start, round.stop,
-  x.len, ctl
+  x.len, ctl.int
 ) {
   # For each unique string, compute the state at each start and stop position
   # and re-map the positions to "ansi" space
 
   if(tabs.as.spaces)
-    x <- .Call(FANSI_tabs_as_spaces, x, tab.stops, warn, term.cap.int, ctl)
+    x <- .Call(FANSI_tabs_as_spaces, x, tab.stops, warn, term.cap.int, ctl.int)
 
   res <- character(x.len)
   s.s.valid <- stop >= start & stop
@@ -220,7 +220,7 @@ substr_ctl_internal <- function(
       u, e.sort - 1L, type.int,
       e.lag, e.ends,
       warn, term.cap.int,
-      ctl
+      ctl.int
     )
     # Recover the matching values for e.sort
 
