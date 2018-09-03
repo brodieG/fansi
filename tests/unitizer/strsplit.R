@@ -50,15 +50,15 @@ unitizer_sect('bad intputs', {
   strsplit_ctl(str.2, "", term.cap=1:3)
   strsplit_ctl(str.2, "", term.cap="bananas")
 })
-unitizer_sect('issue 57', {
-  "reminder to add issue57 tests"
-
-  # can't work, should issue a warning
+unitizer_sect('issue 55', {
+  # can't work, ideally would issue a warning, but detecting stripped
+  # escape sequences in regular expression will be complicated
 
   strsplit_ctl("hello\nworld", "\n")
-  strsplit_sgr("hello\033[31mworld", "\033[31m")
+  strsplit_sgr("hello\033[31mworld", "\033[31m", fixed=TRUE)
 
   # should work
 
+  strsplit_ctl("a\nb", "\n", ctl=c('all', 'nl'))
   strsplit_sgr("hello\nworld", "\n")
 })

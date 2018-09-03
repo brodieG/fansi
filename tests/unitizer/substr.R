@@ -150,10 +150,35 @@ unitizer_sect('bad args', {
   substr2_ctl(hello2.0, 1, 2, type='bananas')
 })
 unitizer_sect('`ctl` related issues', {
-  # Things to test:
-  # - a string with ESC, C0, NL, CSI, SGR
-  # - #57 is fixed
-  # - SGR is not interpreted when not part of `ctl`
-  # - SGR of type '\033[31;m' correctly recognized as last
-  "reminder to add `ctl` tests"
+  # Make sure SGR end properly detected
+
+  substr_sgr("\033[31;42mhello world", 2, 4)
+
+  # Repeated SGR
+
+  substr_sgr("\033[31m\033[42mhello world", 2, 4)
+
+  # Intermediate byte (this is not an SGR!)
+
+  substr_sgr("\033[31;42!mhello world", 2, 4)
+
+  # non-SGR CSI mixed with SGR when not parsing non-SGR CSI
+
+  substr_sgr("\033[55;38l\033[31mhello world", 2, 4, warn=FALSE)
+  substr_sgr("\033[31m\033[55;38lhello world", 2, 4, warn=FALSE)
+  substr_sgr("hello \033[31m\033[55;38lworld", 7, 9, warn=FALSE)
+
+  # Mix of escapes
+
+  substr_ctl("\033[55;38l\033[31mhello world", 2, 4, warn=FALSE)
+  substr_ctl("\033[31m\033[55;38lhello world", 2, 4, warn=FALSE)
+  substr_ctl("hello \033[31m\033[55;38lworld", 7, 9, warn=FALSE)
+  substr_ctl("hello\033[55;38l \033[31mworld", 4, 7, warn=FALSE)
+
+  # C0 / nl
+
+  substr_sgr("ab\n\tcd\n", 3, 6, warn=FALSE)
+  substr_sgr("ab\n\033[31m\tcd\n", 3, 6, warn=FALSE)
+  substr_ctl("ab\n\033[31m\tcd\n", 3, 6, warn=FALSE, ctl=c('all', 'nl'))
+  substr_ctl("ab\n\033[31m\tcd\n", 3, 6, warn=FALSE, ctl=c('all', 'nl', 'c0'))
 })
