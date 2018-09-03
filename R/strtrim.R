@@ -134,3 +134,20 @@ strtrim2_ctl <- function(
   )
   res
 }
+#' @export
+#' @rdname strtrim_ctl
+
+strtrim_sgr <- function(x, width, warn=getOption('fansi.warn'))
+  strtrim_ctl(x=x, width=width, warn=warn, ctl='sgr')
+
+#' @export
+#' @rdname strtrim_ctl
+
+strtrim2_sgr <- function(x, width, warn=getOption('fansi.warn'),
+  tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
+  tab.stops=getOption('fansi.tab.stops')
+)
+  strtrim2_ctl(
+    x=x, width=width, warn=warn, tabs.as.spaces=tabs.as.spaces,
+    tab.stops=tab.stops, ctl='sgr'
+  )

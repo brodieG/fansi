@@ -120,3 +120,11 @@ nzchar_ctl <- function(x, keepNA=NA, warn=getOption('fansi.warn')) {
   term.cap.int <- seq_along(VALID.TERM.CAP)
   .Call(FANSI_nzchar_esc, enc2utf8(x), keepNA, warn, term.cap.int)
 }
+#' @export
+#' @rdname nchar_ctl
+
+nchar_sgr <- function(
+  x, type='chars', allowNA=FALSE, keepNA=NA, warn=getOption('fansi.warn')
+)
+ nchar_ctl(x=x, type=type, allowNA=allowNA, keepNA=keepNA, warn=warn, ctl='sgr')
+
