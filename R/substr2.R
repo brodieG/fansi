@@ -19,16 +19,19 @@
 #' `substr_ctl` is a drop-in replacement for `substr`.  Performance is
 #' slightly slower than `substr`.  ANSI CSI SGR sequences will be included in
 #' the substrings to reflect the format of the substring when it was embedded in
-#' the source string.  Additionally, other _Control Sequences_ are
-#' treated as zero-width (see ISSUE #56).
+#' the source string.  Additionally, other _Control Sequences_ specified in
+#' `ctl` are treated as zero-width.
 #'
-#' `substr2_ctl` adds the ability to retrieve substrings based on display width,
-#' and byte width in addition to the normal character width.  `substr2_ctl` also
-#' provides the option to convert tabs to spaces with [tabs_as_spaces] prior to
-#' taking substrings.
-#
+#' The `*_sgr` functions are wrappers around the corresponding `*_ctl` functions
+#' with `ctl='sgr'`.
+#'
+#' `substr2_ctl` and `substr2_sgr` add the ability to retrieve substrings based
+#' on display width, and byte width in addition to the normal character width.
+#' `substr2_ctl` also provides the option to convert tabs to spaces with
+#' [tabs_as_spaces] prior to taking substrings.
+#'
 #' Because exact substrings on anything other than character width cannot be
-#' guaranteed (e.g.  because of multi-byte encodings, or double display-width
+#' guaranteed (e.g. as a result of multi-byte encodings, or double display-width
 #' characters) `substr2_ctl` must make assumptions on how to resolve provided
 #' `start`/`stop` values that are infeasible and does so via the `round`
 #' parameter.
