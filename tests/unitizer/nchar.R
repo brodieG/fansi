@@ -27,6 +27,12 @@ unitizer_sect('with escapes', {
   nzchar_ctl(esc.2)
   nzchar_ctl(esc.2, warn=FALSE)
 })
+unitizer_sect('ctl', {
+  nzchar_ctl("\n\t\033[31m\033[41!m\033p")
+  nzchar_ctl("\n\t\033[31m\033[41!m\033pa")
+  nzchar_ctl("\n\t\033[31m\033[41!m\033p", ctl=c('sgr', 'csi', 'esc'))
+  nzchar_ctl("\n\t\033[31m\033[41!m\033p", ctl=c('c0', 'nl'))
+})
 unitizer_sect('bad inputs', {
   nchar_ctl(9:10, warn=1:3)
   nchar_ctl("hello\033[31m world", allowNA=1:3)

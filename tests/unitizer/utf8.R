@@ -28,6 +28,7 @@ unitizer_sect("substr", {
   starts <- seq(1, by=6, len=5)
   ends <- starts + 5
   substr2_ctl(lor.cn.c.2.5, starts, ends, term.cap=term.cap)
+  substr2_sgr(lor.cn.c.2.5, starts, ends, term.cap=term.cap)
 
   starts <- seq(1, by=12, len=5)
   ends <- starts + 11

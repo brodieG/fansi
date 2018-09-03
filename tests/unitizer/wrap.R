@@ -286,6 +286,8 @@ unitizer_sect("bad inputs", {
   strwrap_ctl(hello2.0, warn=NULL)
   strwrap_ctl(hello2.0, term.cap=1:3)
   strwrap_ctl(hello2.0, term.cap="bananas")
+  strwrap_ctl(hello2.0, ctl=1:3)
+  strwrap_ctl(hello2.0, ctl="bananas")
 
   strwrap2_ctl(1:3)
   strwrap2_ctl(hello2.0, width="35")
@@ -299,6 +301,8 @@ unitizer_sect("bad inputs", {
   strwrap2_ctl(hello2.0, warn=NULL)
   strwrap2_ctl(hello2.0, term.cap=1:3)
   strwrap2_ctl(hello2.0, term.cap="bananas")
+  strwrap2_ctl(hello2.0, ctl=1:3)
+  strwrap2_ctl(hello2.0, ctl="bananas")
 
   strwrap2_ctl(hello2.0, wrap.always=1:3)
   strwrap2_ctl(hello2.0, wrap.always=NA)

@@ -56,6 +56,8 @@ unitizer_sect("strtrim", {
   strtrim_ctl(hello2.0, width="35")
   strtrim_ctl(hello2.0, width=NA_integer_)
   strtrim_ctl(hello2.0, width=10, warn=NULL)
+  strtrim_ctl(hello2.0, width=10, ctl=0)
+  strtrim_ctl(hello2.0, width=10, ctl='bananas')
 
   strtrim2_ctl(1:3, width=10)
   strtrim2_ctl(hello2.0, width="35")
@@ -66,6 +68,9 @@ unitizer_sect("strtrim", {
   strtrim2_ctl(hello2.0, width=10, tabs.as.spaces=1:3)
   strtrim2_ctl(hello2.0, width=10, tab.stops=-(1:3))
   strtrim2_ctl(hello2.0, width=10, tab.stops=0)
+
+  strtrim2_ctl(hello2.0, width=10, ctl=0)
+  strtrim2_ctl(hello2.0, width=10, ctl='bananas')
 })
 unitizer_sect("C funs", {
   fansi:::cleave(1:10)

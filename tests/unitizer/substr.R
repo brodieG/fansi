@@ -90,6 +90,11 @@ unitizer_sect("Corner cases", {
 
   str.3 <- structure("fu\033[42mba\033[0mr", class="foo", at="bar")
   substr_ctl(str.3, 2, 3)
+
+  # Turn off sgr
+
+  substr_ctl(str.2, 2, 6, ctl=c('all', 'sgr'))
+  substr_ctl(str.2, 8, 10, ctl=c('all', 'sgr'))
 })
 unitizer_sect("Obscure escapes", {
   # illegal 38/48
@@ -148,6 +153,10 @@ unitizer_sect('bad args', {
   substr2_ctl(hello2.0, 1, 2, term.cap=0)
   substr2_ctl(hello2.0, 1, 2, term.cap='bananas')
   substr2_ctl(hello2.0, 1, 2, type='bananas')
+
+  substr2_ctl(hello2.0, 1, 2, ctl='bananas')
+  substr2_ctl(hello2.0, 1, 2, ctl=0)
+
 })
 unitizer_sect('`ctl` related issues', {
   # Make sure SGR end properly detected

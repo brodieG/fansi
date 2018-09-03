@@ -27,6 +27,18 @@ unitizer_sect("corner cases", {
   suppressWarnings(has_ctl("hello\033[31#0mworld"))
   has_ctl("hello world", ctl=c('sgr', 'sgr'))
 })
+unitizer_sect("select ctl", {
+  has_ctl("hello\033[31mworld", ctl=c('sgr'))
+  has_ctl("hello\033[31mworld", ctl=c('csi'))
+  has_ctl("hello\033[31!mworld", ctl=c('csi'))
+  has_ctl("hello\033[31lworld", ctl=c('csi'))
+  has_ctl("hello\nworld", ctl=c('all', 'nl'))
+  has_ctl("hello\nworld", ctl=c('all', 'c0'))
+  has_ctl("hello\tworld", ctl=c('all', 'c0'))
+  has_ctl("hello\tworld", ctl=c('c0'))
+  has_ctl("hello\033pworld", ctl=c('esc'))
+  has_ctl("hello\033pworld", ctl=c('all', 'esc'))
+})
 unitizer_sect("bad inputs", {
   has_ctl("hello world", warn=NULL)
 
