@@ -195,7 +195,7 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int ctl) {
     };
   } else {
     res = (struct FANSI_csi_pos){
-      .start=x, .len=0, .valid=valid, ctl=found_ctl
+      .start=x + 1, .len=1, .valid=valid, ctl=found_ctl
     };
   }
   return res;

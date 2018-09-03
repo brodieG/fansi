@@ -65,6 +65,7 @@ SEXP FANSI_nzchar(
             "off these warnings."
           );
         }
+        if(!pos.ctl) break;
         string += pos.len;
       }
       LOGICAL(res)[i] = *string != 0;
