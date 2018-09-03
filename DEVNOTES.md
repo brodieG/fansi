@@ -2,6 +2,15 @@
 
 These are internal developer notes.
 
+## FANSI_find_esc
+
+Clearly our changes messed stuff up.  In particular, there is now the
+possibility that FANSI_find_esc won't advance if there are no handled `ctl`
+sequences found, which is different since before all sequences were guaranteed
+to advance.  We kludged a fix for `nzchar`, but this is causes problems
+elsewhere.  We need to review all uses of `FANSI_find_esc` and figure out what a
+compatible way to handle the possibility that `FANSI_find_esc` will find a
+_Control Sequence_ that isn't actually treated as _Control Sequence_.
 ## Width of C0 And Others
 
 The correct way to handle this is probably to keep existing behavior for `_ctl`
