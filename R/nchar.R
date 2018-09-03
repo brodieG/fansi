@@ -23,9 +23,7 @@
 #'
 #' `nchar_ctl` is just a wrapper around `nchar(strip_ctl(...))`.  `nzchar_ctl`
 #' is implemented in native code and is much faster than the otherwise
-#' equivalent `nzchar(strip_ctl(...))`.  You cannot change which _Control
-#' Sequences_ count in `nzchar_ctl`, but you can always resort to
-#' `nzchar(strip_ctl(..., ctl='...'))` if that is important.
+#' equivalent `nzchar(strip_ctl(...))`.
 #'
 #' These functions will warn if either malformed or non-CSI escape sequences are
 #' encountered, as these may be incorrectly interpreted.
@@ -107,7 +105,7 @@ nchar_ctl <- function(
 #' @export
 #' @rdname nchar_ctl
 
-nzchar_ctl <- function(x, keepNA=NA, warn=getOption('fansi.warn')) {
+nzchar_ctl <- function(x, keepNA=NA, ctl='all', warn=getOption('fansi.warn')) {
   if(!is.character(x)) x <- as.character(x)
 
   if(length(warn) != 1L || is.na(warn))
@@ -117,8 +115,19 @@ nzchar_ctl <- function(x, keepNA=NA, warn=getOption('fansi.warn')) {
   if(length(keepNA) != 1L)
     stop("Argument `keepNA` must be a scalar logical.")
 
+  if(!is.character(ctl))
+    stop("Argument `ctl` must be character.")
+  ctl.int <- integer()
+  if(length(ctl)) {
+    # duplicate values in `ctl` are okay, so save a call to `unique` here
+    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
+      stop(
+        "Argument `ctl` may contain only values in `",
+        deparse(VALID.CTL), "`"
+      )
+  }
   term.cap.int <- seq_along(VALID.TERM.CAP)
-  .Call(FANSI_nzchar_esc, enc2utf8(x), keepNA, warn, term.cap.int)
+  .Call(FANSI_nzchar_esc, enc2utf8(x), keepNA, warn, term.cap.int, ctl.int)
 }
 #' @export
 #' @rdname nchar_ctl
@@ -126,5 +135,5 @@ nzchar_ctl <- function(x, keepNA=NA, warn=getOption('fansi.warn')) {
 nchar_sgr <- function(
   x, type='chars', allowNA=FALSE, keepNA=NA, warn=getOption('fansi.warn')
 )
- nchar_ctl(x=x, type=type, allowNA=allowNA, keepNA=keepNA, warn=warn, ctl='sgr')
+ nzchar_ctl(x=x, keepNA=keepNA, warn=warn, ctl='sgr')
 
