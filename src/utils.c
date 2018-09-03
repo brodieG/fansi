@@ -137,8 +137,11 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int ctl) {
 
           // And all the valid intermediates
 
-          while(*x_track >= 0x20 && *x_track <= 0x2F) ++x_track;
-
+          int intermediate = 0;
+          while(*x_track >= 0x20 && *x_track <= 0x2F) {
+            if(!intermediate) intermediate = 1;
+            ++x_track;
+          }
           // Check validity
 
           int valid_tmp = *x_track >= 0x40 && *x_track <= 0x7E;
@@ -153,16 +156,17 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int ctl) {
 
           valid = valid && valid_tmp;
 
-          // CSI SGR only found if ends in m
+          // CSI SGR only found if ends in m and no intermediate
 
-          found_ctl |= *x_track == 'm' ? 1 << 2 : 1 <<3;
+          int sgr = !intermediate && *x_track == 'm';
+          found_ctl |= sgr ? FANSI_CTL_SGR & ctl : FANSI_CTL_CSI & ctl;
           found_this =
-            (*x_track == 'm' && (ctl & (1 << 2))) ||  // SGR
-            (*x_track != 'm' && ctl & (1 << 3));      // CSI
+            (sgr && (ctl & FANSI_CTL_SGR)) ||  // SGR
+            (!sgr && (ctl & FANSI_CTL_CSI));      // CSI
         } else {
           // Includes both the C1 set and "controls strings"
-          found_this = ctl & (1 << 4);
-          found_ctl |= (1 << 4);
+          found_this = ctl & FANSI_CTL_ESC;
+          found_ctl |= ctl & FANSI_CTL_ESC;
           valid = valid && (*x_track >= 0x40 && *x_track <= 0x7E);
         }
         // Advance unless next char is ESC, in which case we want to keep
@@ -172,10 +176,10 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int ctl) {
       } else {
         // x01-x1F, x7F, all the C0 codes
 
-        found_ctl |= (x_val == '\n' ?  1 : 1 << 1);
+        found_ctl |= (x_val == '\n' ? ctl & FANSI_CTL_NL : ctl & FANSI_CTL_C0);
         found_this =
-          (x_val == '\n' && (ctl & 1)) ||
-          (x_val != '\n' && (ctl & (1 << 1)));
+          (x_val == '\n' && (ctl & FANSI_CTL_NL)) ||
+          (x_val != '\n' && (ctl & FANSI_CTL_C0));
       }
       if(found_this) {
         x_found_end = x_track;

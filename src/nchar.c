@@ -18,18 +18,22 @@
 
 #include "fansi.h"
 
-SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap) {
+SEXP FANSI_nzchar(
+  SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap, SEXP ctl
+) {
   if(
     TYPEOF(x) != STRSXP ||
     TYPEOF(keepNA) != LGLSXP ||
     TYPEOF(warn) != LGLSXP ||
-    TYPEOF(term_cap) != INTSXP
+    TYPEOF(term_cap) != INTSXP ||
+    TYPEOF(ctl) != INTSXP
   )
     error("Internal error: input type error; contact maintainer"); // nocov
 
   int keepNA_int = asInteger(keepNA);
   int warn_int = asInteger(warn);
   int warned = 0;
+  int ctl_int = FANSI_ctl_as_int(ctl);
 
   R_xlen_t x_len = XLENGTH(x);
 
@@ -50,7 +54,7 @@ SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap) {
       const char * string = CHAR(string_elt);
 
       while((*string > 0 && *string < 32) || *string == 127) {
-        struct FANSI_csi_pos pos = FANSI_find_esc(string, FANSI_CTL_ALL);
+        struct FANSI_csi_pos pos = FANSI_find_esc(string, ctl_int);
         if(warn_int && !warned && (!pos.valid || (pos.ctl & (1 << 4)))) {
           warned = 1;
           warning(

@@ -328,7 +328,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_nchar(
     SEXP x, SEXP type, SEXP allowNA, SEXP keepNA, SEXP warn, SEXP term_cap
   );
-  SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap);
+  SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap, SEXP ctl);
   SEXP FANSI_strsplit(SEXP x, SEXP warn, SEXP term_cap);
   SEXP FANSI_tabs_as_spaces(
     SEXP vec, SEXP tab_stops, struct FANSI_buff * buff, SEXP warn,
