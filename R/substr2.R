@@ -83,6 +83,13 @@
 #' substr2_ctl(cn.string, 2, 3, type='width', round='both')
 #' substr2_ctl(cn.string, 2, 3, type='width', round='start')
 #' substr2_ctl(cn.string, 2, 3, type='width', round='stop')
+#'
+#' ## the _sgr variety only treat as special CSI SGR,
+#' ## compare the following:
+#'
+#' substr_sgr("\033[31mhello\tworld", 1, 6)
+#' substr_ctl("\033[31mhello\tworld", 1, 6)
+#' substr_ctl("\033[31mhello\tworld", 1, 6, ctl=c('all', 'c0')
 
 substr_ctl <- function(
   x, start, stop,
@@ -180,6 +187,34 @@ substr2_ctl <- function(
   res[!no.na] <- NA_character_
   res
 }
+#' @rdname substr_ctl
+#' @export
+
+substr_sgr <- function(
+  x, start, stop,
+  warn=getOption('fansi.warn'),
+  term.cap=getOption('fansi.term.cap')
+)
+  substr2_ctl(
+    x=x, start=start, stop=stop, warn=warn, term.cap=term.cap, ctl='sgr'
+  )
+
+#' @rdname substr_ctl
+#' @export
+
+substr2_sgr <- function(
+  x, start, stop, type='chars', round='start',
+  tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
+  tab.stops=getOption('fansi.tab.stops'),
+  warn=getOption('fansi.warn'),
+  term.cap=getOption('fansi.term.cap')
+)
+  substr2_ctl(
+    x=x, start=start, stop=stop, type=type, round=round,
+    tabs.as.spaces=tabs.as.spaces,
+    tab.stops=tab.stops, warn=warn, term.cap=term.cap, ctl='sgr',
+  )
+
 ## Lower overhead version of the function for use by strwrap
 ##
 ## @x must already have been converted to UTF8

@@ -3,6 +3,8 @@
 \name{substr_ctl}
 \alias{substr_ctl}
 \alias{substr2_ctl}
+\alias{substr_sgr}
+\alias{substr2_sgr}
 \title{ANSI Control Sequence Aware Version of substr}
 \usage{
 substr_ctl(x, start, stop, warn = getOption("fansi.warn"),
@@ -13,6 +15,15 @@ substr2_ctl(x, start, stop, type = "chars", round = "start",
   tab.stops = getOption("fansi.tab.stops"),
   warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"), ctl = "all")
+
+substr_sgr(x, start, stop, warn = getOption("fansi.warn"),
+  term.cap = getOption("fansi.term.cap"))
+
+substr2_sgr(x, start, stop, type = "chars", round = "start",
+  tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
+  tab.stops = getOption("fansi.tab.stops"),
+  warn = getOption("fansi.warn"),
+  term.cap = getOption("fansi.term.cap"))
 }
 \arguments{
 \item{x}{a character vector or object that can be coerced to character.}
@@ -54,16 +65,20 @@ count begins from the beginning of the input line.}
 \code{substr_ctl} is a drop-in replacement for \code{substr}.  Performance is
 slightly slower than \code{substr}.  ANSI CSI SGR sequences will be included in
 the substrings to reflect the format of the substring when it was embedded in
-the source string.  Additionally, other \emph{Control Sequences} are
-treated as zero-width (see ISSUE #56).
+the source string.  Additionally, other \emph{Control Sequences} specified in
+\code{ctl} are treated as zero-width.
 }
 \details{
-\code{substr2_ctl} adds the ability to retrieve substrings based on display width,
-and byte width in addition to the normal character width.  \code{substr2_ctl} also
-provides the option to convert tabs to spaces with \link{tabs_as_spaces} prior to
-taking substrings.
+The \code{*_sgr} functions are wrappers around the corresponding \code{*_ctl} functions
+with \code{ctl='sgr'}.
+
+\code{substr2_ctl} and \code{substr2_sgr} add the ability to retrieve substrings based
+on display width, and byte width in addition to the normal character width.
+\code{substr2_ctl} also provides the option to convert tabs to spaces with
+\link{tabs_as_spaces} prior to taking substrings.
+
 Because exact substrings on anything other than character width cannot be
-guaranteed (e.g.  because of multi-byte encodings, or double display-width
+guaranteed (e.g. as a result of multi-byte encodings, or double display-width
 characters) \code{substr2_ctl} must make assumptions on how to resolve provided
 \code{start}/\code{stop} values that are infeasible and does so via the \code{round}
 parameter.
@@ -93,6 +108,13 @@ substr2_ctl(cn.string, 2, 3, type='width')
 substr2_ctl(cn.string, 2, 3, type='width', round='both')
 substr2_ctl(cn.string, 2, 3, type='width', round='start')
 substr2_ctl(cn.string, 2, 3, type='width', round='stop')
+
+## the _sgr variety only treat as special CSI SGR,
+## compare the following:
+
+substr_sgr("\\033[31mhello\\tworld", 1, 6)
+substr_ctl("\\033[31mhello\\tworld", 1, 6)
+substr_ctl("\\033[31mhello\\tworld", 1, 6, ctl=c('all', 'c0')
 }
 \seealso{
 \link{fansi} for details on how \emph{Control Sequences} are
