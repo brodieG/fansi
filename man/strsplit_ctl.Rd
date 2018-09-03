@@ -50,6 +50,24 @@ starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
 "38;2" or "48;2"). Changing this parameter changes how \code{fansi} interprets
 escape sequences, so you should ensure that it matches your terminal
 capabilities. See \link{term_cap_test} for details.}
+
+\item{ctl}{character, which \emph{Control Sequences} should be treated
+specially.  If "sgr" is selected (either explicitly or implicitly with
+"all"), SGR sequences are parsed and styles are applied as needed.  The
+only other special treatment for \emph{Control Sequences} is that they area
+all considered to be zero width for operations that involve string
+length.  The \code{ctl} parameter can take any combination of the following
+values denoting which \emph{Control Sequences} should be treated specially:
+\itemize{
+\item "nl": newlines.
+\item "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except
+for newlines and the actual ESC (0x1B) character.
+\item "sgr": ANSI CSI SGR sequences.
+\item "csi": all non-SGR ANSI CSI sequences.
+\item "esc": all other escape sequences.
+\item "all": all of the above, except when used in combination with any of the
+above, in which case it means "all but".
+}}
 }
 \value{
 list, see \link[base:strsplit]{base::strsplit}.

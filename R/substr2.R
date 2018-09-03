@@ -22,9 +22,6 @@
 #' the source string.  Additionally, other _Control Sequences_ specified in
 #' `ctl` are treated as zero-width.
 #'
-#' The `*_sgr` functions are wrappers around the corresponding `*_ctl` functions
-#' with `ctl='sgr'`.
-#'
 #' `substr2_ctl` and `substr2_sgr` add the ability to retrieve substrings based
 #' on display width, and byte width in addition to the normal character width.
 #' `substr2_ctl` also provides the option to convert tabs to spaces with
@@ -44,9 +41,16 @@
 #' characters to be dropped irrespective whether they correspond to `start` or
 #' `stop`, and "both" could cause all of them to be included.
 #'
+#' @section ctl vs. sgr:
+#'
+#' The `*_ctl` versions of the functions treat all _Control Sequences_
+#' specially.  For the most part this means treating _Control Sequences_ as zero
+#' display width, with additional special treatment for the ANSI CSI SGR
+#' flavor. The `*_sgr` versions only treat ANSI CSI SGR sequences specially, and
+#' are equivalent to the `*_ctl` versions with the `ctl` parameter set to "sgr".
+#'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @inheritParams base::substr
-#' @inheritParams tabs_as_spaces
 #' @export
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
@@ -59,6 +63,27 @@
 #'   within a multi-byte character or a wide display character.  See details.
 #' @param tabs.as.spaces FALSE (default) or TRUE, whether to convert tabs to
 #'   spaces.  This can only be set to TRUE if `strip.spaces` is FALSE.
+#' @param tab.stops integer(1:n) indicating position of tab stops to use
+#'   when converting tabs to spaces.  If there are more tabs in a line than
+#'   defined tab stops the last tab stop is re-used.  For the purposes of
+#'   applying tab stops, each input line is considered a line and the character
+#'   count begins from the beginning of the input line.
+#' @param ctl character, which _Control Sequences_ should be treated
+#'   specially.  If "sgr" is selected (either explicitly or implicitly with
+#'   "all"), SGR sequences are parsed and styles are applied as needed.  The
+#'   only other special treatment for _Control Sequences_ is that they area
+#'   all considered to be zero width for operations that involve string
+#'   length.  The `ctl` parameter can take any combination of the following
+#'   values denoting which _Control Sequences_ should be treated specially:
+#'
+#'   * "nl": newlines.
+#'   * "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except
+#'     for newlines and the actual ESC (0x1B) character.
+#'   * "sgr": ANSI CSI SGR sequences.
+#'   * "csi": all non-SGR ANSI CSI sequences.
+#'   * "esc": all other escape sequences.
+#'   * "all": all of the above, except when used in combination with any of the
+#'     above, in which case it means "all but".
 #' @param warn TRUE (default) or FALSE, whether to warn when potentially
 #'   problematic _Control Sequences_ are encountered.  These could cause the
 #'   assumptions `fansi` makes about how strings are rendered on your display
@@ -212,7 +237,7 @@ substr2_sgr <- function(
   substr2_ctl(
     x=x, start=start, stop=stop, type=type, round=round,
     tabs.as.spaces=tabs.as.spaces,
-    tab.stops=tab.stops, warn=warn, term.cap=term.cap, ctl='sgr',
+    tab.stops=tab.stops, warn=warn, term.cap=term.cap, ctl='sgr'
   )
 
 ## Lower overhead version of the function for use by strwrap

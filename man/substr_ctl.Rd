@@ -44,6 +44,24 @@ starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
 escape sequences, so you should ensure that it matches your terminal
 capabilities. See \link{term_cap_test} for details.}
 
+\item{ctl}{character, which \emph{Control Sequences} should be treated
+specially.  If "sgr" is selected (either explicitly or implicitly with
+"all"), SGR sequences are parsed and styles are applied as needed.  The
+only other special treatment for \emph{Control Sequences} is that they area
+all considered to be zero width for operations that involve string
+length.  The \code{ctl} parameter can take any combination of the following
+values denoting which \emph{Control Sequences} should be treated specially:
+\itemize{
+\item "nl": newlines.
+\item "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except
+for newlines and the actual ESC (0x1B) character.
+\item "sgr": ANSI CSI SGR sequences.
+\item "csi": all non-SGR ANSI CSI sequences.
+\item "esc": all other escape sequences.
+\item "all": all of the above, except when used in combination with any of the
+above, in which case it means "all but".
+}}
+
 \item{type}{character(1L) partial matching \code{c("chars", "width")}, although
 \code{type="width"} only works correctly with R >= 3.2.2.}
 
@@ -69,9 +87,6 @@ the source string.  Additionally, other \emph{Control Sequences} specified in
 \code{ctl} are treated as zero-width.
 }
 \details{
-The \code{*_sgr} functions are wrappers around the corresponding \code{*_ctl} functions
-with \code{ctl='sgr'}.
-
 \code{substr2_ctl} and \code{substr2_sgr} add the ability to retrieve substrings based
 on display width, and byte width in addition to the normal character width.
 \code{substr2_ctl} also provides the option to convert tabs to spaces with
@@ -94,6 +109,16 @@ characters to be dropped irrespective whether they correspond to \code{start} or
 \note{
 Non-ASCII strings are converted to and returned in UTF-8 encoding.
 }
+\section{ctl vs. sgr}{
+
+
+The \code{*_ctl} versions of the functions treat all \emph{Control Sequences}
+specially.  For the most part this means treating \emph{Control Sequences} as zero
+display width, with additional special treatment for the ANSI CSI SGR
+flavor. The \code{*_sgr} versions only treat ANSI CSI SGR sequences specially, and
+are equivalent to the \code{*_ctl} versions with the \code{ctl} parameter set to "sgr".
+}
+
 \examples{
 substr_ctl("\\033[42mhello\\033[m world", 1, 9)
 substr_ctl("\\033[42mhello\\033[m world", 3, 9)

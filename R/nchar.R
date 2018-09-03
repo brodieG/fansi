@@ -30,8 +30,9 @@
 #' These functions will warn if either malformed or non-CSI escape sequences are
 #' encountered, as these may be incorrectly interpreted.
 #'
-#' @inheritParams strip_ctl
+#' @inheritParams substr_ctl
 #' @inheritParams base::nchar
+#' @inheritSection substr_ctl ctl vs sgr
 #' @note the `keepNA` parameter is ignored for R < 3.2.2.
 #' @export
 #' @param type character string, one of "chars", or "width".  For byte counts
@@ -53,6 +54,11 @@
 #' ## not include newlines.
 #' nchar_ctl("\t\n\r", ctl="c0")
 #' nchar_ctl("\t\n\r", ctl=c("c0", "nl"))
+#'
+#' ## The _sgr flavor only treats SGR sequences as zero width
+#'
+#' nchar_sgr("\033[31m123")
+#' nchar_sgr("\t\n\n123")
 #'
 #' ## All of the following are Control Sequences
 #' nzchar_ctl("\n\033[42;31m\033[123P\a")

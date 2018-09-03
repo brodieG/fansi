@@ -25,6 +25,7 @@
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work correctly with R < 3.2.2.
 #' @export
+#' @inheritSection substr_ctl ctl vs. sgr
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
 #'   [strwrap_ctl] is used internally by this function.

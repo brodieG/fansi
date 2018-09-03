@@ -23,6 +23,7 @@
 #' @export
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
+#' @inheritParams substr_ctl
 #' @inheritParams strip_ctl
 #' @param which character, deprecated in favor of `ctl`.
 #' @return logical of same length as `x`; NA values in `x` result in NA values

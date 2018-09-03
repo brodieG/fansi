@@ -22,6 +22,24 @@ problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
 
+\item{ctl}{character, which \emph{Control Sequences} should be treated
+specially.  If "sgr" is selected (either explicitly or implicitly with
+"all"), SGR sequences are parsed and styles are applied as needed.  The
+only other special treatment for \emph{Control Sequences} is that they area
+all considered to be zero width for operations that involve string
+length.  The \code{ctl} parameter can take any combination of the following
+values denoting which \emph{Control Sequences} should be treated specially:
+\itemize{
+\item "nl": newlines.
+\item "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except
+for newlines and the actual ESC (0x1B) character.
+\item "sgr": ANSI CSI SGR sequences.
+\item "csi": all non-SGR ANSI CSI sequences.
+\item "esc": all other escape sequences.
+\item "all": all of the above, except when used in combination with any of the
+above, in which case it means "all but".
+}}
+
 \item{tabs.as.spaces}{FALSE (default) or TRUE, whether to convert tabs to
 spaces.  This can only be set to TRUE if \code{strip.spaces} is FALSE.}
 
@@ -43,6 +61,16 @@ This is the only difference between \code{strtrim_ctl} and \code{strtrim2_ctl}.
 Non-ASCII strings are converted to and returned in UTF-8 encoding.
 Width calculations will not work correctly with R < 3.2.2.
 }
+\section{ctl vs. sgr}{
+
+
+The \code{*_ctl} versions of the functions treat all \emph{Control Sequences}
+specially.  For the most part this means treating \emph{Control Sequences} as zero
+display width, with additional special treatment for the ANSI CSI SGR
+flavor. The \code{*_sgr} versions only treat ANSI CSI SGR sequences specially, and
+are equivalent to the \code{*_ctl} versions with the \code{ctl} parameter set to "sgr".
+}
+
 \examples{
 strtrim_ctl("\\033[42mHello world\\033[m", 6)
 }

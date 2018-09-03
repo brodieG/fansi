@@ -23,18 +23,16 @@
 #' stops you will need to provide them yourself if you are using anything
 #' outside of the standard tab stop every 8 characters that is the default.
 #'
-#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
+#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.  The
+#'   `ctl` parameter only affects which _Control Sequences_ are considered zero
+#'   width.  Tabs will always be converted to spaces, irrespective of the `ctl`
+#'   setting.
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
 #' @export
 #' @inheritParams substr_ctl
 #' @param x character vector or object coercible to character; any tabs therein
 #'   will be replaced.
-#' @param tab.stops integer(1:n) indicating position of tab stops to use
-#'   when converting tabs to spaces.  If there are more tabs in a line than
-#'   defined tab stops the last tab stop is re-used.  For the purposes of
-#'   applying tab stops, each input line is considered a line and the character
-#'   count begins from the beginning of the input line.
 #' @return character, `x` with tabs replaced by spaces, with elements
 #'   possibly converted to UTF-8.
 #' @examples
