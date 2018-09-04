@@ -23,15 +23,22 @@ unitizer_sect('with escapes', {
 
   nchar_ctl(esc.2)
   nchar_ctl(esc.2, warn=FALSE)
-
   nzchar_ctl(esc.2)
   nzchar_ctl(esc.2, warn=FALSE)
+
+  # not an SGR
+
+  nchar_ctl("\033[31#mworld", ctl="sgr")
+  nchar_ctl("\033[31#mworld", ctl="csi")
 })
 unitizer_sect('ctl', {
-  nzchar_ctl("\n\t\033[31m\033[41!m\033p")
-  nzchar_ctl("\n\t\033[31m\033[41!m\033pa")
-  nzchar_ctl("\n\t\033[31m\033[41!m\033p", ctl=c('sgr', 'csi', 'esc'))
-  nzchar_ctl("\n\t\033[31m\033[41!m\033p", ctl=c('c0', 'nl'))
+  esc.3 <- "\n\t\033[31m\033[41!m\033p"
+  nzchar_ctl(esc.3, warn=FALSE)
+  nzchar_ctl(sprintf("%sa", esc.3), warn=FALSE)
+  nzchar_ctl(esc.3, ctl=c('sgr', 'csi', 'esc'), warn=FALSE)
+  nzchar_ctl(esc.3, ctl=c('c0', 'nl'), warn=FALSE)
+  nzchar_ctl("\n\t\n", ctl=c('nl'), warn=FALSE)
+  nzchar_ctl("\t\n", ctl=c('nl'), warn=FALSE)
 })
 unitizer_sect('bad inputs', {
   nchar_ctl(9:10, warn=1:3)

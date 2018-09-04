@@ -34,6 +34,7 @@ SEXP FANSI_nzchar(
   int warn_int = asInteger(warn);
   int warned = 0;
   int ctl_int = FANSI_ctl_as_int(ctl);
+  int ctl_not_ctl = 0;
 
   R_xlen_t x_len = XLENGTH(x);
 
@@ -54,8 +55,10 @@ SEXP FANSI_nzchar(
       const char * string = CHAR(string_elt);
 
       while((*string > 0 && *string < 32) || *string == 127) {
-        struct FANSI_csi_pos pos = FANSI_find_esc(string, ctl_int);
-        if(warn_int && !warned && (!pos.valid || (pos.ctl & (1 << 4)))) {
+        struct FANSI_csi_pos pos = FANSI_find_esc(string, FANSI_CTL_ALL);
+        if(
+          warn_int && !warned && (!pos.valid || (pos.ctl & FANSI_CTL_ESC))
+        ) {
           warned = 1;
           warning(
             "Encountered %s ESC sequence at index [%.0f], %s%s",
@@ -65,10 +68,17 @@ SEXP FANSI_nzchar(
             "off these warnings."
           );
         }
-        if(!pos.ctl) break;
-        string += pos.len;
+        string = pos.start + pos.len;
+
+        // found something not considered a control sequence, so means there is
+        // at least one character to count
+
+        ctl_not_ctl = (pos.ctl ^ ctl_int) & pos.ctl;
+        if(ctl_not_ctl) break;
       }
-      LOGICAL(res)[i] = *string != 0;
+      // If string doesn't end at this point, or has ctrl sequences that are not
+      // considered control sequences, then there is at least one char
+      LOGICAL(res)[i] = *string != (0 || ctl_not_ctl);
   } }
   UNPROTECT(1);
   return res;

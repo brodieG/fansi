@@ -346,7 +346,6 @@ static SEXP strwrap(
     // Can no longer advance after we reach end, but we still need to assemble
     // strings so we assign `state` even though technically not correct
 
-    Rprintf("hello\n");
     if(!state.string[state.pos_byte]) state_next = state;
     else state_next = FANSI_read_next(state);
     state_bound.warn = state_next.warn;  // avoid double warning
@@ -502,7 +501,6 @@ SEXP FANSI_strwrap_ext(
   SEXP first_only,
   SEXP ctl
 ) {
-  Rprintf("hello 1\n");
   if(
     TYPEOF(x) != STRSXP || TYPEOF(width) != INTSXP ||
     TYPEOF(indent) != INTSXP || TYPEOF(exdent) != INTSXP ||
@@ -536,8 +534,6 @@ SEXP FANSI_strwrap_ext(
 
   int strip_spaces_int = asInteger(strip_spaces);
 
-  Rprintf("Process stuff\n");
-
   if(strip_spaces_int) x = PROTECT(FANSI_process(x, &buff));
   else PROTECT(x);
 
@@ -570,7 +566,6 @@ SEXP FANSI_strwrap_ext(
   if(indent_int < 0 || exdent_int < 0)
     error("Internal Error: illegal indent/exdent values.");  // nocov
 
-  Rprintf("Pre stuff\n");
   pre_dat_raw = make_pre(prefix);
 
   const char * warn_base =
@@ -580,8 +575,6 @@ SEXP FANSI_strwrap_ext(
     ini_dat_raw = make_pre(initial);
     if(warn_int && ini_dat_raw.warn) warning(warn_base, "initial");
   } else ini_dat_raw = pre_dat_raw;
-
-  Rprintf("Pad stuff\n");
 
   ini_first_dat = pad_pre(ini_dat_raw, indent_int);
 
@@ -627,7 +620,6 @@ SEXP FANSI_strwrap_ext(
   }
   // Wrap each element
 
-  Rprintf("ready 1\n");
   for(i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
     SEXP chr = STRING_ELT(x, i);

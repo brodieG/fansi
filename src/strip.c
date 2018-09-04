@@ -103,7 +103,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
       if(
         !invalid_ansi && (
           !csi.valid ||
-          ((csi.ctl & (1 << 4)) & ctl_int)
+          ((csi.ctl & FANSI_CTL_ESC) & ctl_int)
         )
       ) {
         invalid_ansi = 1;

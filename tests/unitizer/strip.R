@@ -101,6 +101,7 @@ unitizer_sect("Selective stripping", {
   string.1 <- "hello\033\033[45p world\n\033[31#3mgoodbye\a moon"
 
   strip_ctl(string.1, c("nl", "sgr", "esc"))
+  strip_ctl(string.1, c("csi"))
   strip_ctl(string.1, "all")
   strip_ctl(string.1, c("c0", "nl"))
   strip_ctl(string.1, c("all", "sgr"))
