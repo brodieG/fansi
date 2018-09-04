@@ -262,4 +262,40 @@ strwrap2_ctl <- function(
   )
   if(simplify) unlist(res) else res
 }
+#' @export
+#' @rdname strwrap_ctl
+
+strwrap_sgr <- function(
+  x, width = 0.9 * getOption("width"), indent = 0,
+  exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
+  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
+  ctrl=getOption('fansi.ctrl')
+)
+  strwrap_ctl(
+    x=x, width=width, indent=indent,
+    exdent=exdent, prefix=prefix, simplify=simplify, initial=initial,
+    warn=warn, term.cap=warn,
+    ctl='sgr'
+  )
+#' @export
+#' @rdname strwrap_ctl
+
+strwrap2_sgr <- function(
+  x, width = 0.9 * getOption("width"), indent = 0,
+  exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
+  wrap.always=FALSE, pad.end="",
+  strip.spaces=!tabs.as.spaces,
+  tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
+  tab.stops=getOption('fansi.tab.stops'),
+  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+)
+  strwrap2_ctl(
+    x=x, width=width, indent=indent,
+    exdent=exdent, prefix=prefix, simplify=simplify, initial=initial,
+    wrap.always=wrap.always, pad.end=pad.end,
+    strip.spaces=strip.spaces,
+    tabs.as.spaces=tabs.as.spaces,
+    tab.stops=tab.stops,
+    warn=warn, term.cap=term.cap, ctl='sgr'
+  )
 
