@@ -19,16 +19,14 @@ color or cursor position.
 We will refer to ANSI control characters and sequences as "\emph{Control
 Sequences}" hereafter.
 
-There are three types of \emph{Control Sequences} that \code{fansi} treats specially:
+There are three types of \emph{Control Sequences} that \code{fansi} can treat
+specially:
 \itemize{
 \item "C0" control characters, such as tabs and carriage returns (we include
 delete in this set, even though technically it is not part of it).
 \item Sequences starting in "ESC[", also known as ANSI CSI sequences.
 \item Sequences starting in "ESC" and followed by something other than "[".
 }
-
-All of these are considered zero display-width for purposes of string width
-calculations.
 
 \emph{Control Sequences} starting with ESC are assumed to be two characters
 long (including the ESC) unless they are of the CSI variety, in which case
@@ -41,6 +39,13 @@ In theory it is possible to encode \emph{Control Sequences} with a single
 byte introducing character in the 0x40-0x5F range instead of the traditional
 "ESC[".  Since this is rare and it conflicts with UTF-8 encoding, we do
 not support it.
+
+The special treatment of \emph{Control Sequences} is to compute their
+display/character width as zero.  For the SGR subset of the ANSI CSI
+sequences, \code{fansi} will also parse, interpret, and reapply the text styles
+they encode as needed.  Whether a particular type of \emph{Control Sequence} is
+treated specially can be specified via the \code{ctl} parameter to the \code{fansi}
+functions that have it.
 }
 
 \section{ANSI CSI SGR Control Sequences}{

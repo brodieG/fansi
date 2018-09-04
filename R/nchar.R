@@ -30,7 +30,7 @@
 #'
 #' @inheritParams substr_ctl
 #' @inheritParams base::nchar
-#' @inheritSection substr_ctl ctl vs sgr
+#' @inheritSection substr_ctl ctl vs. sgr
 #' @note the `keepNA` parameter is ignored for R < 3.2.2.
 #' @export
 #' @param type character string, one of "chars", or "width".  For byte counts

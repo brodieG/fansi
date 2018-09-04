@@ -32,6 +32,7 @@
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
 #' @inheritParams substr_ctl
+#' @inheritSection substr_ctl ctl vs. sgr
 #' @export
 #' @param ctl character, any combination of the following values (see details):
 #'   * "nl": strip newlines.

@@ -23,12 +23,7 @@ assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
 
 \item{ctl}{character, which \emph{Control Sequences} should be treated
-specially.  If "sgr" is selected (either explicitly or implicitly with
-"all"), SGR sequences are parsed and styles are applied as needed.  The
-only other special treatment for \emph{Control Sequences} is that they area
-all considered to be zero width for operations that involve string
-length.  The \code{ctl} parameter can take any combination of the following
-values denoting which \emph{Control Sequences} should be treated specially:
+specially. See the "ctl vs. sgr" section for details.
 \itemize{
 \item "nl": newlines.
 \item "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except

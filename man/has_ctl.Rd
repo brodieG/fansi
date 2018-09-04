@@ -12,16 +12,17 @@ has_sgr(x, warn = getOption("fansi.warn"))
 \arguments{
 \item{x}{a character vector or object that can be coerced to character.}
 
-\item{ctl}{character, any combination of the following values (see details):
+\item{ctl}{character, which \emph{Control Sequences} should be treated
+specially. See the "ctl vs. sgr" section for details.
 \itemize{
-\item "nl": strip newlines.
-\item "c0": strip all other "C0" control characters (i.e. x01-x1f, x7F),
-except for newlines and the actual ESC character.
-\item "sgr": strip ANSI CSI SGR sequences.
-\item "csi": strip all non-SGR csi sequences.
-\item "esc": strip all other escape sequences.
+\item "nl": newlines.
+\item "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except
+for newlines and the actual ESC (0x1B) character.
+\item "sgr": ANSI CSI SGR sequences.
+\item "csi": all non-SGR ANSI CSI sequences.
+\item "esc": all other escape sequences.
 \item "all": all of the above, except when used in combination with any of the
-above, in which case it means "all but" (see details).
+above, in which case it means "all but".
 }}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially

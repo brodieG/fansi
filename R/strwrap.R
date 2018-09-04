@@ -40,6 +40,7 @@
 #' @inheritParams base::strwrap
 #' @inheritParams tabs_as_spaces
 #' @inheritParams substr_ctl
+#' @inheritSection substr_ctl ctl vs. sgr
 #' @param wrap.always TRUE or FALSE (default), whether to hard wrap at requested
 #'   width if no word breaks are detected within a line.  If set to TRUE then
 #'   `width` must be at least 2.
@@ -50,15 +51,6 @@
 #' @param strip.spaces TRUE (default) or FALSE, if TRUE, extraneous white spaces
 #'   (spaces, newlines, tabs) are removed in the same way as [base::strwrap]
 #'   does.
-#' @param ctrl character, any combination of the following values (see details):
-#'   * "nl": strip newlines.
-#'   * "c0": strip all other "C0" control characters (i.e. x01-x1f, x7F), 
-#'     except for newlines and the actual ESC character.
-#'   * "sgr": strip ANSI CSI SGR sequences.
-#'   * "csi": strip all non-SGR csi sequences.
-#'   * "esc": strip all other escape sequences.
-#'   * "all": all of the above, except when used in combination with any of the
-#'     above, in which case it means "all but" (see details).
 #' @param tabs.as.spaces FALSE (default) or TRUE, whether to convert tabs to
 #'   spaces.  This can only be set to TRUE if `strip.spaces` is FALSE.
 #' @export

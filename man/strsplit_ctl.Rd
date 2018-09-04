@@ -52,12 +52,7 @@ escape sequences, so you should ensure that it matches your terminal
 capabilities. See \link{term_cap_test} for details.}
 
 \item{ctl}{character, which \emph{Control Sequences} should be treated
-specially.  If "sgr" is selected (either explicitly or implicitly with
-"all"), SGR sequences are parsed and styles are applied as needed.  The
-only other special treatment for \emph{Control Sequences} is that they area
-all considered to be zero width for operations that involve string
-length.  The \code{ctl} parameter can take any combination of the following
-values denoting which \emph{Control Sequences} should be treated specially:
+specially. See the "ctl vs. sgr" section for details.
 \itemize{
 \item "nl": newlines.
 \item "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except
@@ -90,6 +85,19 @@ Non-ASCII strings are converted to and returned in UTF-8 encoding.  The
 split positions are computed after both \code{x} and \code{split} are converted to
 UTF-8.
 }
+\section{ctl vs. sgr}{
+
+
+The \code{*_ctl} versions of the functions treat all \emph{Control Sequences}
+specially.  The special treatment of \emph{Control Sequences} is to compute their
+display/character width as zero.  For the SGR subset of the ANSI CSI
+sequences, \code{fansi} will also parse, interpret, and reapply the text styles
+they encode as needed.  You can modify whether a control sequence is treated
+specially with the \code{ctl} parameter.  The \code{*_sgr} versions only treat ANSI CSI
+SGR sequences specially, and are equivalent to the \code{*_ctl} versions with the
+\code{ctl} parameter set to "sgr".
+}
+
 \examples{
 strsplit_sgr("\\033[31mhello\\033[42m world!", " ")
 

@@ -44,10 +44,13 @@
 #' @section ctl vs. sgr:
 #'
 #' The `*_ctl` versions of the functions treat all _Control Sequences_
-#' specially.  For the most part this means treating _Control Sequences_ as zero
-#' display width, with additional special treatment for the ANSI CSI SGR
-#' flavor. The `*_sgr` versions only treat ANSI CSI SGR sequences specially, and
-#' are equivalent to the `*_ctl` versions with the `ctl` parameter set to "sgr".
+#' specially.  The special treatment of _Control Sequences_ is to compute their
+#' display/character width as zero.  For the SGR subset of the ANSI CSI
+#' sequences, `fansi` will also parse, interpret, and reapply the text styles
+#' they encode as needed.  You can modify whether a control sequence is treated
+#' specially with the `ctl` parameter.  The `*_sgr` versions only treat ANSI CSI
+#' SGR sequences specially, and are equivalent to the `*_ctl` versions with the
+#' `ctl` parameter set to "sgr".
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @inheritParams base::substr
@@ -69,12 +72,7 @@
 #'   applying tab stops, each input line is considered a line and the character
 #'   count begins from the beginning of the input line.
 #' @param ctl character, which _Control Sequences_ should be treated
-#'   specially.  If "sgr" is selected (either explicitly or implicitly with
-#'   "all"), SGR sequences are parsed and styles are applied as needed.  The
-#'   only other special treatment for _Control Sequences_ is that they area
-#'   all considered to be zero width for operations that involve string
-#'   length.  The `ctl` parameter can take any combination of the following
-#'   values denoting which _Control Sequences_ should be treated specially:
+#'   specially. See the "ctl vs. sgr" section for details.
 #'
 #'   * "nl": newlines.
 #'   * "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except

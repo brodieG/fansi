@@ -52,6 +52,19 @@ known sequence.  If you combine "all" with any other option then everything
 \note{
 Non-ASCII strings are converted to and returned in UTF-8 encoding.
 }
+\section{ctl vs. sgr}{
+
+
+The \code{*_ctl} versions of the functions treat all \emph{Control Sequences}
+specially.  The special treatment of \emph{Control Sequences} is to compute their
+display/character width as zero.  For the SGR subset of the ANSI CSI
+sequences, \code{fansi} will also parse, interpret, and reapply the text styles
+they encode as needed.  You can modify whether a control sequence is treated
+specially with the \code{ctl} parameter.  The \code{*_sgr} versions only treat ANSI CSI
+SGR sequences specially, and are equivalent to the \code{*_ctl} versions with the
+\code{ctl} parameter set to "sgr".
+}
+
 \examples{
 string <- "hello\\033k\\033[45p world\\n\\033[31mgoodbye\\a moon"
 strip_ctl(string)

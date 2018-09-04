@@ -38,6 +38,7 @@
 #'   be coerced to character.
 #' @inheritParams base::strsplit
 #' @inheritParams strwrap_ctl
+#' @inheritSection substr_ctl ctl vs. sgr
 #' @return list, see [base::strsplit].
 #' @examples
 #' strsplit_sgr("\033[31mhello\033[42m world!", " ")
