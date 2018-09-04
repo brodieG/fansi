@@ -52,4 +52,6 @@ unitizer_sect('bad inputs', {
 
   nzchar_ctl(9:10, warn=1:3)
   nzchar_ctl("hello\033[31m world", keepNA=1:3)
+  nzchar_ctl("hello\033[31m world", ctl=1)
+  nzchar_ctl("hello\033[31m world", ctl="bananas")
 })

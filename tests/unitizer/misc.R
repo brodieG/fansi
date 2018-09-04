@@ -49,6 +49,11 @@ unitizer_sect("strtrim", {
 
   strtrim2_ctl("\033[42m\thello world\033[m foobar", 12, tabs.as.spaces=TRUE)
 
+  strtrim_sgr("\033[42m\the\allo world\033[m foobar", 12, warn=FALSE)
+  strtrim2_sgr(
+    "\033[42m\the\allo world\033[m foobar", 12, tabs.as.spaces=TRUE,
+    warn=FALSE, tab.stops=2
+  )
   # bad args
 
   hello2.0 <- "\033[42m\thello world\033[m foobar"
