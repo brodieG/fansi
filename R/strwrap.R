@@ -274,8 +274,7 @@ strwrap_sgr <- function(
   strwrap_ctl(
     x=x, width=width, indent=indent,
     exdent=exdent, prefix=prefix, simplify=simplify, initial=initial,
-    warn=warn, term.cap=warn,
-    ctl='sgr'
+    warn=warn, term.cap=term.cap, ctl='sgr'
   )
 #' @export
 #' @rdname strwrap_ctl
