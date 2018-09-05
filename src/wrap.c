@@ -416,6 +416,7 @@ static SEXP strwrap(
         )
       );
       first_line = 0;
+      width_tar = width_2;
       last_start = state_start.pos_byte;
       // first_only for `strtrim`
 
