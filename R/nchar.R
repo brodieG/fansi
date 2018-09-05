@@ -142,8 +142,6 @@ nzchar_ctl <- function(x, keepNA=NA, ctl='all', warn=getOption('fansi.warn')) {
 #' @export
 #' @rdname nchar_ctl
 
-nzchar_sgr <- function(
-  x, type='chars', allowNA=FALSE, keepNA=NA, warn=getOption('fansi.warn')
-)
+nzchar_sgr <- function(x, keepNA=NA, warn=getOption('fansi.warn'))
  nzchar_ctl(x=x, keepNA=keepNA, warn=warn, ctl='sgr')
 
