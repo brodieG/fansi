@@ -191,6 +191,27 @@ unitizer_sect("wrap2", {
   strwrap2_ctl(hello.9b, 8, strip.spaces=FALSE)
   hello.9c <- "\033[41m  hello world."
 })
+unitizer_sect("_sgr", {
+  hello.9e <- c(
+    "hello\t\033[91mworld\033[m\tworld",
+    "asdfasdfasdfasdf"
+  )
+  ## primarily testing that all args are used correctly.
+  strwrap2_sgr(
+    hello.9e, 12, tabs.as.spaces=TRUE, tab.stops=c(6, 12), warn=FALSE,
+    indent=2, exdent=1, prefix="+ ", initial="> ", term.cap="256",
+    wrap.always=TRUE, simplify=FALSE, pad.end="~", strip.spaces=FALSE
+  )
+  strwrap_sgr(
+    hello.9e, 12, warn=FALSE,
+    indent=2, exdent=1, prefix="+ ", initial="> ", term.cap="256",
+    simplify=FALSE
+  )
+  strwrap_sgr(
+    hello.9e, 12, indent=2, exdent=1, prefix="+ ", initial="> ",
+    term.cap="256", simplify=FALSE
+  )
+})
 unitizer_sect("long words", {
   hello.long <- "\033[31mhelloworld\033[mlongword"
   strwrap_ctl(hello.long, 8)

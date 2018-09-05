@@ -283,8 +283,13 @@ unitizer_sect("nchar", {
 
   esc.2 <- "\n\r\033P\033[31m\a"
   nchar_ctl(c(esc.1, esc.2, 'hello'), warn=FALSE)
-})
 
+  # _sgr
+
+  esc.4 <- c(sprintf("\033[31m%s\thello", w1), NA, hello.illegal)
+  nchar_sgr(esc.4, type='width', keepNA=FALSE, warn=FALSE, allowNA=TRUE)
+  nzchar_sgr(esc.4, keepNA=FALSE, warn=FALSE)
+})
 unitizer_sect("unhandled", {
   # a bad utf8 string and other bad stuff
 

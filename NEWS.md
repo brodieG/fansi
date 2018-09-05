@@ -18,6 +18,8 @@
   are excluded from by the `ctl` parameter.
 * [#54](https://github.com/brodieG/fansi/issues/54): fix `sgr_to_html` so that
   it can handle vector elements with un-terminated SGR sequences (@krlmlr).
+* Fix bug in width computation of first line onwards in `strwrap_ctl` when
+  indent/exdent/prefix/initial widths vary from first to second line.
 
 ## v0.3.0
 
