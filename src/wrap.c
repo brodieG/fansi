@@ -416,7 +416,6 @@ static SEXP strwrap(
         )
       );
       first_line = 0;
-      width_tar = width_2;
       last_start = state_start.pos_byte;
       // first_only for `strtrim`
 
@@ -433,6 +432,7 @@ static SEXP strwrap(
       // Next line will be the beginning of a paragraph
 
       para_start = (state.string[state.pos_byte] == '\n');
+      width_tar = para_start ? width_1 : width_2;
 
       // Recreate what the state is at the wrap point, including skipping the
       // wrap character if there was one, and any subsequent leading spaces if
