@@ -193,10 +193,11 @@ unitizer_sect("wrap2", {
 })
 unitizer_sect("_sgr", {
   hello.9e <- c(
-    "hello\t\033[91mworld\033[m\tworld",
+    "hello\t\033[91mworld\033[m\t\033[38;2;31;42;4mworld boohaythere",
     "asdfasdfasdfasdf"
   )
   ## primarily testing that all args are used correctly.
+  strwrap_sgr(hello.9e, 12, term.cap='256')
   strwrap2_sgr(
     hello.9e, 12, tabs.as.spaces=TRUE, tab.stops=c(6, 12), warn=FALSE,
     indent=2, exdent=1, prefix="+ ", initial="> ", term.cap="256",
