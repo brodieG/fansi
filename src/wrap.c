@@ -346,9 +346,15 @@ static SEXP strwrap(
     // Can no longer advance after we reach end, but we still need to assemble
     // strings so we assign `state` even though technically not correct
 
-    if(!state.string[state.pos_byte]) state_next = state;
-    else state_next = FANSI_read_next(state);
+    if(!state.string[state.pos_byte]){
+      Rprintf("fake state next: \n");
+      state_next = state;
+    } else {
+      Rprintf("RN ");
+      state_next = FANSI_read_next(state);
+    }
     state_bound.warn = state_next.warn;  // avoid double warning
+
 
     // detect word boundaries and paragraph starts; we need to track
     // state_bound for the special case where we are in strip space mode
@@ -385,13 +391,11 @@ static SEXP strwrap(
         (has_boundary || wrap_always)
       )
     ) {
-      /*
       Rprintf(
-        "--so: %d width: %d tar: %d has_b: %d wa: %d fo: %d\n",
+        "--so: %d width: %d tar: %d has_b: %d wa: %d fo: %d pb: %d\n",
         !state.string[state.pos_byte], state.pos_width, width_tar,
-        has_boundary, wrap_always, first_only
+        has_boundary, wrap_always, first_only, state.pos_byte
       );
-      */
       if(
         !state.string[state.pos_byte] ||
         (wrap_always && !has_boundary) || first_only
@@ -402,6 +406,11 @@ static SEXP strwrap(
         state_bound = state;
       }
       if(!first_line && last_start >= state_start.pos_byte) {
+        Rprintf(
+          "fl: %d ls: %d pb: %d s: %s\n",
+          first_line, last_start, state_start.pos_byte,
+          state_start.string
+        );
         error(
           "%s%s",
           "Wrap error: trying to wrap to width narrower than ",
@@ -449,7 +458,12 @@ static SEXP strwrap(
       } }
       has_boundary = 0;
       state_bound.pos_width = 0;
-      state = state_start = state_bound;
+
+      // For cases with boundary, reset beginning to the boundary, otherwise set
+      // to the previously computed next position
+
+      state = state_start =
+        state_bound.pos_byte > state_next.pos_byte ? state_bound : state_next;
     } else {
       state_prev = state;
       state = state_next;
