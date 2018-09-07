@@ -85,8 +85,9 @@ tabs_as_spaces <- function(
 #' Test Terminal Capabilities
 #'
 #' Outputs ANSI CSI SGR formatted text to screen so that you may visually
-#' inspect what color capabilities your terminal supports.  The three tested
-#' terminal capabilities are:
+#' inspect what color capabilities your terminal supports.
+#'
+#' The three tested terminal capabilities are:
 #'
 #' * "bright" for bright colors with SGR codes in 90-97 and 100-107
 #' * "256" for colors defined by "38;5;x" and "48;5;x" where x is in 0-255
@@ -103,6 +104,12 @@ tabs_as_spaces <- function(
 #' By default `fansi` assumes terminals support bright and 256 color
 #' modes, and also tests for truecolor support via the $COLORTERM system
 #' variable.
+#'
+#' Functions with the `term.cap` parameter like `substr_ctl` will warn if they
+#' encounter 256 or true color SGR sequences and `term.cap` indicates they are
+#' unsupported as such a terminal may misinterpret those sequences.  Bright
+#' codes in terminals that do not support them are more likely to be silently
+#' ignored, so `fansi` functions do not warn about those.
 #'
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
