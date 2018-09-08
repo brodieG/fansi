@@ -31,7 +31,12 @@
 #'   treated as one, even if some of those sequences are valid.
 #' * error: the reason why the sequence was not handled:
 #'     * exceed-term-cap: contains color codes not supported by the terminal
-#'       (see [term_cap_test]).
+#'       (see [term_cap_test]).  Bright colors with color codes in the 90-97 and
+#'       100-107 range in terminals that do not support them are not considered
+#'       errors, whereas 256 or truecolor codes in terminals that do not support
+#'       them are.  This is because the latter are often misinterpreted by
+#'       terminals that do not support them, whereas the former are typically
+#'       silently ignored.
 #'     * special: SGR substring contains uncommon characters in ":<=>".
 #'     * unknown: SGR substring with a value that does not correspond to a known
 #'       SGR code.
