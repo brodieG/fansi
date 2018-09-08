@@ -346,11 +346,10 @@ static SEXP strwrap(
     // Can no longer advance after we reach end, but we still need to assemble
     // strings so we assign `state` even though technically not correct
 
+    Rprintf("Position: %d\n", state.pos_byte);
     if(!state.string[state.pos_byte]){
-      Rprintf("fake state next: \n");
       state_next = state;
     } else {
-      Rprintf("RN ");
       state_next = FANSI_read_next(state);
     }
     state_bound.warn = state_next.warn;  // avoid double warning
@@ -366,10 +365,14 @@ static SEXP strwrap(
       state.string[state.pos_byte] == '\t' ||
       state.string[state.pos_byte] == '\n'
     ) {
+      Rprintf(
+        "Bound @ %d raw: %d chr: %d prev: %d\n",
+        state.pos_byte - state_start.pos_byte, state.pos_byte,
+        state.string[state.pos_byte], prev_boundary
+      );
       if(strip_spaces && !prev_boundary) state_bound = state;
       else if(!strip_spaces) state_bound = state;
       has_boundary = prev_boundary = 1;
-      // Rprintf("Bound @ %d\n", state_bound.pos_byte - state_start.pos_byte);
     } else {
       prev_boundary = 0;
     }
@@ -391,11 +394,6 @@ static SEXP strwrap(
         (has_boundary || wrap_always)
       )
     ) {
-      Rprintf(
-        "--so: %d width: %d tar: %d has_b: %d wa: %d fo: %d pb: %d\n",
-        !state.string[state.pos_byte], state.pos_width, width_tar,
-        has_boundary, wrap_always, first_only, state.pos_byte
-      );
       if(
         !state.string[state.pos_byte] ||
         (wrap_always && !has_boundary) || first_only
@@ -406,11 +404,6 @@ static SEXP strwrap(
         state_bound = state;
       }
       if(!first_line && last_start >= state_start.pos_byte) {
-        Rprintf(
-          "fl: %d ls: %d pb: %d s: %s\n",
-          first_line, last_start, state_start.pos_byte,
-          state_start.string
-        );
         error(
           "%s%s",
           "Wrap error: trying to wrap to width narrower than ",
@@ -424,6 +417,7 @@ static SEXP strwrap(
           width_tar, pad_chr
         )
       );
+      PrintValue(res_sxp);
       first_line = 0;
       last_start = state_start.pos_byte;
       // first_only for `strtrim`
@@ -445,12 +439,19 @@ static SEXP strwrap(
 
       // Recreate what the state is at the wrap point, including skipping the
       // wrap character if there was one, and any subsequent leading spaces if
-      // there are any and we are in strip_space mode.
+      // there are any and we are in strip_space mode.  If there was no boundary
+      // then we're hard breaking and we reset position to the next position.
 
-      if(
-        has_boundary && state_bound.string[state_bound.pos_byte] == '\n'
-      ) {
+      Rprintf(
+        "Positions has_b: %d, state: %d bound: %d prev: %d next: %d\n",
+        has_boundary,
+        state.pos_byte, state_bound.pos_byte, state_prev.pos_byte,
+        state_next.pos_byte
+      );
+      if(has_boundary) {
         state_bound = FANSI_read_next(state_bound);
+      } else if(!has_boundary) {
+        state_bound = state;
       }
       if(strip_spaces) {
         while(state_bound.string[state_bound.pos_byte] == ' ') {
@@ -459,11 +460,8 @@ static SEXP strwrap(
       has_boundary = 0;
       state_bound.pos_width = 0;
 
-      // For cases with boundary, reset beginning to the boundary, otherwise set
-      // to the previously computed next position
-
-      state = state_start =
-        state_bound.pos_byte > state_next.pos_byte ? state_bound : state_next;
+      state_prev = state;
+      state = state_start = state_bound;
     } else {
       state_prev = state;
       state = state_next;
