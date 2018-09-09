@@ -115,7 +115,7 @@
 #'
 #' substr_sgr("\033[31mhello\tworld", 1, 6)
 #' substr_ctl("\033[31mhello\tworld", 1, 6)
-#' substr_ctl("\033[31mhello\tworld", 1, 6, ctl=c('all', 'c0')
+#' substr_ctl("\033[31mhello\tworld", 1, 6, ctl=c('all', 'c0'))
 
 substr_ctl <- function(
   x, start, stop,
