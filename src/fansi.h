@@ -40,6 +40,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   #define FANSI_STYLE_MAX 12 // 12 is double underline
 
+  #define FANSI_TERM_BRIGHT 1
+  #define FANSI_TERM_256 2
+  #define FANSI_TERM_TRUECOLOR 4
+
   // symbols
 
   SEXP FANSI_warn_sym;
@@ -233,12 +237,12 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * Type of failure
      *
      * * 0: no error
-     * * 1: well formed csi sgr, but contains color codes that
-     *      exceed terminal capabilities
-     * * 2: well formed csi sgr, but contains uninterpretable characters [:<=>]
-     * * 3: well formed csi sgr, but contains uninterpretable sub-strings, if a
+     * * 1: well formed csi sgr, but contains uninterpretable sub-strings, if a
      *      CSI sequence is not fully parsed yet (i.e. last char not read) it is
      *      assumed to be SGR until we read the final code.
+     * * 2: well formed csi sgr, but contains uninterpretable characters [:<=>]
+     * * 3: well formed csi sgr, but contains color codes that exceed terminal
+     *     capabilities
      * * 4: well formed csi, but not an SGR
      * * 5: malformed csi
      * * 6: other escape sequence
@@ -323,7 +327,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   );
   SEXP FANSI_color_to_html_ext(SEXP x);
   SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap);
-  SEXP FANSI_unhandled_esc(SEXP x);
+  SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap);
 
   SEXP FANSI_nchar(
     SEXP x, SEXP type, SEXP allowNA, SEXP keepNA, SEXP warn, SEXP term_cap

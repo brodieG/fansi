@@ -36,6 +36,13 @@ unitizer_sect("unhandled", {
   # A malformed ESCape
 
   unhandled_ctl("hello\033\033\033[45p wor\ald")
+
+  # Specifying term cap
+
+  unhandled_ctl("\033[38;5;220mworld\033[m", "bright")
+  unhandled_ctl("\033[38;2;10;20;30mworld\033[m", "bright")
+  unhandled_ctl("\033[38;2;10;20;30mworld\033[m", "bri")
+  unhandled_ctl("\033[38;2;10;20;30mworld\033[m", NULL)
 })
 unitizer_sect("strtrim", {
   strtrim_ctl(" hello world", 7)

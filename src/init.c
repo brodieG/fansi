@@ -31,7 +31,7 @@ R_CallMethodDef callMethods[] = {
   {"tabs_as_spaces", (DL_FUNC) &FANSI_tabs_as_spaces_ext, 5},
   {"color_to_html", (DL_FUNC) &FANSI_color_to_html_ext, 1},
   {"esc_to_html", (DL_FUNC) &FANSI_esc_to_html, 3},
-  {"unhandled_esc", (DL_FUNC) &FANSI_unhandled_esc, 1},
+  {"unhandled_esc", (DL_FUNC) &FANSI_unhandled_esc, 2},
   {"unique_chr", (DL_FUNC) &FANSI_unique_chr, 1},
   {"nzchar_esc", (DL_FUNC) &FANSI_nzchar, 5},
   {"add_int", (DL_FUNC) &FANSI_add_int_ext, 2},

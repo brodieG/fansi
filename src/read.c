@@ -127,7 +127,7 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
   // valid SGR sequence
 
   if(!err_code && (len - leading_zeros) > 3) {
-    err_code = 3;
+    err_code = 1;
   }
   if(!err_code) {
     int len2 = len - leading_zeros;
@@ -135,7 +135,7 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
       val += (as_num(--string) * mult);
       mult *= 10;
   } }
-  if(err_code < 3 && val > 255) err_code = 3;
+  if(err_code < 3 && val > 255) err_code = 1;
 
   // If the string didn't end, then we consume one extra character for the
   // ending
@@ -187,16 +187,16 @@ static struct FANSI_state parse_colors(
       // terminal and iTerm)
 
       state.pos_byte -= (res.len);
-      state.err_code = 3;
+      state.err_code = 1;
     } else if (
       // terminal doesn't have 256 or true color capability
-      (res.val == 2 && !(state.term_cap & (1 << 2))) ||
-      (res.val == 5 && !(state.term_cap & (1 << 1)))
+      (res.val == 2 && !(state.term_cap & FANSI_TERM_TRUECOLOR)) ||
+      (res.val == 5 && !(state.term_cap & FANSI_TERM_256))
     ) {
       // right now this is same as when not 2/5 following a 38, but maybe in the
       // future we want different treatment?
       state.pos_byte -= (res.len);
-      state.err_code = 1;
+      state.err_code = 3;
     } else {
       int colors = res.val;
       if(colors == 2) {
@@ -479,7 +479,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
             } else if (tok_res.val == 55) {
               state.border &= ~(1U << 3);
             } else {
-              state.err_code = 3;  // unknown token
+              state.err_code = 1;  // unknown token
             }
           } else if(tok_res.val >= 60 && tok_res.val < 70) {
             // borders
@@ -489,10 +489,10 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
             } else if (tok_res.val == 65) {
               state.ideogram = 0;
             } else {
-              state.err_code = 3;  // unknown token
+              state.err_code = 1;  // unknown token
             }
           } else {
-            state.err_code = 3;  // unknown token
+            state.err_code = 1;  // unknown token
           }
         }
         if(state.style > ((1 << (FANSI_STYLE_MAX + 1)) - 1))
@@ -547,7 +547,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
     // !esc_recognized.
     state.err_code = err_code;  // b/c we want the worst err code
     state.last_char_width = 0;
-    if(err_code == 1) {
+    if(err_code == 3) {
       state.err_msg =
         "a CSI SGR sequence with color codes not supported by terminal";
     } else if(err_code < 4) {

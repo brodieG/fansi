@@ -18,9 +18,11 @@
 
 #include "fansi.h"
 
-SEXP FANSI_unhandled_esc(SEXP x) {
+SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
   if(TYPEOF(x) != STRSXP)
     error("Argument `x` must be a character vector.");  // nocov
+  if(TYPEOF(term_cap) != INTSXP)
+    error("Argument `term_cap` must be an integer vector.");  // nocov
 
   R_xlen_t x_len = XLENGTH(x);
   if(x_len >= FANSI_int_max)
@@ -30,7 +32,6 @@ SEXP FANSI_unhandled_esc(SEXP x) {
     );
     // nocov end
 
-  SEXP zero_vec = PROTECT(allocVector(INTSXP, 0));
   SEXP R_true = PROTECT(ScalarLogical(1));
   SEXP R_one = PROTECT(ScalarInteger(1));
   SEXP no_warn = PROTECT(ScalarLogical(0));
@@ -58,7 +59,7 @@ SEXP FANSI_unhandled_esc(SEXP x) {
       string = string_start = CHAR(chrsxp);
 
       struct FANSI_state state = FANSI_state_init_full(
-        string, no_warn, zero_vec, R_true, R_true, R_one, ctl_all
+        string, no_warn, term_cap, R_true, R_true, R_one, ctl_all
       );
       int has_errors = 0;
 
@@ -174,6 +175,6 @@ SEXP FANSI_unhandled_esc(SEXP x) {
   SET_VECTOR_ELT(res_fin, 3, res_err_code);
   SET_VECTOR_ELT(res_fin, 4, res_translated);
   SET_VECTOR_ELT(res_fin, 5, res_string);
-  UNPROTECT(13);
+  UNPROTECT(12);
   return res_fin;
 }

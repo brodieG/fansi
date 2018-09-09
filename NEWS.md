@@ -20,6 +20,9 @@
   it can handle vector elements with un-terminated SGR sequences (@krlmlr).
 * Fix bug in width computation of first line onwards in `strwrap_ctl` when
   indent/exdent/prefix/initial widths vary from first to second line.
+* Fix wrapping in `strwrap2_*(..., strip.spaces=FALSE)`, including a bug when
+  `wrap.always=TRUE` and a line started in a word-whitespace boundary.
+* Add `term.cap` parameter to `unhandled_ctl`.
 
 ## v0.3.0
 
