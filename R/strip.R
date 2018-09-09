@@ -32,16 +32,18 @@
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
 #' @inheritParams substr_ctl
+#' @inheritSection substr_ctl ctl vs. sgr
 #' @export
-#' @param strip character, any combination of the following values (see details):
+#' @param ctl character, any combination of the following values (see details):
 #'   * "nl": strip newlines.
-#'   * "c0": strip all other "C0" control characters (i.e. x01-x1f), except for
-#'     newlines and the actual ESC character.
+#'   * "c0": strip all other "C0" control characters (i.e. x01-x1f, x7F), 
+#'     except for newlines and the actual ESC character.
 #'   * "sgr": strip ANSI CSI SGR sequences.
 #'   * "csi": strip all non-SGR csi sequences.
 #'   * "esc": strip all other escape sequences.
 #'   * "all": all of the above, except when used in combination with any of the
 #'     above, in which case it means "all but" (see details).
+#' @param strip character, deprecated in favor of `ctl`.
 #' @return character vector of same length as x with ANSI escape sequences
 #'   stripped
 #' @examples
@@ -56,27 +58,30 @@
 #' ## as far as the `strip` argument is concerned
 #' strip_ctl(string, c("all", "nl", "c0"))
 #'
-#' ## convenience function, same as `strip_ctl(strip='sgr')`
+#' ## convenience function, same as `strip_ctl(ctl='sgr')`
 #' strip_sgr(string)
 
-strip_ctl <- function(x, strip='all', warn=getOption('fansi.warn')) {
+strip_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), strip) {
+  if(!missing(strip)) {
+    message("Parameter `strip` has been deprecated; use `ctl` instead.")
+    ctl <- strip
+  }
   if(!is.character(x)) x <- as.character(x)
 
   if(!is.logical(warn)) warn <- as.logical(warn)
   if(length(warn) != 1L || is.na(warn))
     stop("Argument `warn` must be TRUE or FALSE.")
 
-  if(!is.character(strip))
-    stop("Argument `strip` must be character.")
-
-  if(length(strip)) {
-    # duplicate values in `strip` are okay, so save a call to `unique` here
-    if(anyNA(strip.int <- match(strip, VALID.STRIP)))
+  if(!is.character(ctl))
+    stop("Argument `ctl` must be character.")
+  if(length(ctl)) {
+    # duplicate values in `ctl` are okay, so save a call to `unique` here
+    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
       stop(
-        "Argument `strip` may contain only values in `",
-        deparse(VALID.STRIP), "`"
+        "Argument `ctl` may contain only values in `",
+        deparse(VALID.CTL), "`"
       )
-    .Call(FANSI_strip_csi, enc2utf8(x), strip.int, warn)
+    .Call(FANSI_strip_csi, enc2utf8(x), ctl.int, warn)
   } else x
 }
 #' @export
@@ -88,11 +93,11 @@ strip_sgr <- function(x, warn=getOption('fansi.warn')) {
   if(length(warn) != 1L || is.na(warn))
     stop("Argument `warn` must be TRUE or FALSE.")
 
-  strip.int <- match("sgr", VALID.STRIP)
-  if(anyNA(strip.int))
-    stop("Internal Error: invalid strip type; contact maintainer.") # nocov
+  ctl.int <- match("sgr", VALID.CTL)
+  if(anyNA(ctl.int))
+    stop("Internal Error: invalid ctl type; contact maintainer.") # nocov
 
-  .Call(FANSI_strip_csi, enc2utf8(x), strip.int, warn)
+  .Call(FANSI_strip_csi, enc2utf8(x), ctl.int, warn)
 }
 
 ## Process String by Removing Unwanted Characters

@@ -365,7 +365,15 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
     const char * string_start = CHAR(chrsxp);
     const char * string = string_start;
-    state.string = state_prev.string = string;
+
+    // Reset position info and string; we want to preserve the rest of the state
+    // info so that SGR styles can spill across lines
+
+    state = FANSI_reset_pos(state);
+    state.string = string;
+    struct FANSI_state state_start = FANSI_reset_pos(state);
+
+    // Save what the state was at the end of the prior string
 
     R_len_t bytes_init = LENGTH(chrsxp);
 
@@ -380,6 +388,18 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
     // the alternative is to track a growing list or some such of accrued parsed
     // sequences.  The latter might be faster, but more work for us so we'll
     // leave it and see if it becomes a major issue.
+
+    // It is possible for a state to be left over from prior string.
+
+    if(FANSI_state_has_style_basic(state)) {
+      bytes_extra = html_compute_size(
+        state, bytes_extra, state.pos_byte, 0, i
+      );
+      has_esc = any_esc = 1;
+    }
+    state_prev = state;
+
+    // Now check string proper
 
     while(*string && (string = strchr(string, 0x1b))) {
       if(!any_esc) any_esc = 1;
@@ -418,12 +438,24 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
       FANSI_size_buff(&buff, bytes_final);
       string = string_start;
-      state_init.warn = state.warn;
-      state_init.string = string_start;
-      state = state_prev = state_init;
+      state_start.warn = state.warn;
+      state = state_start;
+
+      // Rprintf("string is '%s'\n", state.string);
 
       int first_esc = 1;
       char * buff_track = buff.buff;
+
+      // Handle state left-over from previous char elem
+
+      if(FANSI_state_has_style_basic(state)) {
+        int bytes_html = state_as_html(state, first_esc, buff_track);
+        buff_track += bytes_html;
+        first_esc = 0;
+      }
+      state_prev = state;
+
+      // Deal with state changes in this string
 
       while(*string && (string = strchr(string, 0x1b))) {
         state.pos_byte = (string - string_start);
@@ -434,8 +466,10 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
         // The text since the last ESC
 
+        // Rprintf("prev_byte: %d\n", state_prev.pos_byte);
         const char * string_last = string_start + state_prev.pos_byte;
         int bytes_prev = string - string_last;
+        // Rprintf("bytes prev: %d\n", bytes_prev);
         // Rprintf("write prev: '%.*s'\n", bytes_prev, string_last);
         memcpy(buff_track, string_last, bytes_prev);
         buff_track += bytes_prev;

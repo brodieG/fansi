@@ -6,8 +6,8 @@
 \usage{
 set_knit_hooks(hooks, which = "output", proc.fun = function(x, class)
   html_code_block(sgr_to_html(html_esc(x)), class = class),
-  class = sprintf("fansi fansi-\%s", which), style = getOption("fansi.css"),
-  .test = FALSE)
+  class = sprintf("fansi fansi-\%s", which),
+  style = getOption("fansi.css"), .test = FALSE)
 }
 \arguments{
 \item{hooks}{list, this should the be \code{knitr::knit_hooks} object; we
@@ -101,5 +101,5 @@ do.call(knitr::knit_hooks$set, old.hooks)
 \seealso{
 \code{\link{has_sgr}}, \code{\link{sgr_to_html}}, \code{\link{html_esc}}, \code{\link{html_code_block}},
 \href{https://yihui.name/knitr/hooks/#output-hooks}{knitr output hooks},
-\href{https://bookdown.org/yihui/rmarkdown/language-engines.html#javascript-and-css}{embedding CSS inRmd}.
+\href{https://bookdown.org/yihui/rmarkdown/language-engines.html#javascript-and-css}{embedding CSS in Rmd}.
 }

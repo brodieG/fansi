@@ -5,7 +5,7 @@
 \title{Replace Tabs With Spaces}
 \usage{
 tabs_as_spaces(x, tab.stops = getOption("fansi.tab.stops"),
-  warn = getOption("fansi.warn"))
+  warn = getOption("fansi.warn"), ctl = "all")
 }
 \arguments{
 \item{x}{character vector or object coercible to character; any tabs therein
@@ -21,6 +21,19 @@ count begins from the beginning of the input line.}
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
+
+\item{ctl}{character, which \emph{Control Sequences} should be treated
+specially. See the "ctl vs. sgr" section for details.
+\itemize{
+\item "nl": newlines.
+\item "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except
+for newlines and the actual ESC (0x1B) character.
+\item "sgr": ANSI CSI SGR sequences.
+\item "csi": all non-SGR ANSI CSI sequences.
+\item "esc": all other escape sequences.
+\item "all": all of the above, except when used in combination with any of the
+above, in which case it means "all but".
+}}
 }
 \value{
 character, \code{x} with tabs replaced by spaces, with elements
@@ -36,7 +49,10 @@ stops you will need to provide them yourself if you are using anything
 outside of the standard tab stop every 8 characters that is the default.
 }
 \note{
-Non-ASCII strings are converted to and returned in UTF-8 encoding.
+Non-ASCII strings are converted to and returned in UTF-8 encoding.  The
+\code{ctl} parameter only affects which \emph{Control Sequences} are considered zero
+width.  Tabs will always be converted to spaces, irrespective of the \code{ctl}
+setting.
 }
 \examples{
 string <- '1\\t12\\t123\\t1234\\t12345678'

@@ -101,6 +101,7 @@ unitizer_sect("Selective stripping", {
   string.1 <- "hello\033\033[45p world\n\033[31#3mgoodbye\a moon"
 
   strip_ctl(string.1, c("nl", "sgr", "esc"))
+  strip_ctl(string.1, c("csi"))
   strip_ctl(string.1, "all")
   strip_ctl(string.1, c("c0", "nl"))
   strip_ctl(string.1, c("all", "sgr"))
@@ -124,8 +125,9 @@ unitizer_sect("Selective stripping", {
 })
 unitizer_sect("Bad Inputs", {
   strip_ctl("hello\033[41mworld", warn=1:3)
-  strip_ctl("hello\033[41mworld", strip=1:3)
-  strip_ctl("hello\033[41mworld", strip="bananas")
+  strip_ctl("hello\033[41mworld", ctl=1:3)
+  strip_ctl("hello\033[41mworld", ctl="bananas")
+  strip_ctl("hello\033[41mworld", strip="sgr")
 
   strip_sgr("hello\033[41mworld", warn=1:3)
 

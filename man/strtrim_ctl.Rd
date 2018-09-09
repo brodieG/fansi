@@ -3,11 +3,19 @@
 \name{strtrim_ctl}
 \alias{strtrim_ctl}
 \alias{strtrim2_ctl}
+\alias{strtrim_sgr}
+\alias{strtrim2_sgr}
 \title{ANSI Control Sequence Aware Version of strtrim}
 \usage{
-strtrim_ctl(x, width, warn = getOption("fansi.warn"))
+strtrim_ctl(x, width, warn = getOption("fansi.warn"), ctl = "all")
 
 strtrim2_ctl(x, width, warn = getOption("fansi.warn"),
+  tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
+  tab.stops = getOption("fansi.tab.stops"), ctl = "all")
+
+strtrim_sgr(x, width, warn = getOption("fansi.warn"))
+
+strtrim2_sgr(x, width, warn = getOption("fansi.warn"),
   tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
   tab.stops = getOption("fansi.tab.stops"))
 }
@@ -21,6 +29,19 @@ strtrim2_ctl(x, width, warn = getOption("fansi.warn"),
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
+
+\item{ctl}{character, which \emph{Control Sequences} should be treated
+specially. See the "ctl vs. sgr" section for details.
+\itemize{
+\item "nl": newlines.
+\item "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except
+for newlines and the actual ESC (0x1B) character.
+\item "sgr": ANSI CSI SGR sequences.
+\item "csi": all non-SGR ANSI CSI sequences.
+\item "esc": all other escape sequences.
+\item "all": all of the above, except when used in combination with any of the
+above, in which case it means "all but".
+}}
 
 \item{tabs.as.spaces}{FALSE (default) or TRUE, whether to convert tabs to
 spaces.  This can only be set to TRUE if \code{strip.spaces} is FALSE.}
@@ -43,6 +64,19 @@ This is the only difference between \code{strtrim_ctl} and \code{strtrim2_ctl}.
 Non-ASCII strings are converted to and returned in UTF-8 encoding.
 Width calculations will not work correctly with R < 3.2.2.
 }
+\section{ctl vs. sgr}{
+
+
+The \code{*_ctl} versions of the functions treat all \emph{Control Sequences}
+specially.  The special treatment of \emph{Control Sequences} is to compute their
+display/character width as zero.  For the SGR subset of the ANSI CSI
+sequences, \code{fansi} will also parse, interpret, and reapply the text styles
+they encode as needed.  You can modify whether a control sequence is treated
+specially with the \code{ctl} parameter.  The \code{*_sgr} versions only treat ANSI CSI
+SGR sequences specially, and are equivalent to the \code{*_ctl} versions with the
+\code{ctl} parameter set to "sgr".
+}
+
 \examples{
 strtrim_ctl("\\033[42mHello world\\033[m", 6)
 }

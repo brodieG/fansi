@@ -3,17 +3,36 @@
 \name{strwrap_ctl}
 \alias{strwrap_ctl}
 \alias{strwrap2_ctl}
+\alias{strwrap_sgr}
+\alias{strwrap2_sgr}
 \title{ANSI Control Sequence Aware Version of strwrap}
 \usage{
-strwrap_ctl(x, width = 0.9 * getOption("width"), indent = 0, exdent = 0,
-  prefix = "", simplify = TRUE, initial = prefix,
-  warn = getOption("fansi.warn"), term.cap = getOption("fansi.term.cap"))
+strwrap_ctl(x, width = 0.9 * getOption("width"), indent = 0,
+  exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
+  warn = getOption("fansi.warn"),
+  term.cap = getOption("fansi.term.cap"),
+  ctrl = getOption("fansi.ctrl"), ctl = "all")
 
-strwrap2_ctl(x, width = 0.9 * getOption("width"), indent = 0, exdent = 0,
-  prefix = "", simplify = TRUE, initial = prefix, wrap.always = FALSE,
-  pad.end = "", strip.spaces = !tabs.as.spaces,
+strwrap2_ctl(x, width = 0.9 * getOption("width"), indent = 0,
+  exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
+  wrap.always = FALSE, pad.end = "", strip.spaces = !tabs.as.spaces,
   tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
-  tab.stops = getOption("fansi.tab.stops"), warn = getOption("fansi.warn"),
+  tab.stops = getOption("fansi.tab.stops"),
+  warn = getOption("fansi.warn"),
+  term.cap = getOption("fansi.term.cap"), ctl = "all")
+
+strwrap_sgr(x, width = 0.9 * getOption("width"), indent = 0,
+  exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
+  warn = getOption("fansi.warn"),
+  term.cap = getOption("fansi.term.cap"),
+  ctrl = getOption("fansi.ctrl"))
+
+strwrap2_sgr(x, width = 0.9 * getOption("width"), indent = 0,
+  exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
+  wrap.always = FALSE, pad.end = "", strip.spaces = !tabs.as.spaces,
+  tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
+  tab.stops = getOption("fansi.tab.stops"),
+  warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"))
 }
 \arguments{
@@ -54,6 +73,19 @@ starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
 escape sequences, so you should ensure that it matches your terminal
 capabilities. See \link{term_cap_test} for details.}
 
+\item{ctl}{character, which \emph{Control Sequences} should be treated
+specially. See the "ctl vs. sgr" section for details.
+\itemize{
+\item "nl": newlines.
+\item "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except
+for newlines and the actual ESC (0x1B) character.
+\item "sgr": ANSI CSI SGR sequences.
+\item "csi": all non-SGR ANSI CSI sequences.
+\item "esc": all other escape sequences.
+\item "all": all of the above, except when used in combination with any of the
+above, in which case it means "all but".
+}}
+
 \item{wrap.always}{TRUE or FALSE (default), whether to hard wrap at requested
 width if no word breaks are detected within a line.  If set to TRUE then
 \code{width} must be at least 2.}
@@ -65,7 +97,8 @@ string the line remains unpadded.}
 
 \item{strip.spaces}{TRUE (default) or FALSE, if TRUE, extraneous white spaces
 (spaces, newlines, tabs) are removed in the same way as \link[base:strwrap]{base::strwrap}
-does.}
+does.  When FALSE, whitespaces are preserved, except for newlines as those
+are implicit in boundaries between vector elements.}
 
 \item{tabs.as.spaces}{FALSE (default) or TRUE, whether to convert tabs to
 spaces.  This can only be set to TRUE if \code{strip.spaces} is FALSE.}
@@ -99,6 +132,19 @@ computing tab positions.
 Non-ASCII strings are converted to and returned in UTF-8 encoding.
 Width calculations will not work correctly with R < 3.2.2.
 }
+\section{ctl vs. sgr}{
+
+
+The \code{*_ctl} versions of the functions treat all \emph{Control Sequences}
+specially.  The special treatment of \emph{Control Sequences} is to compute their
+display/character width as zero.  For the SGR subset of the ANSI CSI
+sequences, \code{fansi} will also parse, interpret, and reapply the text styles
+they encode as needed.  You can modify whether a control sequence is treated
+specially with the \code{ctl} parameter.  The \code{*_sgr} versions only treat ANSI CSI
+SGR sequences specially, and are equivalent to the \code{*_ctl} versions with the
+\code{ctl} parameter set to "sgr".
+}
+
 \examples{
 hello.1 <- "hello \\033[41mred\\033[49m world"
 hello.2 <- "hello\\t\\033[41mred\\033[49m\\tworld"

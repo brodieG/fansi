@@ -28,15 +28,13 @@
 #' We will refer to ANSI control characters and sequences as "_Control
 #' Sequences_" hereafter.
 #'
-#' There are three types of _Control Sequences_ that `fansi` treats specially:
+#' There are three types of _Control Sequences_ that `fansi` can treat
+#' specially:
 #'
 #' * "C0" control characters, such as tabs and carriage returns (we include
 #'   delete in this set, even though technically it is not part of it).
 #' * Sequences starting in "ESC&#91;", also known as ANSI CSI sequences.
 #' * Sequences starting in "ESC" and followed by something other than "&#91;".
-#'
-#' All of these are considered zero display-width for purposes of string width
-#' calculations.
 #'
 #' _Control Sequences_ starting with ESC are assumed to be two characters
 #' long (including the ESC) unless they are of the CSI variety, in which case
@@ -50,6 +48,13 @@
 #' byte introducing character in the 0x40-0x5F range instead of the traditional
 #' "ESC&#91;".  Since this is rare and it conflicts with UTF-8 encoding, we do
 #' not support it.
+#'
+#' The special treatment of _Control Sequences_ is to compute their
+#' display/character width as zero.  For the SGR subset of the ANSI CSI
+#' sequences, `fansi` will also parse, interpret, and reapply the text styles
+#' they encode as needed.  Whether a particular type of _Control Sequence_ is
+#' treated specially can be specified via the `ctl` parameter to the `fansi`
+#' functions that have it.
 #'
 #' @section ANSI CSI SGR Control Sequences:
 #'

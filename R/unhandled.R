@@ -31,7 +31,12 @@
 #'   treated as one, even if some of those sequences are valid.
 #' * error: the reason why the sequence was not handled:
 #'     * exceed-term-cap: contains color codes not supported by the terminal
-#'       (see [term_cap_test]).
+#'       (see [term_cap_test]).  Bright colors with color codes in the 90-97 and
+#'       100-107 range in terminals that do not support them are not considered
+#'       errors, whereas 256 or truecolor codes in terminals that do not support
+#'       them are.  This is because the latter are often misinterpreted by
+#'       terminals that do not support them, whereas the former are typically
+#'       silently ignored.
 #'     * special: SGR substring contains uncommon characters in ":<=>".
 #'     * unknown: SGR substring with a value that does not correspond to a known
 #'       SGR code.
@@ -67,11 +72,18 @@
 #' )
 #' unhandled_ctl(string)
 
-unhandled_ctl <- function(x) {
-  res <- .Call(FANSI_unhandled_esc, enc2utf8(x))
+unhandled_ctl <- function(x, term.cap=getOption('fansi.term.cap')) {
+  if(!is.character(term.cap))
+    stop("Argument `term.cap` must be character.")
+  if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
+    stop(
+      "Argument `term.cap` may only contain values in ",
+      deparse(VALID.TERM.CAP)
+    )
+  res <- .Call(FANSI_unhandled_esc, enc2utf8(x), term.cap.int)
   names(res) <- c("index", "start", "stop", "error", "translated", "esc")
   errors <- c(
-    'exceed-term-cap', 'special', 'unknown', 'non-SGR', 'malformed-CSI',
+    'unknown', 'special', 'exceed-term-cap', 'non-SGR', 'malformed-CSI',
     'non-CSI', 'malformed-ESC', 'C0', 'malformed-UTF8'
   )
   res[['error']] <- errors[res[['error']]]

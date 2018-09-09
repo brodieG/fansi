@@ -2,10 +2,16 @@
 % Please edit documentation in R/strsplit.R
 \name{strsplit_ctl}
 \alias{strsplit_ctl}
+\alias{strsplit_sgr}
 \title{ANSI Control Sequence Aware Version of strsplit}
 \usage{
 strsplit_ctl(x, split, fixed = FALSE, perl = FALSE, useBytes = FALSE,
-  warn = getOption("fansi.warn"), term.cap = getOption("fansi.term.cap"))
+  warn = getOption("fansi.warn"),
+  term.cap = getOption("fansi.term.cap"), ctl = "all")
+
+strsplit_sgr(x, split, fixed = FALSE, perl = FALSE, useBytes = FALSE,
+  warn = getOption("fansi.warn"),
+  term.cap = getOption("fansi.term.cap"))
 }
 \arguments{
 \item{x}{a character vector, or, unlike \link[base:strsplit]{base::strsplit} an object that can
@@ -44,22 +50,61 @@ starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
 "38;2" or "48;2"). Changing this parameter changes how \code{fansi} interprets
 escape sequences, so you should ensure that it matches your terminal
 capabilities. See \link{term_cap_test} for details.}
+
+\item{ctl}{character, which \emph{Control Sequences} should be treated
+specially. See the "ctl vs. sgr" section for details.
+\itemize{
+\item "nl": newlines.
+\item "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except
+for newlines and the actual ESC (0x1B) character.
+\item "sgr": ANSI CSI SGR sequences.
+\item "csi": all non-SGR ANSI CSI sequences.
+\item "esc": all other escape sequences.
+\item "all": all of the above, except when used in combination with any of the
+above, in which case it means "all but".
+}}
 }
 \value{
 list, see \link[base:strsplit]{base::strsplit}.
 }
 \description{
 A drop-in replacement for \link[base:strsplit]{base::strsplit}.  It will be noticeably slower,
-but should otherwise behave the same way except for CSI SGR sequence
+but should otherwise behave the same way except for \emph{Control Sequence}
 awareness.
+}
+\details{
+This function works by computing the position of the split points after
+removing \emph{Control Sequences}, and uses those positions in conjunction with
+\code{\link{substr_ctl}} to extract the pieces.  An important implication of this is
+that you cannot split by \emph{Control Sequences} that are being treated as
+\emph{Control Sequences}.  You can however limit which control sequences are
+treated specially via the \code{ctl} parameters (see examples).
 }
 \note{
 Non-ASCII strings are converted to and returned in UTF-8 encoding.  The
 split positions are computed after both \code{x} and \code{split} are converted to
 UTF-8.
 }
+\section{ctl vs. sgr}{
+
+
+The \code{*_ctl} versions of the functions treat all \emph{Control Sequences}
+specially.  The special treatment of \emph{Control Sequences} is to compute their
+display/character width as zero.  For the SGR subset of the ANSI CSI
+sequences, \code{fansi} will also parse, interpret, and reapply the text styles
+they encode as needed.  You can modify whether a control sequence is treated
+specially with the \code{ctl} parameter.  The \code{*_sgr} versions only treat ANSI CSI
+SGR sequences specially, and are equivalent to the \code{*_ctl} versions with the
+\code{ctl} parameter set to "sgr".
+}
+
 \examples{
-strsplit_ctl("\\033[31mhello\\033[42m world!", " ")
+strsplit_sgr("\\033[31mhello\\033[42m world!", " ")
+
+## Next two examples allow splitting by newlines, which
+## normally doesn't work as newlines are _Control Sequences_
+strsplit_sgr("\\033[31mhello\\033[42m\\nworld!", "\\n")
+strsplit_ctl("\\033[31mhello\\033[42m\\nworld!", "\\n", strip=c("all", "nl"))
 }
 \seealso{
 \link{fansi} for details on how \emph{Control Sequences} are

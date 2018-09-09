@@ -23,18 +23,16 @@
 #' stops you will need to provide them yourself if you are using anything
 #' outside of the standard tab stop every 8 characters that is the default.
 #'
-#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
+#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.  The
+#'   `ctl` parameter only affects which _Control Sequences_ are considered zero
+#'   width.  Tabs will always be converted to spaces, irrespective of the `ctl`
+#'   setting.
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
 #' @export
 #' @inheritParams substr_ctl
 #' @param x character vector or object coercible to character; any tabs therein
 #'   will be replaced.
-#' @param tab.stops integer(1:n) indicating position of tab stops to use
-#'   when converting tabs to spaces.  If there are more tabs in a line than
-#'   defined tab stops the last tab stop is re-used.  For the purposes of
-#'   applying tab stops, each input line is considered a line and the character
-#'   count begins from the beginning of the input line.
 #' @return character, `x` with tabs replaced by spaces, with elements
 #'   possibly converted to UTF-8.
 #' @examples
@@ -57,7 +55,8 @@
 #' ) )
 
 tabs_as_spaces <- function(
-  x, tab.stops=getOption('fansi.tab.stops'), warn=getOption('fansi.warn')
+  x, tab.stops=getOption('fansi.tab.stops'), warn=getOption('fansi.warn'),
+  ctl='all'
 ) {
   if(!is.character(x)) x <- as.character(x)
   if(!is.logical(warn)) warn <- as.logical(warn)
@@ -66,16 +65,29 @@ tabs_as_spaces <- function(
   if(!is.numeric(tab.stops) || !length(tab.stops) || any(tab.stops < 1))
     stop("Argument `tab.stops` must be numeric and strictly positive")
 
+  if(!is.character(ctl))
+    stop("Argument `ctl` must be character.")
+  ctl.int <- integer()
+  if(length(ctl)) {
+    # duplicate values in `ctl` are okay, so save a call to `unique` here
+    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
+      stop(
+        "Argument `ctl` may contain only values in `",
+        deparse(VALID.CTL), "`"
+      )
+  }
   term.cap.int <- seq_along(VALID.TERM.CAP)
   .Call(
-    FANSI_tabs_as_spaces, enc2utf8(x), as.integer(tab.stops), warn, term.cap.int
+    FANSI_tabs_as_spaces, enc2utf8(x), as.integer(tab.stops), warn,
+    term.cap.int, ctl.int
   )
 }
 #' Test Terminal Capabilities
 #'
 #' Outputs ANSI CSI SGR formatted text to screen so that you may visually
-#' inspect what color capabilities your terminal supports.  The three tested
-#' terminal capabilities are:
+#' inspect what color capabilities your terminal supports.
+#'
+#' The three tested terminal capabilities are:
 #'
 #' * "bright" for bright colors with SGR codes in 90-97 and 100-107
 #' * "256" for colors defined by "38;5;x" and "48;5;x" where x is in 0-255
@@ -92,6 +104,12 @@ tabs_as_spaces <- function(
 #' By default `fansi` assumes terminals support bright and 256 color
 #' modes, and also tests for truecolor support via the $COLORTERM system
 #' variable.
+#'
+#' Functions with the `term.cap` parameter like `substr_ctl` will warn if they
+#' encounter 256 or true color SGR sequences and `term.cap` indicates they are
+#' unsupported as such a terminal may misinterpret those sequences.  Bright
+#' codes in terminals that do not support them are more likely to be silently
+#' ignored, so `fansi` functions do not warn about those.
 #'
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
