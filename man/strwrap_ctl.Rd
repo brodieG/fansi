@@ -97,7 +97,8 @@ string the line remains unpadded.}
 
 \item{strip.spaces}{TRUE (default) or FALSE, if TRUE, extraneous white spaces
 (spaces, newlines, tabs) are removed in the same way as \link[base:strwrap]{base::strwrap}
-does.}
+does.  When FALSE, whitespaces are preserved, except for newlines as those
+are implicit in boundaries between vector elements.}
 
 \item{tabs.as.spaces}{FALSE (default) or TRUE, whether to convert tabs to
 spaces.  This can only be set to TRUE if \code{strip.spaces} is FALSE.}
