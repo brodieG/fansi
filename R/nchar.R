@@ -30,11 +30,12 @@
 #'
 #' @inheritParams substr_ctl
 #' @inheritParams base::nchar
-#' @inheritSection substr_ctl ctl vs. sgr
+#' @inheritSection substr_ctl _ctl vs. _sgr
 #' @note the `keepNA` parameter is ignored for R < 3.2.2.
 #' @export
 #' @param type character string, one of "chars", or "width".  For byte counts
 #'   use [base::nchar].
+#' @param strip deprecated in favor of `ctl`.
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results,
 #'   [strip_ctl] for removing _Control Sequences_.

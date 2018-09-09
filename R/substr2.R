@@ -41,16 +41,19 @@
 #' characters to be dropped irrespective whether they correspond to `start` or
 #' `stop`, and "both" could cause all of them to be included.
 #'
-#' @section ctl vs. sgr:
+#' @section _ctl vs. _sgr:
 #'
-#' The `*_ctl` versions of the functions treat all _Control Sequences_
-#' specially.  The special treatment of _Control Sequences_ is to compute their
-#' display/character width as zero.  For the SGR subset of the ANSI CSI
-#' sequences, `fansi` will also parse, interpret, and reapply the text styles
-#' they encode as needed.  You can modify whether a control sequence is treated
-#' specially with the `ctl` parameter.  The `*_sgr` versions only treat ANSI CSI
-#' SGR sequences specially, and are equivalent to the `*_ctl` versions with the
-#' `ctl` parameter set to "sgr".
+#' The `*_ctl` versions of the functions treat all _Control Sequences_ specially
+#' by default.  Special treatment is context dependent, and may include
+#' detecting them and/or computing their display/character width as zero.  For
+#' the SGR subset of the ANSI CSI sequences, `fansi` will also parse, interpret,
+#' and reapply the text styles they encode if needed.  You can modify whether a
+#' _Control Sequence_ is treated specially with the `ctl` parameter.  You can
+#' exclude a type of _Control Sequence_ from special treatment by combining
+#' "all" with that type of sequence (e.g. `ctl=c("all", "nl")` for special
+#' treatment of all _Control Sequences_ **but** newlines).  The `*_sgr` versions
+#' only treat ANSI CSI SGR sequences specially, and are equivalent to the
+#' `*_ctl` versions with the `ctl` parameter set to "sgr".
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @inheritParams base::substr
@@ -72,7 +75,7 @@
 #'   applying tab stops, each input line is considered a line and the character
 #'   count begins from the beginning of the input line.
 #' @param ctl character, which _Control Sequences_ should be treated
-#'   specially. See the "ctl vs. sgr" section for details.
+#'   specially. See the "_ctl vs. _sgr" section for details.
 #'
 #'   * "nl": newlines.
 #'   * "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except

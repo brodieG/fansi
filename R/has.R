@@ -25,6 +25,7 @@
 #'   interpreted, particularly if you are getting unexpected results.
 #' @inheritParams substr_ctl
 #' @inheritParams strip_ctl
+#' @inheritSection substr_ctl _ctl vs. _sgr
 #' @param which character, deprecated in favor of `ctl`.
 #' @return logical of same length as `x`; NA values in `x` result in NA values
 #'   in return

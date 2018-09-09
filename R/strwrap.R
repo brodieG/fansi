@@ -40,7 +40,7 @@
 #' @inheritParams base::strwrap
 #' @inheritParams tabs_as_spaces
 #' @inheritParams substr_ctl
-#' @inheritSection substr_ctl ctl vs. sgr
+#' @inheritSection substr_ctl _ctl vs. _sgr
 #' @param wrap.always TRUE or FALSE (default), whether to hard wrap at requested
 #'   width if no word breaks are detected within a line.  If set to TRUE then
 #'   `width` must be at least 2.
