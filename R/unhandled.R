@@ -72,8 +72,15 @@
 #' )
 #' unhandled_ctl(string)
 
-unhandled_ctl <- function(x) {
-  res <- .Call(FANSI_unhandled_esc, enc2utf8(x))
+unhandled_ctl <- function(x, term.cap=getOption('fansi.term.cap')) {
+  if(!is.character(term.cap))
+    stop("Argument `term.cap` must be character.")
+  if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
+    stop(
+      "Argument `term.cap` may only contain values in ",
+      deparse(VALID.TERM.CAP)
+    )
+  res <- .Call(FANSI_unhandled_esc, enc2utf8(x), term.cap.int)
   names(res) <- c("index", "start", "stop", "error", "translated", "esc")
   errors <- c(
     'exceed-term-cap', 'special', 'unknown', 'non-SGR', 'malformed-CSI',
