@@ -17,8 +17,15 @@
 #' ANSI Control Sequence Aware Version of strsplit
 #'
 #' A drop-in replacement for [base::strsplit].  It will be noticeably slower,
-#' but should otherwise behave the same way except for CSI SGR sequence
+#' but should otherwise behave the same way except for _Control Sequence_
 #' awareness.
+#'
+#' This function works by computing the position of the split points after
+#' removing _Control Sequences_, and uses those positions in conjunction with
+#' [`substr_ctl`] to extract the pieces.  An important implication of this is
+#' that you cannot split by _Control Sequences_ that are being treated as
+#' _Control Sequences_.  You can however limit which control sequences are
+#' treated specially via the `ctl` parameters (see examples).
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.  The
 #'   split positions are computed after both `x` and `split` are converted to
@@ -31,26 +38,21 @@
 #'   be coerced to character.
 #' @inheritParams base::strsplit
 #' @inheritParams strwrap_ctl
+#' @inheritSection substr_ctl ctl vs. sgr
 #' @return list, see [base::strsplit].
 #' @examples
-#' strsplit_ctl("\033[31mhello\033[42m world!", " ")
+#' strsplit_sgr("\033[31mhello\033[42m world!", " ")
+#'
+#' ## Next two examples allow splitting by newlines, which
+#' ## normally doesn't work as newlines are _Control Sequences_
+#' strsplit_sgr("\033[31mhello\033[42m\nworld!", "\n")
+#' strsplit_ctl("\033[31mhello\033[42m\nworld!", "\n", strip=c("all", "nl"))
 
-# strsplit_ctl <- function(
-#   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
-#   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
-# ) {
-#   x.split <- strsplit(x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE)
-#   if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
-#     stop(
-#       "Argument `term.cap` may only contain values in ",
-#       deparse(VALID.TERM.CAP)
-#     )
-#   .Call(FANSI_strsplit, x.split, warn, term.cap.int)
-# }
 
 strsplit_ctl <- function(
   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
-  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
+  ctl='all'
 ) {
   x <- as.character(x)
   if(any(Encoding(x) == "bytes"))
@@ -84,7 +86,17 @@ strsplit_ctl <- function(
       "Argument `term.cap` may only contain values in ",
       deparse(VALID.TERM.CAP)
     )
-
+  if(!is.character(ctl))
+    stop("Argument `ctl` must be character.")
+  ctl.int <- integer()
+  if(length(ctl)) {
+    # duplicate values in `ctl` are okay, so save a call to `unique` here
+    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
+      stop(
+        "Argument `ctl` may contain only values in `",
+        deparse(VALID.CTL), "`"
+      )
+  }
   # Need to handle recycling, complicated by the ability of strsplit to accept
   # multiple different split arguments
 
@@ -94,7 +106,7 @@ strsplit_ctl <- function(
   s.x.seq <- rep(s.seq, length.out=length(x)) * (!x.na)
 
   matches <- res <- vector("list", length(x))
-  x.strip <- strip_ctl(x, warn=warn)
+  x.strip <- strip_ctl(x, warn=warn, ctl=ctl)
   chars <- nchar(x.strip)
 
   # Find the split locations and widths
@@ -135,7 +147,8 @@ strsplit_ctl <- function(
         start=starts, stop=ends, type.int=0L,
         round.start=TRUE, round.stop=FALSE,
         tabs.as.spaces=FALSE, tab.stops=8L, warn=warn,
-        term.cap.int=term.cap.int, x.len=length(starts)
+        term.cap.int=term.cap.int, x.len=length(starts),
+        ctl.int=ctl.int
       )
     } else {
       res[[i]] <- x[[i]]
@@ -148,4 +161,30 @@ strsplit_ctl <- function(
   res[x.na] <- list(NA_character_)
   res
 }
+#' @rdname strsplit_ctl
+#' @export
+
+strsplit_sgr <- function(
+  x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
+  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+)
+  strsplit_ctl(
+    x=x, split=split, fixed=fixed, perl=perl, useBytes=useBytes,
+    warn=warn, term.cap=term.cap, ctl='sgr'
+  )
+
+# # old interface to split happening directly in C code
+# strsplit_ctl <- function(
+#   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
+#   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+# ) {
+#   x.split <- strsplit(x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE)
+#   if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
+#     stop(
+#       "Argument `term.cap` may only contain values in ",
+#       deparse(VALID.TERM.CAP)
+#     )
+#   .Call(FANSI_strsplit, x.split, warn, term.cap.int)
+# }
+
 

@@ -29,7 +29,7 @@
  */
 struct FANSI_state FANSI_state_init_full(
   const char * string, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
-  SEXP width
+  SEXP width, SEXP ctl
 ) {
   // nocov start
   if(TYPEOF(warn) != LGLSXP)
@@ -57,6 +57,11 @@ struct FANSI_state FANSI_state_init_full(
       "Internal error: state_init with bad type for width (%s)",
       type2char(TYPEOF(width))
     );
+  if(TYPEOF(ctl) != INTSXP)
+    error(
+      "Internal error: state_init with bad type for ctl (%s)",
+      type2char(TYPEOF(ctl))
+    );
 
   // nocov end
 
@@ -83,7 +88,8 @@ struct FANSI_state FANSI_state_init_full(
     .term_cap = term_cap_int,
     .allowNA = asLogical(allowNA),
     .keepNA = asLogical(keepNA),
-    .use_nchar = asInteger(width)  // 0 for chars, 1 for width
+    .use_nchar = asInteger(width),  // 0 for chars, 1 for width
+    .ctl = FANSI_ctl_as_int(ctl)
   };
 }
 struct FANSI_state FANSI_state_init(
@@ -96,7 +102,8 @@ struct FANSI_state FANSI_state_init(
     string, warn, term_cap,
     R_true,  // allowNA for invalid multibyte
     R_false,
-    R_zero   // Don't use width by default
+    R_zero,  // Don't use width by default
+    R_zero   // Don't treat any escapes as special by default
   );
   UNPROTECT(3);
   return res;
@@ -617,6 +624,27 @@ int FANSI_state_has_style_basic(struct FANSI_state state) {
   return state.style || state.color >= 0 || state.bg_color >= 0;
 }
 /*
+ * Copy the style members from current to target
+ */
+struct FANSI_state FANSI_state_copy_style(
+  struct FANSI_state target, struct FANSI_state current
+) {
+  target.style = current.style;
+  target.border = current.border;
+  target.font = current.font;
+  target.ideogram = current.ideogram;
+
+  target.color = current.color;
+  for(int i = 0; i < 4; ++i) {
+    target.color_extra[i] = current.color_extra[i];
+  }
+  target.bg_color = current.bg_color;
+  for(int i = 0; i < 4; ++i) {
+    target.bg_color_extra[i] = current.bg_color_extra[i];
+  }
+  return target;
+}
+/*
  * R interface for FANSI_state_at_position
  * @param string we're interested in state of
  * @param pos integer positions along the string, one index, sorted
@@ -625,7 +653,7 @@ int FANSI_state_has_style_basic(struct FANSI_state state) {
 SEXP FANSI_state_at_pos_ext(
   SEXP text, SEXP pos, SEXP type,
   SEXP lag, SEXP ends,
-  SEXP warn, SEXP term_cap
+  SEXP warn, SEXP term_cap, SEXP ctl
 ) {
   /*******************************************\
   * IMPORTANT: INPUT MUST ALREADY BE IN UTF8! *
@@ -646,6 +674,8 @@ SEXP FANSI_state_at_pos_ext(
     error("Argument `warn` must be integer");         // nocov
   if(TYPEOF(term_cap) != INTSXP)
     error("Argument `term.cap` must be integer");     // nocov
+  if(TYPEOF(ctl) != INTSXP)
+    error("Argument `ctl` must be integer");         // nocov
 
   R_xlen_t len = XLENGTH(pos);
 
@@ -693,7 +723,7 @@ SEXP FANSI_state_at_pos_ext(
 
   SEXP R_true = PROTECT(ScalarLogical(1));
   struct FANSI_state state =
-    FANSI_state_init_full(string, warn, term_cap, R_true, R_true, type);
+    FANSI_state_init_full(string, warn, term_cap, R_true, R_true, type, ctl);
   UNPROTECT(1);
   struct FANSI_state state_prev = state;
 

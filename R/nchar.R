@@ -23,20 +23,18 @@
 #'
 #' `nchar_ctl` is just a wrapper around `nchar(strip_ctl(...))`.  `nzchar_ctl`
 #' is implemented in native code and is much faster than the otherwise
-#' equivalent `nzchar(strip_ctl(...))`.  You cannot change which _Control
-#' Sequences_ count in `nzchar_ctl`, but you can always resort to
-#' `nzchar(strip_ctl(..., strip='...'))` if that is important.
+#' equivalent `nzchar(strip_ctl(...))`.
 #'
 #' These functions will warn if either malformed or non-CSI escape sequences are
 #' encountered, as these may be incorrectly interpreted.
 #'
-#' @inheritParams strip_ctl
+#' @inheritParams substr_ctl
 #' @inheritParams base::nchar
+#' @inheritSection substr_ctl ctl vs. sgr
 #' @note the `keepNA` parameter is ignored for R < 3.2.2.
 #' @export
 #' @param type character string, one of "chars", or "width".  For byte counts
 #'   use [base::nchar].
-#'
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results,
 #'   [strip_ctl] for removing _Control Sequences_.
@@ -50,17 +48,22 @@
 #' ## Remember newlines are not counted by default
 #' nchar_ctl("\t\n\r")
 #'
-#' ## The 'c0' value for the `strip` argument does
+#' ## The 'c0' value for the `ctl` argument does
 #' ## not include newlines.
-#' nchar_ctl("\t\n\r", strip="c0")
-#' nchar_ctl("\t\n\r", strip=c("c0", "nl"))
+#' nchar_ctl("\t\n\r", ctl="c0")
+#' nchar_ctl("\t\n\r", ctl=c("c0", "nl"))
+#'
+#' ## The _sgr flavor only treats SGR sequences as zero width
+#'
+#' nchar_sgr("\033[31m123")
+#' nchar_sgr("\t\n\n123")
 #'
 #' ## All of the following are Control Sequences
 #' nzchar_ctl("\n\033[42;31m\033[123P\a")
 
 nchar_ctl <- function(
-  x, type='chars', allowNA=FALSE, keepNA=NA, strip='all',
-  warn=getOption('fansi.warn')
+  x, type='chars', allowNA=FALSE, keepNA=NA, ctl='all',
+  warn=getOption('fansi.warn'), strip
 ) {
   if(!is.character(x)) x <- as.character(x)
   if(!is.logical(warn)) warn <- as.logical(warn)
@@ -75,11 +78,15 @@ nchar_ctl <- function(
   if(length(keepNA) != 1L)
     stop("Argument `keepNA` must be a scalar logical.")
 
-  if(!is.character(strip))
-    stop("Argument `strip` must be character.")
-  if(!all(strip %in% VALID.STRIP))
+  if(!missing(strip)) {
+    message("Parameter `strip` has been deprecated; use `ctl` instead.")
+    ctl <- strip
+  }
+  if(!is.character(ctl))
+    stop("Argument `ctl` must be character.")
+  if(!all(ctl %in% VALID.CTL))
     stop(
-      "Argument `strip` may contain only values in `", deparse(VALID.STRIP), "`"
+      "Argument `ctl` may contain only values in `", deparse(VALID.CTL), "`"
     )
   if(!is.character(type) || length(type) != 1 || is.na(type))
     stop("Argument `type` must be scalar character and not NA.")
@@ -89,7 +96,7 @@ nchar_ctl <- function(
       "Argument `type` must partial match one of 'chars', 'width', or 'bytes'."
     )
   type <- valid.types[type.int]
-  stripped <- strip_ctl(x, strip=strip, warn=warn)
+  stripped <- strip_ctl(x, ctl=ctl, warn=warn)
 
   R.ver.gte.3.2.2 <- R.ver.gte.3.2.2 # "import" symbol from namespace
   if(R.ver.gte.3.2.2) nchar(stripped, type=type, allowNA=allowNA, keepNA=keepNA)
@@ -98,7 +105,17 @@ nchar_ctl <- function(
 #' @export
 #' @rdname nchar_ctl
 
-nzchar_ctl <- function(x, keepNA=NA, warn=getOption('fansi.warn')) {
+nchar_sgr <- function(
+  x, type='chars', allowNA=FALSE, keepNA=NA, warn=getOption('fansi.warn')
+)
+  nchar_ctl(
+    x=x, type=type, allowNA=allowNA, keepNA=keepNA, warn=warn, ctl='sgr'
+  )
+
+#' @export
+#' @rdname nchar_ctl
+
+nzchar_ctl <- function(x, keepNA=NA, ctl='all', warn=getOption('fansi.warn')) {
   if(!is.character(x)) x <- as.character(x)
 
   if(length(warn) != 1L || is.na(warn))
@@ -108,6 +125,23 @@ nzchar_ctl <- function(x, keepNA=NA, warn=getOption('fansi.warn')) {
   if(length(keepNA) != 1L)
     stop("Argument `keepNA` must be a scalar logical.")
 
+  if(!is.character(ctl))
+    stop("Argument `ctl` must be character.")
+  ctl.int <- integer()
+  if(length(ctl)) {
+    # duplicate values in `ctl` are okay, so save a call to `unique` here
+    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
+      stop(
+        "Argument `ctl` may contain only values in `",
+        deparse(VALID.CTL), "`"
+      )
+  }
   term.cap.int <- seq_along(VALID.TERM.CAP)
-  .Call(FANSI_nzchar_esc, enc2utf8(x), keepNA, warn, term.cap.int)
+  .Call(FANSI_nzchar_esc, enc2utf8(x), keepNA, warn, term.cap.int, ctl.int)
 }
+#' @export
+#' @rdname nchar_ctl
+
+nzchar_sgr <- function(x, keepNA=NA, warn=getOption('fansi.warn'))
+ nzchar_ctl(x=x, keepNA=keepNA, warn=warn, ctl='sgr')
+

@@ -40,6 +40,7 @@
 #' @inheritParams base::strwrap
 #' @inheritParams tabs_as_spaces
 #' @inheritParams substr_ctl
+#' @inheritSection substr_ctl ctl vs. sgr
 #' @param wrap.always TRUE or FALSE (default), whether to hard wrap at requested
 #'   width if no word breaks are detected within a line.  If set to TRUE then
 #'   `width` must be at least 2.
@@ -49,7 +50,8 @@
 #'   string the line remains unpadded.
 #' @param strip.spaces TRUE (default) or FALSE, if TRUE, extraneous white spaces
 #'   (spaces, newlines, tabs) are removed in the same way as [base::strwrap]
-#'   does.
+#'   does.  When FALSE, whitespaces are preserved, except for newlines as those
+#'   are implicit in boundaries between vector elements.
 #' @param tabs.as.spaces FALSE (default) or TRUE, whether to convert tabs to
 #'   spaces.  This can only be set to TRUE if `strip.spaces` is FALSE.
 #' @export
@@ -96,7 +98,8 @@
 strwrap_ctl <- function(
   x, width = 0.9 * getOption("width"), indent = 0,
   exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
-  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
+  ctrl=getOption('fansi.ctrl'), ctl='all'
 ) {
   if(!is.character(x)) x <- as.character(x)
 
@@ -129,6 +132,17 @@ strwrap_ctl <- function(
       "Argument `term.cap` may only contain values in ",
       deparse(VALID.TERM.CAP)
     )
+  if(!is.character(ctl))
+    stop("Argument `ctl` must be character.")
+  ctl.int <- integer()
+  if(length(ctl)) {
+    # duplicate values in `ctl` are okay, so save a call to `unique` here
+    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
+      stop(
+        "Argument `ctl` may contain only values in `",
+        deparse(VALID.CTL), "`"
+      )
+  }
 
   width <- max(c(as.integer(width) - 1L, 1L))
   indent <- as.integer(indent)
@@ -142,7 +156,8 @@ strwrap_ctl <- function(
     TRUE,
     FALSE, 8L,
     warn, term.cap.int,
-    FALSE   # first_only
+    FALSE,   # first_only
+    ctl.int
   )
   if(simplify) unlist(res) else res
 }
@@ -156,7 +171,8 @@ strwrap2_ctl <- function(
   strip.spaces=!tabs.as.spaces,
   tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
   tab.stops=getOption('fansi.tab.stops'),
-  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
+  ctl='all'
 ) {
   # {{{ validation
 
@@ -213,7 +229,19 @@ strwrap2_ctl <- function(
 
   if(tabs.as.spaces && strip.spaces)
     stop("`tabs.as.spaces` and `strip.spaces` should not both be TRUE.")
-    #
+
+  if(!is.character(ctl))
+    stop("Argument `ctl` must be character.")
+  ctl.int <- integer()
+
+  if(length(ctl)) {
+    # duplicate values in `ctl` are okay, so save a call to `unique` here
+    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
+      stop(
+        "Argument `ctl` may contain only values in `",
+        deparse(VALID.CTL), "`"
+      )
+  }
   # }}} end validation
 
   width <- max(c(as.integer(width) - 1L, 1L))
@@ -230,8 +258,44 @@ strwrap2_ctl <- function(
     strip.spaces,
     tabs.as.spaces, tab.stops,
     warn, term.cap.int,
-    FALSE   # first_only
+    FALSE,   # first_only
+    ctl.int
   )
   if(simplify) unlist(res) else res
 }
+#' @export
+#' @rdname strwrap_ctl
+
+strwrap_sgr <- function(
+  x, width = 0.9 * getOption("width"), indent = 0,
+  exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
+  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
+  ctrl=getOption('fansi.ctrl')
+)
+  strwrap_ctl(
+    x=x, width=width, indent=indent,
+    exdent=exdent, prefix=prefix, simplify=simplify, initial=initial,
+    warn=warn, term.cap=term.cap, ctl='sgr'
+  )
+#' @export
+#' @rdname strwrap_ctl
+
+strwrap2_sgr <- function(
+  x, width = 0.9 * getOption("width"), indent = 0,
+  exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
+  wrap.always=FALSE, pad.end="",
+  strip.spaces=!tabs.as.spaces,
+  tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
+  tab.stops=getOption('fansi.tab.stops'),
+  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+)
+  strwrap2_ctl(
+    x=x, width=width, indent=indent,
+    exdent=exdent, prefix=prefix, simplify=simplify, initial=initial,
+    wrap.always=wrap.always, pad.end=pad.end,
+    strip.spaces=strip.spaces,
+    tabs.as.spaces=tabs.as.spaces,
+    tab.stops=tab.stops,
+    warn=warn, term.cap=term.cap, ctl='sgr'
+  )
 

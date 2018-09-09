@@ -90,6 +90,11 @@ unitizer_sect("Corner cases", {
 
   str.3 <- structure("fu\033[42mba\033[0mr", class="foo", at="bar")
   substr_ctl(str.3, 2, 3)
+
+  # Turn off sgr
+
+  substr_ctl(str.2, 2, 6, ctl=c('all', 'sgr'))
+  substr_ctl(str.2, 8, 10, ctl=c('all', 'sgr'))
 })
 unitizer_sect("Obscure escapes", {
   # illegal 38/48
@@ -148,4 +153,41 @@ unitizer_sect('bad args', {
   substr2_ctl(hello2.0, 1, 2, term.cap=0)
   substr2_ctl(hello2.0, 1, 2, term.cap='bananas')
   substr2_ctl(hello2.0, 1, 2, type='bananas')
+
+  substr2_ctl(hello2.0, 1, 2, ctl='bananas')
+  substr2_ctl(hello2.0, 1, 2, ctl=0)
+
+})
+unitizer_sect('`ctl` related issues', {
+  # Make sure SGR end properly detected
+
+  substr_sgr("\033[31;42mhello world", 2, 4)
+
+  # Repeated SGR
+
+  substr_sgr("\033[31m\033[42mhello world", 2, 4)
+
+  # Intermediate byte (this is not an SGR!)
+
+  substr_sgr("\033[31;42!mhello world", 2, 4)
+
+  # non-SGR CSI mixed with SGR when not parsing non-SGR CSI
+
+  substr_sgr("\033[55;38l\033[31mhello world", 2, 4, warn=FALSE)
+  substr_sgr("\033[31m\033[55;38lhello world", 2, 4, warn=FALSE)
+  substr_sgr("hello \033[31m\033[55;38lworld", 7, 9, warn=FALSE)
+
+  # Mix of escapes
+
+  substr_ctl("\033[55;38l\033[31mhello world", 2, 4, warn=FALSE)
+  substr_ctl("\033[31m\033[55;38lhello world", 2, 4, warn=FALSE)
+  substr_ctl("hello \033[31m\033[55;38lworld", 7, 9, warn=FALSE)
+  substr_ctl("hello\033[55;38l \033[31mworld", 4, 7, warn=FALSE)
+
+  # C0 / nl
+
+  substr_sgr("ab\n\tcd\n", 3, 6, warn=FALSE)
+  substr_sgr("ab\n\033[31m\tcd\n", 3, 6, warn=FALSE)
+  substr_ctl("ab\n\033[31m\tcd\n", 3, 6, warn=FALSE, ctl=c('all', 'nl'))
+  substr_ctl("ab\n\033[31m\tcd\n", 3, 6, warn=FALSE, ctl=c('all', 'nl', 'c0'))
 })

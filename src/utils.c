@@ -87,20 +87,19 @@ SEXP FANSI_add_int_ext(SEXP x, SEXP y) {
  * (e.g. OSX terminal spits out illegal characters to screen but keeps
  * processing the sequence).
  *
- * @param what is a bit flag to line up against VALID.WHAT index values, so
- *   (what & (1 << 0)) is newlines, (what & (1 << 1)) is C0, etc, though note
+ * @param ctl is a bit flag to line up against VALID.WHAT index values, so
+ *   (ctl & (1 << 0)) is newlines, (ctl & (1 << 1)) is C0, etc, though note
  *   this does not act
- *
  */
 
-struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
+struct FANSI_csi_pos FANSI_find_esc(const char * x, int ctl) {
   /***************************************************\
   | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_read_esc  |
   | although now this also deals with c0              |
   \***************************************************/
   int valid = 1;
   int found = 0;
-  int found_what = 0;
+  int found_ctl = 0;
   const char * x_track = x;
   const char * x_found_start;
   const char * x_found_end;
@@ -138,8 +137,11 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
 
           // And all the valid intermediates
 
-          while(*x_track >= 0x20 && *x_track <= 0x2F) ++x_track;
-
+          int intermediate = 0;
+          while(*x_track >= 0x20 && *x_track <= 0x2F) {
+            if(!intermediate) intermediate = 1;
+            ++x_track;
+          }
           // Check validity
 
           int valid_tmp = *x_track >= 0x40 && *x_track <= 0x7E;
@@ -154,16 +156,17 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
 
           valid = valid && valid_tmp;
 
-          // CSI SGR only found if ends in m
+          // CSI SGR only found if ends in m and no intermediate
 
-          found_what |= *x_track == 'm' ? 1 << 2 : 1 <<3;
+          int sgr = !intermediate && *x_track == 'm';
+          found_ctl |= sgr ? FANSI_CTL_SGR & ctl : FANSI_CTL_CSI & ctl;
           found_this =
-            (*x_track == 'm' && (what & (1 << 2))) ||  // SGR
-            (*x_track != 'm' && what & (1 << 3));      // CSI
+            (sgr && (ctl & FANSI_CTL_SGR)) ||  // SGR
+            (!sgr && (ctl & FANSI_CTL_CSI));      // CSI
         } else {
           // Includes both the C1 set and "controls strings"
-          found_this = what & (1 << 4);
-          found_what |= (1 << 4);
+          found_this = ctl & FANSI_CTL_ESC;
+          found_ctl |= ctl & FANSI_CTL_ESC;
           valid = valid && (*x_track >= 0x40 && *x_track <= 0x7E);
         }
         // Advance unless next char is ESC, in which case we want to keep
@@ -173,10 +176,10 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
       } else {
         // x01-x1F, x7F, all the C0 codes
 
-        found_what |= (x_val == '\n' ?  1 : 1 << 1);
+        found_ctl |= (x_val == '\n' ? ctl & FANSI_CTL_NL : ctl & FANSI_CTL_C0);
         found_this =
-          (x_val == '\n' && (what & 1)) ||
-          (x_val != '\n' && (what & (1 << 1)));
+          (x_val == '\n' && (ctl & FANSI_CTL_NL)) ||
+          (x_val != '\n' && (ctl & FANSI_CTL_C0));
       }
       if(found_this) {
         x_found_end = x_track;
@@ -188,11 +191,11 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int what) {
   if(found) {
     res = (struct FANSI_csi_pos){
       .start=x_found_start, .len=(x_found_end - x_found_start),
-      .valid=valid, .what=found_what
+      .valid=valid, .ctl=found_ctl
     };
   } else {
     res = (struct FANSI_csi_pos){
-      .start=x, .len=0, .valid=valid, what=found_what
+      .start=x, .len=0, .valid=valid, ctl=found_ctl
     };
   }
   return res;
@@ -277,28 +280,28 @@ SEXP FANSI_digits_in_int_ext(SEXP y) {
   return(res);
 }
 /*
- * Compresses the what vector into a single integer by encoding each value of
- * what as a bit.
+ * Compresses the ctl vector into a single integer by encoding each value of
+ * ctl as a bit.
  */
 
-int FANSI_what_as_int(SEXP what) {
-  int what_int = 0;
+int FANSI_ctl_as_int(SEXP ctl) {
+  int ctl_int = 0;
   int flip_bits = 0;
-  for(R_xlen_t i = 0; i < XLENGTH(what); ++i) {
-    // -2 because what is 1 indexed (from R), and position 1 means "all", so we
+  for(R_xlen_t i = 0; i < XLENGTH(ctl); ++i) {
+    // -2 because ctl is 1 indexed (from R), and position 1 means "all", so we
     // need to shift by 1 for the 0 index, and then by one more for the position
     // occupied by "all" that really means flip bits
-    int what_val = INTEGER(what)[i] - 2;
-    if(what_val > 4)
-      error("Internal Error: max what value allowed is 4.");
-    if(what_val < 0) flip_bits = 1;
-    else what_int |= 1 << what_val;
+    int ctl_val = INTEGER(ctl)[i] - 2;
+    if(ctl_val > 4)
+      error("Internal Error: max ctl value allowed is 4.");
+    if(ctl_val < 0) flip_bits = 1;
+    else ctl_int |= 1 << ctl_val;
   }
-  if(flip_bits) what_int ^= FANSI_STRIP_ALL;
-  return what_int;
+  if(flip_bits) ctl_int ^= FANSI_CTL_ALL;
+  return ctl_int;
 }
-SEXP FANSI_what_as_int_ext(SEXP what) {
-  return ScalarInteger(FANSI_what_as_int(what));
+SEXP FANSI_ctl_as_int_ext(SEXP ctl) {
+  return ScalarInteger(FANSI_ctl_as_int(ctl));
 }
 /*
  * Partial match a single string byte by byte

@@ -25,6 +25,7 @@
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work correctly with R < 3.2.2.
 #' @export
+#' @inheritSection substr_ctl ctl vs. sgr
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
 #'   [strwrap_ctl] is used internally by this function.
@@ -33,7 +34,7 @@
 #' @examples
 #' strtrim_ctl("\033[42mHello world\033[m", 6)
 
-strtrim_ctl <- function(x, width, warn=getOption('fansi.warn')){
+strtrim_ctl <- function(x, width, warn=getOption('fansi.warn'), ctl='all'){
   if(!is.character(x)) x <- as.character(x)
 
   if(!is.numeric(width) || length(width) != 1L || is.na(width) || width < 0)
@@ -43,6 +44,17 @@ strtrim_ctl <- function(x, width, warn=getOption('fansi.warn')){
   if(length(warn) != 1L || is.na(warn))
     stop("Argument `warn` must be TRUE or FALSE.")
 
+  if(!is.character(ctl))
+    stop("Argument `ctl` must be character.")
+  ctl.int <- integer()
+  if(length(ctl)) {
+    # duplicate values in `ctl` are okay, so save a call to `unique` here
+    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
+      stop(
+        "Argument `ctl` may contain only values in `",
+        deparse(VALID.CTL), "`"
+      )
+  }
   # can assume all term cap available for these purposes
 
   term.cap.int <- seq_along(VALID.TERM.CAP)
@@ -59,7 +71,8 @@ strtrim_ctl <- function(x, width, warn=getOption('fansi.warn')){
     FALSE,     # strip spaces
     FALSE, 8L,
     warn, term.cap.int,
-    TRUE       # first only
+    TRUE,      # first only
+    ctl.int
   )
   res
 }
@@ -69,7 +82,8 @@ strtrim_ctl <- function(x, width, warn=getOption('fansi.warn')){
 strtrim2_ctl <- function(
   x, width, warn=getOption('fansi.warn'),
   tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
-  tab.stops=getOption('fansi.tab.stops')
+  tab.stops=getOption('fansi.tab.stops'),
+  ctl='all'
 ) {
   if(!is.character(x)) x <- as.character(x)
 
@@ -87,6 +101,17 @@ strtrim2_ctl <- function(
   if(!is.numeric(tab.stops) || !length(tab.stops) || any(tab.stops < 1))
     stop("Argument `tab.stops` must be numeric and strictly positive")
 
+  if(!is.character(ctl))
+    stop("Argument `ctl` must be character.")
+  ctl.int <- integer()
+  if(length(ctl)) {
+    # duplicate values in `ctl` are okay, so save a call to `unique` here
+    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
+      stop(
+        "Argument `ctl` may contain only values in `",
+        deparse(VALID.CTL), "`"
+      )
+  }
   # can assume all term cap available for these purposes
 
   term.cap.int <- seq_along(VALID.TERM.CAP)
@@ -104,7 +129,25 @@ strtrim2_ctl <- function(
     FALSE,     # strip spaces
     tabs.as.spaces, tab.stops,
     warn, term.cap.int,
-    TRUE       # first only
+    TRUE,      # first only
+    ctl.int
   )
   res
 }
+#' @export
+#' @rdname strtrim_ctl
+
+strtrim_sgr <- function(x, width, warn=getOption('fansi.warn'))
+  strtrim_ctl(x=x, width=width, warn=warn, ctl='sgr')
+
+#' @export
+#' @rdname strtrim_ctl
+
+strtrim2_sgr <- function(x, width, warn=getOption('fansi.warn'),
+  tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
+  tab.stops=getOption('fansi.tab.stops')
+)
+  strtrim2_ctl(
+    x=x, width=width, warn=warn, tabs.as.spaces=tabs.as.spaces,
+    tab.stops=tab.stops, ctl='sgr'
+  )

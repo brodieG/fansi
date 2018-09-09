@@ -28,11 +28,21 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   // - Constants / Macros ------------------------------------------------------
 
   // CAREFUL with these; if we get close to INT_MAX with 2^x we can have
-  // problems with signed/unsigned bit shifts.  Shouldn't be anywhere close tod
+  // problems with signed/unsigned bit shifts.  Shouldn't be anywhere close to
   // that but something to keep in mind
 
-  #define FANSI_STRIP_ALL 31 // 1 + 2 + 4 + 8 + 16
+  #define FANSI_CTL_NL 1
+  #define FANSI_CTL_C0 2
+  #define FANSI_CTL_SGR 4
+  #define FANSI_CTL_CSI 8
+  #define FANSI_CTL_ESC 16
+  #define FANSI_CTL_ALL 31 // 1 + 2 + 4 + 8 + 16 == 2^0 + 2^1 + 2^2 + 2^3 + 2^4
+
   #define FANSI_STYLE_MAX 12 // 12 is double underline
+
+  #define FANSI_TERM_BRIGHT 1
+  #define FANSI_TERM_256 2
+  #define FANSI_TERM_TRUECOLOR 4
 
   // symbols
 
@@ -74,8 +84,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int len;
     // whether the sequnce is complete or not
     int valid;
-    // what types of escapes were found
-    int what;
+    // what types of control sequences were found, seel also FANSI_state.ctl
+    int ctl;
   };
 
   /*
@@ -212,11 +222,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
     int has_utf8;
 
-    // Track width of last character
+    // Track width of last character (this seems to be the display width)
 
     int last_char_width;
 
-    /* Internal Flags ---------------------------------------------------------
+    /* Control Flags -----------------------------------------------------------
      *
      * Used to communicate back from sub-processes that sub-parsing failed, the
      * sub-process is supposed to leave the state pointed at the failing
@@ -227,12 +237,12 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * Type of failure
      *
      * * 0: no error
-     * * 1: well formed csi sgr, but contains color codes that
-     *      exceed terminal capabilities
-     * * 2: well formed csi sgr, but contains uninterpretable characters [:<=>]
-     * * 3: well formed csi sgr, but contains uninterpretable sub-strings, if a
+     * * 1: well formed csi sgr, but contains uninterpretable sub-strings, if a
      *      CSI sequence is not fully parsed yet (i.e. last char not read) it is
      *      assumed to be SGR until we read the final code.
+     * * 2: well formed csi sgr, but contains uninterpretable characters [:<=>]
+     * * 3: well formed csi sgr, but contains color codes that exceed terminal
+     *     capabilities
      * * 4: well formed csi, but not an SGR
      * * 5: malformed csi
      * * 6: other escape sequence
@@ -252,6 +262,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int term_cap;
     // Whether at end of a CSI escape sequence
     int last;
+    // Whether the last control sequence that was completely read is known to be
+    // an SGR sequence.  This is used as part of the `read_esc` process and is
+    // really intended to be internal.  It's really only meaningful when
+    // `state.last` is true.
+    int sgr;
     // Whether to issue warnings if err_code is non-zero, if -1 means that the
     // warning was issued at least once so may not need to be re-issued
     int warn;
@@ -266,6 +281,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int keepNA;
     // invalid multi-byte char, a bit of duplication with err_code = 9;
     int nchar_err;
+    // what types of Control Sequences should have special treatment.  This
+    // mirrors the `ctl` parameter for `FANSI_find_esc`.  See `FANSI_ctl_as_int`
+    // for the encoding.
+    int ctl;
   };
   /*
    * Need to keep track of fallback state, so we need ability to return two
@@ -286,11 +305,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   // - External funs -----------------------------------------------------------
 
-  SEXP FANSI_has(SEXP x, SEXP what, SEXP warn);
-  SEXP FANSI_strip(SEXP x, SEXP what, SEXP warn);
+  SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn);
+  SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn);
   SEXP FANSI_state_at_pos_ext(
     SEXP text, SEXP pos, SEXP type, SEXP lag, SEXP ends,
-    SEXP warn, SEXP term_cap
+    SEXP warn, SEXP term_cap, SEXP ctl
   );
   SEXP FANSI_strwrap_ext(
     SEXP x, SEXP width,
@@ -299,25 +318,25 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP strip_spaces,
     SEXP tabs_as_spaces, SEXP tab_stops,
     SEXP warn, SEXP term_cap,
-    SEXP first_only
+    SEXP first_only, SEXP ctl
   );
   SEXP FANSI_process(SEXP input, struct FANSI_buff * buff);
   SEXP FANSI_process_ext(SEXP input);
   SEXP FANSI_tabs_as_spaces_ext(
-    SEXP vec, SEXP tab_stops, SEXP warn, SEXP term_cap
+    SEXP vec, SEXP tab_stops, SEXP warn, SEXP term_cap, SEXP ctl
   );
   SEXP FANSI_color_to_html_ext(SEXP x);
   SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap);
-  SEXP FANSI_unhandled_esc(SEXP x);
+  SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap);
 
   SEXP FANSI_nchar(
     SEXP x, SEXP type, SEXP allowNA, SEXP keepNA, SEXP warn, SEXP term_cap
   );
-  SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap);
+  SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap, SEXP ctl);
   SEXP FANSI_strsplit(SEXP x, SEXP warn, SEXP term_cap);
   SEXP FANSI_tabs_as_spaces(
     SEXP vec, SEXP tab_stops, struct FANSI_buff * buff, SEXP warn,
-    SEXP term_cap
+    SEXP term_cap, SEXP ctl
   );
   // utility
 
@@ -337,7 +356,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   // - Internal funs -----------------------------------------------------------
 
-  struct FANSI_csi_pos FANSI_find_esc(const char * x, int what);
+  struct FANSI_csi_pos FANSI_find_esc(const char * x, int ctl);
   struct FANSI_state FANSI_inc_width(struct FANSI_state state, int inc);
   struct FANSI_state FANSI_reset_pos(struct FANSI_state state);
   struct FANSI_state FANSI_reset_width(struct FANSI_state state);
@@ -345,8 +364,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   void FANSI_check_enc(SEXP x, R_xlen_t i);
   SEXP FANSI_check_enc_ext(SEXP x, SEXP i);
 
-  int FANSI_what_as_int(SEXP what);
-  SEXP FANSI_what_as_int_ext(SEXP what);
+  int FANSI_ctl_as_int(SEXP ctl);
+  SEXP FANSI_ctl_as_int_ext(SEXP ctl);
 
   void FANSI_size_buff(struct FANSI_buff * buff, size_t size);
 
@@ -363,13 +382,16 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   );
   struct FANSI_state FANSI_state_init_full(
     const char * string, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
-    SEXP width
+    SEXP width, SEXP ctl
   );
   int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current);
   int FANSI_state_comp_basic(
     struct FANSI_state target, struct FANSI_state current
   );
   int FANSI_state_has_style(struct FANSI_state state);
+  struct FANSI_state FANSI_state_copy_style(
+    struct FANSI_state target, struct FANSI_state current
+  );
   int FANSI_state_has_style_basic(struct FANSI_state state);
   int FANSI_state_size(struct FANSI_state state);
   int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len);
