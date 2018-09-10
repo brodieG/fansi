@@ -167,10 +167,13 @@ unitizer_sect('`ctl` related issues', {
 
   substr_sgr("\033[31m\033[42mhello world", 2, 4)
 
-  # Intermediate byte (this is not an SGR!)
+  # Intermediate byte (this is not an SGR!); tryCatch due to inconsistency
+  # on whether call is included in condition message
 
-  substr_sgr("\033[31;42!mhello world", 2, 4)
-
+  tryCatch(
+    substr_sgr("\033[31;42!mhello world", 2, 4),
+    warning=function(x) conditionMessage(x)
+  )
   # non-SGR CSI mixed with SGR when not parsing non-SGR CSI
 
   substr_sgr("\033[55;38l\033[31mhello world", 2, 4, warn=FALSE)
