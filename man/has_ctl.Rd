@@ -13,7 +13,7 @@ has_sgr(x, warn = getOption("fansi.warn"))
 \item{x}{a character vector or object that can be coerced to character.}
 
 \item{ctl}{character, which \emph{Control Sequences} should be treated
-specially. See the "ctl vs. sgr" section for details.
+specially. See the "_ctl vs. _sgr" section for details.
 \itemize{
 \item "nl": newlines.
 \item "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except
@@ -41,6 +41,22 @@ in return
 for ANSI CSI SGR sequences.  You can check for different types of sequences
 with the \code{ctl} parameter.
 }
+\section{_ctl vs. _sgr}{
+
+
+The \code{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
+by default.  Special treatment is context dependent, and may include
+detecting them and/or computing their display/character width as zero.  For
+the SGR subset of the ANSI CSI sequences, \code{fansi} will also parse, interpret,
+and reapply the text styles they encode if needed.  You can modify whether a
+\emph{Control Sequence} is treated specially with the \code{ctl} parameter.  You can
+exclude a type of \emph{Control Sequence} from special treatment by combining
+"all" with that type of sequence (e.g. \code{ctl=c("all", "nl")} for special
+treatment of all \emph{Control Sequences} \strong{but} newlines).  The \code{*_sgr} versions
+only treat ANSI CSI SGR sequences specially, and are equivalent to the
+\code{*_ctl} versions with the \code{ctl} parameter set to "sgr".
+}
+
 \examples{
 has_ctl("hello world")
 has_ctl("hello\\nworld")

@@ -37,7 +37,7 @@ use \link[base:nchar]{base::nchar}.}
   coded to \code{FALSE} in \R versions \eqn{\le}{<=} 3.2.0.}
 
 \item{ctl}{character, which \emph{Control Sequences} should be treated
-specially. See the "ctl vs. sgr" section for details.
+specially. See the "_ctl vs. _sgr" section for details.
 \itemize{
 \item "nl": newlines.
 \item "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except
@@ -53,6 +53,8 @@ above, in which case it means "all but".
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
+
+\item{strip}{deprecated in favor of \code{ctl}.}
 }
 \description{
 \code{nchar_ctl} counts all non \emph{Control Sequence} characters.
@@ -71,17 +73,20 @@ encountered, as these may be incorrectly interpreted.
 \note{
 the \code{keepNA} parameter is ignored for R < 3.2.2.
 }
-\section{ctl vs. sgr}{
+\section{_ctl vs. _sgr}{
 
 
-The \code{*_ctl} versions of the functions treat all \emph{Control Sequences}
-specially.  The special treatment of \emph{Control Sequences} is to compute their
-display/character width as zero.  For the SGR subset of the ANSI CSI
-sequences, \code{fansi} will also parse, interpret, and reapply the text styles
-they encode as needed.  You can modify whether a control sequence is treated
-specially with the \code{ctl} parameter.  The \code{*_sgr} versions only treat ANSI CSI
-SGR sequences specially, and are equivalent to the \code{*_ctl} versions with the
-\code{ctl} parameter set to "sgr".
+The \code{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
+by default.  Special treatment is context dependent, and may include
+detecting them and/or computing their display/character width as zero.  For
+the SGR subset of the ANSI CSI sequences, \code{fansi} will also parse, interpret,
+and reapply the text styles they encode if needed.  You can modify whether a
+\emph{Control Sequence} is treated specially with the \code{ctl} parameter.  You can
+exclude a type of \emph{Control Sequence} from special treatment by combining
+"all" with that type of sequence (e.g. \code{ctl=c("all", "nl")} for special
+treatment of all \emph{Control Sequences} \strong{but} newlines).  The \code{*_sgr} versions
+only treat ANSI CSI SGR sequences specially, and are equivalent to the
+\code{*_ctl} versions with the \code{ctl} parameter set to "sgr".
 }
 
 \examples{

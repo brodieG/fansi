@@ -23,7 +23,7 @@ assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
 
 \item{ctl}{character, which \emph{Control Sequences} should be treated
-specially. See the "ctl vs. sgr" section for details.
+specially. See the "_ctl vs. _sgr" section for details.
 \itemize{
 \item "nl": newlines.
 \item "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except

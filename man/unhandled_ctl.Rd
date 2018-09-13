@@ -4,10 +4,17 @@
 \alias{unhandled_ctl}
 \title{Identify Unhandled ANSI Control Sequences}
 \usage{
-unhandled_ctl(x)
+unhandled_ctl(x, term.cap = getOption("fansi.term.cap"))
 }
 \arguments{
 \item{x}{character vector}
+
+\item{term.cap}{character a vector of the capabilities of the terminal, can
+be any combination "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
+starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
+"38;2" or "48;2"). Changing this parameter changes how \code{fansi} interprets
+escape sequences, so you should ensure that it matches your terminal
+capabilities. See \link{term_cap_test} for details.}
 }
 \value{
 data frame with as many rows as there are unhandled escape

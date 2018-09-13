@@ -61,6 +61,7 @@
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
 #' @param x character vector
+#' @inheritParams substr_ctl
 #' @return data frame with as many rows as there are unhandled escape
 #'   sequences and columns containing useful information for debugging the
 #'   problem.  See details.

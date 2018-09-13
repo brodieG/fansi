@@ -38,7 +38,7 @@
 #'   be coerced to character.
 #' @inheritParams base::strsplit
 #' @inheritParams strwrap_ctl
-#' @inheritSection substr_ctl ctl vs. sgr
+#' @inheritSection substr_ctl _ctl vs. _sgr
 #' @return list, see [base::strsplit].
 #' @examples
 #' strsplit_sgr("\033[31mhello\033[42m world!", " ")
@@ -46,7 +46,7 @@
 #' ## Next two examples allow splitting by newlines, which
 #' ## normally doesn't work as newlines are _Control Sequences_
 #' strsplit_sgr("\033[31mhello\033[42m\nworld!", "\n")
-#' strsplit_ctl("\033[31mhello\033[42m\nworld!", "\n", strip=c("all", "nl"))
+#' strsplit_ctl("\033[31mhello\033[42m\nworld!", "\n", ctl=c("all", "nl"))
 
 
 strsplit_ctl <- function(
