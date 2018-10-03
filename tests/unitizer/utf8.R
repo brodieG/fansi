@@ -406,3 +406,20 @@ unitizer_sect("wrap with wide UTF8 and ESC", {
   Encoding(string) <- "UTF-8"
   strwrap2_ctl(string, 24, wrap.always=TRUE, pad.end=" ")
 })
+unitizer_sect("issue 54 ctd", {
+  # other issu54 tests are in tohtml.R, but had to move this one here due to the
+  # ellipsis utf-8 character.
+
+  string3 <- c(
+    "\033[38;5;246m# … with 5 more variables: total_time \033[3m\033[38;5;246m<bch:tm>\033[38;5;246m\033[23m, result \033[3m\033[38;5;246m<list>\033[38;5;246m\033[23m, memory \033[3m\033[38;5;246m<list>\033[38;5;246m\033[23m,",
+    "#   time \033[3m\033[38;5;246m<list>\033[38;5;246m\033[23m, gc \033[3m\033[38;5;246m<list>\033[38;5;246m\033[23m\033[39m"
+  )
+  Encoding(string3) <- "UTF-8"
+  fansi::sgr_to_html(string3)
+
+  # head <- "<html><head><meta charset='utf-8'/></head><pre>"
+  # f <- paste0(tempfile(), ".html")
+  # writeLines(c(head, fansi::sgr_to_html(string3), "</pre></html>"), f)
+  # browseURL(f)
+  # unlink(f)
+})
