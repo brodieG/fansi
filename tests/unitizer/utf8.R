@@ -422,4 +422,13 @@ unitizer_sect("issue 54 ctd", {
   # writeLines(c(head, fansi::sgr_to_html(string3), "</pre></html>"), f)
   # browseURL(f)
   # unlink(f)
+
+  # trigger warnings/errors
+
+  string4 <- c(
+    "wow \033[31m then", "hello\033[\x80;wow", "yo \033[m there",
+    "boom \033[41m"
+  )
+  Encoding(string4) <- "UTF-8"
+  sgr_to_html(string4)
 })

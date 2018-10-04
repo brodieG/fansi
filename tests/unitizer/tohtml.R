@@ -138,12 +138,4 @@ unitizer_sect("issue54", {
   string2 <- c("\033[3mhello\033[24m", "world\033[23m moon")
   fansi::sgr_to_html(string2)
 
-
-  # trigger warnings/errors
-
-  string4 <- c(
-    "wow \033[31m then", "hello\033[\x80;wow", "yo \033[m there",
-    "boom \033[41m"
-  )
-  sgr_to_html(string4)
 })
