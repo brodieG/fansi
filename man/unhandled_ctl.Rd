@@ -4,10 +4,17 @@
 \alias{unhandled_ctl}
 \title{Identify Unhandled ANSI Control Sequences}
 \usage{
-unhandled_ctl(x)
+unhandled_ctl(x, term.cap = getOption("fansi.term.cap"))
 }
 \arguments{
 \item{x}{character vector}
+
+\item{term.cap}{character a vector of the capabilities of the terminal, can
+be any combination "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
+starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
+"38;2" or "48;2"). Changing this parameter changes how \code{fansi} interprets
+escape sequences, so you should ensure that it matches your terminal
+capabilities. See \link{term_cap_test} for details.}
 }
 \value{
 data frame with as many rows as there are unhandled escape
@@ -32,7 +39,12 @@ treated as one, even if some of those sequences are valid.
 \item error: the reason why the sequence was not handled:
 \itemize{
 \item exceed-term-cap: contains color codes not supported by the terminal
-(see \link{term_cap_test}).
+(see \link{term_cap_test}).  Bright colors with color codes in the 90-97 and
+100-107 range in terminals that do not support them are not considered
+errors, whereas 256 or truecolor codes in terminals that do not support
+them are.  This is because the latter are often misinterpreted by
+terminals that do not support them, whereas the former are typically
+silently ignored.
 \item special: SGR substring contains uncommon characters in ":<=>".
 \item unknown: SGR substring with a value that does not correspond to a known
 SGR code.

@@ -28,6 +28,7 @@ unitizer_sect("substr", {
   starts <- seq(1, by=6, len=5)
   ends <- starts + 5
   substr2_ctl(lor.cn.c.2.5, starts, ends, term.cap=term.cap)
+  substr2_sgr(lor.cn.c.2.5, starts, ends, term.cap=term.cap)
 
   starts <- seq(1, by=12, len=5)
   ends <- starts + 11
@@ -282,8 +283,13 @@ unitizer_sect("nchar", {
 
   esc.2 <- "\n\r\033P\033[31m\a"
   nchar_ctl(c(esc.1, esc.2, 'hello'), warn=FALSE)
-})
 
+  # _sgr
+
+  esc.4 <- c(sprintf("\033[31m%s\thello", w1), NA, hello.illegal)
+  nchar_sgr(esc.4, type='width', keepNA=FALSE, warn=FALSE, allowNA=TRUE)
+  nzchar_sgr(esc.4, keepNA=FALSE, warn=FALSE)
+})
 unitizer_sect("unhandled", {
   # a bad utf8 string and other bad stuff
 
@@ -399,4 +405,30 @@ unitizer_sect("wrap with wide UTF8 and ESC", {
   string <- "\033[37;48;5;32m國官方認定的民族現有56個\033[39;49m"
   Encoding(string) <- "UTF-8"
   strwrap2_ctl(string, 24, wrap.always=TRUE, pad.end=" ")
+})
+unitizer_sect("issue 54 ctd", {
+  # other issu54 tests are in tohtml.R, but had to move this one here due to the
+  # ellipsis utf-8 character.
+
+  string3 <- c(
+    "\033[38;5;246m# … with 5 more variables: total_time \033[3m\033[38;5;246m<bch:tm>\033[38;5;246m\033[23m, result \033[3m\033[38;5;246m<list>\033[38;5;246m\033[23m, memory \033[3m\033[38;5;246m<list>\033[38;5;246m\033[23m,",
+    "#   time \033[3m\033[38;5;246m<list>\033[38;5;246m\033[23m, gc \033[3m\033[38;5;246m<list>\033[38;5;246m\033[23m\033[39m"
+  )
+  Encoding(string3) <- "UTF-8"
+  fansi::sgr_to_html(string3)
+
+  # head <- "<html><head><meta charset='utf-8'/></head><pre>"
+  # f <- paste0(tempfile(), ".html")
+  # writeLines(c(head, fansi::sgr_to_html(string3), "</pre></html>"), f)
+  # browseURL(f)
+  # unlink(f)
+
+  # trigger warnings/errors
+
+  string4 <- c(
+    "wow \033[31m then", "hello\033[\x80;wow", "yo \033[m there",
+    "boom \033[41m"
+  )
+  Encoding(string4) <- "UTF-8"
+  sgr_to_html(string4)
 })

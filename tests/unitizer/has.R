@@ -25,13 +25,28 @@ unitizer_sect("has", {
 unitizer_sect("corner cases", {
   tryCatch(has_ctl("hello\033[31#0mworld"), warning=conditionMessage)
   suppressWarnings(has_ctl("hello\033[31#0mworld"))
-  has_ctl("hello world", which=c('sgr', 'sgr'))
+  has_ctl("hello world", ctl=c('sgr', 'sgr'))
+})
+unitizer_sect("select ctl", {
+  has_ctl("hello\033[31mworld", ctl=c('sgr'))
+  has_ctl("hello\033[31mworld", ctl=c('csi'))
+  has_ctl("hello\033[31!mworld", ctl=c('csi'))
+  has_ctl("hello\033[31lworld", ctl=c('csi'))
+  has_ctl("hello\nworld", ctl=c('all', 'nl'))
+  has_ctl("hello\nworld", ctl=c('all', 'c0'))
+  has_ctl("hello\tworld", ctl=c('all', 'c0'))
+  has_ctl("hello\tworld", ctl=c('c0'))
+  has_ctl("hello\033pworld", ctl=c('esc'))
+  has_ctl("hello\033pworld", ctl=c('all', 'esc'))
 })
 unitizer_sect("bad inputs", {
   has_ctl("hello world", warn=NULL)
 
-  has_ctl("hello world", which=1:3)
-  has_ctl("hello world", which="bananas")
-  has_ctl("hello world", which=NA_character_)
-  has_ctl(c("\033[31mhello",  "wo\nrld"), which=character())
+  has_ctl("hello world", ctl=1:3)
+  has_ctl("hello world", ctl="bananas")
+  has_ctl("hello world", ctl=NA_character_)
+  has_ctl(c("\033[31mhello",  "wo\nrld"), ctl=character())
+})
+unitizer_sect("deprecation", {
+  has_ctl("hello world", which="sgr")
 })

@@ -30,6 +30,13 @@ unitizer_sect("corner cases", {
   strsplit_ctl(c("\033[31mab\033[0m", ""), "")
 
   strsplit_ctl("hello", NULL)
+
+  # split by escape
+
+  str.sp14 <- c("\033[31mhello\nworld", "\ngoodbye\nmoon")
+  strsplit_ctl(str.sp14, "\n")
+  strsplit_sgr(str.sp14, "\n")
+  strsplit_ctl(str.sp14, "\n", ctl=c('all', 'nl'))
 })
 unitizer_sect('bad intputs', {
   str.bytes <- "\xDE"
@@ -42,4 +49,18 @@ unitizer_sect('bad intputs', {
   strsplit_ctl(str.2, "", useBytes=NA_integer_)
   strsplit_ctl(str.2, "", term.cap=1:3)
   strsplit_ctl(str.2, "", term.cap="bananas")
+  strsplit_ctl(str.2, "", ctl=1:3)
+  strsplit_ctl(str.2, "", ctl="bananas")
+})
+unitizer_sect('issue 55', {
+  # can't work, ideally would issue a warning, but detecting stripped
+  # escape sequences in regular expression will be complicated
+
+  strsplit_ctl("hello\nworld", "\n")
+  strsplit_sgr("hello\033[31mworld", "\033[31m", fixed=TRUE)
+
+  # should work
+
+  strsplit_ctl("a\nb", "\n", ctl=c('all', 'nl'))
+  strsplit_sgr("hello\nworld", "\n")
 })

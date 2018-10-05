@@ -46,7 +46,8 @@ int FANSI_tab_width(struct FANSI_state state, SEXP tab_stops) {
 }
 
 SEXP FANSI_tabs_as_spaces(
-  SEXP vec, SEXP tab_stops, struct FANSI_buff * buff,  SEXP warn, SEXP term_cap
+  SEXP vec, SEXP tab_stops, struct FANSI_buff * buff,  SEXP warn,
+  SEXP term_cap, SEXP ctl
 ) {
   if(TYPEOF(vec) != STRSXP)
     error("Argument 'vec' should be a character vector"); // nocov
@@ -111,7 +112,7 @@ SEXP FANSI_tabs_as_spaces(
       SEXP R_true = PROTECT(ScalarLogical(1));
       SEXP R_one = PROTECT(ScalarInteger(1));
       struct FANSI_state state = FANSI_state_init_full(
-        string, warn, term_cap, R_true, R_true, R_one
+        string, warn, term_cap, R_true, R_true, R_one, ctl
       );
       UNPROTECT(2);
 
@@ -183,10 +184,10 @@ SEXP FANSI_tabs_as_spaces(
   return res_sxp;
 }
 SEXP FANSI_tabs_as_spaces_ext(
-  SEXP vec, SEXP tab_stops, SEXP warn, SEXP term_cap
+  SEXP vec, SEXP tab_stops, SEXP warn, SEXP term_cap, SEXP ctl
 ) {
   struct FANSI_buff buff = {.len = 0};
 
-  return FANSI_tabs_as_spaces(vec, tab_stops, &buff, warn, term_cap);
+  return FANSI_tabs_as_spaces(vec, tab_stops, &buff, warn, term_cap, ctl);
 }
 

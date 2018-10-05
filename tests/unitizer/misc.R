@@ -36,6 +36,13 @@ unitizer_sect("unhandled", {
   # A malformed ESCape
 
   unhandled_ctl("hello\033\033\033[45p wor\ald")
+
+  # Specifying term cap
+
+  unhandled_ctl("\033[38;5;220mworld\033[m", "bright")
+  unhandled_ctl("\033[38;2;10;20;30mworld\033[m", "bright")
+  unhandled_ctl("\033[38;2;10;20;30mworld\033[m", "bri")
+  unhandled_ctl("\033[38;2;10;20;30mworld\033[m", NULL)
 })
 unitizer_sect("strtrim", {
   strtrim_ctl(" hello world", 7)
@@ -49,6 +56,11 @@ unitizer_sect("strtrim", {
 
   strtrim2_ctl("\033[42m\thello world\033[m foobar", 12, tabs.as.spaces=TRUE)
 
+  strtrim_sgr("\033[42m\the\allo world\033[m foobar", 12, warn=FALSE)
+  strtrim2_sgr(
+    "\033[42m\the\allo world\033[m foobar", 12, tabs.as.spaces=TRUE,
+    warn=FALSE, tab.stops=2
+  )
   # bad args
 
   hello2.0 <- "\033[42m\thello world\033[m foobar"
@@ -56,6 +68,8 @@ unitizer_sect("strtrim", {
   strtrim_ctl(hello2.0, width="35")
   strtrim_ctl(hello2.0, width=NA_integer_)
   strtrim_ctl(hello2.0, width=10, warn=NULL)
+  strtrim_ctl(hello2.0, width=10, ctl=0)
+  strtrim_ctl(hello2.0, width=10, ctl='bananas')
 
   strtrim2_ctl(1:3, width=10)
   strtrim2_ctl(hello2.0, width="35")
@@ -66,6 +80,9 @@ unitizer_sect("strtrim", {
   strtrim2_ctl(hello2.0, width=10, tabs.as.spaces=1:3)
   strtrim2_ctl(hello2.0, width=10, tab.stops=-(1:3))
   strtrim2_ctl(hello2.0, width=10, tab.stops=0)
+
+  strtrim2_ctl(hello2.0, width=10, ctl=0)
+  strtrim2_ctl(hello2.0, width=10, ctl='bananas')
 })
 unitizer_sect("C funs", {
   fansi:::cleave(1:10)
@@ -88,12 +105,14 @@ unitizer_sect("enc check", {
 
   Encoding(y) <- "bytes"
   fansi:::check_enc(y, 1)
+
+  fansi:::check_enc("hello", 1)
 })
 unitizer_sect("what as int", {
-  fansi:::what_as_int(c(1, 2, 3, 4, 5))
-  fansi:::what_as_int(c(2, 3, 4, 5))
-  fansi:::what_as_int(c(1, 2, 3, 7))
-  fansi:::what_as_int(c(2, 3, 7))
+  fansi:::ctl_as_int(c(1, 2, 3, 4, 5))
+  fansi:::ctl_as_int(c(2, 3, 4, 5))
+  fansi:::ctl_as_int(c(1, 2, 3, 7))
+  fansi:::ctl_as_int(c(2, 3, 7))
 })
 unitizer_sect("HTML helper", {
   html_esc(character())
