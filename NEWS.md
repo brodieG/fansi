@@ -6,7 +6,7 @@
   parameter to most functions.  Some functions such as `strip_ctl` had existing
   parameters that did the same thing (e.g. `strip`, or `which`), and those have
   been deprecated in favor of `ctl`.  While technically this is a change in the
-  API, it is be backwards compatible (addresses
+  API, it is backwards compatible (addresses
   [#56](https://github.com/brodieG/fansi/issues/56) among and other things).
 * Added `*_sgr` version of most `*_ctl` functions.
 * `nzchar_ctl` gains the `ctl` parameter.

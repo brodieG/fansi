@@ -138,23 +138,4 @@ unitizer_sect("issue54", {
   string2 <- c("\033[3mhello\033[24m", "world\033[23m moon")
   fansi::sgr_to_html(string2)
 
-  string3 <- c(
-    "\033[38;5;246m# … with 5 more variables: total_time \033[3m\033[38;5;246m<bch:tm>\033[38;5;246m\033[23m, result \033[3m\033[38;5;246m<list>\033[38;5;246m\033[23m, memory \033[3m\033[38;5;246m<list>\033[38;5;246m\033[23m,",
-    "#   time \033[3m\033[38;5;246m<list>\033[38;5;246m\033[23m, gc \033[3m\033[38;5;246m<list>\033[38;5;246m\033[23m\033[39m"
-  )
-  fansi::sgr_to_html(string3)
-
-  # head <- "<html><head><meta charset='utf-8'/></head><pre>"
-  # f <- paste0(tempfile(), ".html")
-  # writeLines(c(head, fansi::sgr_to_html(string3), "</pre></html>"), f)
-  # browseURL(f)
-  # unlink(f)
-
-  # trigger warnings/errors
-
-  string4 <- c(
-    "wow \033[31m then", "hello\033[\x80;wow", "yo \033[m there",
-    "boom \033[41m"
-  )
-  sgr_to_html(string4)
 })
