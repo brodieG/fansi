@@ -1,5 +1,29 @@
 # fansi Release Notes
 
+## v0.4.0
+
+* Systematized which control sequences are handled specially by adding the `ctl`
+  parameter to most functions.  Some functions such as `strip_ctl` had existing
+  parameters that did the same thing (e.g. `strip`, or `which`), and those have
+  been deprecated in favor of `ctl`.  While technically this is a change in the
+  API, it is backwards compatible (addresses
+  [#56](https://github.com/brodieG/fansi/issues/56) among and other things).
+* Added `*_sgr` version of most `*_ctl` functions.
+* `nzchar_ctl` gains the `ctl` parameter.
+* [#57](https://github.com/brodieG/fansi/issues/57): Correctly detect when CSI
+  sequences are not actually SGR (previously would apply styles from some
+  non-SGR CSI sequences).
+* [#55](https://github.com/brodieG/fansi/issues/55): `strsplit_ctl` can now work
+  with `ctl` parameters containing escape sequences provided those sequences
+  are excluded from by the `ctl` parameter.
+* [#54](https://github.com/brodieG/fansi/issues/54): fix `sgr_to_html` so that
+  it can handle vector elements with un-terminated SGR sequences (@krlmlr).
+* Fix bug in width computation of first line onwards in `strwrap_ctl` when
+  indent/exdent/prefix/initial widths vary from first to second line.
+* Fix wrapping in `strwrap2_*(..., strip.spaces=FALSE)`, including a bug when
+  `wrap.always=TRUE` and a line started in a word-whitespace boundary.
+* Add `term.cap` parameter to `unhandled_ctl`.
+
 ## v0.3.0
 
 * `fansi::set_knit_hooks` makes it easy to automatically convert ANSI CSI SGR

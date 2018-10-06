@@ -190,6 +190,55 @@ unitizer_sect("wrap2", {
   hello.9b <- "  \033[41mhello world."
   strwrap2_ctl(hello.9b, 8, strip.spaces=FALSE)
   hello.9c <- "\033[41m  hello world."
+
+  ## complex white-space
+
+  ws.0 <- "hello   worldza"
+  ws.1 <- "hello \t worldza"
+  ws.2 <- "hello \n worldza"
+
+  strwrap2_sgr(ws.0, 7, strip.spaces=FALSE)
+  strwrap2_sgr(ws.0, 7, strip.spaces=FALSE, wrap.always=TRUE)
+
+  strwrap2_sgr(ws.0, 6, strip.spaces=FALSE)
+  strwrap2_sgr(ws.0, 6, strip.spaces=FALSE, wrap.always=TRUE)
+
+  strwrap2_sgr(ws.1, 7, strip.spaces=FALSE)
+  strwrap2_sgr(ws.1, 7, strip.spaces=FALSE, wrap.always=TRUE)
+
+  strwrap2_sgr(ws.1, 6, strip.spaces=FALSE)
+  strwrap2_sgr(ws.1, 6, strip.spaces=FALSE, wrap.always=TRUE)
+
+  strwrap2_sgr(" hello world ", 7, strip.spaces=FALSE)
+  strwrap2_sgr("\thello\tworld\t", 7, strip.spaces=FALSE)
+  strwrap2_sgr("\nhello\nworld\n", 7, strip.spaces=FALSE)
+})
+unitizer_sect("_sgr", {
+  hello.9e <- c(
+    "hello\t\033[91mworld\033[m\t\033[38;2;31;42;4mworld boohaythere",
+    "asdfasdfasdfasdf"
+  )
+  ## primarily testing that all args are used correctly.
+  strwrap_sgr(hello.9e, 12, term.cap='256')
+  hello.9f <- "hello \033[91mworld boohaythereyowza"
+  strwrap2_sgr(
+    hello.9f, 12, prefix="++", initial=">>",
+    wrap.always=TRUE, pad.end="~", strip.spaces=FALSE
+  )
+  strwrap2_sgr(
+    hello.9e, 12, tabs.as.spaces=TRUE, tab.stops=c(6, 12), warn=FALSE,
+    indent=2, exdent=1, prefix="++", initial=">>", term.cap="256",
+    wrap.always=TRUE, simplify=FALSE, pad.end="~", strip.spaces=FALSE
+  )
+  strwrap_sgr(
+    hello.9e, 12, warn=FALSE,
+    indent=2, exdent=1, prefix="++", initial=">>", term.cap="256",
+    simplify=FALSE
+  )
+  strwrap_sgr(
+    hello.9e, 12, indent=2, exdent=1, prefix="++", initial=">>",
+    term.cap="256", simplify=FALSE
+  )
 })
 unitizer_sect("long words", {
   hello.long <- "\033[31mhelloworld\033[mlongword"
@@ -286,6 +335,8 @@ unitizer_sect("bad inputs", {
   strwrap_ctl(hello2.0, warn=NULL)
   strwrap_ctl(hello2.0, term.cap=1:3)
   strwrap_ctl(hello2.0, term.cap="bananas")
+  strwrap_ctl(hello2.0, ctl=1:3)
+  strwrap_ctl(hello2.0, ctl="bananas")
 
   strwrap2_ctl(1:3)
   strwrap2_ctl(hello2.0, width="35")
@@ -299,6 +350,8 @@ unitizer_sect("bad inputs", {
   strwrap2_ctl(hello2.0, warn=NULL)
   strwrap2_ctl(hello2.0, term.cap=1:3)
   strwrap2_ctl(hello2.0, term.cap="bananas")
+  strwrap2_ctl(hello2.0, ctl=1:3)
+  strwrap2_ctl(hello2.0, ctl="bananas")
 
   strwrap2_ctl(hello2.0, wrap.always=1:3)
   strwrap2_ctl(hello2.0, wrap.always=NA)

@@ -11,10 +11,10 @@ character the test vector, invisibly
 }
 \description{
 Outputs ANSI CSI SGR formatted text to screen so that you may visually
-inspect what color capabilities your terminal supports.  The three tested
-terminal capabilities are:
+inspect what color capabilities your terminal supports.
 }
 \details{
+The three tested terminal capabilities are:
 \itemize{
 \item "bright" for bright colors with SGR codes in 90-97 and 100-107
 \item "256" for colors defined by "38;5;x" and "48;5;x" where x is in 0-255
@@ -32,6 +32,12 @@ You should compare the screen output from this function to
 By default \code{fansi} assumes terminals support bright and 256 color
 modes, and also tests for truecolor support via the $COLORTERM system
 variable.
+
+Functions with the \code{term.cap} parameter like \code{substr_ctl} will warn if they
+encounter 256 or true color SGR sequences and \code{term.cap} indicates they are
+unsupported as such a terminal may misinterpret those sequences.  Bright
+codes in terminals that do not support them are more likely to be silently
+ignored, so \code{fansi} functions do not warn about those.
 }
 \examples{
 term_cap_test()

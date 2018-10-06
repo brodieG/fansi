@@ -29,6 +29,7 @@
     fansi.tabs.as.spaces=FALSE,
     fansi.tab.stops=8L,
     fansi.warn=TRUE,
+    fansi.ctrl="all",
     fansi.term.cap=c(
       if(isTRUE(Sys.getenv('COLORTERM') %in% c('truecolor', '24bit')))
       'truecolor',

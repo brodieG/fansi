@@ -2,7 +2,54 @@
 
 These are internal developer notes.
 
+## FANSI_find_esc
+
+Clearly our changes messed stuff up.  In particular, there is now the
+possibility that FANSI_find_esc won't advance if there are no handled `ctl`
+sequences found, which is different since before all sequences were guaranteed
+to advance.  We kludged a fix for `nzchar`, but this is causes problems
+elsewhere.  We need to review all uses of `FANSI_find_esc` and figure out what a
+compatible way to handle the possibility that `FANSI_find_esc` will find a
+_Control Sequence_ that isn't actually treated as _Control Sequence_.
+## Width of C0 And Others
+
+The correct way to handle this is probably to keep existing behavior for `_ctl`
+functions, but make sure there are `_sgr` functions for everything.  In the
+latter, unless we're dealing with special cases (e.g. perhaps a future
+`substr2_sgr`, not sure this even makes sense), things other than SGR are
+counted as their character width.  Even other CSI escapes?
+
+Implications for warnings?  Or do we still emit those because even the
+zero-width assumption may be incorrect?  The latter probably.
+
+So the main issue is that we need a mechanism for conveying the `what` as we do
+in `FANSI_find_esc`.  Do we make it part of `state`, or do we pass it along as
+an extra argument?  `FANSI_find_esc` specifically does not use `state` object at
+all, so maybe we do make it part of the `state` object when it is available.
+
+Also need to resolve the naming of `strip`.  It was very convenient in the
+context of `strip_ctl` and even kind of made sense with `nchar_ctl`, but is
+really a stretch in the other functions.  `what` may be more appropriate.
+Probably even better is `ctrl`, and figure out if there is a backwards
+compatible way to detect this.  Possibly switch `ctrl` to be in the same
+position in the signature, put `strip` at the end, and if `strip` is specified
+issue a message that it is deprecated.  The alternative is to live with it and
+then deal with the duplicate parameter docs.
+
+Need to add tests for:
+
+* use of 'ctl' parameter everywhere
+* use of deprecated 'strip'/'which' parameters everywhere
+* treatment of control sequences excluded
+
+BIG QUESTION: is behavior of the `_sgr` variety of functions going to change
+with respect to embedded control sequences (yes..., is okay to do this change,
+almost certainly no one will notice).
+
 ## TIL
+
+Some random thoughts for a possible post about the perils of compiler
+optimization based on the ICC issue we had in #52.
 
 * char vs unsigned char vs signed char
 * the compiler is always right

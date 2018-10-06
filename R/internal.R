@@ -53,5 +53,5 @@ check_enc <- function(x, i) .Call(FANSI_check_enc, x, as.integer(i)[1])
 
 ## make sure what compression working
 
-what_as_int <- function(x) .Call(FANSI_what_as_int, as.integer(x))
+ctl_as_int <- function(x) .Call(FANSI_ctl_as_int, as.integer(x))
 

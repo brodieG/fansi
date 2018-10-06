@@ -58,6 +58,7 @@ struct FANSI_tok_res {
   int len;                  // How many character in the token
   int err_code;             // see struct FANSI_state
   int last;                 // Whether it is the last parameter substring
+  int sgr;                  // Whether sequence is known to be SGR
 };
 /*
  * Attempts to read CSI SGR tokens
@@ -71,9 +72,9 @@ struct FANSI_tok_res {
 struct FANSI_tok_res FANSI_parse_token(const char * string) {
   unsigned int mult, val;
   int len, len_intermediate, len_tail, last, non_standard, private, err_code,
-    leading_zeros, not_zero;
+    leading_zeros, not_zero, sgr;
   len = len_intermediate = len_tail = val = last = non_standard = private =
-    err_code = leading_zeros = not_zero = 0;
+    err_code = leading_zeros = not_zero = sgr = 0;
   mult = 1;
 
   // `private` a bit redundant since we don't actually use it differentially to
@@ -100,11 +101,17 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
   }
   // check for final byte
 
+  sgr = 0;
   last = 1;
   if((*string == ';' || *string == 'm') && !len_intermediate) {
     // valid end of SGR parameter substring
     if(non_standard) err_code = 2;
     if(*string == ';') last = 0;
+    // technically non-sgrness is implicit in last + err_code, but because we
+    // can parse multiple CSI sequences one after the other, and we accumulate
+    // the err_code value, it's cleaner to just explicitly determine whether
+    // sequence is actually sgr.
+    if(*string == 'm') sgr = 1;
   } else if(*string >= 0x40 && *string <= 0x7E && len_intermediate <= 1) {
     // valid final byte
     err_code = 4;
@@ -120,7 +127,7 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
   // valid SGR sequence
 
   if(!err_code && (len - leading_zeros) > 3) {
-    err_code = 3;
+    err_code = 1;
   }
   if(!err_code) {
     int len2 = len - leading_zeros;
@@ -128,7 +135,7 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
       val += (as_num(--string) * mult);
       mult *= 10;
   } }
-  if(err_code < 3 && val > 255) err_code = 3;
+  if(err_code < 3 && val > 255) err_code = 1;
 
   // If the string didn't end, then we consume one extra character for the
   // ending
@@ -138,7 +145,9 @@ struct FANSI_tok_res FANSI_parse_token(const char * string) {
   return (struct FANSI_tok_res) {
     .val=val,
     .len=len + len_intermediate + len_tail,
-    .err_code=err_code, .last=last
+    .err_code=err_code,
+    .last=last,
+    .sgr=sgr
   };
 }
 /*
@@ -168,6 +177,7 @@ static struct FANSI_state parse_colors(
   state.pos_byte += res.len;
   state.last = res.last;
   state.err_code = res.err_code;
+  state.sgr = res.sgr;
 
   if(!state.err_code) {
     if((res.val != 2 && res.val != 5) || state.last) {
@@ -177,16 +187,16 @@ static struct FANSI_state parse_colors(
       // terminal and iTerm)
 
       state.pos_byte -= (res.len);
-      state.err_code = 3;
+      state.err_code = 1;
     } else if (
       // terminal doesn't have 256 or true color capability
-      (res.val == 2 && !(state.term_cap & (1 << 2))) ||
-      (res.val == 5 && !(state.term_cap & (1 << 1)))
+      (res.val == 2 && !(state.term_cap & FANSI_TERM_TRUECOLOR)) ||
+      (res.val == 5 && !(state.term_cap & FANSI_TERM_256))
     ) {
       // right now this is same as when not 2/5 following a 38, but maybe in the
       // future we want different treatment?
       state.pos_byte -= (res.len);
-      state.err_code = 1;
+      state.err_code = 3;
     } else {
       int colors = res.val;
       if(colors == 2) {
@@ -204,6 +214,7 @@ static struct FANSI_state parse_colors(
         state.pos_byte += res.len;
         state.last = res.last;
         state.err_code = res.err_code;
+        state.sgr = res.sgr;
 
         if(!state.err_code) {
           int early_end = res.last && i < (i_max - 1);
@@ -230,6 +241,19 @@ static struct FANSI_state parse_colors(
           for(int i = 0; i < 4; i++) state.bg_color_extra[i] = rgb[i];
         }
   } } }
+  return state;
+}
+/*
+ * Read a Character Off when we know it is an ascii char, this is so we have a
+ * consistent way of advancing state.
+ */
+static struct FANSI_state read_ascii(struct FANSI_state state) {
+  ++state.pos_byte;
+  ++state.pos_ansi;
+  ++state.pos_raw;
+  ++state.pos_width;
+  ++state.pos_width_target;
+  state.last_char_width = 1;
   return state;
 }
 /*
@@ -298,19 +322,29 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
     );
     // nocov end
 
-  int err_code = 0;    // track worst error code
+  int err_code = 0;                       // track worst error code
 
-  // consume all ESC sequences
+  // consume all contiguous ESC sequences; some complexity due to the addition
+  // of the requirement that we only actually interpret the ESC sequences if
+  // they are active via `ctl`, but the impossibility of knowing what type of
+  // ESC sequence we're dealing with until we've parsed it.
 
   while(state.string[state.pos_byte] == 27) {
-    int pos_byte_prev = state.pos_byte;
+    struct FANSI_state state_prev = state;
+    int esc_recognized = 0;
 
     ++state.pos_byte;  // advance ESC
 
     if(!state.string[state.pos_byte]) {
       // String ends in ESC
       state.err_code = 7;
-    } else if(state.string[state.pos_byte] != '[') {
+      esc_recognized =
+        state.ctl & (FANSI_CTL_ESC | FANSI_CTL_CSI | FANSI_CTL_SGR);
+    } else if(
+      state.string[state.pos_byte] != '[' && state.ctl & FANSI_CTL_ESC
+    ) {
+      esc_recognized = 1;
+
       // Other ESC sequence; note there are technically multi character
       // sequences but we ignore them here.  There is also the possibility that
       // we mess up a utf-8 sequence if it starts right after the ESC, but oh
@@ -326,7 +360,9 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
 
       if(state.string[state.pos_byte] != 27)
         ++state.pos_byte;
-    } else {
+    } else if(
+      state.ctl & (FANSI_CTL_CSI | FANSI_CTL_SGR)
+    ) {
       // CSI sequence
 
       ++state.pos_byte;  // consume '['
@@ -340,6 +376,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
         state.pos_byte += tok_res.len;
         state.last = tok_res.last;
         state.err_code = tok_res.err_code;
+        state.sgr = tok_res.sgr;
 
         // Note we use `state.err_code` instead of `tok_res.err_code` as
         // parse_colors internally calls FANSI_parse_token
@@ -347,6 +384,10 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
         if(!state.err_code) {
           // We have a reasonable CSI value, now we need to check whether it
           // actually corresponds to anything that should modify state
+          //
+          // THIS SECTION OF CODE SHOULD ONLY MODIFY STYLE / ERR LEVEL, maybe
+          // would be more robust to do it in a sub-object that only has those
+          // properties to make sure...
 
           if(!tok_res.val) {
             state = reset_state(state);
@@ -438,7 +479,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
             } else if (tok_res.val == 55) {
               state.border &= ~(1U << 3);
             } else {
-              state.err_code = 3;  // unknown token
+              state.err_code = 1;  // unknown token
             }
           } else if(tok_res.val >= 60 && tok_res.val < 70) {
             // borders
@@ -448,10 +489,10 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
             } else if (tok_res.val == 65) {
               state.ideogram = 0;
             } else {
-              state.err_code = 3;  // unknown token
+              state.err_code = 1;  // unknown token
             }
           } else {
-            state.err_code = 3;  // unknown token
+            state.err_code = 1;  // unknown token
           }
         }
         if(state.style > ((1 << (FANSI_STYLE_MAX + 1)) - 1))
@@ -469,16 +510,44 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
         if(state.err_code > err_code) err_code = state.err_code;
         if(state.last) break;
       } while(1);
+      // Need to check that sequence actually is SGR, and if not, we need to
+      // restore the state.
+
+      if(!state.sgr) {
+        // CSI
+        if(state.ctl & FANSI_CTL_CSI) {
+          state = FANSI_state_copy_style(state, state_prev);
+          esc_recognized = 1;
+        } else {
+          state = state_prev;
+        }
+      } else if (state.ctl & FANSI_CTL_SGR) {
+        // SGR and SGR tracking enabled
+        esc_recognized = 1;
+      } else {
+        // SGR, but SGR tracking disabled
+        state = state_prev;
+      }
     }
-    if(state.err_code > err_code) err_code = state.err_code;
-    int byte_offset = state.pos_byte - pos_byte_prev;
-    state.pos_ansi += byte_offset;
+    // If the ESC was recognized then record error and advance, otherwise reset
+    // the state and advance as if reading an ASCII character.
+
+    if(esc_recognized) {
+      if(state.err_code > err_code) err_code = state.err_code;
+
+      int byte_offset = state.pos_byte - state_prev.pos_byte;
+      state.pos_ansi += byte_offset;
+    } else {
+      state = state_prev;
+      state = read_ascii(state);
+    }
   }
   if(err_code) {
-    // All errors are zero width
+    // All errors are zero width; there should not be any errors if
+    // !esc_recognized.
     state.err_code = err_code;  // b/c we want the worst err code
     state.last_char_width = 0;
-    if(err_code == 1) {
+    if(err_code == 3) {
       state.err_msg =
         "a CSI SGR sequence with color codes not supported by terminal";
     } else if(err_code < 4) {
@@ -576,30 +645,25 @@ static struct FANSI_state read_utf8(struct FANSI_state state) {
   return state;
 }
 /*
- * Read a Character Off when we know it is an ascii char, this is so we have a
- * consistent way of advancing state.
- */
-static struct FANSI_state read_ascii(struct FANSI_state state) {
-  ++state.pos_byte;
-  ++state.pos_ansi;
-  ++state.pos_raw;
-  ++state.pos_width;
-  ++state.pos_width_target;
-  state.last_char_width = 1;
-  return state;
-}
-/*
  * C0 ESC sequences treated as zero width and do not count as characters either
  */
 static struct FANSI_state read_c0(struct FANSI_state state) {
-  if(state.string[state.pos_byte] != '\n') {
+  int is_nl = state.string[state.pos_byte] == '\n';
+  if(!is_nl) {
+    // question: should we make the comment about tabs as spaces?
     state.err_msg = "a C0 control character";
     state.err_code = 8;
   }
   state = read_ascii(state);
-  --state.pos_raw;
-  --state.pos_width;
-  --state.pos_width_target;
+  // If C0/NL are being actively processed, treat them as width zero
+  if(
+    (is_nl && (state.ctl & FANSI_CTL_NL)) ||
+    (!is_nl && (state.ctl & FANSI_CTL_C0))
+  ) {
+    --state.pos_raw;
+    --state.pos_width;
+    --state.pos_width_target;
+  }
   return state;
 }
 /*

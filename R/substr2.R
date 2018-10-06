@@ -17,15 +17,18 @@
 #' ANSI Control Sequence Aware Version of substr
 #'
 #' `substr_ctl` is a drop-in replacement for `substr`.  Performance is
-#' slightly slower than `substr`.
+#' slightly slower than `substr`.  ANSI CSI SGR sequences will be included in
+#' the substrings to reflect the format of the substring when it was embedded in
+#' the source string.  Additionally, other _Control Sequences_ specified in
+#' `ctl` are treated as zero-width.
 #'
-#' `substr2_ctl` adds the ability to retrieve substrings based on display width,
-#' and byte width in addition to the normal character width.  `substr2_ctl` also
-#' provides the option to convert tabs to spaces with [tabs_as_spaces] prior to
-#' taking substrings.
-#
+#' `substr2_ctl` and `substr2_sgr` add the ability to retrieve substrings based
+#' on display width, and byte width in addition to the normal character width.
+#' `substr2_ctl` also provides the option to convert tabs to spaces with
+#' [tabs_as_spaces] prior to taking substrings.
+#'
 #' Because exact substrings on anything other than character width cannot be
-#' guaranteed (e.g.  because of multi-byte encodings, or double display-width
+#' guaranteed (e.g. as a result of multi-byte encodings, or double display-width
 #' characters) `substr2_ctl` must make assumptions on how to resolve provided
 #' `start`/`stop` values that are infeasible and does so via the `round`
 #' parameter.
@@ -38,9 +41,22 @@
 #' characters to be dropped irrespective whether they correspond to `start` or
 #' `stop`, and "both" could cause all of them to be included.
 #'
+#' @section _ctl vs. _sgr:
+#'
+#' The `*_ctl` versions of the functions treat all _Control Sequences_ specially
+#' by default.  Special treatment is context dependent, and may include
+#' detecting them and/or computing their display/character width as zero.  For
+#' the SGR subset of the ANSI CSI sequences, `fansi` will also parse, interpret,
+#' and reapply the text styles they encode if needed.  You can modify whether a
+#' _Control Sequence_ is treated specially with the `ctl` parameter.  You can
+#' exclude a type of _Control Sequence_ from special treatment by combining
+#' "all" with that type of sequence (e.g. `ctl=c("all", "nl")` for special
+#' treatment of all _Control Sequences_ **but** newlines).  The `*_sgr` versions
+#' only treat ANSI CSI SGR sequences specially, and are equivalent to the
+#' `*_ctl` versions with the `ctl` parameter set to "sgr".
+#'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @inheritParams base::substr
-#' @inheritParams tabs_as_spaces
 #' @export
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
@@ -53,6 +69,22 @@
 #'   within a multi-byte character or a wide display character.  See details.
 #' @param tabs.as.spaces FALSE (default) or TRUE, whether to convert tabs to
 #'   spaces.  This can only be set to TRUE if `strip.spaces` is FALSE.
+#' @param tab.stops integer(1:n) indicating position of tab stops to use
+#'   when converting tabs to spaces.  If there are more tabs in a line than
+#'   defined tab stops the last tab stop is re-used.  For the purposes of
+#'   applying tab stops, each input line is considered a line and the character
+#'   count begins from the beginning of the input line.
+#' @param ctl character, which _Control Sequences_ should be treated
+#'   specially. See the "_ctl vs. _sgr" section for details.
+#'
+#'   * "nl": newlines.
+#'   * "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except
+#'     for newlines and the actual ESC (0x1B) character.
+#'   * "sgr": ANSI CSI SGR sequences.
+#'   * "csi": all non-SGR ANSI CSI sequences.
+#'   * "esc": all other escape sequences.
+#'   * "all": all of the above, except when used in combination with any of the
+#'     above, in which case it means "all but".
 #' @param warn TRUE (default) or FALSE, whether to warn when potentially
 #'   problematic _Control Sequences_ are encountered.  These could cause the
 #'   assumptions `fansi` makes about how strings are rendered on your display
@@ -77,12 +109,23 @@
 #' substr2_ctl(cn.string, 2, 3, type='width', round='both')
 #' substr2_ctl(cn.string, 2, 3, type='width', round='start')
 #' substr2_ctl(cn.string, 2, 3, type='width', round='stop')
+#'
+#' ## the _sgr variety only treat as special CSI SGR,
+#' ## compare the following:
+#'
+#' substr_sgr("\033[31mhello\tworld", 1, 6)
+#' substr_ctl("\033[31mhello\tworld", 1, 6)
+#' substr_ctl("\033[31mhello\tworld", 1, 6, ctl=c('all', 'c0'))
 
 substr_ctl <- function(
   x, start, stop,
   warn=getOption('fansi.warn'),
-  term.cap=getOption('fansi.term.cap')
-) substr2_ctl(x=x, start=start, stop=stop, warn=warn, term.cap=term.cap)
+  term.cap=getOption('fansi.term.cap'),
+  ctl='all'
+)
+  substr2_ctl(
+    x=x, start=start, stop=stop, warn=warn, term.cap=term.cap, ctl=ctl
+  )
 
 #' @rdname substr_ctl
 #' @export
@@ -92,7 +135,8 @@ substr2_ctl <- function(
   tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
   tab.stops=getOption('fansi.tab.stops'),
   warn=getOption('fansi.warn'),
-  term.cap=getOption('fansi.term.cap')
+  term.cap=getOption('fansi.term.cap'),
+  ctl='all'
 ) {
   if(!is.character(x)) x <- as.character(x)
   x <- enc2utf8(x)
@@ -116,6 +160,17 @@ substr2_ctl <- function(
       "Argument `term.cap` may only contain values in ",
       deparse(VALID.TERM.CAP)
     )
+  if(!is.character(ctl))
+    stop("Argument `ctl` must be character.")
+  ctl.int <- integer()
+  if(length(ctl)) {
+    # duplicate values in `ctl` are okay, so save a call to `unique` here
+    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
+      stop(
+        "Argument `ctl` may contain only values in `",
+        deparse(VALID.CTL), "`"
+      )
+  }
 
   valid.round <- c('start', 'stop', 'both', 'neither')
   if(
@@ -152,11 +207,40 @@ substr2_ctl <- function(
     term.cap.int=term.cap.int,
     round.start=round == 'start' || round == 'both',
     round.stop=round == 'stop' || round == 'both',
-    x.len=length(x)
+    x.len=length(x),
+    ctl.int=ctl.int
   )
   res[!no.na] <- NA_character_
   res
 }
+#' @rdname substr_ctl
+#' @export
+
+substr_sgr <- function(
+  x, start, stop,
+  warn=getOption('fansi.warn'),
+  term.cap=getOption('fansi.term.cap')
+)
+  substr2_ctl(
+    x=x, start=start, stop=stop, warn=warn, term.cap=term.cap, ctl='sgr'
+  )
+
+#' @rdname substr_ctl
+#' @export
+
+substr2_sgr <- function(
+  x, start, stop, type='chars', round='start',
+  tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
+  tab.stops=getOption('fansi.tab.stops'),
+  warn=getOption('fansi.warn'),
+  term.cap=getOption('fansi.term.cap')
+)
+  substr2_ctl(
+    x=x, start=start, stop=stop, type=type, round=round,
+    tabs.as.spaces=tabs.as.spaces,
+    tab.stops=tab.stops, warn=warn, term.cap=term.cap, ctl='sgr'
+  )
+
 ## Lower overhead version of the function for use by strwrap
 ##
 ## @x must already have been converted to UTF8
@@ -165,13 +249,13 @@ substr2_ctl <- function(
 substr_ctl_internal <- function(
   x, start, stop, type.int, round, tabs.as.spaces,
   tab.stops, warn, term.cap.int, round.start, round.stop,
-  x.len
+  x.len, ctl.int
 ) {
   # For each unique string, compute the state at each start and stop position
   # and re-map the positions to "ansi" space
 
   if(tabs.as.spaces)
-    x <- .Call(FANSI_tabs_as_spaces, x, tab.stops, warn, term.cap.int)
+    x <- .Call(FANSI_tabs_as_spaces, x, tab.stops, warn, term.cap.int, ctl.int)
 
   res <- character(x.len)
   s.s.valid <- stop >= start & stop
@@ -199,7 +283,8 @@ substr_ctl_internal <- function(
       FANSI_state_at_pos_ext,
       u, e.sort - 1L, type.int,
       e.lag, e.ends,
-      warn, term.cap.int
+      warn, term.cap.int,
+      ctl.int
     )
     # Recover the matching values for e.sort
 
@@ -239,6 +324,7 @@ state_at_pos <- function(x, starts, ends, warn=getOption('fansi.warn')) {
     is.start,  # lags
     !is.start, # ends
     warn,
-    seq_along(VALID.TERM.CAP)
+    seq_along(VALID.TERM.CAP),
+    seq_along(VALID.CTL)
   )
 }
