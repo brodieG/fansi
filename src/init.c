@@ -47,6 +47,8 @@ R_CallMethodDef callMethods[] = {
   {NULL, NULL, 0}
 };
 
+SEXP FANSI_warn_sym;
+
 void R_init_fansi(DllInfo *info)
 {
  /* Register the .C and .Call routines.

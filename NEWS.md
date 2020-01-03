@@ -1,5 +1,10 @@
 # fansi Release Notes
 
+## v0.4.1
+
+* Correctly define/declare global symbols as per WRE 1.6.4.1, (h/t Professor
+  Ripley, Joshua Ulrich for example fixes).
+
 ## v0.4.0
 
 * Systematized which control sequences are handled specially by adding the `ctl`
