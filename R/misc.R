@@ -243,7 +243,8 @@ html_code_block <- function(x, class='fansi-output') {
 #' @seealso [`has_sgr`], [`sgr_to_html`], [`html_esc`], [`html_code_block`],
 #'   [`knitr` output hooks](https://yihui.name/knitr/hooks/#output-hooks),
 #'   [embedding CSS in
-#'   Rmd](https://bookdown.org/yihui/rmarkdown/language-engines.html#javascript-and-css).
+#'   Rmd](https://bookdown.org/yihui/rmarkdown/language-engines.html#javascript-and-css),
+#'   and the vignette `vignette(package='fansi', 'sgr-in-rmd')`.
 #' @param hooks list, this should the be `knitr::knit_hooks` object; we
 #'   require you pass this to avoid a run-time dependency on `knitr`.
 #' @param which character vector with the names of the hooks that should be
