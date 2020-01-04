@@ -75,10 +75,11 @@ awareness.
 \details{
 This function works by computing the position of the split points after
 removing \emph{Control Sequences}, and uses those positions in conjunction with
-\code{\link{substr_ctl}} to extract the pieces.  An important implication of this is
-that you cannot split by \emph{Control Sequences} that are being treated as
-\emph{Control Sequences}.  You can however limit which control sequences are
-treated specially via the \code{ctl} parameters (see examples).
+\code{\link{substr_ctl}} to extract the pieces.  This concept is borrowed from
+\code{crayon::col_strsplit}.  An important implication of this is that you cannot
+split by \emph{Control Sequences} that are being treated as \emph{Control Sequences}.
+You can however limit which control sequences are treated specially via the
+\code{ctl} parameters (see examples).
 }
 \note{
 Non-ASCII strings are converted to and returned in UTF-8 encoding.  The

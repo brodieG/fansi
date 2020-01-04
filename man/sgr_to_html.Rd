@@ -39,5 +39,7 @@ sgr_to_html("hello\\033[31;42;1mworld\\033[m")
 }
 \seealso{
 \link{fansi} for details on how \emph{Control Sequences} are
-interpreted, particularly if you are getting unexpected results.
+interpreted, particularly if you are getting unexpected results,
+\code{\link[=set_knit_hooks]{set_knit_hooks()}} for how to use ANSI CSI styled text with knitr and HTML
+output.
 }
