@@ -158,6 +158,11 @@ unitizer_sect("hooks", {
   res1[['new.hooks']][['output']]("hello")
   res1[['new.hooks']][['output']]("hello\033[31m world")
 
+  ## split.nl works
+
+  res1a <- set_knit_hooks(h.1, split.nl=TRUE, .test=TRUE)
+  res1a[['new.hooks']][['output']]("hello\033[31m wo\nrld")
+
   p.f.2 <- function(x, y) NULL
   p.f.3 <- function(x, class) sprintf("new proc fun, '%s'", class)
   p.f.4 <- function(x, class) stop("new proc fun")
