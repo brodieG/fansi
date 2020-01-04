@@ -101,5 +101,6 @@ do.call(knitr::knit_hooks$set, old.hooks)
 \seealso{
 \code{\link{has_sgr}}, \code{\link{sgr_to_html}}, \code{\link{html_esc}}, \code{\link{html_code_block}},
 \href{https://yihui.name/knitr/hooks/#output-hooks}{knitr output hooks},
-\href{https://bookdown.org/yihui/rmarkdown/language-engines.html#javascript-and-css}{embedding CSS in Rmd}.
+\href{https://bookdown.org/yihui/rmarkdown/language-engines.html#javascript-and-css}{embedding CSS in Rmd},
+and the vignette \code{vignette(package='fansi', 'sgr-in-rmd')}.
 }
