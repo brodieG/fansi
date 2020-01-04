@@ -1,5 +1,8 @@
-<!-- README.md is generated from README.Rmd. Please edit that file -->
-
+<!-- README.md is generated from README.Rmd. Please edit that file
+library(rmarkdown)
+render('README.Rmd', output_format=md_document())
+render('README.Rmd', output_format=html_document())
+ -->
 ```{r, echo = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
@@ -14,6 +17,7 @@ library(fansi)
 [![](https://travis-ci.org/brodieG/fansi.svg?branch=master)](https://travis-ci.org/brodieG/fansi)
 [![](https://codecov.io/github/brodieG/fansi/coverage.svg?branch=master)](https://codecov.io/github/brodieG/fansi?branch=master)
 [![](http://www.r-pkg.org/badges/version/fansi)](https://cran.r-project.org/package=fansi)
+[![Dependencies direct/recursive](https://tinyverse.netlify.com/badge/fansi)](https://tinyverse.netlify.com/)
 
 Counterparts to R string manipulation functions that account for the effects of
 ANSI text formatting control sequences.

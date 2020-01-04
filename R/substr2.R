@@ -41,6 +41,12 @@
 #' characters to be dropped irrespective whether they correspond to `start` or
 #' `stop`, and "both" could cause all of them to be included.
 #'
+#' These functions map string lengths accounting for ANSI CSI SGR sequence
+#' semantics to the naive length calculations, and then use the mapping in
+#' conjunction with [base::substr()] to extract the string.  This concept is
+#' borrowed directly from Gábor Csárdi's `crayon` package, although the
+#' implementation of the calculation is different.
+#'
 #' @section _ctl vs. _sgr:
 #'
 #' The `*_ctl` versions of the functions treat all _Control Sequences_ specially
