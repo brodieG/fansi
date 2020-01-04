@@ -169,6 +169,7 @@ unitizer_sect("hooks", {
 
   ## bad inputs
 
+  set_knit_hooks(h.1, split.nl='banana')
   set_knit_hooks(h.1, proc.fun=p.f.2)
   set_knit_hooks(h.1, which="hello")
   set_knit_hooks(h.1, which=NULL)
