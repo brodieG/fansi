@@ -1,4 +1,4 @@
-## Copyright (C) 2018  Brodie Gaslam
+## Copyright (C) 2020  Brodie Gaslam
 ##
 ## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
 ##
@@ -22,10 +22,11 @@
 #'
 #' This function works by computing the position of the split points after
 #' removing _Control Sequences_, and uses those positions in conjunction with
-#' [`substr_ctl`] to extract the pieces.  An important implication of this is
-#' that you cannot split by _Control Sequences_ that are being treated as
-#' _Control Sequences_.  You can however limit which control sequences are
-#' treated specially via the `ctl` parameters (see examples).
+#' [`substr_ctl`] to extract the pieces.  This concept is borrowed from
+#' `crayon::col_strsplit`.  An important implication of this is that you cannot
+#' split by _Control Sequences_ that are being treated as _Control Sequences_.
+#' You can however limit which control sequences are treated specially via the
+#' `ctl` parameters (see examples).
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.  The
 #'   split positions are computed after both `x` and `split` are converted to

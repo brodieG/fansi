@@ -1,4 +1,4 @@
-## Copyright (C) 2018  Brodie Gaslam
+## Copyright (C) 2020  Brodie Gaslam
 ##
 ## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
 ##
@@ -23,7 +23,9 @@
 #' @export
 #' @inheritParams substr_ctl
 #' @seealso [fansi] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results.
+#'   interpreted, particularly if you are getting unexpected results,
+#'   [set_knit_hooks()] for how to use ANSI CSI styled text with knitr and HTML
+#'   output.
 #' @return a character vector with all escape sequences removed and any basic
 #'   ANSI CSI SGR escape sequences applied via SPAN html objects with
 #'   inline css styles.

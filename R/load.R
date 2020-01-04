@@ -1,4 +1,4 @@
-## Copyright (C) 2018  Brodie Gaslam
+## Copyright (C) 2020  Brodie Gaslam
 ##
 ## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
 ##
@@ -35,6 +35,11 @@
       'truecolor',
       'bright', '256'
     ),
+    # This is not a particularly good default setting as it may exceed or fail
+    # to cover the interline distance when two lines have background colors.  To
+    # ensure lines are exactly touching use inline-block, although that has it's
+    # own issues.  Otherwise specify your own values.
+
     fansi.css="PRE.fansi SPAN {padding-top: .25em; padding-bottom: .25em};"
   )
   # Scheme defaults are fairly complex...
