@@ -233,7 +233,8 @@ html_code_block <- function(x, class='fansi-output') {
 #' finally [`html_code_block`].
 #'
 #' If you require more control than this function provides you can set the
-#' `knitr` hooks manually with `knitr::knit_hooks$set`.
+#' `knitr` hooks manually with `knitr::knit_hooks$set`.  If you are seeing your
+#' output gaining extra line breaks, look at the `split.nl` option.
 #'
 #' @note Since we do not formally import the `knitr` functions we do not
 #'   guarantee that this function will always work properly with `knitr` /
@@ -261,6 +262,16 @@ html_code_block <- function(x, class='fansi-output') {
 #'   HTML <STYLE> tags as a side effect.  The default value is designed to
 #'   ensure that there is no visible gap in background color with lines with
 #'   height 1.5 (as is the default setting in `rmarkdown` documents v1.1).
+#' @param split.nl TRUE or FALSE (default), set to TRUE to split input strings
+#'   by any newlines they may contain to avoid any newlines inside SPAN tags
+#'   created by [sgr_to_html()].  Some markdown->html renders can be configured
+#'   to convert embedded newlines into line breaks, which may lead to a doubling
+#'   of line breaks.  With the default `proc.fun` the split strings are
+#'   recombined by [html_code_block()], but if you provide your own `proc.fun`
+#'   you'll need to account for the possibility that the character vector it
+#'   receives will have a different number of elements than the chunk output.
+#'   This argument only has an effect if chunk output contains ANSI CSI SGR
+#'   sequences.
 #' @param .test TRUE or FALSE, for internal testing use only.
 #' @return named list with the prior output hooks for each of `which`.
 #' @examples
@@ -306,6 +317,7 @@ set_knit_hooks <- function(
     html_code_block(sgr_to_html(html_esc(x)), class=class),
   class=sprintf("fansi fansi-%s", which),
   style=getOption("fansi.css"),
+  split.nl=FALSE,
   .test=FALSE
 ) {
   if(
@@ -344,6 +356,8 @@ set_knit_hooks <- function(
 
   if(!is.character(style))
     stop("Argument `style` must be character.")
+  if(!isTRUE(split.nl %in% c(TRUE, FALSE)))
+    stop("Argument `split.n` must be TRUE or FALSE")
 
   old.hook.list <- vector('list', length(which))
   names(old.hook.list) <- which
@@ -353,14 +367,16 @@ set_knit_hooks <- function(
   base.err <-
     "are you sure you passed `knitr::knit_hooks` as the `hooks` argument?"
 
-  make_hook <- function(old.hook, class) {
+  make_hook <- function(old.hook, class, split.nl) {
     force(old.hook)
     force(class)
+    force(split.nl)
     function(x, options) {
       # If the output has SGR in it, then convert to HTML and wrap
       # in PRE/CODE tags
 
       if(any(has_sgr(x))) {
+        if(split.nl) x <- unlist(strsplit_sgr(x, '\n', fixed=TRUE))
         res <- try(proc.fun(x=x, class=class))
         if(inherits(res, "try-error"))
           stop(
@@ -394,7 +410,7 @@ set_knit_hooks <- function(
       )
       break
     }
-    new.hook.list[[i]] <- make_hook(old.hook, class[[i]])
+    new.hook.list[[i]] <- make_hook(old.hook, class[[i]], split.nl)
     old.hook.list[[i]] <- old.hook
   }
   if(
