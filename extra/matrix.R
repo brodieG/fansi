@@ -35,26 +35,39 @@ active <- list()
 # structure will be a list of vectors, first el is col, and rest is trailing
 # rows (need to track brightness too?
 
-for(i in seq_len(100)) {
+frames <- 100
+res <- character(frames)
+for(f in seq_len(frames)) {
   active <- Filter(
-    function(x) any(x[-(1:2)] > 0 | x[-(1:2)] <= nrow ), active
+    function(x) {
+      pos <- x[['dat']][,'pos']
+      any(pos > 0 | pos <= nrow )
+    },
+    active
   )
   active <- c(
     active,
     lapply(
-      sample(ncol, ncol/10),
+      sample(ncol, sample(as.integer(ncol/8))),
       function(x) {
-        len <- sample(nrow, 1)
-        c(x, len, seq(1, length.out=len, by=-1))
-      }
+        len <- sample(seq(5, max(nrow, 5), 1), 1)
+        list(
+          row=x,
+          dat=cbind(
+            pos=seq(1, length.out=len, by=-1),
+            val=(len - seq_len(len) + 1) / len
+      ) ) }
   ) )
   active.in <- lapply(
     active,
-    function(x) c(x[1:2], x[-c(1,2)][x[-c(1,2)] > 0 & x[-c(1,2)] <= nrow])
-  )
+    function(x) {
+      pos <- x[['dat']][,'pos']
+      x[['dat']] <- x[['dat']][pos > 0 & pos <= nrow, ,drop=FALSE]
+      x
+  } )
   bright <- matrix(0, ncol, nrow)
   for(i in active.in) {
-    bright[i[1], i[-c(1,2)]] <- (i[2] - (i[-c(1,2)] - i[3])) / i[2]
+    bright[i[['row']], i[['dat']][,'pos']] <- i[['dat']][,'val']
   }
   is.bright <- bright > 0
   display <- text
@@ -64,12 +77,20 @@ for(i in seq_len(100)) {
     display[is.bright]
   )
   display[!is.bright] <- "  "
-  writeLines(
-    c(
-      paste0(rbind(display, '\n'), collapse=''),
-      sprintf('\033[%dA', nrow + 2)
-    )
+  res[f] <- paste0(
+    paste0(rbind(display, '\n'), collapse=''),
+    sprintf('\033[%dA\r', nrow + 1),
+    collapse=""
   )
-  active <- lapply(active, function(x) {x[-(1:2)] <- x[-(1:2)] + 1; x})
-  Sys.sleep(.3)
+  active <- lapply(active,
+    function(x) {
+      x[['dat']][,'pos'] <- x[['dat']][,'pos'] + 1
+      x
+    }
+  )
 }
+for(i in res) {
+  writeLines(i)
+  Sys.sleep(.2)
+}
+writeLines(character(nrow))
