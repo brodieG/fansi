@@ -37,7 +37,7 @@ active <- list()
 
 for(i in seq_len(100)) {
   active <- Filter(
-    function(x) x[1] <= nrow, active
+    function(x) any(x[-(1:2)] > 0 | x[-(1:2)] <= nrow ), active
   )
   active <- c(
     active,
@@ -50,11 +50,11 @@ for(i in seq_len(100)) {
   ) )
   active.in <- lapply(
     active,
-    function(x) c(x[1:2], x[-c(1,2)][x[-c(1,2)] > 0 & x[-c(1,2)] <= ncol])
+    function(x) c(x[1:2], x[-c(1,2)][x[-c(1,2)] > 0 & x[-c(1,2)] <= nrow])
   )
   bright <- matrix(0, ncol, nrow)
   for(i in active.in) {
-    bright[i[1], i[-c(1,2)]] <- (i[2] - i[-c(1,2)] - i[3]) / i[2]
+    bright[i[1], i[-c(1,2)]] <- (i[2] - (i[-c(1,2)] - i[3])) / i[2]
   }
   is.bright <- bright > 0
   display <- text
