@@ -6,7 +6,7 @@
   Ripley, Joshua Ulrich for example fixes).
 * [#59](https://github.com/brodieG/fansi/issues/59): Provide a `split.nl` option
   to `set_knit_hooks` to mitigate white space issues when using blackfriday for
-  the markdown->html conversion.
+  the markdown->html conversion (@krlmlr).
 
 ## v0.4.0
 
