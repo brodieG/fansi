@@ -56,7 +56,8 @@ active <- list()
 # rows (need to track brightness too?
 
 frames <- 200
-fansi.start <- 75
+fansi.start <- 40
+fansi.end <- 150
 fansi.ramp <- 50
 dim.start <- 50
 
@@ -96,17 +97,24 @@ make_frames <- function() {
     }
     is.bright <- bright > 0
     display <- text
+    bright.base <- round(bright[is.bright] * 255)
 
     display[is.bright] <- sprintf(
-      "\033[38;2;0;%d;0m%s\033[m", round(bright[is.bright] * 255 * dim),
+      "\033[38;2;%d;%d;%dm%s\033[m",
+      round((bright.base == 255) * 200 * dim),
+      round(bright.base * dim),
+      round((bright.base == 255) * 200 * dim),
       display[is.bright]
     )
     display[!is.bright] <- "  "
     if(f >= fansi.start) {
-      f.bright.base <- min(c(f - fansi.start) / fansi.ramp, 1)
+      f.bright.base <- min(
+        c(f - fansi.start) / fansi.ramp, c(fansi.end - f) / fansi.ramp, 1
+      )
       f.bright <- f.bright.base * (1 - runif(nrow(fansi.idx)) * .2)
       display[fansi.idx] <- sprintf(
-        "\033[48;2;0;%d;0m%s\033[m", round(f.bright * 180 * dim), display[fansi.idx]
+        "\033[48;2;0;%d;0m%s\033[m",
+        round(f.bright * 180 * dim), display[fansi.idx]
       )
     }
     res[f] <- paste0(
@@ -120,13 +128,16 @@ make_frames <- function() {
         x
       }
     )
+    text[sample(ncol * nrow, ncol * nrow / 10)] <-
+      sample(char.pool, ncol * nrow / 10, rep=TRUE)
   }
   res
 }
 res <- make_frames()
-for(i in res) {
-  writeLines(i)
-  Sys.sleep(.05)
+take <- function(...) {
+  for(i in res) {
+    writeLines(i)
+    Sys.sleep(.05)
+  }
+  writeLines(character(nrow))
 }
-writeLines(character(nrow))
-
