@@ -1,4 +1,8 @@
-<!-- README.md is generated from README.Rmd. Please edit that file -->
+<!-- README.md is generated from README.Rmd. Please edit that file
+library(rmarkdown)
+render('README.Rmd', output_format=md_document())
+render('README.Rmd', output_format=html_document())
+ -->
 fansi - ANSI Control Sequence Aware String Functions
 ====================================================
 
@@ -148,7 +152,8 @@ Acknowledgments
     maintaining the repository, and Uwe Ligges in particular for
     maintaining [Winbuilder](http://win-builder.r-project.org/).
 -   [Gábor Csárdi](https://github.com/gaborcsardi) for getting me
-    started on the journey ANSI control sequences.
+    started on the journey ANSI control sequences, and for many of the
+    ideas on how to process them.
 -   [Jim Hester](https://github.com/jimhester) because
     [covr](https://cran.r-project.org/package=covr) rocks.
 -   [Dirk Eddelbuettel](https://github.com/eddelbuettel) and [Carl
