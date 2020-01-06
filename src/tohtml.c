@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018  Brodie Gaslam
+ * Copyright (C) 2020  Brodie Gaslam
  *
  * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
  *
@@ -496,7 +496,19 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
       buff_track += bytes_stub;
 
       if(has_esc) {
-        // odd case where the only thing in the string is a null SGR
+        // Always close (I think, I'm writing this over a year after I wrote the
+        // code) tag.
+
+        /*--------------------------------------------------------------------*\
+        // WARNING: we're relying on this behavior to deal with the            |
+        // black friday business, see #59)                                     |
+        \*--------------------------------------------------------------------*/
+
+        // Old comment: odd case where the only thing in the string is a null
+        // SGR (from looking at code this will always be require, so not sure
+        // what I mean by "odd case" as this is the only place we close tags
+        // without immediately reopening another).
+
         memcpy(buff_track, "</span>", span_end);
         buff_track += span_end;
       }

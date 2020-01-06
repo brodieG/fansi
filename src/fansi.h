@@ -46,7 +46,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   // symbols
 
-  SEXP FANSI_warn_sym;
+  extern SEXP FANSI_warn_sym;
 
   // macros
 

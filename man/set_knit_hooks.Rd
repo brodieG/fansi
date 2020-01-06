@@ -7,7 +7,7 @@
 set_knit_hooks(hooks, which = "output", proc.fun = function(x, class)
   html_code_block(sgr_to_html(html_esc(x)), class = class),
   class = sprintf("fansi fansi-\%s", which),
-  style = getOption("fansi.css"), .test = FALSE)
+  style = getOption("fansi.css"), split.nl = FALSE, .test = FALSE)
 }
 \arguments{
 \item{hooks}{list, this should the be \code{knitr::knit_hooks} object; we
@@ -30,6 +30,17 @@ classes specified here.  This vector should be the same length as \code{which}.}
 HTML <STYLE> tags as a side effect.  The default value is designed to
 ensure that there is no visible gap in background color with lines with
 height 1.5 (as is the default setting in \code{rmarkdown} documents v1.1).}
+
+\item{split.nl}{TRUE or FALSE (default), set to TRUE to split input strings
+by any newlines they may contain to avoid any newlines inside SPAN tags
+created by \code{\link[=sgr_to_html]{sgr_to_html()}}.  Some markdown->html renders can be configured
+to convert embedded newlines into line breaks, which may lead to a doubling
+of line breaks.  With the default \code{proc.fun} the split strings are
+recombined by \code{\link[=html_code_block]{html_code_block()}}, but if you provide your own \code{proc.fun}
+you'll need to account for the possibility that the character vector it
+receives will have a different number of elements than the chunk output.
+This argument only has an effect if chunk output contains ANSI CSI SGR
+sequences.}
 
 \item{.test}{TRUE or FALSE, for internal testing use only.}
 }
@@ -54,7 +65,8 @@ ANSI CSI SGR are passed off to the previously set hook function.  The default
 finally \code{\link{html_code_block}}.
 
 If you require more control than this function provides you can set the
-\code{knitr} hooks manually with \code{knitr::knit_hooks$set}.
+\code{knitr} hooks manually with \code{knitr::knit_hooks$set}.  If you are seeing your
+output gaining extra line breaks, look at the \code{split.nl} option.
 }
 \note{
 Since we do not formally import the \code{knitr} functions we do not
@@ -101,5 +113,6 @@ do.call(knitr::knit_hooks$set, old.hooks)
 \seealso{
 \code{\link{has_sgr}}, \code{\link{sgr_to_html}}, \code{\link{html_esc}}, \code{\link{html_code_block}},
 \href{https://yihui.name/knitr/hooks/#output-hooks}{knitr output hooks},
-\href{https://bookdown.org/yihui/rmarkdown/language-engines.html#javascript-and-css}{embedding CSS in Rmd}.
+\href{https://bookdown.org/yihui/rmarkdown/language-engines.html#javascript-and-css}{embedding CSS in Rmd},
+and the vignette \code{vignette(package='fansi', 'sgr-in-rmd')}.
 }

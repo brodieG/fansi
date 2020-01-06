@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018  Brodie Gaslam
+ * Copyright (C) 2020  Brodie Gaslam
  *
  * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
  *
@@ -46,6 +46,8 @@ R_CallMethodDef callMethods[] = {
   {"ctl_as_int", (DL_FUNC) &FANSI_ctl_as_int_ext, 1},
   {NULL, NULL, 0}
 };
+
+SEXP FANSI_warn_sym;
 
 void R_init_fansi(DllInfo *info)
 {

@@ -116,6 +116,15 @@ ul {
 h3.subtitle {
   margin-top: -23px;
 }
+body pre + pre:not([class]) code.hljs, body pre + pre.fansi code.hljs {
+  background-color: #EEE;
+}
+body pre + pre:not([class]), body pre + pre.fansi,
+body div.sourceCode + pre:not([class]),
+body div.sourceCode + pre.fansi {
+  margin-top: -19px;
+}
+
 pre, code {
   background-color: #EEE;
   color: #333;
@@ -146,7 +155,7 @@ div.sourceCode pre{
 }
 div.sourceCode + pre,
 div.sourceCode + div.diffobj_container {
-  margin-top: -5px;
+  margin-top: -14px;
 }
 div.diffobj_container pre{
   line-height: 1.3;

@@ -1,5 +1,8 @@
-<!-- README.md is generated from README.Rmd. Please edit that file -->
-
+<!-- README.md is generated from README.Rmd. Please edit that file
+library(rmarkdown)
+render('README.Rmd', output_format=md_document())
+render('README.Rmd', output_format=html_document())
+ -->
 ```{r, echo = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
@@ -14,6 +17,7 @@ library(fansi)
 [![](https://travis-ci.org/brodieG/fansi.svg?branch=master)](https://travis-ci.org/brodieG/fansi)
 [![](https://codecov.io/github/brodieG/fansi/coverage.svg?branch=master)](https://codecov.io/github/brodieG/fansi?branch=master)
 [![](http://www.r-pkg.org/badges/version/fansi)](https://cran.r-project.org/package=fansi)
+[![Dependencies direct/recursive](https://tinyverse.netlify.com/badge/fansi)](https://tinyverse.netlify.com/)
 
 Counterparts to R string manipulation functions that account for the effects of
 ANSI text formatting control sequences.
@@ -111,7 +115,7 @@ browseURL(f)
 It is possible to set `knitr` hooks such that R output that contains ANSI CSI
 SGR is automatically converted to the HTML formatted equivalent and displayed as
 intended.  See the
-[vignette](http://htmlpreview.github.io/?https://raw.githubusercontent.com/brodieG/fansi/6cbfdaa/inst/doc/sgr-in-rmd.html)
+[vignette](https://htmlpreview.github.io/?https://raw.githubusercontent.com/brodieG/fansi/issue61/doc/sgr-in-rmd.html)
 for details.
 
 ## Installation
@@ -124,8 +128,8 @@ install.packages('fansi')
 
 It has no runtime dependencies.
 
-For the development version use:
-`devtools::install_github('brodieg/fansi@development')` or:
+For the development version use
+`remotes::install_github('brodieg/fansi@development')` or:
 
 ```{r eval=FALSE}
 f.dl <- tempfile()
@@ -159,7 +163,8 @@ There is no guarantee that development versions are stable or even working
   the repository, and Uwe Ligges in particular for maintaining
   [Winbuilder](http://win-builder.r-project.org/).
 * [Gábor Csárdi](https://github.com/gaborcsardi) for getting me started on the
-  journey ANSI control sequences.
+  journey ANSI control sequences, and for many of the ideas on how to process
+  them.
 * [Jim Hester](https://github.com/jimhester) because
   [covr](https://cran.r-project.org/package=covr) rocks.
 * [Dirk Eddelbuettel](https://github.com/eddelbuettel) and [Carl
