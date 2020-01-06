@@ -25,8 +25,8 @@ char.pool <- vapply(
 char.pool <- c(char.pool[c(1:63,256:278,285:319,512:575)])
 
 # screen rows/cols so flipped
-ncol <- 41
-nrow <- 20
+ncol <- 46 * 2 - 1
+nrow <- 20 * 2
 
 fansi.raw <- '
 8888888888....88888.....88......88....88888888..8888888888
@@ -43,6 +43,8 @@ fansi.line <- unlist(strsplit(fansi.raw, '\n'))
 fansi.chr <- do.call(rbind, strsplit(fansi.line, ''))
 fansi.idx <-
   which(fansi.chr[, seq(1, ncol(fansi.chr), by=2)] == "8", arr.ind=TRUE)
+fansi.idx <-
+  which(fansi.chr == "8", arr.ind=TRUE)
 
 fansi.idx[,1] <- (nrow - max(fansi.idx[,1])) / 2 + fansi.idx[,1]
 fansi.idx[,2] <- (ncol - max(fansi.idx[,2])) / 2 + fansi.idx[,2]
@@ -55,11 +57,11 @@ active <- list()
 # structure will be a list of vectors, first el is col, and rest is trailing
 # rows (need to track brightness too?
 
-frames <- 200
+frames <- 150
 fansi.start <- 40
-fansi.end <- 150
+fansi.end <- 125
 fansi.ramp <- 50
-dim.start <- 50
+dim.start <- 25
 
 res <- character(frames)
 make_frames <- function() {
