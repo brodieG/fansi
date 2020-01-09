@@ -1,4 +1,4 @@
-## Copyright (C) 2018  Brodie Gaslam
+## Copyright (C) 2020  Brodie Gaslam
 ##
 ## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
 ##
@@ -40,6 +40,12 @@
 #' use "stop" as the `round` value.  "neither" would cause all partial
 #' characters to be dropped irrespective whether they correspond to `start` or
 #' `stop`, and "both" could cause all of them to be included.
+#'
+#' These functions map string lengths accounting for ANSI CSI SGR sequence
+#' semantics to the naive length calculations, and then use the mapping in
+#' conjunction with [base::substr()] to extract the string.  This concept is
+#' borrowed directly from Gábor Csárdi's `crayon` package, although the
+#' implementation of the calculation is different.
 #'
 #' @section _ctl vs. _sgr:
 #'

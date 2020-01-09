@@ -100,6 +100,12 @@ included character via the \code{stop} is left out.  The converse is true if we
 use "stop" as the \code{round} value.  "neither" would cause all partial
 characters to be dropped irrespective whether they correspond to \code{start} or
 \code{stop}, and "both" could cause all of them to be included.
+
+These functions map string lengths accounting for ANSI CSI SGR sequence
+semantics to the naive length calculations, and then use the mapping in
+conjunction with \code{\link[base:substr]{base::substr()}} to extract the string.  This concept is
+borrowed directly from Gábor Csárdi's \code{crayon} package, although the
+implementation of the calculation is different.
 }
 \note{
 Non-ASCII strings are converted to and returned in UTF-8 encoding.

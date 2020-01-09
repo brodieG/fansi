@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018  Brodie Gaslam
+ * Copyright (C) 2020  Brodie Gaslam
  *
  * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
  *
