@@ -5,13 +5,26 @@
 \alias{strsplit_sgr}
 \title{ANSI Control Sequence Aware Version of strsplit}
 \usage{
-strsplit_ctl(x, split, fixed = FALSE, perl = FALSE, useBytes = FALSE,
+strsplit_ctl(
+  x,
+  split,
+  fixed = FALSE,
+  perl = FALSE,
+  useBytes = FALSE,
   warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"), ctl = "all")
+  term.cap = getOption("fansi.term.cap"),
+  ctl = "all"
+)
 
-strsplit_sgr(x, split, fixed = FALSE, perl = FALSE, useBytes = FALSE,
+strsplit_sgr(
+  x,
+  split,
+  fixed = FALSE,
+  perl = FALSE,
+  useBytes = FALSE,
   warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"))
+  term.cap = getOption("fansi.term.cap")
+)
 }
 \arguments{
 \item{x}{a character vector, or, unlike \link[base:strsplit]{base::strsplit} an object that can
@@ -19,7 +32,7 @@ be coerced to character.}
 
 \item{split}{
     character vector (or object which can be coerced to such)
-    containing \link{regular expression}(s) (unless \code{fixed = TRUE})
+    containing \link[base]{regular expression}(s) (unless \code{fixed = TRUE})
     to use for splitting.  If empty matches occur, in particular if
     \code{split} has length 0, \code{x} is split into single characters.
     If \code{split} has length greater than 1, it is re-cycled along
@@ -37,7 +50,7 @@ be coerced to character.}
     byte-by-byte rather than character-by-character, and inputs with
     marked encodings are not converted.  This is forced (with a warning)
     if any input is found which is marked as \code{"bytes"}
-    (see \code{\link{Encoding}}).}
+    (see \code{\link[base]{Encoding}}).}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic \emph{Control Sequences} are encountered.  These could cause the
@@ -89,7 +102,7 @@ UTF-8.
 \section{_ctl vs. _sgr}{
 
 
-The \code{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
+The \verb{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
 by default.  Special treatment is context dependent, and may include
 detecting them and/or computing their display/character width as zero.  For
 the SGR subset of the ANSI CSI sequences, \code{fansi} will also parse, interpret,
@@ -97,18 +110,18 @@ and reapply the text styles they encode if needed.  You can modify whether a
 \emph{Control Sequence} is treated specially with the \code{ctl} parameter.  You can
 exclude a type of \emph{Control Sequence} from special treatment by combining
 "all" with that type of sequence (e.g. \code{ctl=c("all", "nl")} for special
-treatment of all \emph{Control Sequences} \strong{but} newlines).  The \code{*_sgr} versions
+treatment of all \emph{Control Sequences} \strong{but} newlines).  The \verb{*_sgr} versions
 only treat ANSI CSI SGR sequences specially, and are equivalent to the
-\code{*_ctl} versions with the \code{ctl} parameter set to "sgr".
+\verb{*_ctl} versions with the \code{ctl} parameter set to "sgr".
 }
 
 \examples{
-strsplit_sgr("\\033[31mhello\\033[42m world!", " ")
+strsplit_sgr("\033[31mhello\033[42m world!", " ")
 
 ## Next two examples allow splitting by newlines, which
 ## normally doesn't work as newlines are _Control Sequences_
-strsplit_sgr("\\033[31mhello\\033[42m\\nworld!", "\\n")
-strsplit_ctl("\\033[31mhello\\033[42m\\nworld!", "\\n", ctl=c("all", "nl"))
+strsplit_sgr("\033[31mhello\033[42m\nworld!", "\n")
+strsplit_ctl("\033[31mhello\033[42m\nworld!", "\n", ctl=c("all", "nl"))
 }
 \seealso{
 \link{fansi} for details on how \emph{Control Sequences} are

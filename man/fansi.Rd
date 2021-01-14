@@ -3,7 +3,6 @@
 \docType{package}
 \name{fansi}
 \alias{fansi}
-\alias{fansi-package}
 \title{Details About Manipulation of Strings Containing Control Sequences}
 \description{
 Counterparts to R string manipulation functions that account for

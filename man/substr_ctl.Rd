@@ -7,23 +7,47 @@
 \alias{substr2_sgr}
 \title{ANSI Control Sequence Aware Version of substr}
 \usage{
-substr_ctl(x, start, stop, warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"), ctl = "all")
+substr_ctl(
+  x,
+  start,
+  stop,
+  warn = getOption("fansi.warn"),
+  term.cap = getOption("fansi.term.cap"),
+  ctl = "all"
+)
 
-substr2_ctl(x, start, stop, type = "chars", round = "start",
+substr2_ctl(
+  x,
+  start,
+  stop,
+  type = "chars",
+  round = "start",
   tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
   tab.stops = getOption("fansi.tab.stops"),
   warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"), ctl = "all")
+  term.cap = getOption("fansi.term.cap"),
+  ctl = "all"
+)
 
-substr_sgr(x, start, stop, warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"))
+substr_sgr(
+  x,
+  start,
+  stop,
+  warn = getOption("fansi.warn"),
+  term.cap = getOption("fansi.term.cap")
+)
 
-substr2_sgr(x, start, stop, type = "chars", round = "start",
+substr2_sgr(
+  x,
+  start,
+  stop,
+  type = "chars",
+  round = "start",
   tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
   tab.stops = getOption("fansi.tab.stops"),
   warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"))
+  term.cap = getOption("fansi.term.cap")
+)
 }
 \arguments{
 \item{x}{a character vector or object that can be coerced to character.}
@@ -113,7 +137,7 @@ Non-ASCII strings are converted to and returned in UTF-8 encoding.
 \section{_ctl vs. _sgr}{
 
 
-The \code{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
+The \verb{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
 by default.  Special treatment is context dependent, and may include
 detecting them and/or computing their display/character width as zero.  For
 the SGR subset of the ANSI CSI sequences, \code{fansi} will also parse, interpret,
@@ -121,20 +145,20 @@ and reapply the text styles they encode if needed.  You can modify whether a
 \emph{Control Sequence} is treated specially with the \code{ctl} parameter.  You can
 exclude a type of \emph{Control Sequence} from special treatment by combining
 "all" with that type of sequence (e.g. \code{ctl=c("all", "nl")} for special
-treatment of all \emph{Control Sequences} \strong{but} newlines).  The \code{*_sgr} versions
+treatment of all \emph{Control Sequences} \strong{but} newlines).  The \verb{*_sgr} versions
 only treat ANSI CSI SGR sequences specially, and are equivalent to the
-\code{*_ctl} versions with the \code{ctl} parameter set to "sgr".
+\verb{*_ctl} versions with the \code{ctl} parameter set to "sgr".
 }
 
 \examples{
-substr_ctl("\\033[42mhello\\033[m world", 1, 9)
-substr_ctl("\\033[42mhello\\033[m world", 3, 9)
+substr_ctl("\033[42mhello\033[m world", 1, 9)
+substr_ctl("\033[42mhello\033[m world", 3, 9)
 
 ## Width 2 and 3 are in the middle of an ideogram as
 ## start and stop positions respectively, so we control
 ## what we get with `round`
 
-cn.string <- paste0("\\033[42m", "\\u4E00\\u4E01\\u4E03", "\\033[m")
+cn.string <- paste0("\033[42m", "\u4E00\u4E01\u4E03", "\033[m")
 
 substr2_ctl(cn.string, 2, 3, type='width')
 substr2_ctl(cn.string, 2, 3, type='width', round='both')
@@ -144,9 +168,9 @@ substr2_ctl(cn.string, 2, 3, type='width', round='stop')
 ## the _sgr variety only treat as special CSI SGR,
 ## compare the following:
 
-substr_sgr("\\033[31mhello\\tworld", 1, 6)
-substr_ctl("\\033[31mhello\\tworld", 1, 6)
-substr_ctl("\\033[31mhello\\tworld", 1, 6, ctl=c('all', 'c0'))
+substr_sgr("\033[31mhello\tworld", 1, 6)
+substr_ctl("\033[31mhello\tworld", 1, 6)
+substr_ctl("\033[31mhello\tworld", 1, 6, ctl=c('all', 'c0'))
 }
 \seealso{
 \link{fansi} for details on how \emph{Control Sequences} are

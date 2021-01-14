@@ -55,7 +55,7 @@ Non-ASCII strings are converted to and returned in UTF-8 encoding.
 \section{_ctl vs. _sgr}{
 
 
-The \code{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
+The \verb{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
 by default.  Special treatment is context dependent, and may include
 detecting them and/or computing their display/character width as zero.  For
 the SGR subset of the ANSI CSI sequences, \code{fansi} will also parse, interpret,
@@ -63,13 +63,13 @@ and reapply the text styles they encode if needed.  You can modify whether a
 \emph{Control Sequence} is treated specially with the \code{ctl} parameter.  You can
 exclude a type of \emph{Control Sequence} from special treatment by combining
 "all" with that type of sequence (e.g. \code{ctl=c("all", "nl")} for special
-treatment of all \emph{Control Sequences} \strong{but} newlines).  The \code{*_sgr} versions
+treatment of all \emph{Control Sequences} \strong{but} newlines).  The \verb{*_sgr} versions
 only treat ANSI CSI SGR sequences specially, and are equivalent to the
-\code{*_ctl} versions with the \code{ctl} parameter set to "sgr".
+\verb{*_ctl} versions with the \code{ctl} parameter set to "sgr".
 }
 
 \examples{
-string <- "hello\\033k\\033[45p world\\n\\033[31mgoodbye\\a moon"
+string <- "hello\033k\033[45p world\n\033[31mgoodbye\a moon"
 strip_ctl(string)
 strip_ctl(string, c("nl", "c0", "sgr", "csi", "esc")) # equivalently
 strip_ctl(string, "sgr")
