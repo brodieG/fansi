@@ -25,12 +25,12 @@ unitizer_sect("substr", {
     grn.bg, lorem.cn.pieces[3], rgb.und, lorem.cn.pieces[4], end
   )
   lor.cn.c.2.5 <- rep(lorem.cn.col.2, 5)
-  starts <- seq(1, by=6, len=5)
+  starts <- seq(1, by=6, length.out=5)
   ends <- starts + 5
   substr2_ctl(lor.cn.c.2.5, starts, ends, term.cap=term.cap)
   substr2_sgr(lor.cn.c.2.5, starts, ends, term.cap=term.cap)
 
-  starts <- seq(1, by=12, len=5)
+  starts <- seq(1, by=12, length.out=5)
   ends <- starts + 11
   substr2_ctl(lor.cn.c.2.5, starts, ends, type='width', term.cap=term.cap)
 
@@ -51,7 +51,7 @@ unitizer_sect("substr", {
   )
   lor.cn.c.3.5 <- rep(lorem.cn.col.3, 5)
 
-  starts <- seq(1, by=12, len=5)
+  starts <- seq(1, by=12, length.out=5)
   ends <- starts + 10
   ends[2] <- 24
 
@@ -238,8 +238,9 @@ unitizer_sect("Corner cases", {
   substr_ctl(b.t.c, 4, 4)
 
   substr2_ctl(b.t.c, 0, 0, type='width')
-  substr2_ctl(b.t.c, 0, 2, type='width')
-  substr2_ctl(b.t.c, 1, 4, type='width')
+  ## Commented out due to bug introduced by r79799 in r-devel
+  # substr2_ctl(b.t.c, 0, 2, type='width')
+  # substr2_ctl(b.t.c, 1, 4, type='width')
   substr2_ctl(b.t.c, 0, 5, type='width')
   substr2_ctl(b.t.c, 5, 5, type='width')
 })

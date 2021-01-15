@@ -7,35 +7,69 @@
 \alias{strwrap2_sgr}
 \title{ANSI Control Sequence Aware Version of strwrap}
 \usage{
-strwrap_ctl(x, width = 0.9 * getOption("width"), indent = 0,
-  exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
+strwrap_ctl(
+  x,
+  width = 0.9 * getOption("width"),
+  indent = 0,
+  exdent = 0,
+  prefix = "",
+  simplify = TRUE,
+  initial = prefix,
   warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"), ctl = "all")
+  term.cap = getOption("fansi.term.cap"),
+  ctl = "all"
+)
 
-strwrap2_ctl(x, width = 0.9 * getOption("width"), indent = 0,
-  exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
-  wrap.always = FALSE, pad.end = "", strip.spaces = !tabs.as.spaces,
+strwrap2_ctl(
+  x,
+  width = 0.9 * getOption("width"),
+  indent = 0,
+  exdent = 0,
+  prefix = "",
+  simplify = TRUE,
+  initial = prefix,
+  wrap.always = FALSE,
+  pad.end = "",
+  strip.spaces = !tabs.as.spaces,
   tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
   tab.stops = getOption("fansi.tab.stops"),
   warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"), ctl = "all")
+  term.cap = getOption("fansi.term.cap"),
+  ctl = "all"
+)
 
-strwrap_sgr(x, width = 0.9 * getOption("width"), indent = 0,
-  exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
+strwrap_sgr(
+  x,
+  width = 0.9 * getOption("width"),
+  indent = 0,
+  exdent = 0,
+  prefix = "",
+  simplify = TRUE,
+  initial = prefix,
   warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"))
+  term.cap = getOption("fansi.term.cap")
+)
 
-strwrap2_sgr(x, width = 0.9 * getOption("width"), indent = 0,
-  exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
-  wrap.always = FALSE, pad.end = "", strip.spaces = !tabs.as.spaces,
+strwrap2_sgr(
+  x,
+  width = 0.9 * getOption("width"),
+  indent = 0,
+  exdent = 0,
+  prefix = "",
+  simplify = TRUE,
+  initial = prefix,
+  wrap.always = FALSE,
+  pad.end = "",
+  strip.spaces = !tabs.as.spaces,
   tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
   tab.stops = getOption("fansi.tab.stops"),
   warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"))
+  term.cap = getOption("fansi.term.cap")
+)
 }
 \arguments{
 \item{x}{a character vector, or an object which can be converted to a
-    character vector by \code{\link{as.character}}.}
+    character vector by \code{\link[base]{as.character}}.}
 
 \item{width}{a positive integer giving the target column for wrapping
     lines in the output.}
@@ -133,7 +167,7 @@ Width calculations will not work correctly with R < 3.2.2.
 \section{_ctl vs. _sgr}{
 
 
-The \code{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
+The \verb{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
 by default.  Special treatment is context dependent, and may include
 detecting them and/or computing their display/character width as zero.  For
 the SGR subset of the ANSI CSI sequences, \code{fansi} will also parse, interpret,
@@ -141,14 +175,14 @@ and reapply the text styles they encode if needed.  You can modify whether a
 \emph{Control Sequence} is treated specially with the \code{ctl} parameter.  You can
 exclude a type of \emph{Control Sequence} from special treatment by combining
 "all" with that type of sequence (e.g. \code{ctl=c("all", "nl")} for special
-treatment of all \emph{Control Sequences} \strong{but} newlines).  The \code{*_sgr} versions
+treatment of all \emph{Control Sequences} \strong{but} newlines).  The \verb{*_sgr} versions
 only treat ANSI CSI SGR sequences specially, and are equivalent to the
-\code{*_ctl} versions with the \code{ctl} parameter set to "sgr".
+\verb{*_ctl} versions with the \code{ctl} parameter set to "sgr".
 }
 
 \examples{
-hello.1 <- "hello \\033[41mred\\033[49m world"
-hello.2 <- "hello\\t\\033[41mred\\033[49m\\tworld"
+hello.1 <- "hello \033[41mred\033[49m world"
+hello.2 <- "hello\t\033[41mred\033[49m\tworld"
 
 strwrap_ctl(hello.1, 12)
 strwrap_ctl(hello.2, 12)

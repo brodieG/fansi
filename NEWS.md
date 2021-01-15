@@ -1,5 +1,9 @@
 # fansi Release Notes
 
+## v0.4.2
+
+* Temporarily bypass tests due to R bug introduced in R-devel 79799.
+
 ## v0.4.1
 
 * Correctly define/declare global symbols as per WRE 1.6.4.1, (h/t Professor

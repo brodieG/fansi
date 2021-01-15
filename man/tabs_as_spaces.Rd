@@ -4,8 +4,12 @@
 \alias{tabs_as_spaces}
 \title{Replace Tabs With Spaces}
 \usage{
-tabs_as_spaces(x, tab.stops = getOption("fansi.tab.stops"),
-  warn = getOption("fansi.warn"), ctl = "all")
+tabs_as_spaces(
+  x,
+  tab.stops = getOption("fansi.tab.stops"),
+  warn = getOption("fansi.warn"),
+  ctl = "all"
+)
 }
 \arguments{
 \item{x}{character vector or object coercible to character; any tabs therein
@@ -55,7 +59,7 @@ width.  Tabs will always be converted to spaces, irrespective of the \code{ctl}
 setting.
 }
 \examples{
-string <- '1\\t12\\t123\\t1234\\t12345678'
+string <- '1\t12\t123\t1234\t12345678'
 tabs_as_spaces(string)
 writeLines(
   c(

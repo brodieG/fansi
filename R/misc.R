@@ -242,7 +242,7 @@ html_code_block <- function(x, class='fansi-output') {
 #'
 #' @export
 #' @seealso [`has_sgr`], [`sgr_to_html`], [`html_esc`], [`html_code_block`],
-#'   [`knitr` output hooks](https://yihui.name/knitr/hooks/#output-hooks),
+#'   [`knitr` output hooks](https://yihui.org/knitr/hooks/#output-hooks),
 #'   [embedding CSS in
 #'   Rmd](https://bookdown.org/yihui/rmarkdown/language-engines.html#javascript-and-css),
 #'   and the vignette `vignette(package='fansi', 'sgr-in-rmd')`.
