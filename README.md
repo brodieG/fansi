@@ -180,7 +180,8 @@ Acknowledgments
     extension John MacFarlane for [pandoc](https://pandoc.org/).
 -   Olaf Mersmann for
     [microbenchmark](https://cran.r-project.org/package=microbenchmark),
-    because microsecond matter.
+    because microsecond matter, and [Joshua
+    Ulrich](https://github.com/joshuaulrich) for making it lightweight.
 -   All open source developers out there that make their work freely
     available for others to use.
 -   [Github](https://github.com/), [Travis-CI](https://travis-ci.org/),
