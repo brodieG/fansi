@@ -6,11 +6,12 @@ render('README.Rmd', output_format=html_document())
 fansi - ANSI Control Sequence Aware String Functions
 ====================================================
 
-[![](https://travis-ci.org/brodieG/fansi.svg?branch=master)](https://travis-ci.org/brodieG/fansi)
-[![](https://codecov.io/github/brodieG/fansi/coverage.svg?branch=master)](https://codecov.io/github/brodieG/fansi?branch=master)
+[![R build
+status](https://github.com/brodieG/fansi/workflows/R-CMD-check/badge.svg)](https://github.com/brodieG/fansi/actions)
+[![](https://codecov.io/gh/brodieG/fansi/branch/master/graphs/badge.svg?branch=master)](https://codecov.io/gh/brodieG/fansi/branch/master/graphs/badge.svg?branch=master)
 [![](http://www.r-pkg.org/badges/version/fansi)](https://cran.r-project.org/package=fansi)
 [![Dependencies
-direct/recursive](https://tinyverse.netlify.com/badge/fansi)](https://tinyverse.netlify.com/)
+direct/recursive](https://tinyverse.netlify.app/badge/fansi)](https://tinyverse.netlify.app/)
 
 Counterparts to R string manipulation functions that account for the
 effects of ANSI text formatting control sequences.
@@ -124,9 +125,7 @@ For the development version use
     unlink(c(f.dl, f.uz))
 
 There is no guarantee that development versions are stable or even
-working (Travis build status:
-[![](https://travis-ci.org/brodieG/fansi.svg?branch=development)](https://travis-ci.org/brodieG/fansi)).
-The master branch typically mirrors CRAN and should be stable.
+working. The master branch typically mirrors CRAN and should be stable.
 
 Related Packages and References
 -------------------------------
@@ -154,8 +153,9 @@ Acknowledgments
 -   [Gábor Csárdi](https://github.com/gaborcsardi) for getting me
     started on the journey ANSI control sequences, and for many of the
     ideas on how to process them.
--   [Jim Hester](https://github.com/jimhester) because
-    [covr](https://cran.r-project.org/package=covr) rocks.
+-   [Jim Hester](https://github.com/jimhester) for
+    [covr](https://cran.r-project.org/package=covr), and with Rstudio
+    for [r-lib/actions](https://github.com/r-lib/actions).
 -   [Dirk Eddelbuettel](https://github.com/eddelbuettel) and [Carl
     Boettiger](https://github.com/cboettig) for the
     [rocker](https://github.com/rocker-org/rocker) project, and [Gábor
@@ -170,25 +170,25 @@ Acknowledgments
     [r-debug](https://hub.docker.com/r/wch1/r-debug/) docker container,
     in particular because of the valgrind level 2 instrumented version
     of R.
--   Hadley Wickham for
-    [devtools](https://cran.r-project.org/package=devtools) and
+-   [Hadley Wickham](https://github.com/hadley/) and [Peter
+    Danenberg](https://github.com/klutometis) for
     [roxygen2](https://cran.r-project.org/package=roxygen2).
 -   [Yihui Xie](https://github.com/yihui) for
     [knitr](https://cran.r-project.org/package=knitr) and [J.J.
     Allaire](https://github.com/jjallaire) etal for
     [rmarkdown](https://cran.r-project.org/package=rmarkdown), and by
-    extension John MacFarlane for [pandoc](http://pandoc.org/).
+    extension John MacFarlane for [pandoc](https://pandoc.org/).
 -   Olaf Mersmann for
     [microbenchmark](https://cran.r-project.org/package=microbenchmark),
-    because microsecond matter.
+    because microsecond matter, and [Joshua
+    Ulrich](https://github.com/joshuaulrich) for making it lightweight.
 -   All open source developers out there that make their work freely
     available for others to use.
 -   [Github](https://github.com/), [Travis-CI](https://travis-ci.org/),
-    [Codecov](https://codecov.io/),
+    [Codecov](https://about.codecov.io/),
     [Vagrant](https://www.vagrantup.com/),
-    [Docker](https://www.docker.com/),
-    [Ubuntu](https://www.ubuntu.com/), [Brew](https://brew.sh/) for
-    providing infrastructure that greatly simplifies open source
-    development.
--   [Free Software Foundation](http://fsf.org/) for developing the GPL
-    license and promotion of the free software movement.
+    [Docker](https://www.docker.com/), [Ubuntu](https://ubuntu.com/),
+    [Brew](https://brew.sh/) for providing infrastructure that greatly
+    simplifies open source development.
+-   [Free Software Foundation](https://www.fsf.org/) for developing the
+    GPL license and promotion of the free software movement.

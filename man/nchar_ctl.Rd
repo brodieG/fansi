@@ -7,14 +7,25 @@
 \alias{nzchar_sgr}
 \title{ANSI Control Sequence Aware Version of nchar}
 \usage{
-nchar_ctl(x, type = "chars", allowNA = FALSE, keepNA = NA,
-  ctl = "all", warn = getOption("fansi.warn"), strip)
+nchar_ctl(
+  x,
+  type = "chars",
+  allowNA = FALSE,
+  keepNA = NA,
+  ctl = "all",
+  warn = getOption("fansi.warn"),
+  strip
+)
 
-nchar_sgr(x, type = "chars", allowNA = FALSE, keepNA = NA,
-  warn = getOption("fansi.warn"))
+nchar_sgr(
+  x,
+  type = "chars",
+  allowNA = FALSE,
+  keepNA = NA,
+  warn = getOption("fansi.warn")
+)
 
-nzchar_ctl(x, keepNA = NA, ctl = "all",
-  warn = getOption("fansi.warn"))
+nzchar_ctl(x, keepNA = NA, ctl = "all", warn = getOption("fansi.warn"))
 
 nzchar_sgr(x, keepNA = NA, warn = getOption("fansi.warn"))
 }
@@ -29,7 +40,7 @@ use \link[base:nchar]{base::nchar}.}
     throwing an error)?}
 
 \item{keepNA}{logical: should \code{NA} be returned where ever
-  \code{x} is \code{\link{NA}}?  If false, \code{nchar()} returns
+  \code{x} is \code{\link[base]{NA}}?  If false, \code{nchar()} returns
   \code{2}, as that is the number of printing characters used when
   strings are written to output, and \code{nzchar()} is \code{TRUE}.  The
   default for \code{nchar()}, \code{NA}, means to use \code{keepNA = TRUE}
@@ -76,7 +87,7 @@ the \code{keepNA} parameter is ignored for R < 3.2.2.
 \section{_ctl vs. _sgr}{
 
 
-The \code{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
+The \verb{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
 by default.  Special treatment is context dependent, and may include
 detecting them and/or computing their display/character width as zero.  For
 the SGR subset of the ANSI CSI sequences, \code{fansi} will also parse, interpret,
@@ -84,33 +95,33 @@ and reapply the text styles they encode if needed.  You can modify whether a
 \emph{Control Sequence} is treated specially with the \code{ctl} parameter.  You can
 exclude a type of \emph{Control Sequence} from special treatment by combining
 "all" with that type of sequence (e.g. \code{ctl=c("all", "nl")} for special
-treatment of all \emph{Control Sequences} \strong{but} newlines).  The \code{*_sgr} versions
+treatment of all \emph{Control Sequences} \strong{but} newlines).  The \verb{*_sgr} versions
 only treat ANSI CSI SGR sequences specially, and are equivalent to the
-\code{*_ctl} versions with the \code{ctl} parameter set to "sgr".
+\verb{*_ctl} versions with the \code{ctl} parameter set to "sgr".
 }
 
 \examples{
-nchar_ctl("\\033[31m123\\a\\r")
+nchar_ctl("\033[31m123\a\r")
 ## with some wide characters
-cn.string <-  sprintf("\\033[31m\%s\\a\\r", "\\u4E00\\u4E01\\u4E03")
+cn.string <-  sprintf("\033[31m\%s\a\r", "\u4E00\u4E01\u4E03")
 nchar_ctl(cn.string)
 nchar_ctl(cn.string, type='width')
 
 ## Remember newlines are not counted by default
-nchar_ctl("\\t\\n\\r")
+nchar_ctl("\t\n\r")
 
 ## The 'c0' value for the `ctl` argument does
 ## not include newlines.
-nchar_ctl("\\t\\n\\r", ctl="c0")
-nchar_ctl("\\t\\n\\r", ctl=c("c0", "nl"))
+nchar_ctl("\t\n\r", ctl="c0")
+nchar_ctl("\t\n\r", ctl=c("c0", "nl"))
 
 ## The _sgr flavor only treats SGR sequences as zero width
 
-nchar_sgr("\\033[31m123")
-nchar_sgr("\\t\\n\\n123")
+nchar_sgr("\033[31m123")
+nchar_sgr("\t\n\n123")
 
 ## All of the following are Control Sequences
-nzchar_ctl("\\n\\033[42;31m\\033[123P\\a")
+nzchar_ctl("\n\033[42;31m\033[123P\a")
 }
 \seealso{
 \link{fansi} for details on how \emph{Control Sequences} are

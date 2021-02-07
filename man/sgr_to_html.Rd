@@ -4,8 +4,11 @@
 \alias{sgr_to_html}
 \title{Convert ANSI CSI SGR Escape Sequence to HTML Equivalents}
 \usage{
-sgr_to_html(x, warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"))
+sgr_to_html(
+  x,
+  warn = getOption("fansi.warn"),
+  term.cap = getOption("fansi.term.cap")
+)
 }
 \arguments{
 \item{x}{a character vector or object that can be coerced to character.}
@@ -35,7 +38,7 @@ translated.  Others are dropped silently.
 Non-ASCII strings are converted to and returned in UTF-8 encoding.
 }
 \examples{
-sgr_to_html("hello\\033[31;42;1mworld\\033[m")
+sgr_to_html("hello\033[31;42;1mworld\033[m")
 }
 \seealso{
 \link{fansi} for details on how \emph{Control Sequences} are

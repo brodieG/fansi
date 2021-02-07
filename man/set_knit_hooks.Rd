@@ -4,10 +4,16 @@
 \alias{set_knit_hooks}
 \title{Set an Output Hook to Display ANSI CSI SGR in Rmarkdown}
 \usage{
-set_knit_hooks(hooks, which = "output", proc.fun = function(x, class)
-  html_code_block(sgr_to_html(html_esc(x)), class = class),
+set_knit_hooks(
+  hooks,
+  which = "output",
+  proc.fun = function(x, class) html_code_block(sgr_to_html(html_esc(x)), class =
+    class),
   class = sprintf("fansi fansi-\%s", which),
-  style = getOption("fansi.css"), split.nl = FALSE, .test = FALSE)
+  style = getOption("fansi.css"),
+  split.nl = FALSE,
+  .test = FALSE
+)
 }
 \arguments{
 \item{hooks}{list, this should the be \code{knitr::knit_hooks} object; we
@@ -112,7 +118,7 @@ do.call(knitr::knit_hooks$set, old.hooks)
 }
 \seealso{
 \code{\link{has_sgr}}, \code{\link{sgr_to_html}}, \code{\link{html_esc}}, \code{\link{html_code_block}},
-\href{https://yihui.name/knitr/hooks/#output-hooks}{knitr output hooks},
+\href{https://yihui.org/knitr/hooks/#output-hooks}{\code{knitr} output hooks},
 \href{https://bookdown.org/yihui/rmarkdown/language-engines.html#javascript-and-css}{embedding CSS in Rmd},
 and the vignette \code{vignette(package='fansi', 'sgr-in-rmd')}.
 }
