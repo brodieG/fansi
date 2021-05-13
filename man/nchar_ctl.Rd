@@ -32,20 +32,23 @@ nzchar_sgr(x, keepNA = NA, warn = getOption("fansi.warn"))
 \arguments{
 \item{x}{a character vector or object that can be coerced to character.}
 
-\item{type}{character string, one of "chars", or "width".  For byte counts
-use \link[base:nchar]{base::nchar}.}
+\item{type}{character(1L) partial matching \code{c("chars", "width")}, although
+\code{type="width"} only works correctly with R >= 3.2.2.  With "width", whether
+C0 and C1 are treated as zero width may depend on R version and locale in
+addition what the \code{ctl} parameter is set to.  For example, for R4.1 in
+UTF-8 locales C0 and C1 will be zero width even if the value of \code{ctl} is
+such that they wouldn't be so in other circumstances.}
 
 \item{allowNA}{logical: should \code{NA} be returned for invalid
     multibyte strings or \code{"bytes"}-encoded strings (rather than
     throwing an error)?}
 
-\item{keepNA}{logical: should \code{NA} be returned where ever
+\item{keepNA}{logical: should \code{NA} be returned when
   \code{x} is \code{\link[base]{NA}}?  If false, \code{nchar()} returns
   \code{2}, as that is the number of printing characters used when
   strings are written to output, and \code{nzchar()} is \code{TRUE}.  The
   default for \code{nchar()}, \code{NA}, means to use \code{keepNA = TRUE}
-  unless \code{type} is \code{"width"}.  Used to be (implicitly) hard
-  coded to \code{FALSE} in \R versions \eqn{\le}{<=} 3.2.0.}
+  unless \code{type} is \code{"width"}.}
 
 \item{ctl}{character, which \emph{Control Sequences} should be treated
 specially. See the "_ctl vs. _sgr" section for details.
@@ -64,8 +67,6 @@ above, in which case it means "all but".
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
-
-\item{strip}{deprecated in favor of \code{ctl}.}
 }
 \description{
 \code{nchar_ctl} counts all non \emph{Control Sequence} characters.
@@ -110,21 +111,20 @@ nchar_ctl(cn.string, type='width')
 ## Remember newlines are not counted by default
 nchar_ctl("\t\n\r")
 
-## The 'c0' value for the `ctl` argument does
-## not include newlines.
+## The 'c0' value for the `ctl` argument does not include 
+## newlines.
 nchar_ctl("\t\n\r", ctl="c0")
 nchar_ctl("\t\n\r", ctl=c("c0", "nl"))
 
 ## The _sgr flavor only treats SGR sequences as zero width
-
 nchar_sgr("\033[31m123")
 nchar_sgr("\t\n\n123")
 
-## All of the following are Control Sequences
+## All of the following are Control Sequences or C0 controls
 nzchar_ctl("\n\033[42;31m\033[123P\a")
 }
 \seealso{
 \link{fansi} for details on how \emph{Control Sequences} are
 interpreted, particularly if you are getting unexpected results,
-\link{strip_ctl} for removing \emph{Control Sequences}.
+\code{\link{strip_ctl}} for removing \emph{Control Sequences}.
 }

@@ -33,7 +33,7 @@ output chunk specified in \code{which} will be matched position-wise to the
 classes specified here.  This vector should be the same length as \code{which}.}
 
 \item{style}{character a vector of CSS styles; these will be output inside
-HTML <STYLE> tags as a side effect.  The default value is designed to
+HTML >STYLE< tags as a side effect.  The default value is designed to
 ensure that there is no visible gap in background color with lines with
 height 1.5 (as is the default setting in \code{rmarkdown} documents v1.1).}
 
@@ -58,8 +58,8 @@ This is a convenience function designed for use within an \code{rmarkdown}
 document.  It overrides the \code{knitr} output hooks by using
 \code{knitr::knit_hooks$set}.  It replaces the hooks with ones that convert ANSI
 CSI SGR sequences into HTML.  In addition to replacing the hook functions,
-this will output a <STYLE> HTML block to stdout.  These two actions are side
-effects as a result of which R chunks in the \code{rmarkdown} document that
+this will output a <STYLE> HTML block to stdout.  These two actions are
+side effects as a result of which R chunks in the \code{rmarkdown} document that
 contain ANSI CSI SGR are shown in their HTML equivalent form.
 }
 \details{
