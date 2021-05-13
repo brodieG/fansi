@@ -33,12 +33,9 @@
 #' @inheritSection substr_ctl _ctl vs. _sgr
 #' @note the `keepNA` parameter is ignored for R < 3.2.2.
 #' @export
-#' @param type character string, one of "chars", or "width".  For byte counts
-#'   use [base::nchar].
-#' @param strip deprecated in favor of `ctl`.
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results,
-#'   [strip_ctl] for removing _Control Sequences_.
+#'   [`strip_ctl`] for removing _Control Sequences_.
 #' @examples
 #' nchar_ctl("\033[31m123\a\r")
 #' ## with some wide characters
@@ -49,17 +46,16 @@
 #' ## Remember newlines are not counted by default
 #' nchar_ctl("\t\n\r")
 #'
-#' ## The 'c0' value for the `ctl` argument does
-#' ## not include newlines.
+#' ## The 'c0' value for the `ctl` argument does not include 
+#' ## newlines.
 #' nchar_ctl("\t\n\r", ctl="c0")
 #' nchar_ctl("\t\n\r", ctl=c("c0", "nl"))
 #'
 #' ## The _sgr flavor only treats SGR sequences as zero width
-#'
 #' nchar_sgr("\033[31m123")
 #' nchar_sgr("\t\n\n123")
 #'
-#' ## All of the following are Control Sequences
+#' ## All of the following are Control Sequences or C0 controls
 #' nzchar_ctl("\n\033[42;31m\033[123P\a")
 
 nchar_ctl <- function(

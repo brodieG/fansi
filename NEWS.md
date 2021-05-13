@@ -1,5 +1,11 @@
 # fansi Release Notes
 
+## v0.4.3
+
+* Adjust for changes to `nchar(..., type='width')` for C0-C1 control characters
+  in R 4.1.
+* Restore tests bypassed in 0.4.2.
+
 ## v0.4.2
 
 * Temporarily bypass tests due to R bug introduced in R-devel 79799.

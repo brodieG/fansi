@@ -197,8 +197,8 @@ html_esc <- function(x) {
 #' @param class character vectors of classes to apply to the PRE HTML tags.  It
 #'   is the users responsibility to ensure the classes are valid CSS class
 #'   names.
-#' @return character(1L) `x`, with <PRE> and <CODE> HTML tags applied and
-#'   collapsed into one line with newlines as the line separator.
+#' @return character(1L) `x`, with &lt;PRE&gt; and &lt;CODE&gt; HTML tags
+#'   applied and collapsed into one line with newlines as the line separator.
 #' @examples
 #' html_code_block(c("hello world"))
 #' html_code_block(c("hello world"), class="pretty")
@@ -221,8 +221,8 @@ html_code_block <- function(x, class='fansi-output') {
 #' document.  It overrides the `knitr` output hooks by using
 #' `knitr::knit_hooks$set`.  It replaces the hooks with ones that convert ANSI
 #' CSI SGR sequences into HTML.  In addition to replacing the hook functions,
-#' this will output a <STYLE> HTML block to stdout.  These two actions are side
-#' effects as a result of which R chunks in the `rmarkdown` document that
+#' this will output a &lt;STYLE&gt; HTML block to stdout.  These two actions are
+#' side effects as a result of which R chunks in the `rmarkdown` document that
 #' contain ANSI CSI SGR are shown in their HTML equivalent form.
 #'
 #' The replacement hook function tests for the presence of ANSI CSI SGR
@@ -257,9 +257,9 @@ html_code_block <- function(x, class='fansi-output') {
 #' @param proc.fun function that will be applied to output that contains ANSI
 #'   CSI SGR sequences.  Should accept parameters `x` and `class`, where `x` is
 #'   the output, and `class` is the CSS class that should be applied to
-#'   the <PRE><CODE> blocks the output will be placed in.
+#'   the &lt;PRE&gt;&lt;CODE&gt; blocks the output will be placed in.
 #' @param style character a vector of CSS styles; these will be output inside
-#'   HTML <STYLE> tags as a side effect.  The default value is designed to
+#'   HTML &gt;STYLE&lt; tags as a side effect.  The default value is designed to
 #'   ensure that there is no visible gap in background color with lines with
 #'   height 1.5 (as is the default setting in `rmarkdown` documents v1.1).
 #' @param split.nl TRUE or FALSE (default), set to TRUE to split input strings

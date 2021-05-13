@@ -51,7 +51,7 @@ functions that have it.
 
 
 \strong{NOTE}: not all displays support ANSI CSI SGR sequences; run
-\link{term_cap_test} to see whether your display supports them.
+\code{\link{term_cap_test}} to see whether your display supports them.
 
 ANSI CSI SGR Control Sequences are the subset of CSI sequences that can be
 used to change text appearance (e.g. color).  These sequences begin with
@@ -127,10 +127,10 @@ to the way R does.
 }
 
 These issues are most likely to occur with invalid UTF-8 sequences,
-combining character sequences, and emoji.  For example, as of this writing R
-(and the OSX terminal) consider emojis to be one wide characters, when in
-reality they are two wide.  Do not expect the \code{fansi} width
-calculations to to work correctly with strings containing emoji.
+combining character sequences, and emoji.  For example, whether special
+characters such as emoji are considered one or two wide evolves as software
+adopts newer versions of Unicode.  Do not expect the \code{fansi} width
+calculations to always work correctly with strings containing emoji.
 
 Internally, \code{fansi} computes the width of every UTF-8 character sequence
 outside of the ASCII range using the native \code{R_nchar} function.  This will

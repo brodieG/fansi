@@ -82,7 +82,11 @@ above, in which case it means "all but".
 }}
 
 \item{type}{character(1L) partial matching \code{c("chars", "width")}, although
-\code{type="width"} only works correctly with R >= 3.2.2.}
+\code{type="width"} only works correctly with R >= 3.2.2.  With "width", whether
+C0 and C1 are treated as zero width may depend on R version and locale in
+addition what the \code{ctl} parameter is set to.  For example, for R4.1 in
+UTF-8 locales C0 and C1 will be zero width even if the value of \code{ctl} is
+such that they wouldn't be so in other circumstances.}
 
 \item{round}{character(1L) partial matching
 \code{c("start", "stop", "both", "neither")}, controls how to resolve

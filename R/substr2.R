@@ -68,7 +68,11 @@
 #'   interpreted, particularly if you are getting unexpected results.
 #' @param x a character vector or object that can be coerced to character.
 #' @param type character(1L) partial matching `c("chars", "width")`, although
-#'   `type="width"` only works correctly with R >= 3.2.2.
+#'   `type="width"` only works correctly with R >= 3.2.2.  With "width", whether
+#'   C0 and C1 are treated as zero width may depend on R version and locale in
+#'   addition what the `ctl` parameter is set to.  For example, for R4.1 in
+#'   UTF-8 locales C0 and C1 will be zero width even if the value of `ctl` is
+#'   such that they wouldn't be so in other circumstances.
 #' @param round character(1L) partial matching
 #'   `c("start", "stop", "both", "neither")`, controls how to resolve
 #'   ambiguities when a `start` or `stop` value in "width" `type` mode falls
