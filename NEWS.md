@@ -1,5 +1,10 @@
 # fansi Release Notes
 
+## v0.4.3
+
+* Restore tests bypassed in 0.4.2.
+* Adjust for changes to `nchar(..., type='width')` for controls.
+
 ## v0.4.2
 
 * Temporarily bypass tests due to R bug introduced in R-devel 79799.

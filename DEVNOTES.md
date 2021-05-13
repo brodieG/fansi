@@ -2,6 +2,40 @@
 
 These are internal developer notes.
 
+## To HTML
+
+
+One of the problems is that we won't know the size of our target buffer until
+we've seen all the tags and evaluated their rendered size.
+
+So we have a choice to:
+
+1. Two pass, computing sizes first, and then actually generating the strings
+    * Obviously we have two passes, not ideal
+        * Need both new tag size
+        * And old removal size
+    * But also need to be super careful about sizes
+2. One pass, generate HTML as we go
+    * But if we run out of room in buffer will need to grow it and copy it
+    * Can't really make a reasonable guess as to total size without a first pass
+      anyway as we need at a minimum to count how many escape sequences there
+      are.
+3. Two pass, generate HTML as we go, but don't write full string until end
+    * Need to allocate potentially growing array containing either the strings
+      or the information needed to generate them
+
+So basically:
+
+1. re-do the parse twice for each element
+2. risk having to re-write the entire buffer each time we run out of room
+3. track a growing array of strings
+
+Probably re-do the parse twice seems like the least worst of the two options.
+
+One way that we can potentially mitigate the cost of this is with a linked list,
+but that requires repeated allocations for each element.
+
+
 ## FANSI_find_esc
 
 Clearly our changes messed stuff up.  In particular, there is now the
@@ -11,6 +45,7 @@ to advance.  We kludged a fix for `nzchar`, but this is causes problems
 elsewhere.  We need to review all uses of `FANSI_find_esc` and figure out what a
 compatible way to handle the possibility that `FANSI_find_esc` will find a
 _Control Sequence_ that isn't actually treated as _Control Sequence_.
+
 ## Width of C0 And Others
 
 The correct way to handle this is probably to keep existing behavior for `_ctl`
@@ -75,35 +110,6 @@ won't interfere with existing colors.
 
 All the other codes don't really interfere with each other so we don't have to
 worry too much about them.
-
-## To HTML
-
-One of the problems is that we won't know the size of our target buffer until
-we've seen all the tags and evaluated their rendered size.
-
-So we have a choice to:
-
-1. Two pass, computing sizes first, and then actually generating the strings
-    * Obviously we have two passes, not ideal
-        * Need both new tag size
-        * And old removal size
-    * But also need to be super careful about sizes
-2. One pass, generate HTML as we go
-    * But if we run out of room in buffer will need to grow it and copy it
-3. Two pass, generate HTML as we go, but don't write full string until end
-    * Need to allocate potentially growing array containing either the strings
-      or the information needed to generate them
-
-So basically:
-
-1. re-do the parse twice for each element
-2. risk having to re-write the entire buffer each time we run out of room
-3. track a growing array of strings
-
-Probably re-do the parse twice seems like the least worst of the two options.
-
-One way that we can potentially mitigate the cost of this is with a linked list,
-but that requires repeated allocations for each element.
 
 ## Tabs
 

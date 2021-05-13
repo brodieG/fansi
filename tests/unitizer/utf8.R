@@ -286,9 +286,15 @@ unitizer_sect("nchar", {
 
   # _sgr
 
-  esc.4 <- c(sprintf("\033[31m%s\thello", w1), NA, hello.illegal)
+  esc.4 <- c(sprintf("\033[31m%shello", w1), NA, hello.illegal)
   nchar_sgr(esc.4, type='width', keepNA=FALSE, warn=FALSE, allowNA=TRUE)
   nzchar_sgr(esc.4, keepNA=FALSE, warn=FALSE)
+
+  # _sgr does not strip C0; note R behavior on width of C0-C1
+  # fluctuating around R4.1 transition so can't test directly.
+
+  nchar_sgr("\033[31m\thello", type='width') >=
+    nchar_ctl("\033[31m\thello", type='width')
 })
 unitizer_sect("unhandled", {
   # a bad utf8 string and other bad stuff
