@@ -238,9 +238,8 @@ unitizer_sect("Corner cases", {
   substr_ctl(b.t.c, 4, 4)
 
   substr2_ctl(b.t.c, 0, 0, type='width')
-  ## Commented out due to bug introduced by r79799 in r-devel
-  # substr2_ctl(b.t.c, 0, 2, type='width')
-  # substr2_ctl(b.t.c, 1, 4, type='width')
+  substr2_ctl(b.t.c, 0, 2, type='width')
+  substr2_ctl(b.t.c, 1, 4, type='width')
   substr2_ctl(b.t.c, 0, 5, type='width')
   substr2_ctl(b.t.c, 5, 5, type='width')
 })
