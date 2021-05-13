@@ -2,8 +2,9 @@
 
 ## v0.4.3
 
+* Adjust for changes to `nchar(..., type='width')` for C0-C1 control characters
+  in R 4.1.
 * Restore tests bypassed in 0.4.2.
-* Adjust for changes to `nchar(..., type='width')` for controls.
 
 ## v0.4.2
 
