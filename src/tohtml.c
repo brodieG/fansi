@@ -26,7 +26,7 @@
  * for html translation
  */
 struct FANSI_css {const char * css; int len;};
-
+// .len leftover from when we used pre-computed widths
 static const struct FANSI_css css_style[9] = {
   // Code 1: bold
   {.css="font-weight: bold;", .len=18},
@@ -52,17 +52,21 @@ static const struct FANSI_css css_style[9] = {
  *
  * <https://en.wikipedia.org/wiki/ANSI_escape_code>
  *
- * @param color an integer expected to be between 0 and 9
+ * IMPORTANT: this advances what *buff points to to the NULL terminator at the
+ * end of what is written to so string is ready to append to.
+ *
+ * @param color an integer expected to be in 0:9, 90:97, 100:107.
  * @param color_extra a pointer to a 4 long integer array as you would get in
  *   struct FANSI_state.color_extra
- * @param buff must be pre-allocated to be able to hold the color in format
- *   #FFFFFF including the null terminator (so at least 8 bytes)
+ * @param **buff a pointer to a pre-allocated buffer allocated to be able to hold
+ *   the color in format #FFFFFF including the null terminator (so at least 8
+ *   bytes). *buff will be written to.
  * @return how many bytes were written, guaranteed to be 7 bytes, does not
  *   include the NULL terminator that is also written just in case.
  */
 
 static int color_to_html(
-  int color, int * color_extra, char * buff
+  int color, int * color_extra, char ** buff
 ) {
   // CAREFUL: DON'T WRITE MORE THAN 7 BYTES + NULL TERMINATOR
 
@@ -85,7 +89,7 @@ static int color_to_html(
     "555555", "FF5555", "55FF55", "FFFF55",
     "5555FF", "FF55FF", "55FFFF", "FFFFFF"
   };
-  char * buff_track = buff;
+  char * buff_track = *buff;
 
   if(color == 9) {
     error(
@@ -157,10 +161,61 @@ static int color_to_html(
     error("Internal Error: invalid color code %d", color); // nocov
   }
   *buff_track = 0;
-  return (int) (buff_track - buff);
+  int dist = (int) (buff_track - *buff);
+  if(dist != 7) error("Internal Error: unexpected byte count for color.");
+  buff = &buff_track;
+  return dist;
 }
+/*
+ * If *buff is not NULL, copy tmp into it and advance, else measure tmp
+ * and advance length
+ */
+static int copy_or_measure(char ** buff, const char * tmp) {
+  int len = strlen(tmp);
+  if(*buff) {
+    strcpy(*buff, tmp);
+    *buff += len;
+  }
+  return len;
+}
+/*
+ * Bunch of strlens here could be avoided as we know the lengths, hope compiler
+ * is smart enough, and if not, well, no big deal.
+ */
+static int sprintf_or_measure(
+  char ** buff,
+  const char* class_prefix, const char * type, int color, const char * pad
+) {
+  int len = 0;
+  int col_orig = color;
+  if(color >= 100) color -= 92;
+  else if (color >= 90) color -= 82;
+  if(color < 0 || color > 15)
+    error("Internal Error: invalid color for class color %d.", col_orig);
 
-static int state_as_html(struct FANSI_state state, int first, char * buff) {
+  if(buff) {
+    int bytes = sprintf(*buff, "%s-%s-%02d%s", class_prefix, type, color, pad);
+    if(bytes < 0)
+      error("Internal Error: sprintf failed copying color class.");
+    *buff += bytes;
+    len += bytes;
+  } else {
+    len += strlen(class_prefix) + 1 + strlen(type) + 1 + 2 + strlen(pad);
+  }
+  return len;
+}
+/*
+ * Compute and write the size of each state.
+ *
+ * This used to be two distinct functions, but the risk of getting out of sync
+ * was too high so we merged them into one.
+ *
+ * @param buff the buffer to write to, if it is null computes size instead of
+ *   writing.
+ */
+static int state_size_and_write_as_html(
+  struct FANSI_state state, int first, char * buff, const char * class_prefix
+) {
   /****************************************************\
   | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_csi_write  |
   | although right now ignoring rare escapes in html   |
@@ -168,91 +223,81 @@ static int state_as_html(struct FANSI_state state, int first, char * buff) {
 
   // Styles
   const char * buff_start = buff;
+  int len = 0;
   if(!FANSI_state_has_style_basic(state)) {
     if(first)
       // nocov start
       error("Internal Error: no state in first span; contact maintainer.");
       // nocov end
     if(state.string[state.pos_byte]) {
-      memcpy(buff, "</span><span>", 13);
-      buff += 13;
+      const char * tmp = "</span><span>";
+      len += copy_or_measure(&buff, tmp);
     }
   } else {
-    if(first) {
-      memcpy(buff, "<span style='", 13);
-      buff += 13;
-    } else {
-      memcpy(buff, "</span><span style='", 20);
-      buff += 20;
-    }
-    // Colors color: #FFFFFF; background-color: #FFFFFF;
-
     int invert = state.style & (1 << 7);
     int color = invert ? state.bg_color : state.color;
     int * color_extra = invert ? state.bg_color_extra : state.color_extra;
     int bg_color = invert ? state.color : state.bg_color;
     int * bg_color_extra = invert ? state.color_extra : state.bg_color_extra;
+    int class_color =
+      class_prefix && ((color >= 0 && color < 8) || color > 9);
+    int class_bgcol =
+      class_prefix && ((bg_color >= 0 && bg_color < 8) || bg_color > 9);
 
-    if(color >= 0) {
-      memcpy(buff, "color: ", 7);
-      buff += 7;
-      buff += color_to_html(color, color_extra, buff);
-      *(buff++) = ';';
-    }
-    if(bg_color >= 0) {
-      memcpy(buff, "background-color: ", 18);
-      buff += 18;
-      buff += color_to_html(bg_color, bg_color_extra, buff);
-      *(buff++) = ';';
-    }
-    // Styles (need to go after color for transparent to work)
+    // Because of invert we could end up with 9x and 10x flipped.  Code checks
+    // Elsewhere that color should only be 90:97 or 100:107 if greater than 9.
+    // These should end up being in 8-15.
 
-    for(int i = 1; i < 10; ++i) {
-      if(state.style & (1 << i)) {
-        memcpy(buff, css_style[i - 1].css, css_style[i - 1].len);
-        buff += css_style[i - 1].len;
+    const char * tmp;
+    if(first) tmp = "<span"; else tmp = "</span><span";
+    len += copy_or_measure(&buff, tmp);
+
+    // Class based colors; remap brights to 8-15
+    // e.g. " class='fansi-color-06 fansi-bgcolor-04'"
+    if(class_prefix) {
+      tmp = " class='";
+      len += copy_or_measure(&buff, tmp);
+
+      if(class_color)
+        len += sprintf_or_measure(&buff, class_prefix, "color", color, " ");
+      if(class_bgcol)
+        len += sprintf_or_measure(&buff, class_prefix, "bgcol", bg_color, "");
+      if(buff) *(buff++) = '\'';
+      ++len;
+    }
+    // inline style and/or colors
+    if(
+      state.style || (!class_prefix && (color >= 0 || bg_color >= 0))
+    ) {
+      len += copy_or_measure(&buff, " style='");
+      if(color >= 0) {
+        len += copy_or_measure(&buff, "color: ");
+        len += color_to_html(color, color_extra, &buff);
+        *(buff++) = ';';
+        ++len;
       }
+      if(bg_color >= 0) {
+        len += copy_or_measure(&buff,  "background-color: ");
+        len += color_to_html(bg_color, bg_color_extra, &buff);
+        *(buff++) = ';';
+        ++ len;
+      }
+      // Styles (need to go after color for transparent to work)
+
+      for(int i = 1; i < 10; ++i)
+        if(state.style & (1 << i))
+          len += copy_or_measure(&buff, css_style[i - 1].css);
     }
-    *(buff++) = '\'';
-    *(buff++) = '>';
+    copy_or_measure(&buff, "'>");
+  }
+  if(buff) {
     *buff = 0;
+    if((int)(buff - buff_start) != len)
+      error("Internal Error: buffer length mismatch in html generation.");
   }
-  return (int)(buff - buff_start);
+  return len;
 }
-/*
- * Compute size of each state
- */
-static int state_size_as_html(struct FANSI_state state, int first) {
-  int size = 0;
-  if(!FANSI_state_has_style_basic(state)) {
-    if(first)
-      // nocov start
-      error("Internal Error: no state in first span; contact maintainer.");
-      // nocov end
 
-    // Only need to re-open tag if not at end of string
-    if(state.string[state.pos_byte]) {
-      size = 13;  // </span><span>
-    }
-  } else {
-    if(first) {
-      size = 15;  // <span style="">
-    } else {
-      size = 22;  // </span><span style="">
-    }
-    // Styles
-
-    for(int i = 1; i < 10; ++i) {
-      if(state.style & (1 << i)) size += css_style[i - 1].len;
-    }
-    // Colors color: #FFFFFF; background-color: #FFFFFF;
-
-    int invert = state.style & (1 << 7);
-    if(state.color >= 0) size += invert ? 26 : 15;
-    if(state.bg_color >= 0) size += invert ? 15 : 26;
-  }
-  return size;
-}
 /*
  * Helper functions to process size and write the HTML split off
  * for clarity
@@ -260,13 +305,14 @@ static int state_size_as_html(struct FANSI_state state, int first) {
 
 static int html_compute_size(
   struct FANSI_state state, int bytes_extra, int bytes_esc_start, int first,
-  R_xlen_t i
+  R_xlen_t i, const char * class_prefix
 ) {
   // bytes_esc cannot overflow int because the input is supposed to be an
   // R sourced string
 
   int bytes_esc = state.pos_byte - bytes_esc_start;
-  int bytes_html = state_size_as_html(state, first);
+  int bytes_html =
+    state_size_and_write_as_html(state, first, NULL, class_prefix);
   int bytes_net = bytes_html - bytes_esc;
 
   if(bytes_net >= 0) {
@@ -343,14 +389,20 @@ static size_t html_check_overflow(
   bytes_final = (size_t) bytes_init + bytes_extra + span_extra + 1;
   return bytes_final;
 }
-SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
+SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP class_pre) {
   if(TYPEOF(x) != STRSXP)
     error("Internal Error: `x` must be a character vector");  // nocov
+  if(TYPEOF(class_pre) != STRSXP)
+    error("Internal Error: `class_pre` must be a character vector");  // nocov
+  if(XLENGTH(class_pre) != 1)
+    error("Internal Error: `class_pre` must be a scalar char");  // nocov
 
   R_xlen_t x_len = XLENGTH(x);
   struct FANSI_buff buff = {.len=0};
   struct FANSI_state state, state_prev, state_init;
   state = state_prev = state_init = FANSI_state_init("", warn, term_cap);
+  const char * class_prefix = CHAR(STRING_ELT(class_pre, 0));
+  if(!strlen(class_prefix)) class_prefix = NULL;
 
   SEXP res = x;
   // Reserve spot on protection stack
@@ -393,7 +445,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
 
     if(FANSI_state_has_style_basic(state)) {
       bytes_extra = html_compute_size(
-        state, bytes_extra, state.pos_byte, 0, i
+        state, bytes_extra, state.pos_byte, 0, i, class_prefix
       );
       has_esc = any_esc = 1;
     }
@@ -416,8 +468,9 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
       int esc_start = state.pos_byte;
       state = FANSI_read_next(state);
       if(FANSI_state_comp_basic(state, state_prev)) {
-        bytes_extra =
-          html_compute_size(state, bytes_extra, esc_start, !has_esc, i);
+        bytes_extra = html_compute_size(
+          state, bytes_extra, esc_start, !has_esc, i, class_prefix
+        );
         if(!has_esc) has_esc = 1;
       }
       state_prev = state;
@@ -449,7 +502,9 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
       // Handle state left-over from previous char elem
 
       if(FANSI_state_has_style_basic(state)) {
-        int bytes_html = state_as_html(state, first_esc, buff_track);
+        int bytes_html = state_size_and_write_as_html(
+          state, first_esc, buff_track, class_prefix
+        );
         buff_track += bytes_html;
         first_esc = 0;
       }
@@ -477,7 +532,9 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap) {
         // If we have a change from the previous tag, write html/css
 
         if(FANSI_state_comp_basic(state, state_prev)) {
-          int bytes_html = state_as_html(state, first_esc, buff_track);
+          int bytes_html = state_size_and_write_as_html(
+            state, first_esc, buff_track, class_prefix
+          );
           // Rprintf("write html: '%.*s'\n", bytes_html, buff_track);
           buff_track += bytes_html;
           if(first_esc) first_esc = 0;
@@ -559,9 +616,11 @@ SEXP FANSI_color_to_html_ext(SEXP x) {
   SEXP res = PROTECT(allocVector(STRSXP, len / 5));
 
   for(R_xlen_t i = 0; i < len; i += 5) {
-    int size = color_to_html(x_int[i], x_int + (i + 1), buff.buff);
+    char * buff_orig = buff.buff;
+    // RECALL: color_to_html moves the buff.buff pointers
+    int size = color_to_html(x_int[i], x_int + (i + 1), &(buff.buff));
     if(size < 1) error("Internal Error: size should be at least one");
-    SEXP chrsxp = PROTECT(mkCharLenCE(buff.buff, size, CE_BYTES));
+    SEXP chrsxp = PROTECT(mkCharLenCE(buff_orig, size, CE_BYTES));
     SET_STRING_ELT(res, i / 5, chrsxp);
     UNPROTECT(1);
   }

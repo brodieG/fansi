@@ -19,6 +19,15 @@
 #' Only the colors, background-colors, and basic styles (CSI SGR codes 1-9) are
 #' translated.  Others are dropped silently.
 #'
+#' If `class.prefix` is specified as a string, then HTML output affected by
+#' color or background color CSI SGR sequences  will be tagged respectively with
+#' classes of form "<prefix>-color-##" and "<prefix>-bgcol-##".  "<prefix>" is
+#' the value of `class.prefix` and "##" is a two digit number in 00-15, where
+#' 00-07 are the standard colors (i.e. CSI SGR codes 30-37 or 40-47), and 08-15
+#' are the bright colors (i.e. CSI SGR codes 90-97 or 100-107).  Colors
+#' specified either by the 256 or true color schemes (e.g. those starting with
+#' code 38 or 48) will always be specified as inline styles.
+#'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @export
 #' @inheritParams substr_ctl
@@ -26,14 +35,20 @@
 #'   interpreted, particularly if you are getting unexpected results,
 #'   [set_knit_hooks()] for how to use ANSI CSI styled text with knitr and HTML
 #'   output.
+#' @param fansi.class.prefix character(1L) specify a non empty string to cause
+#'   colors and background-colors to be specified via classes instead of inline
+#'   styles (see details).
 #' @return a character vector with all escape sequences removed and any basic
 #'   ANSI CSI SGR escape sequences applied via SPAN html objects with
-#'   inline css styles.
+#'   inline css styles (see details).
 #' @examples
 #' sgr_to_html("hello\033[31;42;1mworld\033[m")
+#' sgr_to_html("hello\033[31;42;1mworld\033[m", class.prefix='fansi')
 
 sgr_to_html <- function(
-  x, warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+  x, warn=getOption('fansi.warn'),
+  term.cap=getOption('fansi.term.cap'),
+  class.prefix=getOption('fansi.class.prefix', '')
 ) {
   if(!is.character(x)) x <- as.character(x)
   if(!is.logical(warn)) warn <- as.logical(warn)
@@ -47,7 +62,12 @@ sgr_to_html <- function(
       "Argument `term.cap` may only contain values in ",
       deparse(VALID.TERM.CAP)
     )
+  if(
+    !is.character(class.prefix) || length(class.prefix) != 1L ||
+    is.na(class.prefix)
+  )
+    stop("Argument `class.prefix` must be scalar character and not NA.")
 
-  .Call(FANSI_esc_to_html, enc2utf8(x), warn, term.cap.int)
+  .Call(FANSI_esc_to_html, enc2utf8(x), warn, term.cap.int, class.prefix)
 }
 

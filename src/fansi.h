@@ -326,7 +326,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP vec, SEXP tab_stops, SEXP warn, SEXP term_cap, SEXP ctl
   );
   SEXP FANSI_color_to_html_ext(SEXP x);
-  SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap);
+  SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP class_pre);
   SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap);
 
   SEXP FANSI_nchar(
