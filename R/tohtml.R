@@ -19,14 +19,8 @@
 #' Only the colors, background-colors, and basic styles (CSI SGR codes 1-9) are
 #' translated.  Others are dropped silently.
 #'
-#' If `class.prefix` is specified as a string, then HTML output affected by
-#' color or background color CSI SGR sequences  will be tagged respectively with
-#' classes of form "<prefix>-color-##" and "<prefix>-bgcol-##".  "<prefix>" is
-#' the value of `class.prefix` and "##" is a two digit number in 00-15, where
-#' 00-07 are the standard colors (i.e. CSI SGR codes 30-37 or 40-47), and 08-15
-#' are the bright colors (i.e. CSI SGR codes 90-97 or 100-107).  Colors
-#' specified either by the 256 or true color schemes (e.g. those starting with
-#' code 38 or 48) will always be specified as inline styles.
+#' `make_styles` generates a style sheet to match to classes based on the
+#' default 8 bit color mapping.
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @export
@@ -35,11 +29,11 @@
 #'   interpreted, particularly if you are getting unexpected results,
 #'   [set_knit_hooks()] for how to use ANSI CSI styled text with knitr and HTML
 #'   output.
-#' @param use.classes FALSE (default), TRUE, or character vector of either 16,
+#' @param classes FALSE (default), TRUE, or character vector of either 16,
 #'   32, or 512 class names.  Character strings may only contain ASCII
 #'   characters corresponding to letters, numbers, the hyphen, or the
 #'   underscore.  It is the user's responsibility to provide values that are
-#'   legal class names.
+#'   legal class names.  `make_styles` only supports character vectors.
 #'
 #'   * FALSE: All colors rendered as inline CSS styles.
 #'   * TRUE: Each of the 256 basic colors is mapped to a class in form
@@ -131,6 +125,39 @@ sgr_to_html <- function(
 
 
   .Call(FANSI_esc_to_html, enc2utf8(x), warn, term.cap.int, classes)
+}
+
+#' @rdname sgr_to_html
+#' @export
+
+make_styles <- function(classes) {
+  if(!is.character(classes)) stop("Argument `classes` is not character.")
+  classes <- check_classes(classes)
+
+  colors <- rep(seq_len(length(classes) / 2) - 1L, each=2)
+  colors.hex <- esc_color_code_to_html(rbind(8L, 5L, colors, 0L, 0L))
+  paste0(
+    ".", classes,
+    " {", c("color", "background-color"), ": ", colors.hex, ";}"
+  )
+}
+
+check_classes <- function(classes) {
+  class.len <- length(classes)
+  if(!class.len %in% c(16L, 32L, 512L)) {
+    stop(
+      "Argument `classes` must be length 16, 32, or 512 if it is a ",
+      "character vector (is ", class.len, ")."
+    )
+  }
+  if(anyNA(classes))
+    stop("Argument `classes` contains NA values.")
+  if(!all(grepl("^[0-9a-zA-Z_\\-]*$", classes)))
+    stop(
+      "Argument `classes` contains charcters other than ASCII letters, ",
+      "numbers, the hyphen, and underscore."
+    )
+  classes
 }
 
 FANSI.CLASSES <- do.call(

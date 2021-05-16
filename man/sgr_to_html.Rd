@@ -2,13 +2,17 @@
 % Please edit documentation in R/tohtml.R
 \name{sgr_to_html}
 \alias{sgr_to_html}
+\alias{make_styles}
 \title{Convert ANSI CSI SGR Escape Sequence to HTML Equivalents}
 \usage{
 sgr_to_html(
   x,
   warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap")
+  term.cap = getOption("fansi.term.cap"),
+  classes = FALSE
 )
+
+make_styles(classes)
 }
 \arguments{
 \item{x}{a character vector or object that can be coerced to character.}
@@ -24,21 +28,94 @@ starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
 "38;2" or "48;2"). Changing this parameter changes how \code{fansi} interprets
 escape sequences, so you should ensure that it matches your terminal
 capabilities. See \link{term_cap_test} for details.}
+
+\item{classes}{FALSE (default), TRUE, or character vector of either 16,
+32, or 512 class names.  Character strings may only contain ASCII
+characters corresponding to letters, numbers, the hyphen, or the
+underscore.  It is the user's responsibility to provide values that are
+legal class names.  \code{make_styles} only supports character vectors.
+\itemize{
+\item FALSE: All colors rendered as inline CSS styles.
+\item TRUE: Each of the 256 basic colors is mapped to a class in form
+"fansi-color-###" (or "fansi-bgcol-###" for background colors)
+where "###" is a zero padded three digit number in 0:255.  Basic colors
+specified with SGR codes 30-37 (or 40-47) map to 000:007, and bright ones
+specified with 90-97 (or 100-107) map to 008:015.  8 bit colors specified
+with SGR codes 38;5;### or 48;5;### map directly based on the value of
+"###".  Implicitly, this assumes that the 8 bit colors in 0:7 match the
+basic colors, and those in 8:15 the bright ones.  24 bit colors specified
+with 38;2;#;#;# or 48;2;#;#;# do not map to classes and are rendered as
+inline styles instead.
+\item character(16): The eight basic colors are mapped to the string values in
+the vector, all others are rendered as inline CSS styles.  Basic colors
+are mapped irrespective of whether they are encoded as the basic colors
+or as 8 bit colors.  Sixteen elements are needed because there must be
+eight classes for foreground colors, and 8 classes for background colors.
+Classes should be ordered in ascending order of color number, with
+foreground and background classes alternating starting with foreground
+(see examples).
+\item character(32): Like character(16), except the basic and bright colors are
+mapped.
+\item character(256): Like character(16), except all 8 bit colors are mapped.
+}}
 }
 \value{
-a character vector with all escape sequences removed and any basic
-ANSI CSI SGR escape sequences applied via SPAN html objects with
-inline css styles.
+for \code{sgr_to_html}, a character vector with all escape sequences
+removed and any basic ANSI CSI SGR escape sequences applied via SPAN html
+objects with inline css styles (see details), for \code{make_styles} a
+character vector that can be used a style sheet.
 }
 \description{
 Only the colors, background-colors, and basic styles (CSI SGR codes 1-9) are
 translated.  Others are dropped silently.
 }
+\details{
+\code{make_styles} generates a style sheet to match to classes based on the
+default 8 bit color mapping.
+}
 \note{
 Non-ASCII strings are converted to and returned in UTF-8 encoding.
+
+For legacy reasons the colors you get from the basic and bright color
+are not exactly the same as the first 16 colors of the 8 bit colors.  It is
+not possible to duplicated this (mis)behavior with \code{classes} as the
+basic/bright colors will map to the same classes as the first 16 colors of
+the 8-bit colors.
 }
 \examples{
 sgr_to_html("hello\033[31;42;1mworld\033[m")
+sgr_to_html("hello\033[31;42;1mworld\033[m", classes=TRUE)
+
+## Generate some class names for basic colors
+classes <- expand.grid(
+  "myclass",
+  c("fg", "bg"),
+  c("black", "red", "green", "yellow", "blue", "magenta", "cyan", "white")
+)
+classes  # order is important!
+sgr_to_html(
+  "\033[91mhello\033[31;42;1mworld\033[m",
+  classes=do.call(paste, c(classes, sep="-"))
+)
+## Create a whole web page with a style sheet
+
+f <- tempfile()
+writeLines(
+  c(
+    "<html><head><style>",
+    make_styles(classes),
+    "</style>",
+    "<body>",
+    sgr_to_html(
+      "\033[91mhello\033[31;42;1mworld\033[m",
+      classes=do.call(paste, c(classes, sep="-"))
+    ),
+    "</body></html>"
+  ),
+  file=f
+)
+\dontrun{browseUrl(f))}
+unlink(f)j
 }
 \seealso{
 \link{fansi} for details on how \emph{Control Sequences} are
