@@ -163,7 +163,7 @@ static int color_to_html(
   *buff_track = 0;
   int dist = (int) (buff_track - *buff);
   if(dist != 7) error("Internal Error: unexpected byte count for color.");
-  buff = &buff_track;
+  *buff = buff_track;
   return dist;
 }
 /*
@@ -210,8 +210,8 @@ static int sprintf_or_measure(
  * This used to be two distinct functions, but the risk of getting out of sync
  * was too high so we merged them into one.
  *
- * @param buff the buffer to write to, if it is null computes size instead of
- *   writing.
+ * @param buff the buffer to write to, if it is null only computes size instead
+ *   also of writing.
  */
 static int state_size_and_write_as_html(
   struct FANSI_state state, int first, char * buff, const char * class_prefix
@@ -224,7 +224,6 @@ static int state_size_and_write_as_html(
   // Styles
   const char * buff_start = buff;
   int len = 0;
-  Rprintf("start size\n");
   if(!FANSI_state_has_style_basic(state)) {
     if(first)
       // nocov start
@@ -249,20 +248,16 @@ static int state_size_and_write_as_html(
     // Elsewhere that color should only be 90:97 or 100:107 if greater than 9.
     // These should end up being in 8-15.
 
-    Rprintf("init span\n");
     const char * tmp;
     if(first) tmp = "<span"; else tmp = "</span><span";
     len += copy_or_measure(&buff, tmp);
 
-    // Class based colors; remap brights to 8-15
-    // e.g. " class='fansi-color-06 fansi-bgcolor-04'"
+    // Class based colors e.g. " class='fansi-color-06 fansi-bgcolor-04'"
+    // Brights remapped to 8-15
 
-    Rprintf("class section\n");
     if(class_prefix) {
       tmp = " class='";
-      Rprintf("  measure\n");
       len += copy_or_measure(&buff, tmp);
-      Rprintf("  sprintf\n");
 
       if(class_color)
         len += sprintf_or_measure(&buff, class_prefix, "color", color, " ");
@@ -272,40 +267,38 @@ static int state_size_and_write_as_html(
       ++len;
     }
     // inline style and/or colors
-    Rprintf("style section, prefix: %d\n", class_prefix == NULL);
     if(
       state.style || (!class_prefix && (color >= 0 || bg_color >= 0))
     ) {
-      Rprintf("  open tag\n");
       len += copy_or_measure(&buff, " style='");
-      if(color >= 0) {
-        Rprintf("  color tag\n");
-        len += copy_or_measure(&buff, "color: ");
-        Rprintf("  actual color\n");
-        if(buff) len += color_to_html(color, color_extra, &buff);
-        else len += 8;
-        Rprintf("  actual color\n");
-        len += copy_or_measure(&buff, ";");
-      }
-      if(bg_color >= 0) {
-        len += copy_or_measure(&buff,  "background-color: ");
-        if(buff) len += color_to_html(bg_color, bg_color_extra, &buff);
-        else len +=8;
-        len += copy_or_measure(&buff, ";");
-      }
+      if(!class_prefix) {
+        if(color >= 0) {
+          len += copy_or_measure(&buff, "color: ");
+          if(buff) len += color_to_html(color, color_extra, &buff);
+          else len += 8;
+          len += copy_or_measure(&buff, ";");
+        }
+        if(bg_color >= 0) {
+          len += copy_or_measure(&buff,  "background-color: ");
+          if(buff) len += color_to_html(bg_color, bg_color_extra, &buff);
+          else len +=8;
+          len += copy_or_measure(&buff, ";");
+      } }
       // Styles (need to go after color for transparent to work)
 
       for(int i = 1; i < 10; ++i)
         if(state.style & (1 << i))
           len += copy_or_measure(&buff, css_style[i - 1].css);
     }
-    copy_or_measure(&buff, "'>");
+    len += copy_or_measure(&buff, "'>");
   }
-  Rprintf("done\n");
   if(buff) {
     *buff = 0;
     if((int)(buff - buff_start) != len)
-      error("Internal Error: buffer length mismatch in html generation.");
+      error(
+        "Internal Error: buffer length mismatch in html generation (%d vs %d).",
+        len, (int)(buff - buff_start)
+      );
   }
   return len;
 }
@@ -413,8 +406,8 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP class_pre) {
   struct FANSI_buff buff = {.len=0};
   struct FANSI_state state, state_prev, state_init;
   state = state_prev = state_init = FANSI_state_init("", warn, term_cap);
-  const char * class_prefix = CHAR(STRING_ELT(class_pre, 0));
-  if(!strlen(class_prefix)) class_prefix = NULL;
+  SEXP class_chrsxp = STRING_ELT(class_pre, 0);
+  const char * class_prefix = LENGTH(class_chrsxp) ?  CHAR(class_chrsxp) : NULL;
 
   SEXP res = x;
   // Reserve spot on protection stack
@@ -453,7 +446,6 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP class_pre) {
 
     // It is possible for a state to be left over from prior string.
 
-    Rprintf("Initial.\n");
     if(FANSI_state_has_style_basic(state)) {
       bytes_extra = html_compute_size(
         state, bytes_extra, state.pos_byte, 0, i, class_prefix
@@ -477,7 +469,6 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP class_pre) {
       // them
 
       int esc_start = state.pos_byte;
-      Rprintf("Next.\n");
       state = FANSI_read_next(state);
       if(FANSI_state_comp_basic(state, state_prev)) {
         bytes_extra = html_compute_size(
@@ -488,7 +479,6 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP class_pre) {
       state_prev = state;
       ++string;
     }
-    Rprintf("Total extra bytes %d\n", bytes_extra);
     if(any_esc) {
       // we will use an extra <span></span> to simplify logic
       int span_end = has_esc * 7;
@@ -500,19 +490,15 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP class_pre) {
 
       // Allocate buffer and do second pass
 
-      FANSI_size_buff(&buff, bytes_final);
+      FANSI_size_buff(&buff, bytes_final + 1);
       string = string_start;
       state_start.warn = state.warn;
       state = state_start;
-
-      // Rprintf("string is '%s'\n", state.string);
 
       int first_esc = 1;
       char * buff_track = buff.buff;
 
       // Handle state left-over from previous char elem
-
-      Rprintf("Write initial.\n");
       if(FANSI_state_has_style_basic(state)) {
         int bytes_html = state_size_and_write_as_html(
           state, first_esc, buff_track, class_prefix
@@ -533,22 +519,17 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP class_pre) {
 
         // The text since the last ESC
 
-        // Rprintf("prev_byte: %d\n", state_prev.pos_byte);
         const char * string_last = string_start + state_prev.pos_byte;
         int bytes_prev = string - string_last;
-        // Rprintf("bytes prev: %d\n", bytes_prev);
-        // Rprintf("write prev: '%.*s'\n", bytes_prev, string_last);
         memcpy(buff_track, string_last, bytes_prev);
         buff_track += bytes_prev;
 
         // If we have a change from the previous tag, write html/css
 
-        Rprintf("Write next.\n");
         if(FANSI_state_comp_basic(state, state_prev)) {
           int bytes_html = state_size_and_write_as_html(
             state, first_esc, buff_track, class_prefix
           );
-          // Rprintf("write html: '%.*s'\n", bytes_html, buff_track);
           buff_track += bytes_html;
           if(first_esc) first_esc = 0;
         }
@@ -559,8 +540,6 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP class_pre) {
 
       const char * string_last = state_prev.string + state_prev.pos_byte;
       int bytes_stub = bytes_init - (string_last - string_start);
-      // Rprintf("last: '%s'\n", string_last);
-      // Rprintf("stub %d string %d\n", bytes_stub, (string_last - string_start));
 
       memcpy(buff_track, string_last, bytes_stub);
       buff_track += bytes_stub;
@@ -585,7 +564,6 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP class_pre) {
       *(buff_track) = '0';  // not strictly needed
 
       // Now create the charsxp what encoding to use.
-
       if(buff_track - buff.buff > FANSI_int_max)
         // nocov start
         error(
