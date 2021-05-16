@@ -77,14 +77,16 @@ static int color_to_8bit(int color, int* color_extra) {
  * 8 bit color codes in 0:255, or NULL if not.
  *
  * CAUTION: test result before dereferencing: could be a pointer to NULL.
+ *
+ * @param whether to return foreground or background styles
  */
 
 static const char * get_color_class(
-  int color, int* color_extra, SEXP color_classes
+  int color, int* color_extra, SEXP color_classes, int bg
 ) {
   int col8bit = color_to_8bit(color, color_extra);
-  if(col8bit >= 0 && XLENGTH(color_classes) > (R_xlen_t) col8bit)
-    return CHAR(STRING_ELT(color_classes, col8bit));
+  if(col8bit >= 0 && XLENGTH(color_classes) / 2 > (R_xlen_t) col8bit)
+    return CHAR(STRING_ELT(color_classes, col8bit * 2 + bg));
   else return NULL;
 }
 /*
@@ -272,9 +274,9 @@ static int state_size_and_write_as_html(
 
     // Use provided classes instead of inline styles?
     const char * color_class =
-      get_color_class(color, color_extra, color_classes);
+      get_color_class(color, color_extra, color_classes, 0);
     const char * bgcol_class =
-      get_color_class(bg_color, bg_color_extra, color_classes);
+      get_color_class(bg_color, bg_color_extra, color_classes, 1);
 
     const char * tmp;
     if(first) tmp = "<span"; else tmp = "</span><span";

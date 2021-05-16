@@ -60,15 +60,16 @@
 #'
 #' @note For legacy reasons the colors you get from the basic and bright color
 #'   are not exactly the same as the first 16 colors of the 8 bit colors.  It is
-#'   not possible to duplicated this (mis)behavior with `use.classes` as the
+#'   not possible to duplicated this (mis)behavior with `classes` as the
 #'   basic/bright colors will map to the same classes as the first 16 colors of
 #'   the 8-bit colors.
-#' @return a character vector with all escape sequences removed and any basic
-#'   ANSI CSI SGR escape sequences applied via SPAN html objects with
-#'   inline css styles (see details).
+#' @return for `sgr_to_html`, a character vector with all escape sequences
+#'   removed and any basic ANSI CSI SGR escape sequences applied via SPAN html
+#'   objects with inline css styles (see details), for `make_styles` a
+#'   character vector that can be used a style sheet.
 #' @examples
 #' sgr_to_html("hello\033[31;42;1mworld\033[m")
-#' sgr_to_html("hello\033[31;42;1mworld\033[m", use.classes=TRUE)
+#' sgr_to_html("hello\033[31;42;1mworld\033[m", classes=TRUE)
 #'
 #' ## Generate some class names for basic colors
 #' classes <- expand.grid(
@@ -77,15 +78,31 @@
 #'   c("black", "red", "green", "yellow", "blue", "magenta", "cyan", "white")
 #' )
 #' classes  # order is important!
-#' sgr_to_html(
-#'   "\033[91mhello\033[31;42;1mworld\033[m",
-#'   use.classes=do.call(paste, c(classes, sep="-"))
+#' classes <- do.call(paste, c(classes, sep="-"))
+#' html <- sgr_to_html(
+#'   "\033[94mhello\033[m \033[31;42;1mworld\033[m",
+#'   classes=classes
 #' )
+#' html
+#'
+#' ## Create a whole web page with a style sheet
+#' \dontrun{
+#' f <- tempfile()
+#' writeLines(
+#'   c(
+#'     "<html><head><style>", make_styles(classes), "</style>", 
+#'     "<body>", html, "</body></html>"
+#'   ),
+#'   con=f
+#' )
+#' browseURL(f))
+#' unlink(f)
+#' }
 
 sgr_to_html <- function(
   x, warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap'),
-  use.classes=FALSE
+  classes=FALSE
 ) {
   if(!is.character(x)) x <- as.character(x)
   if(!is.logical(warn)) warn <- as.logical(warn)
@@ -100,29 +117,14 @@ sgr_to_html <- function(
       deparse(VALID.TERM.CAP)
     )
 
-  classes <- if(isTRUE(use.classes)) {
+  classes <- if(isTRUE(classes)) {
     FANSI.CLASSES
-  } else if (identical(use.classes, FALSE)) {
+  } else if (identical(classes, FALSE)) {
     character()
-  } else if (is.character(use.classes)) {
-    class.len <- length(use.classes)
-    if(!class.len %in% c(16L, 32L, 512L)) {
-      stop(
-        "Argument `use.classes` must be length 16, 32, or 512 if it is a ",
-        "character vector (is ", class.len, ")."
-      )
-    }
-    if(anyNA(use.classes))
-      stop("Argument `use.classes` contains NA values.")
-    if(!all(grepl("^[0-9a-zA-Z_\\-]*$", use.classes)))
-      stop(
-        "Argument `use.classes` contains charcters other than ASCII letters, ",
-        "numbers, the hyphen, and underscore."
-      )
-    use.classes
+  } else if (is.character(classes)) {
+    check_classes(classes)
   } else
-    stop("Argument `use.classes` must be TRUE, FALSE, or a character vector.")
-
+    stop("Argument `classes` must be TRUE, FALSE, or a character vector.")
 
   .Call(FANSI_esc_to_html, enc2utf8(x), warn, term.cap.int, classes)
 }
