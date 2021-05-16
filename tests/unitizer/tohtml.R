@@ -138,4 +138,28 @@ unitizer_sect("issue54", {
   string2 <- c("\033[3mhello\033[24m", "world\033[23m moon")
   fansi::sgr_to_html(string2)
 
+  sgr_to_html("\033[31mhello\033[31m", use.classes=NULL)
+  sgr_to_html("\033[31mhello\033[31m", use.classes=character(7L))
+  sgr_to_html("\033[31mhello\033[31m", use.classes=NA_character_)
+  sgr_to_html("\033[31mhello\033[31m", use.classes="bad class")
+})
+
+unitizer_sect("Colors as classes (#65)", {
+  sgr_to_html("\033[96mhello\033[31;42;1mworld\033[m", use.classes=TRUE)
+
+  class.8 <-
+    do.call(paste, c(expand.grid(c("fg", "bg"), 0:7), sep="-"))
+  class.16 <-
+    do.call(paste, c(expand.grid(c("fg", "bg"), 0:15), sep="-"))
+  class.256 <-
+    do.call(paste, c(expand.grid(c("fg", "bg"), 0:255), sep="-"))
+
+  x <- c(
+    "\033[96mhe\033[107mllo\033[31;42;1mworld\033[m",
+    "\033[48;5;16;38;5;17mgood\033[7mbye\033[39;49m super \033[48;2;235;0;20mmoon\033[m"
+  )
+  sgr_to_html(x, use.classes=class.8)
+  sgr_to_html(x, use.classes=class.16)
+  sgr_to_html(x, use.classes=class.256)
+
 })

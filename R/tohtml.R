@@ -35,20 +35,63 @@
 #'   interpreted, particularly if you are getting unexpected results,
 #'   [set_knit_hooks()] for how to use ANSI CSI styled text with knitr and HTML
 #'   output.
-#' @param fansi.class.prefix character(1L) specify a non empty string to cause
-#'   colors and background-colors to be specified via classes instead of inline
-#'   styles (see details).
+#' @param use.classes FALSE (default), TRUE, or character vector of either 16,
+#'   32, or 512 class names.  Character strings may only contain ASCII
+#'   characters corresponding to letters, numbers, the hyphen, or the
+#'   underscore.  It is the user's responsibility to provide values that are
+#'   legal class names.
+#'
+#'   * FALSE: All colors rendered as inline CSS styles.
+#'   * TRUE: Each of the 256 basic colors is mapped to a class in form
+#'     "fansi-color-###" (or "fansi-bgcol-###" for background colors)
+#'     where "###" is a zero padded three digit number in 0:255.  Basic colors
+#'     specified with SGR codes 30-37 (or 40-47) map to 000:007, and bright ones
+#'     specified with 90-97 (or 100-107) map to 008:015.  8 bit colors specified
+#'     with SGR codes 38;5;### or 48;5;### map directly based on the value of
+#'     "###".  Implicitly, this assumes that the 8 bit colors in 0:7 match the
+#'     basic colors, and those in 8:15 the bright ones.  24 bit colors specified
+#'     with 38;2;#;#;# or 48;2;#;#;# do not map to classes and are rendered as
+#'     inline styles instead.
+#'   * character(16): The eight basic colors are mapped to the string values in
+#'     the vector, all others are rendered as inline CSS styles.  Basic colors
+#'     are mapped irrespective of whether they are encoded as the basic colors
+#'     or as 8 bit colors.  Sixteen elements are needed because there must be
+#'     eight classes for foreground colors, and 8 classes for background colors.
+#'     Classes should be ordered in ascending order of color number, with
+#'     foreground and background classes alternating starting with foreground
+#'     (see examples).
+#'   * character(32): Like character(16), except the basic and bright colors are
+#'     mapped.
+#'   * character(256): Like character(16), except all 8 bit colors are mapped.
+#'
+#' @note For legacy reasons the colors you get from the basic and bright color
+#'   are not exactly the same as the first 16 colors of the 8 bit colors.  It is
+#'   not possible to duplicated this (mis)behavior with `use.classes` as the
+#'   basic/bright colors will map to the same classes as the first 16 colors of
+#'   the 8-bit colors.
 #' @return a character vector with all escape sequences removed and any basic
 #'   ANSI CSI SGR escape sequences applied via SPAN html objects with
 #'   inline css styles (see details).
 #' @examples
 #' sgr_to_html("hello\033[31;42;1mworld\033[m")
-#' sgr_to_html("hello\033[31;42;1mworld\033[m", class.prefix='fansi')
+#' sgr_to_html("hello\033[31;42;1mworld\033[m", use.classes=TRUE)
+#'
+#' ## Generate some class names for basic colors
+#' classes <- expand.grid(
+#'   "myclass",
+#'   c("fg", "bg"),
+#'   c("black", "red", "green", "yellow", "blue", "magenta", "cyan", "white")
+#' )
+#' classes  # order is important!
+#' sgr_to_html(
+#'   "\033[91mhello\033[31;42;1mworld\033[m",
+#'   use.classes=do.call(paste, c(classes, sep="-"))
+#' )
 
 sgr_to_html <- function(
   x, warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap'),
-  class.prefix=getOption('fansi.class.prefix', '')
+  use.classes=FALSE
 ) {
   if(!is.character(x)) x <- as.character(x)
   if(!is.logical(warn)) warn <- as.logical(warn)
@@ -62,12 +105,37 @@ sgr_to_html <- function(
       "Argument `term.cap` may only contain values in ",
       deparse(VALID.TERM.CAP)
     )
-  if(
-    !is.character(class.prefix) || length(class.prefix) != 1L ||
-    is.na(class.prefix)
-  )
-    stop("Argument `class.prefix` must be scalar character and not NA.")
 
-  .Call(FANSI_esc_to_html, enc2utf8(x), warn, term.cap.int, class.prefix)
+  classes <- if(isTRUE(use.classes)) {
+    FANSI.CLASSES
+  } else if (identical(use.classes, FALSE)) {
+    character()
+  } else if (is.character(use.classes)) {
+    class.len <- length(use.classes)
+    if(!class.len %in% c(16L, 32L, 512L)) {
+      stop(
+        "Argument `use.classes` must be length 16, 32, or 512 if it is a ",
+        "character vector (is ", class.len, ")."
+      )
+    }
+    if(anyNA(use.classes))
+      stop("Argument `use.classes` contains NA values.")
+    if(!all(grepl("^[0-9a-zA-Z_\\-]*$", use.classes)))
+      stop(
+        "Argument `use.classes` contains charcters other than ASCII letters, ",
+        "numbers, the hyphen, and underscore."
+      )
+    use.classes
+  } else
+    stop("Argument `use.classes` must be TRUE, FALSE, or a character vector.")
+
+
+  .Call(FANSI_esc_to_html, enc2utf8(x), warn, term.cap.int, classes)
 }
 
+FANSI.CLASSES <- do.call(
+  paste,
+  c(
+    expand.grid('fansi', c('color', 'bgcol'), sprintf("%03d", 0:255)),
+    sep="-"
+) )
