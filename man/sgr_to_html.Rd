@@ -23,11 +23,11 @@ assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
-be any combination "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
+be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
 starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
-"38;2" or "48;2"). Changing this parameter changes how \code{fansi} interprets
-escape sequences, so you should ensure that it matches your terminal
-capabilities. See \link{term_cap_test} for details.}
+"38;2" or "48;2"). Changing this parameter changes how \code{fansi}
+interprets escape sequences, so you should ensure that it matches your
+terminal capabilities. See \link{term_cap_test} for details.}
 
 \item{classes}{FALSE (default), TRUE, or character vector of either 16,
 32, or 512 class names.  Character strings may only contain ASCII
@@ -42,10 +42,11 @@ where "###" is a zero padded three digit number in 0:255.  Basic colors
 specified with SGR codes 30-37 (or 40-47) map to 000:007, and bright ones
 specified with 90-97 (or 100-107) map to 008:015.  8 bit colors specified
 with SGR codes 38;5;### or 48;5;### map directly based on the value of
-"###".  Implicitly, this assumes that the 8 bit colors in 0:7 match the
-basic colors, and those in 8:15 the bright ones.  24 bit colors specified
-with 38;2;#;#;# or 48;2;#;#;# do not map to classes and are rendered as
-inline styles instead.
+"###".  Implicitly, this maps the 8 bit colors in 0:7 to the basic
+colors,  and those in 8:15 to the bright ones even though these are not
+exactly the same when using inline styles.  "truecolor"s specified with
+38;2;#;#;# or 48;2;#;#;# do not map to classes and are rendered as inline
+styles instead.
 \item character(16): The eight basic colors are mapped to the string values in
 the vector, all others are rendered as inline CSS styles.  Basic colors
 are mapped irrespective of whether they are encoded as the basic colors
@@ -56,8 +57,14 @@ foreground and background classes alternating starting with foreground
 (see examples).
 \item character(32): Like character(16), except the basic and bright colors are
 mapped.
-\item character(256): Like character(16), except all 8 bit colors are mapped.
+\item character(256): Like character(16), except the basic, bright, and all 8
+bit colors are mapped.
 }}
+
+\item{rgb.mix}{3 x 3 numeric matrix to remix color channels.  Each column
+corresponds to the channel mix of each channel in the output.  Intended
+primarily to easily generate style sheets with different colors for demo
+purposes.  Values that end up out of range are truncated into range.}
 }
 \value{
 for \code{sgr_to_html}, a character vector with all escape sequences
@@ -70,17 +77,12 @@ Only the colors, background-colors, and basic styles (CSI SGR codes 1-9) are
 translated.  Others are dropped silently.
 }
 \details{
-\code{make_styles} generates a style sheet to match to classes based on the
-default 8 bit color mapping.
+\code{make_styles} generates a style sheet to match provided classes to the
+default 8 bit color mapping.  This is intended primarily for demo and test
+purposes.
 }
 \note{
 Non-ASCII strings are converted to and returned in UTF-8 encoding.
-
-For legacy reasons the colors you get from the basic and bright color
-are not exactly the same as the first 16 colors of the 8 bit colors.  It is
-not possible to duplicated this (mis)behavior with \code{classes} as the
-basic/bright colors will map to the same classes as the first 16 colors of
-the 8-bit colors.
 }
 \examples{
 sgr_to_html("hello\033[31;42;1mworld\033[m")
@@ -93,29 +95,66 @@ classes <- expand.grid(
   c("black", "red", "green", "yellow", "blue", "magenta", "cyan", "white")
 )
 classes  # order is important!
-sgr_to_html(
-  "\033[91mhello\033[31;42;1mworld\033[m",
-  classes=do.call(paste, c(classes, sep="-"))
+classes <- do.call(paste, c(classes, sep="-"))
+html <- sgr_to_html(
+  "\033[94mhello\033[m \033[31;42;1mworld\033[m",
+  classes=classes
 )
-## Create a whole web page with a style sheet
+## Only basic colors are mapped to classes; others styled inline
+html
 
-f <- tempfile()
-writeLines(
-  c(
-    "<html><head><style>",
-    make_styles(classes),
-    "</style>",
-    "<body>",
-    sgr_to_html(
-      "\033[91mhello\033[31;42;1mworld\033[m",
-      classes=do.call(paste, c(classes, sep="-"))
-    ),
-    "</body></html>"
-  ),
-  file=f
+## Create a whole web page with a style sheet for 256 colors and
+## the colors shown in a table.  For simplicity we'll only plot
+## colors 16-231
+class.256 <- do.call(paste, c(expand.grid(c("fg", "bg"), 0:255), sep="-"))
+fg <- 231:16
+bg <- rev(fg)  # reverse fg/bg so we can read the numbers
+table <- matrix(
+  sprintf("\033[38;5;\%d;48;5;\%dm\%s\033[m", fg, bg, format(bg)), 36
 )
-\dontrun{browseUrl(f))}
-unlink(f)j
+part.a <- do.call(paste0, c(split(table[1:18,], row(table[1:18,]))))
+part.b <- do.call(paste0, c(split(table[-(1:18),], row(table[-(1:18),]))))
+
+## Show colors on terminals that support 256 colors
+part.a[1]
+writeLines(part.a)
+writeLines(part.b)
+
+## Convert to HTML using classes instead of inline styles:
+html.body <- sgr_to_html(c(part.a, part.b), classes=class.256)
+writeLines(html.body[1])  # No inline colors
+html.body <- paste0(html.body, collapse="\n")
+
+## Web page template
+page <- "
+<html><head><style>\%s</style>\n
+<body style='background-color: #EEEEEE;'>
+<h3>\%s</h3>
+<pre>\%s</pre></body></html>"
+
+## Generate different style sheets.  We use `make_styles`
+## for convenience but users should provide their own.
+default <- make_styles(class.256)
+mix <- matrix(c(.6,.2,.2, .2,.6,.2, .2,.2,.6), 3)
+desaturated <- make_styles(class.256, mix)
+
+writeLines(default[1:4])
+writeLines(desaturated[1:4])
+default <- paste0(default, collapse="\n")
+desaturated <- paste0(desaturated, collapse="\n")
+
+## Embed in HTML page and diplay; only CSS changing
+html.0 <- sprintf(page, "", "Unstyled", html.body)
+html.1 <- sprintf(page, default, "Default", html.body)
+html.2 <- sprintf(page, desaturated, "Desaturated", html.body)
+
+\dontrun{
+f <- tempfile();
+writeLines(html.0, f); browseURL(f); Sys.sleep(1);
+writeLines(html.1, f); browseURL(f); Sys.sleep(1);
+writeLines(html.2, f); browseURL(f); Sys.sleep(1);
+unlink(f)
+}
 }
 \seealso{
 \link{fansi} for details on how \emph{Control Sequences} are

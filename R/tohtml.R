@@ -19,8 +19,9 @@
 #' Only the colors, background-colors, and basic styles (CSI SGR codes 1-9) are
 #' translated.  Others are dropped silently.
 #'
-#' `make_styles` generates a style sheet to match to classes based on the
-#' default 8 bit color mapping.
+#' `make_styles` generates a style sheet to match provided classes to the
+#' default 8 bit color mapping.  This is intended primarily for demo and test
+#' purposes.
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @export
@@ -42,10 +43,11 @@
 #'     specified with SGR codes 30-37 (or 40-47) map to 000:007, and bright ones
 #'     specified with 90-97 (or 100-107) map to 008:015.  8 bit colors specified
 #'     with SGR codes 38;5;### or 48;5;### map directly based on the value of
-#'     "###".  Implicitly, this assumes that the 8 bit colors in 0:7 match the
-#'     basic colors, and those in 8:15 the bright ones.  24 bit colors specified
-#'     with 38;2;#;#;# or 48;2;#;#;# do not map to classes and are rendered as
-#'     inline styles instead.
+#'     "###".  Implicitly, this maps the 8 bit colors in 0:7 to the basic
+#'     colors,  and those in 8:15 to the bright ones even though these are not
+#'     exactly the same when using inline styles.  "truecolor"s specified with
+#'     38;2;#;#;# or 48;2;#;#;# do not map to classes and are rendered as inline
+#'     styles instead.
 #'   * character(16): The eight basic colors are mapped to the string values in
 #'     the vector, all others are rendered as inline CSS styles.  Basic colors
 #'     are mapped irrespective of whether they are encoded as the basic colors
@@ -56,7 +58,8 @@
 #'     (see examples).
 #'   * character(32): Like character(16), except the basic and bright colors are
 #'     mapped.
-#'   * character(256): Like character(16), except all 8 bit colors are mapped.
+#'   * character(256): Like character(16), except the basic, bright, and all 8
+#'     bit colors are mapped.
 #'
 #' @param rgb.mix 3 x 3 numeric matrix to remix color channels.  Each column
 #'   corresponds to the channel mix of each channel in the output.  Intended
@@ -82,19 +85,59 @@
 #'   "\033[94mhello\033[m \033[31;42;1mworld\033[m",
 #'   classes=classes
 #' )
+#' ## Only basic colors are mapped to classes; others styled inline
 #' html
 #'
-#' ## Create a whole web page with a style sheet
-#' \dontrun{
-#' f <- tempfile()
-#' writeLines(
-#'   c(
-#'     "<html><head><style>", make_styles(classes), "</style>", 
-#'     "<body>", html, "</body></html>"
-#'   ),
-#'   con=f
+#' ## Create a whole web page with a style sheet for 256 colors and
+#' ## the colors shown in a table.  For simplicity we'll only plot
+#' ## colors 16-231
+#' class.256 <- do.call(paste, c(expand.grid(c("fg", "bg"), 0:255), sep="-"))
+#' fg <- 231:16
+#' bg <- rev(fg)  # reverse fg/bg so we can read the numbers
+#' table <- matrix(
+#'   sprintf("\033[38;5;%d;48;5;%dm%s\033[m", fg, bg, format(bg)), 36
 #' )
-#' browseURL(f))
+#' part.a <- do.call(paste0, c(split(table[1:18,], row(table[1:18,]))))
+#' part.b <- do.call(paste0, c(split(table[-(1:18),], row(table[-(1:18),]))))
+#'
+#' ## Show colors on terminals that support 256 colors
+#' part.a[1]
+#' writeLines(part.a)
+#' writeLines(part.b)
+#'
+#' ## Convert to HTML using classes instead of inline styles:
+#' html.body <- sgr_to_html(c(part.a, part.b), classes=class.256)
+#' writeLines(html.body[1])  # No inline colors
+#' html.body <- paste0(html.body, collapse="\n")
+#'
+#' ## Web page template
+#' page <- "
+#' <html><head><style>%s</style>\n
+#' <body style='background-color: #EEEEEE;'>
+#' <h3>%s</h3>
+#' <pre>%s</pre></body></html>"
+#'
+#' ## Generate different style sheets.  We use `make_styles`
+#' ## for convenience but users should provide their own.
+#' default <- make_styles(class.256)
+#' mix <- matrix(c(.6,.2,.2, .2,.6,.2, .2,.2,.6), 3)
+#' desaturated <- make_styles(class.256, mix)
+#'
+#' writeLines(default[1:4])
+#' writeLines(desaturated[1:4])
+#' default <- paste0(default, collapse="\n")
+#' desaturated <- paste0(desaturated, collapse="\n")
+#'
+#' ## Embed in HTML page and diplay; only CSS changing
+#' html.0 <- sprintf(page, "", "Unstyled", html.body)
+#' html.1 <- sprintf(page, default, "Default", html.body)
+#' html.2 <- sprintf(page, desaturated, "Desaturated", html.body)
+#'
+#' \dontrun{
+#' f <- tempfile();
+#' writeLines(html.0, f); browseURL(f); Sys.sleep(1);
+#' writeLines(html.1, f); browseURL(f); Sys.sleep(1);
+#' writeLines(html.2, f); browseURL(f); Sys.sleep(1);
 #' unlink(f)
 #' }
 
