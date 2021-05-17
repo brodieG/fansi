@@ -94,8 +94,8 @@ static const char * get_color_class(
  *
  * <https://en.wikipedia.org/wiki/ANSI_escape_code>
  *
- * IMPORTANT: this advances what *buff points to to the NULL terminator at the
- * end of what is written to so string is ready to append to.
+ * !> DANGER <!: this advances *buff so that it points to to the NULL terminator
+ * the end of what is written to so string is ready to append to.
  *
  * @param color an integer expected to be in 0:9, 90:97, 100:107. NB: ranges
  *   30:39 and 40:49 already converted to 0:9.
@@ -220,6 +220,9 @@ static int color_to_html(
 /*
  * If *buff is not NULL, copy tmp into it and advance, else measure tmp
  * and advance length
+ *
+ * !> DANGER <!: this advances *buff so that it points to to the NULL terminator
+ * the end of what is written to so string is ready to append to.
  */
 static unsigned int copy_or_measure(
   char ** buff, const char * tmp, unsigned int len
@@ -631,11 +634,11 @@ SEXP FANSI_color_to_html_ext(SEXP x) {
   SEXP res = PROTECT(allocVector(STRSXP, len / 5));
 
   for(R_xlen_t i = 0; i < len; i += 5) {
-    char * buff_orig = buff.buff;
-    // RECALL: color_to_html moves the buff.buff pointers
-    int size = color_to_html(x_int[i], x_int + (i + 1), &(buff.buff), 0);
+    // RECALL: color_to_html moves the buff_tmp pointer
+    char * buff_tmp = buff.buff;
+    int size = color_to_html(x_int[i], x_int + (i + 1), &(buff_tmp), 0);
     if(size < 1) error("Internal Error: size should be at least one");
-    SEXP chrsxp = PROTECT(mkCharLenCE(buff_orig, size, CE_BYTES));
+    SEXP chrsxp = PROTECT(mkCharLenCE(buff.buff, size, CE_BYTES));
     SET_STRING_ELT(res, i / 5, chrsxp);
     UNPROTECT(1);
   }
