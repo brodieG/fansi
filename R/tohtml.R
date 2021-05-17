@@ -58,11 +58,10 @@
 #'     mapped.
 #'   * character(256): Like character(16), except all 8 bit colors are mapped.
 #'
-#' @note For legacy reasons the colors you get from the basic and bright color
-#'   are not exactly the same as the first 16 colors of the 8 bit colors.  It is
-#'   not possible to duplicated this (mis)behavior with `classes` as the
-#'   basic/bright colors will map to the same classes as the first 16 colors of
-#'   the 8-bit colors.
+#' @param rgb.mix 3 x 3 numeric matrix to remix color channels.  Each column
+#'   corresponds to the channel mix of each channel in the output.  Intended
+#'   primarily to easily generate style sheets with different colors for demo
+#'   purposes.  Values that end up out of range are truncated into range.
 #' @return for `sgr_to_html`, a character vector with all escape sequences
 #'   removed and any basic ANSI CSI SGR escape sequences applied via SPAN html
 #'   objects with inline css styles (see details), for `make_styles` a
@@ -132,12 +131,26 @@ sgr_to_html <- function(
 #' @rdname sgr_to_html
 #' @export
 
-make_styles <- function(classes) {
+make_styles <- function(classes, rgb.mix=diag(3)) {
   if(!is.character(classes)) stop("Argument `classes` is not character.")
+  if(
+    !is.matrix(rgb.mix) || !is.numeric(rgb.mix) ||
+    !identical(dim(rgb.mix), c(3L, 3L)) ||
+    anyNA(rgb.mix)
+  )
+    stop("Argument `rgb.mix` must be a 3 x 3 numeric matrix with no NAs.")
+
   classes <- check_classes(classes)
 
   colors <- rep(seq_len(length(classes) / 2) - 1L, each=2)
   colors.hex <- esc_color_code_to_html(rbind(8L, 5L, colors, 0L, 0L))
+
+  if(!identical(rgb.mix, diag(3))) {
+    color.vals <- t(col2rgb(colors.hex)) %*% rgb.mix
+    color.vals[color.vals > 255] <- 255
+    color.vals[color.vals < 0] <- 0
+    colors.hex <- rgb(color.vals, maxColorValue=255)
+  }
   paste0(
     ".", classes,
     " {", c("color", "background-color"), ": ", colors.hex, ";}"

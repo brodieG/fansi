@@ -12,7 +12,7 @@ sgr_to_html(
   classes = FALSE
 )
 
-make_styles(classes)
+make_styles(classes, rgb.mix = diag(3))
 }
 \arguments{
 \item{x}{a character vector or object that can be coerced to character.}
