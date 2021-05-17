@@ -40,7 +40,9 @@ static const struct FANSI_css css_style[9] = {
   {.css="text-decoration: blink;", .len=23},
   // Code 6: blink
   {.css="text-decoration: blink;", .len=23},
-  // Code 7: invert; unused
+  // Code 7: invert; unused; means we'll get an empty style tag if the only
+  // active style is invert, but oh well.  Could fix by adding an exception but
+  // won't
   {.css="", .len=0},
   // Code 8: conceal
   {.css="color: transparent;", .len=19},

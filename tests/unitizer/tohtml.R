@@ -116,9 +116,6 @@ unitizer_sect("Corner cases", {
   # non character inputs
 
   sgr_to_html(1:3)
-
-
-
 })
 unitizer_sect("Bad inputs", {
   fansi:::esc_color_code_to_html(matrix(1:12, 4))
@@ -137,15 +134,10 @@ unitizer_sect("issue54", {
 
   string2 <- c("\033[3mhello\033[24m", "world\033[23m moon")
   fansi::sgr_to_html(string2)
-
-  sgr_to_html("\033[31mhello\033[31m", use.classes=NULL)
-  sgr_to_html("\033[31mhello\033[31m", use.classes=character(7L))
-  sgr_to_html("\033[31mhello\033[31m", use.classes=NA_character_)
-  sgr_to_html("\033[31mhello\033[31m", use.classes="bad class")
 })
 
 unitizer_sect("Colors as classes (#65)", {
-  sgr_to_html("\033[96mhello\033[31;42;1mworld\033[m", use.classes=TRUE)
+  sgr_to_html("\033[94mhello\033[31;42;1mworld\033[m", classes=TRUE)
 
   class.8 <-
     do.call(paste, c(expand.grid(c("fg", "bg"), 0:7), sep="-"))
@@ -155,13 +147,29 @@ unitizer_sect("Colors as classes (#65)", {
     do.call(paste, c(expand.grid(c("fg", "bg"), 0:255), sep="-"))
 
   x <- c(
-    "\033[96mhe\033[107mllo\033[31;42;1mworld\033[m",
-    "\033[48;5;16;38;5;17mgood\033[7mbye\033[39;49m super \033[48;2;235;0;20mmoon\033[m",
-    # "\033[48;5;16;38;5;17mgood\033[7mbye\033[39;49m super \033[48;2;235;0;20mmoon\033[m",
+    "\033[94mhe\033[107mllo\033[31;42;1mworld\033[m",
+    "\033[48;5;11;38;5;70mgood\033[7mbye\033[39;49m super \033[48;2;235;0;20mmoon\033[m",
     NULL
   )
   term.cap <- c('bright', '256', 'truecolor')
-  sgr_to_html(x, use.classes=class.8, term.cap=term.cap)
-  sgr_to_html(x, use.classes=class.16, term.cap=term.cap)
-  sgr_to_html(x, use.classes=class.256, term.cap=term.cap)
+  sgr_to_html(x, classes=class.8, term.cap=term.cap)
+  sgr_to_html(x, classes=class.16, term.cap=term.cap)
+  sgr_to_html(x, classes=class.256, term.cap=term.cap)
+
+  make_styles(class.8)
+  make_styles(class.8, matrix(c(0,1,0,0,0,1,1,0,0), 3)) # shift channels
+
+  # errors
+
+  sgr_to_html("\033[31mhello\033[31m", classes=NULL)
+  sgr_to_html("\033[31mhello\033[31m", classes=character(7L))
+  sgr_to_html("\033[31mhello\033[31m", classes=NA_character_)
+  sgr_to_html("\033[31mhello\033[31m", classes="bad class")
+
+  make_styles(class.8, c(1,1,0,0,0,1,1,0,0))
+  make_styles(class.8, matrix(c(0,1,0,0,0,1,1,0,NA), 3))
+  make_styles(class.8, "hello")
+  make_styles(letters, matrix(c(0,1,0,0,0,1,1,0,0), 3))
+
+  ## see examples for visual testing
 })
