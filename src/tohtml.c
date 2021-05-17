@@ -96,29 +96,15 @@ static const char * get_color_class(
  *
  * <https://en.wikipedia.org/wiki/ANSI_escape_code>
  *
- * !> DANGER <!: this advances *buff so that it points to to the NULL terminator
- * the end of what is written to so string is ready to append to.
- *
  * @param color an integer expected to be in 0:9, 90:97, 100:107. NB: ranges
  *   30:39 and 40:49 already converted to 0:9.
  * @param color_extra a pointer to a 4 long integer array as you would get in
  *   struct FANSI_state.color_extra
- * @param **buff a pointer to a pre-allocated buffer allocated to be able to hold
- *   the color in format #FFFFFF including the null terminator (so at least 8
- *   bytes). *buff will be written to.
- * @return how many bytes were written, guaranteed to be 7 bytes, does not
- *   include the NULL terminator that is also written just in case.
+ * @param buff a buffer with at least 8 bytes allocated.
+ * @return the *buff pointer
  */
 
-static int color_to_html(
-  int color, int * color_extra, char ** buff, unsigned int len
-) {
-  if(FANSI_int_max - len < 7)
-    error(
-      "Attempting to write more than INT_MAX bytes when converting CSI SGR to ",
-      "HTML (v2)."
-    );
-
+static char * color_to_html(int color, int * color_extra, char * buff) {
   // CAREFUL: DON'T WRITE MORE THAN 7 BYTES + NULL TERMINATOR
 
   const char * dectohex = "0123456789ABCDEF";
@@ -140,84 +126,82 @@ static int color_to_html(
     "555555", "FF5555", "55FF55", "FFFF55",
     "5555FF", "FF55FF", "55FFFF", "FFFFFF"
   };
-  char * buff_track = *buff;
+  char * buff_track = buff;
 
-  if(buff_track) {
-    if(color == 9) {
-      error(
-        "Internal Error: should not be applying no-color; contact maintainer."
-      );
-    } else if(color >= 0 && color < 10) {
-      *(buff_track++) = '#';
+  if(color == 9) {
+    error(
+      "Internal Error: should not be applying no-color; contact maintainer."
+    );
+  } else if(color >= 0 && color < 10) {
+    *(buff_track++) = '#';
 
-      if(color == 8) {
-        if(color_extra[0] == 2) {
-          for(int i = 1; i < 4; ++i) {
-            char hi = dectohex[color_extra[i] / 16];
-            char lo = dectohex[color_extra[i] % 16];
+    if(color == 8) {
+      if(color_extra[0] == 2) {
+        for(int i = 1; i < 4; ++i) {
+          char hi = dectohex[color_extra[i] / 16];
+          char lo = dectohex[color_extra[i] % 16];
+          *(buff_track++) = hi;
+          *(buff_track++) = lo;
+        }
+      } else if(color_extra[0] == 5) {
+        // These are the 0-255 color codes
+        int color_5 = color_extra[1];
+        if(color_5 < 0 || color_5 > 255)
+          error("Internal Error: 0-255 color outside of that range."); // nocov
+        if(color_5 < 16) {
+          // Standard colors
+          memcpy(buff_track, std_16[color_5], 6);
+          buff_track += 6;
+        } else if (color_5 < 232) {
+          int c5 = color_5 - 16;
+          int c5_r = c5 / 36;
+          int c5_g = (c5 % 36) / 6;
+          int c5_b = c5 % 6;
+
+          if(c5_r > 5 || c5_g > 5 || c5_b > 5)
+            error("Internal Error: out of bounds computing 6^3 clr."); // nocov
+
+          memcpy(buff_track, std_5[c5_r], 2);
+          buff_track += 2;
+          memcpy(buff_track, std_5[c5_g], 2);
+          buff_track += 2;
+          memcpy(buff_track, std_5[c5_b], 2);
+          buff_track += 2;
+        } else {
+          int c_bw = (color_5 - 232) * 10 + 8;
+          char hi = dectohex[c_bw / 16];
+          char lo = dectohex[c_bw % 16];
+          for(int i = 0; i < 3; ++i) {
             *(buff_track++) = hi;
             *(buff_track++) = lo;
           }
-        } else if(color_extra[0] == 5) {
-          // These are the 0-255 color codes
-          int color_5 = color_extra[1];
-          if(color_5 < 0 || color_5 > 255)
-            error("Internal Error: 0-255 color outside of that range."); // nocov
-          if(color_5 < 16) {
-            // Standard colors
-            memcpy(buff_track, std_16[color_5], 6);
-            buff_track += 6;
-          } else if (color_5 < 232) {
-            int c5 = color_5 - 16;
-            int c5_r = c5 / 36;
-            int c5_g = (c5 % 36) / 6;
-            int c5_b = c5 % 6;
-
-            if(c5_r > 5 || c5_g > 5 || c5_b > 5)
-              error("Internal Error: out of bounds computing 6^3 clr."); // nocov
-
-            memcpy(buff_track, std_5[c5_r], 2);
-            buff_track += 2;
-            memcpy(buff_track, std_5[c5_g], 2);
-            buff_track += 2;
-            memcpy(buff_track, std_5[c5_b], 2);
-            buff_track += 2;
-          } else {
-            int c_bw = (color_5 - 232) * 10 + 8;
-            char hi = dectohex[c_bw / 16];
-            char lo = dectohex[c_bw % 16];
-            for(int i = 0; i < 3; ++i) {
-              *(buff_track++) = hi;
-              *(buff_track++) = lo;
-            }
-          }
-        } else
-          // nocov start
-          error(
-            "Internal Error: invalid 256 or tru color code; contact maintainer."
-          );
-          // nocov end
-      } else {
-        memcpy(buff_track, std_8[color], 6);
-        buff_track += 6;
-      }
-    } else if(
-      (color >= 90 && color <= 97) ||
-      (color >= 100 && color <= 107)
-    ) {
-      *(buff_track++) = '#';
-      int c_bright = color >= 100 ? color - 100 : color - 90;
-      memcpy(buff_track, bright[c_bright], 6);
-      buff_track += 6;
+        }
+      } else
+        // nocov start
+        error(
+          "Internal Error: invalid 256 or tru color code; contact maintainer."
+        );
+        // nocov end
     } else {
-      error("Internal Error: invalid color code %d", color); // nocov
+      memcpy(buff_track, std_8[color], 6);
+      buff_track += 6;
     }
-    *buff_track = 0;
-    int dist = (int) (buff_track - *buff);
-    if(dist != 7) error("Internal Error: unexpected byte count for color.");
-    *buff = buff_track;
+  } else if(
+    (color >= 90 && color <= 97) ||
+    (color >= 100 && color <= 107)
+  ) {
+    *(buff_track++) = '#';
+    int c_bright = color >= 100 ? color - 100 : color - 90;
+    memcpy(buff_track, bright[c_bright], 6);
+    buff_track += 6;
+  } else {
+    error("Internal Error: invalid color code %d", color); // nocov
   }
-  return 7;
+  *buff_track = 0;
+  int dist = (int) (buff_track - buff);
+  if(dist != 7) error("Internal Error: unexpected byte count for color.");
+
+  return buff;
 }
 /*
  * If *buff is not NULL, copy tmp into it and advance, else measure tmp
@@ -292,11 +276,11 @@ static int state_size_and_write_as_html(
 
     if(color_class || bgcol_class) {
       tmp = " class='";
-      len += copy_or_measure(&buff, tmp, len);
-      if(color_class) len += copy_or_measure(&buff, color_class, len);
-      if(color_class && bgcol_class) len += copy_or_measure(&buff, " ", len);
-      if(bgcol_class) len += copy_or_measure(&buff, bgcol_class, len);
-      len += copy_or_measure(&buff, "'", len);
+      len += copy_or_measure(&buff, tmp);
+      if(color_class) len += copy_or_measure(&buff, color_class);
+      if(color_class && bgcol_class) len += copy_or_measure(&buff, " ");
+      if(bgcol_class) len += copy_or_measure(&buff, bgcol_class);
+      len += copy_or_measure(&buff, "'");
     }
     // inline style and/or colors
     if(
@@ -306,14 +290,18 @@ static int state_size_and_write_as_html(
     ) {
       len += copy_or_measure(&buff, " style='", len);
       if(color >= 0 && (!color_class)) {
-        len += copy_or_measure(&buff, "color: ", len);
-        len += color_to_html(color, color_extra, &buff, len);
-        len += copy_or_measure(&buff, ";", len);
+        len += copy_or_measure(&buff, "color: ");
+        len += copy_or_measure(
+          &buff, color_to_html(color, color_extra, color_tmp)
+        );
+        len += copy_or_measure(&buff, ";");
       }
       if(bg_color >= 0 && (!bgcol_class)) {
-        len += copy_or_measure(&buff,  "background-color: ", len);
-        len += color_to_html(bg_color, bg_color_extra, &buff, len);
-        len += copy_or_measure(&buff, ";", len);
+        len += copy_or_measure(&buff,  "background-color: ");
+        len += copy_or_measure(
+            &buff, color_to_html(bg_color, bg_color_extra, color_tmp)
+        );
+        len += copy_or_measure(&buff, ";");
       }
       // Styles (need to go after color for transparent to work)
 
@@ -636,10 +624,7 @@ SEXP FANSI_color_to_html_ext(SEXP x) {
   SEXP res = PROTECT(allocVector(STRSXP, len / 5));
 
   for(R_xlen_t i = 0; i < len; i += 5) {
-    // RECALL: color_to_html moves the buff_tmp pointer
-    char * buff_tmp = buff.buff;
-    int size = color_to_html(x_int[i], x_int + (i + 1), &(buff_tmp), 0);
-    if(size < 1) error("Internal Error: size should be at least one");
+    color_to_html(x_int[i], x_int + (i + 1), buff.buff);
     SEXP chrsxp = PROTECT(mkCharLenCE(buff.buff, size, CE_BYTES));
     SET_STRING_ELT(res, i / 5, chrsxp);
     UNPROTECT(1);
