@@ -17,6 +17,8 @@ Tests:
   * Both background and color classes
   * Background yes color no, and vice versa
 
+html_compute_size compute the size of each sequential escape collection.
+
 ## To HTML
 
 Done.

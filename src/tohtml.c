@@ -207,18 +207,29 @@ static char * color_to_html(int color, int * color_extra, char * buff) {
  * If *buff is not NULL, copy tmp into it and advance, else measure tmp
  * and advance length
  *
- * !> DANGER <!: this advances *buff so that it points to to the NULL terminator
+ *   vvvvvvvv
+ * !> DANGER <!
+ *   ^^^^^^^^
+ *
+ * This advances *buff so that it points to to the NULL terminator
  * the end of what is written to so string is ready to append to.
+ *
+ * @param i index in overal character vector, needed to report overflow string.
  */
 static unsigned int copy_or_measure(
-  char ** buff, const char * tmp, unsigned int len
+  char ** buff, const char * tmp, unsigned int len, R_xlen_t i
 ) {
-  unsigned int tmp_len = strlen(tmp);
-  if(tmp_len > FANSI_int_max - len)
+  size_t tmp_len = strlen(tmp);
+  // strictly it's possible for len > FANSI_int_max, but shouldn't happen even
+  // in testing since we only grow len by first checking.
+  if(tmp_len > FANSI_int_max - len) {
+    intmax_t ind = i >= INTMAX_MAX ? -2 : i;
     error(
-      "Attempting to write more than INT_MAX bytes when converting CSI SGR to ",
-      "HTML."
+      "%s%s %ju %s",
+      "Expanding SGR sequences into CSS will create a string longer ",
+      "than INT_MAX at position", ind + 1, "which is not allowed by R (3)."
     );
+  }
   if(*buff) {
     strcpy(*buff, tmp);
     *buff += tmp_len;
@@ -226,16 +237,21 @@ static unsigned int copy_or_measure(
   return tmp_len;
 }
 /*
- * Compute and write the size of each state.
+ * Compute HTML Size of Each Individual State, Or Write It
  *
  * This used to be two distinct functions, but the risk of getting out of sync
- * was too high so we merged them into one.
+ * was too high so we merged them into one.  We try to minimize the
+ * differences between size calculation vs. writing modes to avoid mistakes, but
+ * this means the code is less efficient than could be, possibly repeating
+ * calcualtions, overflow checks, or computing compile time knowable string
+ * widths.
  *
  * @param buff the buffer to write to, if it is null only computes size instead
  *   also of writing.
  */
 static int state_size_and_write_as_html(
-  struct FANSI_state state, int first, char * buff, SEXP color_classes
+  struct FANSI_state state, int first, char * buff,
+  SEXP color_classes, R_xlen_t i
 ) {
   /****************************************************\
   | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_csi_write  |
@@ -252,7 +268,7 @@ static int state_size_and_write_as_html(
       // nocov end
     if(state.string[state.pos_byte]) {
       const char * tmp = "</span><span>";
-      len += copy_or_measure(&buff, tmp, len);
+      len += copy_or_measure(&buff, tmp, len, i);
     }
   } else {
     int invert = state.style & (1 << 7);
@@ -269,18 +285,18 @@ static int state_size_and_write_as_html(
 
     const char * tmp;
     if(first) tmp = "<span"; else tmp = "</span><span";
-    len += copy_or_measure(&buff, tmp, len);
+    len += copy_or_measure(&buff, tmp, len, i);
 
     // Class based colors e.g. " class='fansi-color-06 fansi-bgcolor-04'"
     // Brights remapped to 8-15
 
     if(color_class || bgcol_class) {
       tmp = " class='";
-      len += copy_or_measure(&buff, tmp);
-      if(color_class) len += copy_or_measure(&buff, color_class);
-      if(color_class && bgcol_class) len += copy_or_measure(&buff, " ");
-      if(bgcol_class) len += copy_or_measure(&buff, bgcol_class);
-      len += copy_or_measure(&buff, "'");
+      len += copy_or_measure(&buff, tmp, len, i);
+      if(color_class) len += copy_or_measure(&buff, color_class, len, i);
+      if(color_class && bgcol_class) len += copy_or_measure(&buff, " ", len, i);
+      if(bgcol_class) len += copy_or_measure(&buff, bgcol_class, len, i);
+      len += copy_or_measure(&buff, "'", len, i);
     }
     // inline style and/or colors
     if(
@@ -288,30 +304,31 @@ static int state_size_and_write_as_html(
       (color >= 0 && (!color_class)) ||
       (bg_color >= 0 && (!bgcol_class))
     ) {
-      len += copy_or_measure(&buff, " style='", len);
+      len += copy_or_measure(&buff, " style='", len, i);
+      char color_tmp[8];
       if(color >= 0 && (!color_class)) {
-        len += copy_or_measure(&buff, "color: ");
+        len += copy_or_measure(&buff, "color: ", len, i);
         len += copy_or_measure(
-          &buff, color_to_html(color, color_extra, color_tmp)
+          &buff, color_to_html(color, color_extra, color_tmp), len, i
         );
-        len += copy_or_measure(&buff, ";");
+        len += copy_or_measure(&buff, ";", len, i);
       }
       if(bg_color >= 0 && (!bgcol_class)) {
-        len += copy_or_measure(&buff,  "background-color: ");
+        len += copy_or_measure(&buff,  "background-color: ", len, i);
         len += copy_or_measure(
-            &buff, color_to_html(bg_color, bg_color_extra, color_tmp)
+            &buff, color_to_html(bg_color, bg_color_extra, color_tmp), len, i
         );
-        len += copy_or_measure(&buff, ";");
+        len += copy_or_measure(&buff, ";", len, i);
       }
       // Styles (need to go after color for transparent to work)
 
       for(int i = 1; i < 10; ++i)
         if(state.style & (1 << i))
-          len += copy_or_measure(&buff, css_style[i - 1].css, len);
+          len += copy_or_measure(&buff, css_style[i - 1].css, len, i);
 
-      len += copy_or_measure(&buff, "'", len);
+      len += copy_or_measure(&buff, "'", len, i);
     }
-    len += copy_or_measure(&buff, ">", len);
+    len += copy_or_measure(&buff, ">", len, i);
   }
   if(buff) {
     *buff = 0;
@@ -321,12 +338,24 @@ static int state_size_and_write_as_html(
         len, (unsigned int)(buff - buff_start)
       );
   }
-  return len;
+  // Final check (redundant to those in copy_or_measure, really)
+
+  if(len > (unsigned int) FANSI_int_max) {
+    intmax_t ind = i >= INTMAX_MAX ? -2 : i;
+    error(
+      "%s%s %ju %s",
+      "Expanding SGR sequences into CSS will create a string longer ",
+      "than INT_MAX at position", ind + 1, "which is not allowed by R (4)."
+    );
+  }
+  return (int) len;
 }
 
 /*
  * Helper functions to process size and write the HTML split off
  * for clarity
+ *
+ * Watch out, return value could be negative!
  */
 
 static int html_compute_size(
@@ -338,16 +367,25 @@ static int html_compute_size(
 
   int bytes_esc = state.pos_byte - bytes_esc_start;
   int bytes_html =
-    state_size_and_write_as_html(state, first, NULL, color_classes);
+    state_size_and_write_as_html(state, first, NULL, color_classes, i);
+
+  if(bytes_html > FANSI_int_max) {
+    intmax_t ind = i >= INTMAX_MAX ? -2 : i;
+    error(
+      "%s%s %ju %s",
+      "Expanding SGR sequences into CSS will create a string longer ",
+      "than INT_MAX at position ", ind + 1, " which is not allowed by R (1)."
+    );
+  }
   int bytes_net = bytes_html - bytes_esc;
 
   if(bytes_net >= 0) {
     if(bytes_extra > FANSI_int_max - bytes_net) {
+      intmax_t ind = i >= INTMAX_MAX ? -2 : i;
       error(
-        "%s%s %.0f %s",
+        "%s%s %ju %s",
         "Expanding SGR sequences into CSS will create a string longer ",
-        "than INT_MAX at position", (double) (i + 1),
-        "which is not allowed by R."
+        "than INT_MAX at position ", ind + 1, " which is not allowed by R (2)."
       );
     }
     bytes_extra += bytes_net;
@@ -386,7 +424,7 @@ static size_t html_check_overflow(
   ) {
     error(
       "%s%s %.0f %s",
-      "String with SGR sequences as CSS is longer ",
+      "String with SGR sequences expanded to CSS is longer ",
       "than INT_MAX at position", (double) (i + 1),
       "which is not allowed by R."
     );
@@ -515,10 +553,11 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       int first_esc = 1;
       char * buff_track = buff.buff;
 
-      // Handle state left-over from previous char elem
+      // Handle state left-over from previous char elem; we already checked
+      // for overflow in first pass
       if(FANSI_state_has_style_basic(state)) {
         int bytes_html = state_size_and_write_as_html(
-          state, first_esc, buff_track, color_classes
+          state, first_esc, buff_track, color_classes, i
         );
         buff_track += bytes_html;
         first_esc = 0;
@@ -542,10 +581,11 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
         buff_track += bytes_prev;
 
         // If we have a change from the previous tag, write html/css
+        // we already checked for overflow in first pass
 
         if(FANSI_state_comp_basic(state, state_prev)) {
           int bytes_html = state_size_and_write_as_html(
-            state, first_esc, buff_track, color_classes
+            state, first_esc, buff_track, color_classes, i
           );
           buff_track += bytes_html;
           if(first_esc) first_esc = 0;
@@ -625,7 +665,7 @@ SEXP FANSI_color_to_html_ext(SEXP x) {
 
   for(R_xlen_t i = 0; i < len; i += 5) {
     color_to_html(x_int[i], x_int + (i + 1), buff.buff);
-    SEXP chrsxp = PROTECT(mkCharLenCE(buff.buff, size, CE_BYTES));
+    SEXP chrsxp = PROTECT(mkCharLenCE(buff.buff, 7, CE_BYTES));
     SET_STRING_ELT(res, i / 5, chrsxp);
     UNPROTECT(1);
   }

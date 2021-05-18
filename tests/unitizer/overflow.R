@@ -38,12 +38,18 @@ unitizer_sect('wrap', {
 })
 unitizer_sect('html', {
   invisible(fansi:::set_int_max(37))
-
   sgr_to_html("\033[31m")
   # whole string over
   tce(sgr_to_html("\033[31ma"))
   # Sequences alone over
   tce(sgr_to_html("\033[31m\033[42mhello"))
+  # Over due to classes
+  invisible(fansi:::set_int_max(57))
+  tce(sgr_to_html("\033[31m\033[42mhello", classes=TRUE))
+  # Fits exactly
+  invisible(fansi:::set_int_max(58))
+  (x <- sgr_to_html("\033[31m\033[42mhello", classes=TRUE))
+  nchar(x)
 })
 unitizer_sect('unhandled', {
   invisible(fansi:::set_int_max(10))
