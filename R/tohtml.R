@@ -218,6 +218,42 @@ check_classes <- function(classes) {
     )
   classes
 }
+#' Frame HTML in a Web Page And Display
+#'
+#' Helper function that takes HTML content and CSS, assembles a web page around
+#' it, and uses [browseURL()] to display it.  For testing purposes only.  No
+#' effort is made to produce DOCTYPE, etc.
+#'
+#' @export
+#' @param x character vector of html encoded strings
+#' @param css character vector of css styles
+#' @param display TRUE or FALSE, whether to display the resulting page in a
+#'   browser window.  If TRUE, will sleep for one second before returning, and
+#'   will delete the temporary file used to store the HTML.
+#' @return NULL invisibly
+#' @seealso [make_styles()].
+#' @examples
+#' txt <- "\033[31;42mHello \033[7mWorld\033[m"
+#' writeLines(txt)
+#' \dontrun{
+#' in_html(txt) # spawns a browser window
+#' }
+#' readLines(in_html(txt, display=FALSE))
+#' css <- "SPAN {text-decoration: underline;}"
+#' readLines(in_html(txt, css=css, display=FALSE))
+
+in_html <- function(x, css="", display=TRUE) {
+  f <- tempfile()
+  writeLines(c("<html><style>", css, "</style><body>", x, "</body></html>"), f)
+  if(display) {
+    # nocov start not allowed to do this in tests
+    browseURL(f)
+    Sys.sleep(1)
+    unlink(f)
+    # nocov end
+  }
+  f
+}
 
 FANSI.CLASSES <- do.call(
   paste,
