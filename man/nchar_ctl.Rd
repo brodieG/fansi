@@ -67,6 +67,8 @@ above, in which case it means "all but".
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
+
+\item{strip}{character, deprecated in favor of \code{ctl}.}
 }
 \description{
 \code{nchar_ctl} counts all non \emph{Control Sequence} characters.

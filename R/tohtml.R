@@ -16,15 +16,22 @@
 
 #' Convert ANSI CSI SGR Escape Sequence to HTML Equivalents
 #'
+#' Interprets CSI SGR sequences and produces a string with equivalent
+#' formats applied with SPAN elements and either inline-CSS styles, or
+#' optionally for colors, by labeling the SPAN elements with user classes the
+#' user can generate a corresponding style sheet for.
+#'
 #' Only the colors, background-colors, and basic styles (CSI SGR codes 1-9) are
 #' translated.  Others are dropped silently.
 #'
-#' `make_styles` generates a style sheet to match provided classes to the
-#' default 8 bit color mapping.  This is intended primarily for demo and test
-#' purposes.
+#' `make_styles` is a helper function to generate style sheets that use the
+#' default 8 bit color scheme `fansi` uses, and is a helper function for the
+#' examples.
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @export
+#' @seealso [in_html()] for framing assorted HTML into an HTML page,
+#'   [sgr_256()] to generate a demo string with all 256 8 bit color.
 #' @inheritParams substr_ctl
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results,
@@ -89,56 +96,28 @@
 #' html
 #'
 #' ## Create a whole web page with a style sheet for 256 colors and
-#' ## the colors shown in a table.  For simplicity we'll only plot
-#' ## colors 16-231
+#' ## the colors shown in a table.
 #' class.256 <- do.call(paste, c(expand.grid(c("fg", "bg"), 0:255), sep="-"))
-#' fg <- 231:16
-#' bg <- rev(fg)  # reverse fg/bg so we can read the numbers
-#' table <- matrix(
-#'   sprintf("\033[38;5;%d;48;5;%dm%s\033[m", fg, bg, format(bg)), 36
-#' )
-#' part.a <- do.call(paste0, c(split(table[1:18,], row(table[1:18,]))))
-#' part.b <- do.call(paste0, c(split(table[-(1:18),], row(table[-(1:18),]))))
-#'
-#' ## Show colors on terminals that support 256 colors
-#' part.a[1]
-#' writeLines(part.a)
-#' writeLines(part.b)
+#' sgr.256 <- sgr_256()     # A demo of all 256 colors
+#' writeLines(sgr.256[1:8]) # SGR formatting
 #'
 #' ## Convert to HTML using classes instead of inline styles:
-#' html.body <- sgr_to_html(c(part.a, part.b), classes=class.256)
-#' writeLines(html.body[1])  # No inline colors
-#' html.body <- paste0(html.body, collapse="\n")
-#'
-#' ## Web page template
-#' page <- "
-#' <html><head><style>%s</style>\n
-#' <body style='background-color: #EEEEEE;'>
-#' <h3>%s</h3>
-#' <pre>%s</pre></body></html>"
+#' html.256 <- sgr_to_html(sgr.256, classes=class.256)
+#' writeLines(html.256[1])  # No inline colors
 #'
 #' ## Generate different style sheets.  We use `make_styles`
 #' ## for convenience but users should provide their own.
 #' default <- make_styles(class.256)
 #' mix <- matrix(c(.6,.2,.2, .2,.6,.2, .2,.2,.6), 3)
 #' desaturated <- make_styles(class.256, mix)
-#'
 #' writeLines(default[1:4])
 #' writeLines(desaturated[1:4])
-#' default <- paste0(default, collapse="\n")
-#' desaturated <- paste0(desaturated, collapse="\n")
 #'
 #' ## Embed in HTML page and diplay; only CSS changing
-#' html.0 <- sprintf(page, "", "Unstyled", html.body)
-#' html.1 <- sprintf(page, default, "Default", html.body)
-#' html.2 <- sprintf(page, desaturated, "Desaturated", html.body)
-#'
 #' \dontrun{
-#' f <- tempfile();
-#' writeLines(html.0, f); browseURL(f); Sys.sleep(1);
-#' writeLines(html.1, f); browseURL(f); Sys.sleep(1);
-#' writeLines(html.2, f); browseURL(f); Sys.sleep(1);
-#' unlink(f)
+#' in_html(html.256)                  # no CSS
+#' in_html(html.256, css=default)     # default CSS
+#' in_html(html.256, css=desaturated) # desaturated CSS
 #' }
 
 sgr_to_html <- function(
