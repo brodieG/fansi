@@ -394,9 +394,9 @@ static int state_size_and_write_as_html(
       );
       // nocov end
   }
-  // We've checked len at every step, so it cannot overflow INT_MAX
+  // We've checked len at every step, so it cannot overflow INT_MAX.
 
-  return (int) len;
+  return (int)len - bytes_html;
 }
 /*
  * Check for overall overflow, recall that R allows up to R_LEN_T_MAX long
@@ -556,7 +556,9 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
 
     if(has_esc || has_state) {
       bytes_final = html_check_overflow(
-        bytes_html, bytes_esc, bytes_init, span_end_len * has_state, i
+        bytes_html, bytes_esc, bytes_init,
+        span_end_len * state_has_style_html(state), // Last state has style?
+        i
       );
       // Allocate target vector if it hasn't been yet
       if(res == x) REPROTECT(res = duplicate(x), ipx);
@@ -606,7 +608,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       memcpy(buff_track, string_last, bytes_stub);
       buff_track += bytes_stub;
 
-      if(has_state) {
+      if(state_has_style_html(state)) {
         memcpy(buff_track,span_end, span_end_len);
         buff_track += span_end_len;
       }
