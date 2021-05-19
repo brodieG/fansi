@@ -17,6 +17,14 @@
  */
 
 #include "fansi.h"
+// Which styles actuall produce HTML
+
+static const unsigned int css_html_style = {
+  1, 2, 3, 4, 5, 6,
+  // 7,                // Inverse doesn't actually produces a style
+  8, 9
+}
+static unsigned int css_html_mask = 0;
 /*
  * Looks like we don't need to worry about C0 sequences, however we must
  * parse all ESC sequences as HTML gladly displays everything right after the
@@ -26,7 +34,9 @@
  * for html translation
  */
 struct FANSI_css {const char * css; int len;};
+
 // .len leftover from when we used pre-computed widths
+
 static const struct FANSI_css css_style[9] = {
   // Code 1: bold
   {.css="font-weight: bold;", .len=18},
@@ -40,15 +50,50 @@ static const struct FANSI_css css_style[9] = {
   {.css="text-decoration: blink;", .len=23},
   // Code 6: blink
   {.css="text-decoration: blink;", .len=23},
-  // Code 7: invert; unused; means we'll get an empty style tag if the only
-  // active style is invert, but oh well.  Could fix by adding an exception but
-  // won't
+  // Code 7: invert; unused, but needs to be here for offset lookups to work;
   {.css="", .len=0},
   // Code 8: conceal
   {.css="color: transparent;", .len=19},
   // Code 9: line-through
   {.css="text-decoration: line-through;", .len=30},
 };
+// Generate mask for html styles in first pass
+
+static unsigned int style_html_mask() {
+  if(!css_html_mask) {
+    for(int i = 0; i < sizeof(css_html_style) / sizeof(unsigned int); ++i)
+      css_html_mask |= 1U << css_html_style[i];
+  }
+  return css_html_mask;
+}
+static int state_has_color(struct FANSI_state state) {
+  return state.color >= 0 || state.bg_color >= 0;
+}
+static int state_has_style_html(struct FANSI_state state) {
+  // generate mask first time around.
+  return (state.style & style_html_mask()) ||
+    state.color >= 0 || state.bg_color >= 0;
+}
+static int state_comp_html(
+  struct FANSI_state target, struct FANSI_state current
+) {
+  return
+    // Colors are Different
+    FANSI_state_comp_color(target, current) ||
+    // HTML rendered styles are different
+    (
+      (target.style & style_html_mask()) !=
+      (current.style & style_html_mask())
+    ) ||
+    // Either state has color and the invert style is specified, note
+    // that this will mistakenly determine a change in the corner case where
+    // the colors are the inverse of each other and the inverse matches them.
+    (
+      (state_has_color(target) || state_has_color(current)) &&
+      (target.style & (1U << 7) || current.style & (1U << 7))
+    );
+}
+
 /*
  * Converts basic, bright and 8 bit colors to a range of 0:255.
  * Returns -1 for other values including no color.
@@ -253,7 +298,9 @@ static unsigned int copy_or_measure(
  *   also of writing.
  */
 static int state_size_and_write_as_html(
-  struct FANSI_state state, int first, char * buff,
+  struct FANSI_state state,
+  struct FANSI_state state_prev,
+  char * buff,
   SEXP color_classes, R_xlen_t i
 ) {
   /****************************************************\
@@ -261,78 +308,80 @@ static int state_size_and_write_as_html(
   | although right now ignoring rare escapes in html   |
   \****************************************************/
 
-  // Styles
+  // Not all basic styles are html styles (e.g. invert), so state only changes
+  // on invert when current or previous also has a color style
+
+  int has_cur_state = state_has_style_html(state);
+  int has_prev_state = state_has_style_html(state_prev);
+  int state_change = state_comp_html(state, state_prev);
+
   const char * buff_start = buff;
   unsigned int len = 0;
-  if(!FANSI_state_has_style_basic(state)) {
-    if(first)
-      // nocov start
-      error("Internal Error: no state in first span; contact maintainer.");
-      // nocov end
-    if(state.string[state.pos_byte]) {
-      const char * tmp = "</span><span>";
-      len += copy_or_measure(&buff, tmp, len, i);
-    }
-  } else {
-    int invert = state.style & (1 << 7);
-    int color = invert ? state.bg_color : state.color;
-    int * color_extra = invert ? state.bg_color_extra : state.color_extra;
-    int bg_color = invert ? state.color : state.bg_color;
-    int * bg_color_extra = invert ? state.color_extra : state.bg_color_extra;
 
-    // Use provided classes instead of inline styles?
-    const char * color_class =
-      get_color_class(color, color_extra, color_classes, 0);
-    const char * bgcol_class =
-      get_color_class(bg_color, bg_color_extra, color_classes, 1);
-
-    const char * tmp;
-    if(first) tmp = "<span"; else tmp = "</span><span";
-    len += copy_or_measure(&buff, tmp, len, i);
-
-    // Class based colors e.g. " class='fansi-color-06 fansi-bgcolor-04'"
-    // Brights remapped to 8-15
-
-    if(color_class || bgcol_class) {
-      tmp = " class='";
-      len += copy_or_measure(&buff, tmp, len, i);
-      if(color_class) len += copy_or_measure(&buff, color_class, len, i);
-      if(color_class && bgcol_class) len += copy_or_measure(&buff, " ", len, i);
-      if(bgcol_class) len += copy_or_measure(&buff, bgcol_class, len, i);
-      len += copy_or_measure(&buff, "'", len, i);
-    }
-    // inline style and/or colors
-    if(
-      state.style ||
-      (color >= 0 && (!color_class)) ||
-      (bg_color >= 0 && (!bgcol_class))
-    ) {
-      len += copy_or_measure(&buff, " style='", len, i);
-      char color_tmp[8];
-      if(color >= 0 && (!color_class)) {
-        len += copy_or_measure(&buff, "color: ", len, i);
-        len += copy_or_measure(
-          &buff, color_to_html(color, color_extra, color_tmp), len, i
-        );
-        len += copy_or_measure(&buff, ";", len, i);
+  if(state_change) {
+    if(!has_cur_state) {
+      len += copy_or_measure(&buff, "</span>", len, i);
+    } else {
+      if (!has_prev_state) {
+        len += copy_or_measure(&buff, "<span", len, i);
+      } else {
+        len += copy_or_measure(&buff, "</span><span", len, i);
       }
-      if(bg_color >= 0 && (!bgcol_class)) {
-        len += copy_or_measure(&buff,  "background-color: ", len, i);
-        len += copy_or_measure(
-            &buff, color_to_html(bg_color, bg_color_extra, color_tmp), len, i
-        );
-        len += copy_or_measure(&buff, ";", len, i);
+      // Styles
+      int invert = state.style & (1 << 7);
+      int color = invert ? state.bg_color : state.color;
+      int * color_extra = invert ? state.bg_color_extra : state.color_extra;
+      int bg_color = invert ? state.color : state.bg_color;
+      int * bg_color_extra = invert ? state.color_extra : state.bg_color_extra;
+
+      // Use provided classes instead of inline styles?
+      const char * color_class =
+        get_color_class(color, color_extra, color_classes, 0);
+      const char * bgcol_class =
+        get_color_class(bg_color, bg_color_extra, color_classes, 1);
+
+      // Class based colors e.g. " class='fansi-color-06 fansi-bgcolor-04'"
+      // Brights remapped to 8-15
+
+      if(color_class || bgcol_class) {
+        len += copy_or_measure(&buff, " class='";, len, i);
+        if(color_class) len += copy_or_measure(&buff, color_class, len, i);
+        if(color_class && bgcol_class) len += copy_or_measure(&buff, " ", len, i);
+        if(bgcol_class) len += copy_or_measure(&buff, bgcol_class, len, i);
+        len += copy_or_measure(&buff, "'", len, i);
       }
-      // Styles (need to go after color for transparent to work)
+      // inline style and/or colors
+      if(
+        state.style ||
+        (color >= 0 && (!color_class)) ||
+        (bg_color >= 0 && (!bgcol_class))
+      ) {
+        len += copy_or_measure(&buff, " style='", len, i);
+        char color_tmp[8];
+        if(color >= 0 && (!color_class)) {
+          len += copy_or_measure(&buff, "color: ", len, i);
+          len += copy_or_measure(
+            &buff, color_to_html(color, color_extra, color_tmp), len, i
+          );
+          len += copy_or_measure(&buff, ";", len, i);
+        }
+        if(bg_color >= 0 && (!bgcol_class)) {
+          len += copy_or_measure(&buff,  "background-color: ", len, i);
+          len += copy_or_measure(
+              &buff, color_to_html(bg_color, bg_color_extra, color_tmp), len, i
+          );
+          len += copy_or_measure(&buff, ";", len, i);
+        }
+        // Styles (need to go after color for transparent to work)
 
-      for(int i = 1; i < 10; ++i)
-        if(state.style & (1 << i))
-          len += copy_or_measure(&buff, css_style[i - 1].css, len, i);
+        for(int i = 1; i < 10; ++i)
+          if(state.style & css_html_mask & (1 << i))
+            len += copy_or_measure(&buff, css_style[i - 1].css, len, i);
 
-      len += copy_or_measure(&buff, "'", len, i);
-    }
-    len += copy_or_measure(&buff, ">", len, i);
-  }
+        len += copy_or_measure(&buff, "'", len, i);
+      }
+      len += copy_or_measure(&buff, ">", len, i);
+  } }
   if(buff) {
     *buff = 0;
     if((unsigned int)(buff - buff_start) != len)
@@ -353,15 +402,16 @@ static int state_size_and_write_as_html(
  */
 
 static int html_compute_size(
-  struct FANSI_state state, int bytes_extra, int bytes_esc_start, int first,
-  R_xlen_t i, SEXP color_classes
+  struct FANSI_state state, struct FANSI_state state_prev,
+  int bytes_extra, int bytes_esc_start, R_xlen_t i, SEXP color_classes
 ) {
   // bytes_esc cannot overflow int because the input is supposed to be an
   // R sourced string
 
   int bytes_esc = state.pos_byte - bytes_esc_start;
-  int bytes_html =
-    state_size_and_write_as_html(state, first, NULL, color_classes, i);
+  int bytes_html = state_size_and_write_as_html(
+    state, state_prev, NULL, color_classes, i
+  );
   int bytes_net = bytes_html - bytes_esc;
 
   if(bytes_net >= 0) {
@@ -382,6 +432,10 @@ static int html_compute_size(
     }
     bytes_extra += bytes_net;
   }
+  Rprintf(
+    "b_esc: %d; b_html: %d; b_net: %d\n",
+    bytes_esc, bytes_html, bytes_net
+  );
   return bytes_extra;
 }
 /*
@@ -435,6 +489,7 @@ static size_t html_check_overflow(
 
   return (size_t) bytes_final + 1;   // include terminator
 }
+
 SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
   if(TYPEOF(x) != STRSXP)
     error("Internal Error: `x` must be a character vector");  // nocov
@@ -445,6 +500,8 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
   struct FANSI_buff buff = {.len=0};
   struct FANSI_state state, state_prev, state_init;
   state = state_prev = state_init = FANSI_state_init("", warn, term_cap);
+  const char * span_end = "</span>";
+  int span_end_len = (int) strlen(span_end);
 
   SEXP res = x;
   // Reserve spot on protection stack
@@ -477,8 +534,14 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
 
     int bytes_extra = 0;   // Net bytes being add via tags (css - ESC)
     size_t bytes_final = 0;
-    int has_esc, any_esc;
-    has_esc = any_esc = 0;
+
+    // It is possible to have sequences that don't actually translate to an HTML
+    // representable state, and it is also possible to only have HTML
+    // representable states carried over from the prior element (thus no escapes
+    // in the current).
+
+    int has_esc, has_state;
+    has_esc = has_state = 0;
 
     // Process the strings in two passes, in pass 1 we compute how many bytes
     // we'll need to store the string, and in the second we actually write it.
@@ -487,20 +550,17 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
     // sequences.  The latter might be faster, but more work for us so we'll
     // leave it and see if it becomes a major issue.
 
-    // It is possible for a state to be left over from prior string.
+    // It is possible for a state to be left over from prior string.  For first
+    // loop iteration, state and state_prev will be the same.
 
-    if(FANSI_state_has_style_basic(state)) {
-      bytes_extra = html_compute_size(
-        state, bytes_extra, state.pos_byte, 0, i, color_classes
-      );
-      has_esc = any_esc = 1;
-    }
-    state_prev = state;
-
+    has_state |= state_has_style_html(state);
+    bytes_extra = html_compute_size(
+      state, state_prev, bytes_extra, state.pos_byte, i, color_classes
+    );
     // Now check string proper
 
     while(*string && (string = strchr(string, 0x1b))) {
-      if(!any_esc) any_esc = 1;
+      has_esc = 1;
 
       // Since we don't care about width, etc, we only use the state objects to
       // parse the ESC sequences, so we don't have to worry about UTF8
@@ -513,20 +573,25 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
 
       int esc_start = state.pos_byte;
       state = FANSI_read_next(state);
-      if(FANSI_state_comp_basic(state, state_prev)) {
-        bytes_extra = html_compute_size(
-          state, bytes_extra, esc_start, !has_esc, i, color_classes
-        );
-        if(!has_esc) has_esc = 1;
-      }
+      has_state |= state_has_style_html(state);
+
+      Rprintf(
+        "comp: %d, pos: %d\n",
+        FANSI_state_comp_basic(state, state_prev), state.pos_byte
+      );
+      // UPDATE, ONCE THIS IS FIXED THE OUTER IF GOES AWAY.
+
+      bytes_extra = html_compute_size(
+        state, state_prev, bytes_extra, esc_start, i, color_classes
+      );
       state_prev = state;
       ++string;
     }
-    if(any_esc) {
-      // we will use an extra <span></span> to simplify logic
-      int span_end = has_esc * 7;
-
-      bytes_final = html_check_overflow(bytes_extra, bytes_init, span_end, i);
+    if(has_esc || has_state) {
+      bytes_final = html_check_overflow(
+        bytes_extra, bytes_init, span_end_len * has_state, i
+      );
+      Rprintf("extra: %d init: %d end: %d final %d\n", bytes_extra, bytes_init, span_end_len, bytes_final);
 
       // Allocate target vector if it hasn't been yet
       if(res == x) REPROTECT(res = duplicate(x), ipx);
@@ -535,7 +600,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       FANSI_size_buff(&buff, bytes_final);
       string = string_start;
       state_start.warn = state.warn;
-      state = state_start;
+      state = state_prev = state_start;
 
       int first_esc = 1;
       char * buff_track = buff.buff;
@@ -544,7 +609,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       // for overflow in first pass
       if(FANSI_state_has_style_basic(state)) {
         int bytes_html = state_size_and_write_as_html(
-          state, first_esc, buff_track, color_classes, i
+          state, state_prev, buff_track, color_classes, i
         );
         buff_track += bytes_html;
         first_esc = 0;

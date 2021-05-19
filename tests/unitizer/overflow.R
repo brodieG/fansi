@@ -50,6 +50,8 @@ unitizer_sect('html', {
   invisible(fansi:::set_int_max(58))
   (x <- sgr_to_html("\033[31m\033[42mhello", classes=TRUE))
   nchar(x)
+  # Over
+
 })
 unitizer_sect('unhandled', {
   invisible(fansi:::set_int_max(10))

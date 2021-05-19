@@ -48,6 +48,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   extern SEXP FANSI_warn_sym;
 
+
   // macros
 
   #define FANSI_ADD_INT(x, y) FANSI_add_int((x), (y), __FILE__, __LINE__)
@@ -145,7 +146,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * - n == 12: prop spacing
      *
      * UPDATE FANSI_STYLE_MAX if we add more here!!, make sure to check the
-     * size, read, and write funs any time this changes
+     * size, read, and write funs any time this changes.
+     *
+     * Also, if any HTML styles are added check those too.
      */
     unsigned int style;
 
@@ -385,6 +388,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP width, SEXP ctl
   );
   int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current);
+  int FANSI_state_comp_color(
+    struct FANSI_state target, struct FANSI_state current
+  );
   int FANSI_state_comp_basic(
     struct FANSI_state target, struct FANSI_state current
   );

@@ -101,7 +101,7 @@ unitizer_sect("simple html conversion", {
 })
 unitizer_sect("Bright Colors", {
   sgr_to_html("hello\033[94;101m world\033[39m yow\033[49mza")
-  # oob color
+  # oob color (!98 %in% 90:97)
   sgr_to_html("hello\033[98;101m world\033[39m yow\033[49mza")
 })
 unitizer_sect("Corner cases", {
