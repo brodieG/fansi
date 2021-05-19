@@ -203,6 +203,16 @@ static char * color_to_html(int color, int * color_extra, char * buff) {
 
   return buff;
 }
+// Central error function.
+
+static void overflow_err(const char * type, R_xlen_t i) {
+  intmax_t ind = i >= INTMAX_MAX ? -2 : i; // i == INTMAX_MAX is the issue
+  error(
+    "%s %s %s %ju %s",
+    "Expanding SGR sequences into CSS will create a string longer than",
+    type, "at position", ind + 1, "which is not supported."
+  );
+}
 /*
  * If *buff is not NULL, copy tmp into it and advance, else measure tmp
  * and advance length
@@ -222,14 +232,7 @@ static unsigned int copy_or_measure(
   size_t tmp_len = strlen(tmp);
   // strictly it's possible for len > FANSI_int_max, but shouldn't happen even
   // in testing since we only grow len by first checking.
-  if(tmp_len > FANSI_int_max - len) {
-    intmax_t ind = i >= INTMAX_MAX ? -2 : i;
-    error(
-      "%s%s %ju %s",
-      "Expanding SGR sequences into CSS will create a string longer ",
-      "than INT_MAX at position", ind + 1, "which is not allowed by R (3)."
-    );
-  }
+  if(tmp_len > FANSI_int_max - len) overflow_err("INT_MAX", i);
   if(*buff) {
     strcpy(*buff, tmp);
     *buff += tmp_len;
@@ -333,24 +336,15 @@ static int state_size_and_write_as_html(
   if(buff) {
     *buff = 0;
     if((unsigned int)(buff - buff_start) != len)
+      // nocov start
       error(
         "Internal Error: buffer length mismatch in html generation (%ud vs %ud).",
         len, (unsigned int)(buff - buff_start)
       );
-  }
-  // Final check (redundant to those in copy_or_measure, really)
-
-  if(len > (unsigned int) FANSI_int_max) {
-    intmax_t ind = i >= INTMAX_MAX ? -2 : i;
-    error(
-      "%s%s %ju %s",
-      "Expanding SGR sequences into CSS will create a string longer ",
-      "than INT_MAX at position", ind + 1, "which is not allowed by R (4)."
-    );
+      // nocov end
   }
   return (int) len;
 }
-
 /*
  * Helper functions to process size and write the HTML split off
  * for clarity
@@ -368,26 +362,10 @@ static int html_compute_size(
   int bytes_esc = state.pos_byte - bytes_esc_start;
   int bytes_html =
     state_size_and_write_as_html(state, first, NULL, color_classes, i);
-
-  if(bytes_html > FANSI_int_max) {
-    intmax_t ind = i >= INTMAX_MAX ? -2 : i;
-    error(
-      "%s%s %ju %s",
-      "Expanding SGR sequences into CSS will create a string longer ",
-      "than INT_MAX at position ", ind + 1, " which is not allowed by R (1)."
-    );
-  }
   int bytes_net = bytes_html - bytes_esc;
 
   if(bytes_net >= 0) {
-    if(bytes_extra > FANSI_int_max - bytes_net) {
-      intmax_t ind = i >= INTMAX_MAX ? -2 : i;
-      error(
-        "%s%s %ju %s",
-        "Expanding SGR sequences into CSS will create a string longer ",
-        "than INT_MAX at position ", ind + 1, " which is not allowed by R (2)."
-      );
-    }
+    if(bytes_extra > FANSI_int_max - bytes_net) overflow_err("INT_MAX", i);
     bytes_extra += bytes_net;
   } else {
     if(bytes_extra < FANSI_int_min - bytes_net) {
@@ -406,52 +384,56 @@ static int html_compute_size(
   }
   return bytes_extra;
 }
-// Check for overall overflow, recall that R allows up to INT_MAX long strings
-// excluding the NULL.
-//
-// However, need size_t return since including the NULL terminator we could need
-// over int size.
-
+/*
+ * Check for overall overflow, recall that R allows up to R_LEN_T_MAX long
+ * strings (which currently is INT_MAX) excluding the NULL.
+ *
+ * However, need size_t return so we can allocate one extra byte for the NULL
+ * terminator.  Strictly speaking we could avoid this as R accepts character
+ * buffers of known length via mkCharLenCE or some such, but it feels
+ * uncomfortable having an unterminated string floating around.
+ *
+ * @return the size of the string **including** the NULL terminator
+ */
 static size_t html_check_overflow(
   int bytes_extra, int bytes_init, int span_extra, R_xlen_t i
 ) {
-  size_t bytes_final;
-  if(bytes_init < 0) error("Internal error: bytes_init must be positive.");
-  if(
-    bytes_extra >= 0 && (
-      bytes_init > FANSI_int_max - bytes_extra - span_extra
-    )
-  ) {
-    error(
-      "%s%s %.0f %s",
-      "String with SGR sequences expanded to CSS is longer ",
-      "than INT_MAX at position", (double) (i + 1),
-      "which is not allowed by R."
-    );
-  } else if(bytes_extra < 0) {
-    if(bytes_extra <= FANSI_int_min + span_extra) {
-      // nocov start
-      error(
-        "%s%s%s",
-        "Internal error: integer overflow when trying to compute net ",
-        "additional bytes required by conversion of SGR to HTML. ",
-        "Contact maintainer"
-      );
-      // nocov end
-    }
-    int bytes_extra_extra = bytes_extra + span_extra;
+  if(bytes_init < 0 || span_extra < 0)
+    error("Internal Error: illegal -ve lengths in overflow check."); // nocov
 
-    if(bytes_init + bytes_extra_extra < 0)
-      // nocov start
-      error(
-        "%s%s",
-        "Internal Error: CSS would translate to negative length string; ",
-        "this should not happen."
-      );
-      // nocov end
+  // bytes_extra is -ve in cases CSI SGR is longer than html, which is possible.
+  if(
+    (
+       bytes_extra >= 0 &&
+       bytes_init > FANSI_int_max - bytes_extra - span_extra
+    )
+    ||
+    (
+       bytes_extra < 0 &&
+       bytes_init + bytes_extra > FANSI_int_max - span_extra
+    )
+  ) overflow_err("INT_MAX", i);
+
+  if(bytes_init + bytes_extra + span_extra < 0) {
+    // nocov start
+    error(
+      "%s%s",
+      "Internal Error: CSS would translate to negative length string; ",
+      "this should not happen."
+    );
+    // nocov end
   }
-  bytes_final = (size_t) bytes_init + bytes_extra + span_extra + 1;
-  return bytes_final;
+  int bytes_final = bytes_init + bytes_extra + span_extra;
+
+  // In the extremely unlikely case we're on a systems with weird integer sizes
+  // or R changes what R_len_t.  >= SIZE_MAX b/c we need room for the extra NULL
+  // terminator byte
+  if(INT_MAX >= SIZE_MAX && (unsigned int) bytes_final >= SIZE_MAX)
+    overflow_err("SIZE_MAX", i);     // nocov
+  if(INT_MAX > R_LEN_T_MAX && bytes_final > R_LEN_T_MAX)
+    overflow_err("R_LEN_T_MAX", i);  // nocov
+
+  return (size_t) bytes_final + 1;   // include terminator
 }
 SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
   if(TYPEOF(x) != STRSXP)
@@ -484,8 +466,14 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
     state.string = string;
     struct FANSI_state state_start = FANSI_reset_pos(state);
 
-    // Save what the state was at the end of the prior string
-    R_len_t bytes_init = LENGTH(chrsxp);
+    // R_len_t is currently (R4.1) int, but what if it's increased in the
+    // future?  Considered doing all the code in R_len_t units but that gets
+    // hideous real fast (e.g. R_LEN_T_MIN isn't even defined - will the new one
+    // be signed?)
+    R_len_t bytes_init0 = LENGTH(chrsxp);
+    if(bytes_init0 > FANSI_int_max)
+      error("Strings longer than INT_MAX not supported.");
+    int bytes_init = (int) bytes_init0;
 
     int bytes_extra = 0;   // Net bytes being add via tags (css - ESC)
     size_t bytes_final = 0;
@@ -543,8 +531,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       // Allocate target vector if it hasn't been yet
       if(res == x) REPROTECT(res = duplicate(x), ipx);
 
-      // Allocate buffer and do second pass
-
+      // Allocate buffer and do second pass, bytes_final includes space for NULL
       FANSI_size_buff(&buff, bytes_final);
       string = string_start;
       state_start.warn = state.warn;
@@ -620,7 +607,6 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       }
       *(buff_track) = '0';  // not strictly needed
 
-      // Now create the charsxp what encoding to use.
       if(buff_track - buff.buff > FANSI_int_max)
         // nocov start
         error(
@@ -630,9 +616,22 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
         );
         // nocov end
 
+      // Final check that we're not out of sync (recall buff.len includes NULL)
+      if(buff_track - buff.buff != (int)(bytes_final - 1))
+        // nocov start
+        error(
+          "Internal Error: %s (%td vs %zu).",
+          "buffer length mismatch in html generation",
+          buff_track - buff.buff, bytes_final - 1
+        );
+        // nocov end
+
+      // Now create the charsxp with the original encoding.  Since we're only
+      // removing SGR and adding FANSI, it should be okay.
+
       cetype_t chr_type = getCharCE(chrsxp);
       SEXP chrsxp = PROTECT(
-        mkCharLenCE(buff.buff, (int) (buff_track - buff.buff), chr_type)
+        mkCharLenCE(buff.buff, (R_len_t)(buff_track - buff.buff), chr_type)
       );
       SET_STRING_ELT(res, i, chrsxp);
       UNPROTECT(1);
