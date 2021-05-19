@@ -424,3 +424,48 @@ set_knit_hooks <- function(
   if(.test) list(old.hooks=old.hook.list, new.hooks=new.hook.list, res=set.res)
   else old.hook.list
 }
+#' Show 8 Bit ANSI CSI SGR Colors
+#'
+#' Generates text with each 8 bit SGR code (e.g. the "###" in "38;5;###") with
+#' the background colored by itself, and the foreground in a contrasting color
+#' and interesting color (we sacrifice some contrast for interest as this is
+#' intended for demo rather than reference purposes).
+#'
+#' @seealso [make_styles()].
+#' @export
+#' @return character vector with SGR codes with background color set as
+#'   themselves.
+#' @examples
+#' writeLines(sgr_256())
+
+sgr_256 <- function() {
+  tpl <- "\033[38;5;%d;48;5;%dm%s\033[m"
+
+  # Basic, bright, grayscale
+  basic <- paste0(sprintf(tpl, 15, 0:7, format(0:7, width=3)), collapse=" ")
+  bright <- paste0(sprintf(tpl, 0, 8:15, format(8:15, width=3)), collapse=" ")
+  gs1 <-
+    paste0(sprintf(tpl, 15, 232:243, format(232:243, width=3)), collapse=" ")
+  gs2 <-
+    paste0(sprintf(tpl, 0, 244:255, format(244:255, width=3)), collapse=" ")
+
+  # Color parts
+  fg <- 231:16
+  bg <- rev(fg)  # reverse fg/bg so we can read the numbers                  }
+
+  table <- matrix(sprintf(tpl, fg, bg, format(bg)), 36)
+  part.a <- do.call(paste0, c(split(table[1:18,], row(table[1:18,]))))
+  part.b <- do.call(paste0, c(split(table[-(1:18),], row(table[-(1:18),]))))
+
+  ## Output
+  c(
+    "Standard", basic, "",
+    "High-Intensity", bright, "",
+    "216 Colors (Dark)",
+    part.a, "",
+    "216 Colors (Light)",
+    part.b, "",
+    "Grayscale",
+    gs1, gs2
+  )
+}
