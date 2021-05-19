@@ -19,11 +19,11 @@
 #include "fansi.h"
 // Which styles actuall produce HTML
 
-static const unsigned int css_html_style = {
+static const unsigned int css_html_style[8] = {
   1, 2, 3, 4, 5, 6,
   // 7,                // Inverse doesn't actually produces a style
   8, 9
-}
+};
 static unsigned int css_html_mask = 0;
 /*
  * Looks like we don't need to worry about C0 sequences, however we must
@@ -61,7 +61,8 @@ static const struct FANSI_css css_style[9] = {
 
 static unsigned int style_html_mask() {
   if(!css_html_mask) {
-    for(int i = 0; i < sizeof(css_html_style) / sizeof(unsigned int); ++i)
+    int style_n = sizeof(css_html_style) / sizeof(unsigned int);
+    for(int i = 0; i < style_n; ++i)
       css_html_mask |= 1U << css_html_style[i];
   }
   return css_html_mask;
@@ -253,9 +254,9 @@ static char * color_to_html(int color, int * color_extra, char * buff) {
 static void overflow_err(const char * type, R_xlen_t i) {
   intmax_t ind = i >= INTMAX_MAX ? -2 : i; // i == INTMAX_MAX is the issue
   error(
-    "%s %s %s %ju %s",
-    "Expanding SGR sequences into CSS will create a string longer than",
-    type, "at position", ind + 1, "which is not supported."
+    "%s %s %s %ju%s",
+    "Expanding SGR sequences into HTML will create a string longer than",
+    type, "at position", ind + 1, ". Try again with smaller strings."
   );
 }
 /*
@@ -301,7 +302,8 @@ static int state_size_and_write_as_html(
   struct FANSI_state state,
   struct FANSI_state state_prev,
   char * buff,
-  SEXP color_classes, R_xlen_t i
+  SEXP color_classes, R_xlen_t i,
+  int bytes_html
 ) {
   /****************************************************\
   | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_csi_write  |
@@ -316,7 +318,7 @@ static int state_size_and_write_as_html(
   int state_change = state_comp_html(state, state_prev);
 
   const char * buff_start = buff;
-  unsigned int len = 0;
+  unsigned int len = bytes_html;  // this is for overflow check
 
   if(state_change) {
     if(!has_cur_state) {
@@ -344,7 +346,7 @@ static int state_size_and_write_as_html(
       // Brights remapped to 8-15
 
       if(color_class || bgcol_class) {
-        len += copy_or_measure(&buff, " class='";, len, i);
+        len += copy_or_measure(&buff, " class='", len, i);
         if(color_class) len += copy_or_measure(&buff, color_class, len, i);
         if(color_class && bgcol_class) len += copy_or_measure(&buff, " ", len, i);
         if(bgcol_class) len += copy_or_measure(&buff, bgcol_class, len, i);
@@ -392,51 +394,9 @@ static int state_size_and_write_as_html(
       );
       // nocov end
   }
+  // We've checked len at every step, so it cannot overflow INT_MAX
+
   return (int) len;
-}
-/*
- * Helper functions to process size and write the HTML split off
- * for clarity
- *
- * Watch out, return value could be negative!
- */
-
-static int html_compute_size(
-  struct FANSI_state state, struct FANSI_state state_prev,
-  int bytes_extra, int bytes_esc_start, R_xlen_t i, SEXP color_classes
-) {
-  // bytes_esc cannot overflow int because the input is supposed to be an
-  // R sourced string
-
-  int bytes_esc = state.pos_byte - bytes_esc_start;
-  int bytes_html = state_size_and_write_as_html(
-    state, state_prev, NULL, color_classes, i
-  );
-  int bytes_net = bytes_html - bytes_esc;
-
-  if(bytes_net >= 0) {
-    if(bytes_extra > FANSI_int_max - bytes_net) overflow_err("INT_MAX", i);
-    bytes_extra += bytes_net;
-  } else {
-    if(bytes_extra < FANSI_int_min - bytes_net) {
-      // This should actually be impossible as a string that is only ESC
-      // sequences with no SGR is the only way to get that big a decrease,
-      // and if it doesn't have SGR then it wouldn't enter this loop
-      // nocov start
-      error(
-        "%s%s",
-        "Internal Error: unexpectedly large byte shrinking when ",
-        "converting ESC sequences to CSS; contact maintainer."
-      );
-      // nocov end
-    }
-    bytes_extra += bytes_net;
-  }
-  Rprintf(
-    "b_esc: %d; b_html: %d; b_net: %d\n",
-    bytes_esc, bytes_html, bytes_net
-  );
-  return bytes_extra;
 }
 /*
  * Check for overall overflow, recall that R allows up to R_LEN_T_MAX long
@@ -450,12 +410,14 @@ static int html_compute_size(
  * @return the size of the string **including** the NULL terminator
  */
 static size_t html_check_overflow(
-  int bytes_extra, int bytes_init, int span_extra, R_xlen_t i
+  int bytes_html, int bytes_esc, int bytes_init, int span_extra, R_xlen_t i
 ) {
   if(bytes_init < 0 || span_extra < 0)
     error("Internal Error: illegal -ve lengths in overflow check."); // nocov
 
-  // bytes_extra is -ve in cases CSI SGR is longer than html, which is possible.
+  // both bytes_html and byte_esc are positive, so this cannot overflow
+
+  int bytes_extra = bytes_html - bytes_esc;
   if(
     (
        bytes_extra >= 0 &&
@@ -531,8 +493,9 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
     if(bytes_init0 > FANSI_int_max)
       error("Strings longer than INT_MAX not supported.");
     int bytes_init = (int) bytes_init0;
+    int bytes_html = 0;
+    int bytes_esc = 0;
 
-    int bytes_extra = 0;   // Net bytes being add via tags (css - ESC)
     size_t bytes_final = 0;
 
     // It is possible to have sequences that don't actually translate to an HTML
@@ -553,10 +516,16 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
     // It is possible for a state to be left over from prior string.  For first
     // loop iteration, state and state_prev will be the same.
 
+    // - Pass 1: Measure -------------------------------------------------------
+
+    // Overflow checked inside funs
+
     has_state |= state_has_style_html(state);
-    bytes_extra = html_compute_size(
-      state, state_prev, bytes_extra, state.pos_byte, i, color_classes
+    bytes_html += state_size_and_write_as_html(
+      state, state_prev, NULL, color_classes, i, bytes_html
     );
+    bytes_esc += 0;  // This is state from prior string, so no ESC yet
+
     // Now check string proper
 
     while(*string && (string = strchr(string, 0x1b))) {
@@ -575,24 +544,20 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       state = FANSI_read_next(state);
       has_state |= state_has_style_html(state);
 
-      Rprintf(
-        "comp: %d, pos: %d\n",
-        FANSI_state_comp_basic(state, state_prev), state.pos_byte
+      bytes_html += state_size_and_write_as_html(
+        state, state_prev, NULL, color_classes, i, bytes_html
       );
-      // UPDATE, ONCE THIS IS FIXED THE OUTER IF GOES AWAY.
+      bytes_esc += state.pos_byte - esc_start;
 
-      bytes_extra = html_compute_size(
-        state, state_prev, bytes_extra, esc_start, i, color_classes
-      );
       state_prev = state;
       ++string;
     }
+    // - Pass 2: Write ---------------------------------------------------------
+
     if(has_esc || has_state) {
       bytes_final = html_check_overflow(
-        bytes_extra, bytes_init, span_end_len * has_state, i
+        bytes_html, bytes_esc, bytes_init, span_end_len * has_state, i
       );
-      Rprintf("extra: %d init: %d end: %d final %d\n", bytes_extra, bytes_init, span_end_len, bytes_final);
-
       // Allocate target vector if it hasn't been yet
       if(res == x) REPROTECT(res = duplicate(x), ipx);
 
@@ -602,18 +567,14 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       state_start.warn = state.warn;
       state = state_prev = state_start;
 
-      int first_esc = 1;
       char * buff_track = buff.buff;
 
       // Handle state left-over from previous char elem; we already checked
       // for overflow in first pass
-      if(FANSI_state_has_style_basic(state)) {
-        int bytes_html = state_size_and_write_as_html(
-          state, state_prev, buff_track, color_classes, i
-        );
-        buff_track += bytes_html;
-        first_esc = 0;
-      }
+
+      buff_track += state_size_and_write_as_html(
+        state, state_prev, buff_track, color_classes, i, 0
+      );
       state_prev = state;
 
       // Deal with state changes in this string
@@ -622,53 +583,32 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
         state.pos_byte = (string - string_start);
 
         // read all sequential ESC tags
-
         state = FANSI_read_next(state);
 
         // The text since the last ESC
-
         const char * string_last = string_start + state_prev.pos_byte;
         int bytes_prev = string - string_last;
         memcpy(buff_track, string_last, bytes_prev);
         buff_track += bytes_prev;
 
-        // If we have a change from the previous tag, write html/css
-        // we already checked for overflow in first pass
+        // State as html
+        buff_track += state_size_and_write_as_html(
+          state, state_prev,  buff_track, color_classes, i, 0
+        );
 
-        if(FANSI_state_comp_basic(state, state_prev)) {
-          int bytes_html = state_size_and_write_as_html(
-            state, first_esc, buff_track, color_classes, i
-          );
-          buff_track += bytes_html;
-          if(first_esc) first_esc = 0;
-        }
         state_prev = state;
         string = state.string + state.pos_byte;
       }
       // Last hunk left to write and trailing SPAN
-
       const char * string_last = state_prev.string + state_prev.pos_byte;
       int bytes_stub = bytes_init - (string_last - string_start);
 
       memcpy(buff_track, string_last, bytes_stub);
       buff_track += bytes_stub;
 
-      if(has_esc) {
-        // Always close (I think, I'm writing this over a year after I wrote the
-        // code) tag.
-
-        /*--------------------------------------------------------------------*\
-        // WARNING: we're relying on this behavior to deal with the            |
-        // black friday business, see #59)                                     |
-        \*--------------------------------------------------------------------*/
-
-        // Old comment: odd case where the only thing in the string is a null
-        // SGR (from looking at code this will always be require, so not sure
-        // what I mean by "odd case" as this is the only place we close tags
-        // without immediately reopening another).
-
-        memcpy(buff_track, "</span>", span_end);
-        buff_track += span_end;
+      if(has_state) {
+        memcpy(buff_track,span_end, span_end_len);
+        buff_track += span_end_len;
       }
       *(buff_track) = '0';  // not strictly needed
 

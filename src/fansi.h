@@ -132,6 +132,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * corresponding ANSI CSI SGR codes, 10 and greater are not necessarily
      * contiguous but were put here because they could co-exist with the style
      *
+     * - n ==  0: UNUSED, possibly an oversight?  Logic simpler though.
      * - n ==  1: bold
      * - n ==  2: blur/faint
      * - n ==  3: italic
