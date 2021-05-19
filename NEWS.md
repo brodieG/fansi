@@ -1,7 +1,9 @@
 # fansi Release Notes
 
-## v0.4.3
+## v0.5.0
 
+* [#65](https://github.com/brodieG/fansi/issues/65): optionally convert CSI SGR
+  to classes instead of inline styles (h/t @hadley).
 * Adjust for changes to `nchar(..., type='width')` for C0-C1 control characters
   in R 4.1.
 * Restore tests bypassed in 0.4.2.

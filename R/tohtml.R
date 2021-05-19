@@ -171,6 +171,7 @@ sgr_to_html <- function(
   .Call(FANSI_esc_to_html, enc2utf8(x), warn, term.cap.int, classes)
 }
 
+#' @importFrom grDevices col2rgb rgb
 #' @rdname sgr_to_html
 #' @export
 

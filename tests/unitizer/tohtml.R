@@ -163,13 +163,14 @@ unitizer_sect("Colors as classes (#65)", {
 
   sgr_to_html("\033[31mhello\033[31m", classes=NULL)
   sgr_to_html("\033[31mhello\033[31m", classes=character(7L))
-  sgr_to_html("\033[31mhello\033[31m", classes=NA_character_)
-  sgr_to_html("\033[31mhello\033[31m", classes="bad class")
+  sgr_to_html("\033[31mhello\033[31m", classes=rep(NA_character_, 16))
+  sgr_to_html("\033[31mhello\033[31m", classes=rep("bad class", 16))
 
   make_styles(class.8, c(1,1,0,0,0,1,1,0,0))
   make_styles(class.8, matrix(c(0,1,0,0,0,1,1,0,NA), 3))
   make_styles(class.8, "hello")
   make_styles(letters, matrix(c(0,1,0,0,0,1,1,0,0), 3))
+  make_styles(NULL)
 
   ## see examples for visual testing
 })
