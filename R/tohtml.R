@@ -88,12 +88,11 @@
 #' )
 #' classes  # order is important!
 #' classes <- do.call(paste, c(classes, sep="-"))
-#' html <- sgr_to_html(
+#' ## Only basic colors are mapped to classes; others styled inline
+#' sgr_to_html(
 #'   "\033[94mhello\033[m \033[31;42;1mworld\033[m",
 #'   classes=classes
 #' )
-#' ## Only basic colors are mapped to classes; others styled inline
-#' html
 #'
 #' ## Create a whole web page with a style sheet for 256 colors and
 #' ## the colors shown in a table.
@@ -114,10 +113,11 @@
 #' writeLines(desaturated[1:4])
 #'
 #' ## Embed in HTML page and diplay; only CSS changing
+#' html <- c("<pre>", html.256, "</pre>")
 #' \dontrun{
-#' in_html(html.256)                  # no CSS
-#' in_html(html.256, css=default)     # default CSS
-#' in_html(html.256, css=desaturated) # desaturated CSS
+#' in_html(html)                  # no CSS
+#' in_html(html, css=default)     # default CSS
+#' in_html(html, css=desaturated) # desaturated CSS
 #' }
 
 sgr_to_html <- function(
