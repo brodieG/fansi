@@ -86,12 +86,11 @@ static int state_comp_html(
       (target.style & style_html_mask()) !=
       (current.style & style_html_mask())
     ) ||
-    // Either state has color and the invert style is specified, note
-    // that this will mistakenly determine a change in the corner case where
-    // the colors are the inverse of each other and the inverse matches them.
+    // If one has color both have the same color, but we need to check
+    // whether they have different invert status
     (
-      (state_has_color(target) || state_has_color(current)) &&
-      (target.style & (1U << 7) || current.style & (1U << 7))
+      (state_has_color(target)) &&
+      (target.style & (1U << 7)) ^ (current.style & (1U << 7))
     );
 }
 
