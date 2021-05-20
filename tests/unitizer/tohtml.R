@@ -109,13 +109,15 @@ unitizer_sect("Corner cases", {
   sgr_to_html("hello\033[31m")
 
   # A string that shrinks; multiple repeated SGRs reduced to a single span
-
   sgrs <- paste0(rep("\033[31m", 20), collapse="")
   sgr_to_html(sprintf("%shello world\033[m", sgrs))
 
   # non character inputs
-
   sgr_to_html(1:3)
+
+  # Sequential escape sequences
+  sgr_to_html("\033[31mhello\033[m\033[42m world\033[m")
+
 })
 unitizer_sect("Bad inputs", {
   fansi:::esc_color_code_to_html(matrix(1:12, 4))
@@ -159,8 +161,12 @@ unitizer_sect("Colors as classes (#65)", {
   make_styles(class.8)
   make_styles(class.8, matrix(c(0,1,0,0,0,1,1,0,0), 3)) # shift channels
 
-  # errors
+  # in_html(sgr_to_html(sgr_256()))
+  sgr_to_html(sgr_256())
+  # in_html(sgr_to_html(sgr_256(), classes=make_styles(class.256)))
+  sgr_to_html(sgr_256(), classes=class.256)
 
+  # errors
   sgr_to_html("\033[31mhello\033[31m", classes=NULL)
   sgr_to_html("\033[31mhello\033[31m", classes=character(7L))
   sgr_to_html("\033[31mhello\033[31m", classes=rep(NA_character_, 16))

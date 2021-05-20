@@ -24,6 +24,15 @@
 #' Only the colors, background-colors, and basic styles (CSI SGR codes 1-9) are
 #' translated.  Others are dropped silently.
 #'
+#' Each element of the input vector is translated into a stand-alone valid HTML
+#' string.  In particular, any open SPAN tags are closed at the end of an
+#' element and re-opened on the subsequent element with the same style.  This
+#' allows safe combination of HTML translated strings, for example by
+#' [paste()]ing them together.  The trade-off is that there may be redundant
+#' HTML produced.  To avoid this first collapse your input vector into one
+#' string, being mindful that very large strings may exceed maximum string
+#' size when converted to HTML.
+#'
 #' `make_styles` is a helper function to generate style sheets that use the
 #' default 8 bit color scheme `fansi` uses, and is a helper function for the
 #' examples.
@@ -209,7 +218,10 @@ check_classes <- function(classes) {
 #' @param display TRUE or FALSE, whether to display the resulting page in a
 #'   browser window.  If TRUE, will sleep for one second before returning, and
 #'   will delete the temporary file used to store the HTML.
-#' @return NULL invisibly
+#' @param clean TRUE or FALSE, if TRUE and `display == TRUE`, will delete the
+#'   temporary file used for the web page, otherwise will leave it.
+#' @return character(1L) the file location of the page, invisibly, but keep in
+#'   mind it will have been deleted if `clean=TRUE`.
 #' @seealso [make_styles()].
 #' @examples
 #' txt <- "\033[31;42mHello \033[7mWorld\033[m"
@@ -217,9 +229,9 @@ check_classes <- function(classes) {
 #' \dontrun{
 #' in_html(txt) # spawns a browser window
 #' }
-#' readLines(in_html(txt, display=FALSE))
+#' writeLines(readLines(in_html(txt, display=FALSE)))
 #' css <- "SPAN {text-decoration: underline;}"
-#' readLines(in_html(txt, css=css, display=FALSE))
+#' writeLines(readLines(in_html(txt, css=css, display=FALSE)))
 
 in_html <- function(x, css="", display=TRUE, clean=display) {
   html <- c("<html><style>", css, "</style><body>", x, "</body></html>")
