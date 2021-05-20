@@ -521,7 +521,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
 
     has_state |= state_has_style_html(state);
     bytes_html += state_size_and_write_as_html(
-      state, state_prev, NULL, color_classes, i, bytes_html
+      state, state_init, NULL, color_classes, i, bytes_html
     );
     bytes_esc += 0;  // This is state from prior string, so no ESC yet
 
@@ -573,7 +573,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       // for overflow in first pass
 
       buff_track += state_size_and_write_as_html(
-        state, state_prev, buff_track, color_classes, i, 0
+        state, state_init, buff_track, color_classes, i, 0
       );
       state_prev = state;
 
