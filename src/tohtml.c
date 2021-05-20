@@ -478,16 +478,15 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
 
     const char * string = CHAR(chrsxp);
 
-    // Reset position info and string; we want to preserve the rest of the state
-    // info so that SGR styles can spill across lines
+    // Reset position info and string; rest of state info is preserved from
+    // prior line so that the state can be continued on new line.
     state = FANSI_reset_pos(state);
     state.string = string;
     struct FANSI_state state_start = FANSI_reset_pos(state);
+    state_prev = state_init;  // but there are no styles in the string yet
 
-    // R_len_t is currently (R4.1) int, but what if it's increased in the
-    // future?  Considered doing all the code in R_len_t units but that gets
-    // hideous real fast (e.g. R_LEN_T_MIN isn't even defined - will the new one
-    // be signed?)
+    // R_len_t is currently (R4.1) int, but defend against change by doing all
+    // calcs in int and checking that fits.
     R_len_t bytes_init0 = LENGTH(chrsxp);
     if(bytes_init0 > FANSI_int_max)
       error("Strings longer than INT_MAX not supported.");
@@ -497,47 +496,25 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
 
     size_t bytes_final = 0;
 
-    // It is possible to have sequences that don't actually translate to an HTML
-    // representable state, and it is also possible to only have HTML
-    // representable states carried over from the prior element (thus no escapes
-    // in the current).
-
+    // Some ESCs may not produce any HTML, and some strings may gain HTML from
+    // an ESC from a prior element even if they have no ESCs.
     int has_esc, has_state;
     has_esc = has_state = 0;
 
     // Process the strings in two passes, in pass 1 we compute how many bytes
     // we'll need to store the string, and in the second we actually write it.
-    // This is obviously a bit wasteful as we parse the ESC sequences twice, but
-    // the alternative is to track a growing list or some such of accrued parsed
-    // sequences.  The latter might be faster, but more work for us so we'll
-    // leave it and see if it becomes a major issue.
-
-    // It is possible for a state to be left over from prior string.  For first
-    // loop iteration, state and state_prev will be the same.
+    // We trade efficiency for convenience.
 
     // - Pass 1: Measure -------------------------------------------------------
-
-    // Overflow checked inside funs
-
-    has_state |= state_has_style_html(state);
-    bytes_html += state_size_and_write_as_html(
-      state, state_init, NULL, color_classes, i, bytes_html
-    );
-    bytes_esc += 0;  // This is state from prior string, so no ESC yet
-
-    // Now check string proper
 
     while(*string && (string = strchr(string, 0x1b))) {
       has_esc = 1;
 
-      // Since we don't care about width, etc, we only use the state objects to
-      // parse the ESC sequences, so we don't have to worry about UTF8
-      // conversions.
-
       state.pos_byte = (string - state.string);
 
-      // read all sequential ESC tags and compute the net change in size to hold
-      // them
+      // We cheat by only using FANSI_read_next to read escape sequences as we
+      // don't care about display width, etc.  Normally we would _read_next over
+      // all characters, not just skip from ESC to ESC.
 
       int esc_start = state.pos_byte;
       state = FANSI_read_next(state);
@@ -546,7 +523,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       bytes_html += state_size_and_write_as_html(
         state, state_prev, NULL, color_classes, i, bytes_html
       );
-      bytes_esc += state.pos_byte - esc_start;
+      bytes_esc += state.pos_byte - esc_start;  // cannot overflow int
       state_prev = state;
       string = state.string + state.pos_byte;
     }
@@ -565,24 +542,13 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       FANSI_size_buff(&buff, bytes_final);
       string = state.string;  // always points to first byte
       state_start.warn = state.warn;
-      state = state_prev = state_start;
+      state = state_start;
+      state_prev = state_init;
 
       char * buff_track = buff.buff;
 
-      // Handle state left-over from previous char elem; we already checked
-      // for overflow in first pass
-
-      buff_track += state_size_and_write_as_html(
-        state, state_init, buff_track, color_classes, i, 0
-      );
-      state_prev = state;
-
-      // Deal with state changes in this string
-
       while(*string && (string = strchr(string, 0x1b))) {
         state.pos_byte = (string - state.string);
-
-        // read all sequential ESC tags
         state = FANSI_read_next(state);
 
         // The text since the last ESC
@@ -595,7 +561,6 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
         buff_track += state_size_and_write_as_html(
           state, state_prev,  buff_track, color_classes, i, 0
         );
-
         state_prev = state;
         string = state.string + state.pos_byte;
       }
@@ -611,15 +576,6 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
         buff_track += span_end_len;
       }
       *(buff_track) = '0';  // not strictly needed
-
-      if(buff_track - buff.buff > FANSI_int_max)
-        // nocov start
-        error(
-          "%s%s",
-          "Internal Error: attempting to write string longer than INT_MAX; ",
-          "contact maintainer (3)."
-        );
-        // nocov end
 
       // Final check that we're not out of sync (recall buff.len includes NULL)
       if(buff_track - buff.buff != (int)(bytes_final - 1))
