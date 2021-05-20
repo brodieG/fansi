@@ -384,6 +384,7 @@ static int state_size_and_write_as_html(
       }
       len += copy_or_measure(&buff, ">", len, i);
   } }
+  len -= bytes_html;
   if(buff) {
     *buff = 0;
     if((unsigned int)(buff - buff_start) != len)
@@ -396,7 +397,7 @@ static int state_size_and_write_as_html(
   }
   // We've checked len at every step, so it cannot overflow INT_MAX.
 
-  return (int)len - bytes_html;
+  return (int)len;
 }
 /*
  * Check for overall overflow, recall that R allows up to R_LEN_T_MAX long
@@ -548,9 +549,8 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
         state, state_prev, NULL, color_classes, i, bytes_html
       );
       bytes_esc += state.pos_byte - esc_start;
-
       state_prev = state;
-      ++string;
+      string = string_start + state.pos_byte;
     }
     // - Pass 2: Write ---------------------------------------------------------
 
@@ -628,7 +628,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
         // nocov start
         error(
           "Internal Error: %s (%td vs %zu).",
-          "buffer length mismatch in html generation",
+          "buffer length mismatch in html generation (2)",
           buff_track - buff.buff, bytes_final - 1
         );
         // nocov end
