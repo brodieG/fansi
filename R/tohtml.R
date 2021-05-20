@@ -221,17 +221,16 @@ check_classes <- function(classes) {
 #' css <- "SPAN {text-decoration: underline;}"
 #' readLines(in_html(txt, css=css, display=FALSE))
 
-in_html <- function(x, css="", display=TRUE) {
+in_html <- function(x, css="", display=TRUE, clean=display) {
+  html <- c("<html><style>", css, "</style><body>", x, "</body></html>")
   f <- tempfile()
-  writeLines(c("<html><style>", css, "</style><body>", x, "</body></html>"), f)
-  if(display) {
-    # nocov start not allowed to do this in tests
-    browseURL(f)
+  writeLines(html, f)
+  if(display) browseURL(f)  # nocov, can't do this in tests
+  if(clean) {
     Sys.sleep(1)
     unlink(f)
-    # nocov end
   }
-  f
+  invisible(f)
 }
 
 FANSI.CLASSES <- do.call(
