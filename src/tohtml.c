@@ -477,8 +477,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
     SEXP chrsxp = STRING_ELT(x, i);
     FANSI_check_enc(chrsxp, i);
 
-    const char * string_start = CHAR(chrsxp);
-    const char * string = string_start;
+    const char * string = CHAR(chrsxp);
 
     // Reset position info and string; we want to preserve the rest of the state
     // info so that SGR styles can spill across lines
@@ -536,7 +535,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       // parse the ESC sequences, so we don't have to worry about UTF8
       // conversions.
 
-      state.pos_byte = (string - string_start);
+      state.pos_byte = (string - state.string);
 
       // read all sequential ESC tags and compute the net change in size to hold
       // them
@@ -550,7 +549,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       );
       bytes_esc += state.pos_byte - esc_start;
       state_prev = state;
-      string = string_start + state.pos_byte;
+      string = state.string + state.pos_byte;
     }
     // - Pass 2: Write ---------------------------------------------------------
 
@@ -565,7 +564,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
 
       // Allocate buffer and do second pass, bytes_final includes space for NULL
       FANSI_size_buff(&buff, bytes_final);
-      string = string_start;
+      string = state.string;  // always points to first byte
       state_start.warn = state.warn;
       state = state_prev = state_start;
 
@@ -582,13 +581,13 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       // Deal with state changes in this string
 
       while(*string && (string = strchr(string, 0x1b))) {
-        state.pos_byte = (string - string_start);
+        state.pos_byte = (string - state.string);
 
         // read all sequential ESC tags
         state = FANSI_read_next(state);
 
         // The text since the last ESC
-        const char * string_last = string_start + state_prev.pos_byte;
+        const char * string_last = state.string + state_prev.pos_byte;
         int bytes_prev = string - string_last;
         memcpy(buff_track, string_last, bytes_prev);
         buff_track += bytes_prev;
@@ -603,7 +602,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       }
       // Last hunk left to write and trailing SPAN
       const char * string_last = state_prev.string + state_prev.pos_byte;
-      int bytes_stub = bytes_init - (string_last - string_start);
+      int bytes_stub = bytes_init - (string_last - state.string);
 
       memcpy(buff_track, string_last, bytes_stub);
       buff_track += bytes_stub;
