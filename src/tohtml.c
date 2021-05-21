@@ -505,34 +505,40 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
     // we'll need to store the string, and in the second we actually write it.
     // We trade efficiency for convenience.
 
+    // We cheat by only using FANSI_read_next to read escape sequences as we
+    // don't care about display width, etc.  Normally we would _read_next over
+    // all characters, not just skip from ESC to ESC.
+
     // - Pass 1: Measure -------------------------------------------------------
 
-    while(*string && (string = strchr(string, 0x1b))) {
-      has_esc = 1;
-
-      state.pos_byte = (string - state.string);
-
-      // We cheat by only using FANSI_read_next to read escape sequences as we
-      // don't care about display width, etc.  Normally we would _read_next over
-      // all characters, not just skip from ESC to ESC.
-
-      int esc_start = state.pos_byte;
-      state = FANSI_read_next(state);
-      has_state |= state_has_style_html(state);
-
-      bytes_html += state_size_and_write_as_html(
-        state, state_prev, NULL, color_classes, i, bytes_html
-      );
-      bytes_esc += state.pos_byte - esc_start;  // cannot overflow int
-      state_prev = state;
-      string = state.string + state.pos_byte;
+    while(1) {
+      string = strchr(string, 0x1b);
+      if(!string) string = state.string + bytes_init;
+      else {
+        has_esc = 1;
+        state.pos_byte = (string - state.string);
+      }
+      // State as html, skip if at end of string
+      if(*string) {
+        int esc_start = state.pos_byte;
+        state = FANSI_read_next(state);
+        string = state.string + state.pos_byte;
+        bytes_esc += state.pos_byte - esc_start;  // cannot overflow int
+        if(*string) {
+          bytes_html += state_size_and_write_as_html(
+            state, state_prev,  NULL, color_classes, i, bytes_html
+          );
+          state_prev = state;
+          has_state |= state_has_style_html(state);
+        } else break; // nothing after state, so done
+      } else break;
     }
     // - Pass 2: Write ---------------------------------------------------------
 
     if(has_esc || has_state) {
       bytes_final = html_check_overflow(
         bytes_html, bytes_esc, bytes_init,
-        span_end_len * state_has_style_html(state), // Last state has style?
+        span_end_len * state_has_style_html(state_prev),// Last state has style?
         i
       );
       // Allocate target vector if it hasn't been yet
@@ -547,31 +553,34 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
 
       char * buff_track = buff.buff;
 
-      while(*string && (string = strchr(string, 0x1b))) {
-        state.pos_byte = (string - state.string);
-        state = FANSI_read_next(state);
+      // Very similar to pass 1 loop, but different enough it would be annoying
+      // to make a common function
+      while(1) {
+        const char * string_prev = string;
+        string = strchr(string, 0x1b);
+        if(!string) string = state.string + bytes_init;
+        else state.pos_byte = (string - state.string);
 
         // The text since the last ESC
-        const char * string_last = state.string + state_prev.pos_byte;
-        int bytes_prev = string - string_last;
-        memcpy(buff_track, string_last, bytes_prev);
+        int bytes_prev = string - string_prev;
+        memcpy(buff_track, string_prev, bytes_prev);
         buff_track += bytes_prev;
+        state.pos_byte = (string - state.string);
 
-        // State as html
-        buff_track += state_size_and_write_as_html(
-          state, state_prev,  buff_track, color_classes, i, 0
-        );
-        state_prev = state;
-        string = state.string + state.pos_byte;
+        // State as html, skip if at end of string
+        if(*string) {
+          state = FANSI_read_next(state);
+          string = state.string + state.pos_byte;
+          if(*string) {
+            buff_track += state_size_and_write_as_html(
+              state, state_prev,  buff_track, color_classes, i, 0
+            );
+            state_prev = state;
+          } else break; // nothing after state, so done
+        } else break;
       }
-      // Last hunk left to write and trailing SPAN
-      const char * string_last = state_prev.string + state_prev.pos_byte;
-      int bytes_stub = bytes_init - (string_last - state.string);
-
-      memcpy(buff_track, string_last, bytes_stub);
-      buff_track += bytes_stub;
-
-      if(state_has_style_html(state)) {
+      // Trailing SPAN if needed
+      if(state_has_style_html(state_prev)) {
         memcpy(buff_track,span_end, span_end_len);
         buff_track += span_end_len;
       }
