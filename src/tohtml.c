@@ -39,23 +39,23 @@ struct FANSI_css {const char * css; int len;};
 
 static const struct FANSI_css css_style[9] = {
   // Code 1: bold
-  {.css="font-weight: bold;", .len=18},
+  {.css="font-weight: bold", .len=-1},
   // Code 2: lighter
-  {.css="font-weight: 100;", .len=17},
+  {.css="font-weight: 100", .len=-1},
   // Code 3: italic
-  {.css="font-style: italic;", .len=19},
+  {.css="font-style: italic", .len=-1},
   // Code 4: underline
-  {.css="text-decoration: underline;", .len=27},
+  {.css="text-decoration: underline", .len=-1},
   // Code 5: blink
-  {.css="text-decoration: blink;", .len=23},
+  {.css="text-decoration: blink", .len=-1},
   // Code 6: blink
-  {.css="text-decoration: blink;", .len=23},
+  {.css="text-decoration: blink", .len=-1},
   // Code 7: invert; unused, but needs to be here for offset lookups to work;
   {.css="", .len=0},
   // Code 8: conceal
-  {.css="color: transparent;", .len=19},
+  {.css="color: transparent", .len=-1},
   // Code 9: line-through
-  {.css="text-decoration: line-through;", .len=30},
+  {.css="text-decoration: line-through", .len=-1},
 };
 // Generate mask for html styles in first pass
 
@@ -281,6 +281,7 @@ static unsigned int copy_or_measure(
   if(*buff) {
     strcpy(*buff, tmp);
     *buff += tmp_len;
+    **buff = 0;  // not necessary, but helps to debug
   }
   return tmp_len;
 }
@@ -358,26 +359,27 @@ static int state_size_and_write_as_html(
         (bg_color >= 0 && (!bgcol_class))
       ) {
         len += copy_or_measure(&buff, " style='", len, i);
+        unsigned int len_start = len;
         char color_tmp[8];
         if(color >= 0 && (!color_class)) {
           len += copy_or_measure(&buff, "color: ", len, i);
           len += copy_or_measure(
             &buff, color_to_html(color, color_extra, color_tmp), len, i
           );
-          len += copy_or_measure(&buff, ";", len, i);
         }
         if(bg_color >= 0 && (!bgcol_class)) {
+          if(len_start < len) len += copy_or_measure(&buff, "; ", len, i);
           len += copy_or_measure(&buff,  "background-color: ", len, i);
           len += copy_or_measure(
-              &buff, color_to_html(bg_color, bg_color_extra, color_tmp), len, i
+            &buff, color_to_html(bg_color, bg_color_extra, color_tmp), len, i
           );
-          len += copy_or_measure(&buff, ";", len, i);
         }
         // Styles (need to go after color for transparent to work)
-
         for(int i = 1; i < 10; ++i)
-          if(state.style & css_html_mask & (1 << i))
+          if(state.style & css_html_mask & (1 << i)) {
+            if(len_start < len) len += copy_or_measure(&buff, "; ", len, i);
             len += copy_or_measure(&buff, css_style[i - 1].css, len, i);
+          }
 
         len += copy_or_measure(&buff, "'", len, i);
       }
