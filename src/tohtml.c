@@ -353,7 +353,7 @@ static int state_size_and_write_as_html(
       }
       // inline style and/or colors
       if(
-        state.style ||
+        state.style & css_html_mask ||
         (color >= 0 && (!color_class)) ||
         (bg_color >= 0 && (!bgcol_class))
       ) {
