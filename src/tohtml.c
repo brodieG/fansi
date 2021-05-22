@@ -482,7 +482,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
 
     // Reset position info and string; rest of state info is preserved from
     // prior line so that the state can be continued on new line.
-    state = FANSI_reset_pos(state);
+    state = FANSI_reset_pos(state_prev);
     state.string = string;
     struct FANSI_state state_start = FANSI_reset_pos(state);
     state_prev = state_init;  // but there are no styles in the string yet
@@ -500,8 +500,8 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
 
     // Some ESCs may not produce any HTML, and some strings may gain HTML from
     // an ESC from a prior element even if they have no ESCs.
-    int has_esc, has_state;
-    has_esc = has_state = 0;
+    int has_esc = 0;
+    int has_state = state_has_style_html(state);
 
     // Process the strings in two passes, in pass 1 we compute how many bytes
     // we'll need to store the string, and in the second we actually write it.
@@ -513,6 +513,14 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
 
     // - Pass 1: Measure -------------------------------------------------------
 
+    // Leftover from prior element (only if can't be merged with new)
+    if(*string && *string != 0x1b && state_has_style_html(state)) {
+      bytes_html += state_size_and_write_as_html(
+        state, state_prev,  NULL, color_classes, i, bytes_html
+      );
+      state_prev = state;
+    }
+    // New in this element
     while(1) {
       string = strchr(string, 0x1b);
       if(!string) string = state.string + bytes_init;
@@ -557,6 +565,13 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
 
       // Very similar to pass 1 loop, but different enough it would be annoying
       // to make a common function
+
+      if(*string && *string != 0x1b && state_has_style_html(state)) {
+        buff_track += state_size_and_write_as_html(
+          state, state_prev,  buff_track, color_classes, i, 0
+        );
+        state_prev = state;
+      }
       while(1) {
         const char * string_prev = string;
         string = strchr(string, 0x1b);
