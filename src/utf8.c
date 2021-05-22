@@ -130,7 +130,7 @@ struct FANSI_string_as_utf8 FANSI_string_as_utf8(SEXP x) {
  */
 
 void FANSI_check_chrsxp(SEXP x, R_xlen_t i) {
-  if(typeof(x) != CHARSXP)
+  if(TYPEOF(x) != CHARSXP)
     error("Internal Error: expected CHARSXP, got %s.", type2char(TYPEOF(x)));
   cetype_t type = getCharCE(x);
   if(type != CE_NATIVE && type != CE_UTF8) {
@@ -154,7 +154,7 @@ void FANSI_check_chrsxp(SEXP x, R_xlen_t i) {
     intmax_t ind = i >= INTMAX_MAX ? -2 : i; // i == INTMAX_MAX is the issue
     error(
       "Strings longer than INT_MAX not supported, encountered %ju at index %ju.",
-      (intmax_t)(LENGHT(x)), ind
+      (intmax_t)(LENGTH(x)), ind
     );
   }
 }

@@ -258,6 +258,14 @@ static void overflow_err(const char * type, R_xlen_t i) {
     type, "at position", ind + 1, ". Try again with smaller strings."
   );
 }
+static void overflow_err2(R_xlen_t i) {
+  intmax_t ind = i >= INTMAX_MAX ? -2 : i; // i == INTMAX_MAX is the issue
+  error(
+    "%s %s %s %ju%s",
+    "Escaping HTML special characters will create a string longer than",
+    "INT_MAX", "at position", ind + 1, ". Try again with smaller strings."
+  );
+}
 /*
  * If *buff is not NULL, copy tmp into it and advance, else measure tmp
  * and advance length
@@ -401,6 +409,21 @@ static int state_size_and_write_as_html(
   return (int)len;
 }
 /*
+ * Final checks for unsual size, and include space for terminator.
+ */
+
+static size_t final_string_size(int bytes, R_xlen_t i) {
+  // In the extremely unlikely case we're on a systems with weird integer sizes
+  // or R changes what R_len_t.  >= SIZE_MAX b/c we need room for the extra NULL
+  // terminator byte
+  if(INT_MAX >= SIZE_MAX && (unsigned int) bytes >= SIZE_MAX)
+    overflow_err("SIZE_MAX", i);     // nocov
+  if(INT_MAX > R_LEN_T_MAX && bytes > R_LEN_T_MAX)
+    overflow_err("R_LEN_T_MAX", i);  // nocov
+
+  return (size_t) bytes + 1;   // include terminator
+}
+/*
  * Check for overall overflow, recall that R allows up to R_LEN_T_MAX long
  * strings (which currently is INT_MAX) excluding the NULL.
  *
@@ -442,16 +465,7 @@ static size_t html_check_overflow(
     // nocov end
   }
   int bytes_final = bytes_init + bytes_extra + span_extra;
-
-  // In the extremely unlikely case we're on a systems with weird integer sizes
-  // or R changes what R_len_t.  >= SIZE_MAX b/c we need room for the extra NULL
-  // terminator byte
-  if(INT_MAX >= SIZE_MAX && (unsigned int) bytes_final >= SIZE_MAX)
-    overflow_err("SIZE_MAX", i);     // nocov
-  if(INT_MAX > R_LEN_T_MAX && bytes_final > R_LEN_T_MAX)
-    overflow_err("R_LEN_T_MAX", i);  // nocov
-
-  return (size_t) bytes_final + 1;   // include terminator
+  return final_string_size(bytes_final, i);
 }
 
 SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
@@ -659,6 +673,102 @@ SEXP FANSI_color_to_html_ext(SEXP x) {
     color_to_html(x_int[i], x_int + (i + 1), buff.buff);
     SEXP chrsxp = PROTECT(mkCharLenCE(buff.buff, 7, CE_BYTES));
     SET_STRING_ELT(res, i / 5, chrsxp);
+    UNPROTECT(1);
+  }
+  UNPROTECT(1);
+  return res;
+}
+
+/*
+ * & -> &amp;    0x26
+ * " -> &quot;   0x22
+ * ' -> &#039;   0x27
+ * < -> &lt;     0x3c
+ * > -> &gt;     0x3e
+ */
+
+SEXP FANSI_esc_html(SEXP x) {
+  if(TYPEOF(x) != STRSXP)
+    error("Internal Error: `x` must be a character vector");  // nocov
+
+  R_xlen_t x_len = XLENGTH(x);
+  SEXP res = x;
+  // Reserve spot on protection stack
+  PROTECT_INDEX ipx;
+  PROTECT_WITH_INDEX(res, &ipx);
+
+  for(R_xlen_t i = 0; i < x_len; ++i) {
+    FANSI_interrupt(i);
+
+    SEXP chrsxp = STRING_ELT(x, i);
+    FANSI_check_chrsxp(chrsxp, i);
+    int bytes = (int) LENGTH(chrsxp);
+    const char * string = CHAR(chrsxp);
+    struct FANSI_buff buff = {.len=0};
+
+    // - Pass 1: Measure -------------------------------------------------------
+
+    while(*string) {
+      switch(*string) {
+        case '&': // &amp;
+          if(bytes <= FANSI_int_max - 4) bytes += 4;
+          else overflow_err2(i);
+          break;
+        case '"':
+        case '\'':
+          if(bytes <= FANSI_int_max - 5) bytes += 5;
+          else overflow_err2(i);
+          break;
+        case '<':
+        case '>':
+          if(bytes <= FANSI_int_max - 3) bytes += 3;
+          else overflow_err2(i);
+          break;
+      }
+      ++string;
+    }
+    // Leftover from prior element (only if can't be merged with new)
+
+    // - Pass 2: Write ---------------------------------------------------------
+
+    if(bytes > LENGTH(chrsxp)) {
+      // Allocate target vector if it hasn't been yet
+      if(res == x) REPROTECT(res = duplicate(x), ipx);
+
+      // Allocate buffer and do second pass, bytes_final includes space for NULL
+
+      FANSI_size_buff(&buff, final_string_size(bytes, i));
+
+      char * buff_track = buff.buff;
+
+      while(*string) {
+        switch(*string) {
+          case '&': // &amp;
+            memcpy(buff_track, "&amp;", 5);
+            buff_track += 5;
+            break;
+          case '"':
+            memcpy(buff_track, "&quot;", 6);
+            buff_track += 6;
+            break;
+          case '\'':
+            memcpy(buff_track, "&#039;", 6);
+            buff_track += 6;
+            break;
+          case '<':
+            memcpy(buff_track, "&lt;", 4);
+            buff_track += 4;
+            break;
+          case '>':
+            memcpy(buff_track, "&gt;", 4);
+            buff_track += 4;
+            break;
+          default:
+            *(buff_track++) = *(string++);
+    } } }
+    cetype_t chr_type = getCharCE(chrsxp);
+    SEXP reschr = PROTECT(mkCharLenCE(buff.buff, (R_len_t)(bytes), chr_type));
+    SET_STRING_ELT(res, i, reschr);
     UNPROTECT(1);
   }
   UNPROTECT(1);
