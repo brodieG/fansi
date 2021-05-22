@@ -6,6 +6,8 @@ These are internal developer notes.
 
 Tests:
 
+* State carrying over from one string element to the next?
+
 * 39/49, much of the code assumes it won't get there.
 * Overflows
   * Caused by classes

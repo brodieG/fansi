@@ -38,9 +38,9 @@ unitizer_sect('wrap', {
 })
 unitizer_sect('html', {
   invisible(fansi:::set_int_max(37))
-  sgr_to_html("\033[31m")
+  sgr_to_html("\033[31ma")
   # whole string over
-  tce(sgr_to_html("\033[31ma"))
+  tce(sgr_to_html("\033[31mab"))
   # Sequences alone over
   tce(sgr_to_html("\033[31m\033[42mhello"))
   # Over due to classes

@@ -19,41 +19,47 @@
 #' Interprets CSI SGR sequences and produces a string with equivalent
 #' formats applied with SPAN elements and either inline-CSS styles, or
 #' optionally for colors, by labeling the SPAN elements with user classes the
-#' user can generate a corresponding style sheet for.
+#' user can generate a corresponding style sheet for.  The conversion operates
+#' under assumption that the input is free of HTML markup, and makes no
+#' guarantees on correctness if this is not true.
 #'
-#' Only the colors, background-colors, and basic styles (CSI SGR codes 1-9) are
-#' translated.  Others are dropped silently.
+#' Only "observable" styles are translated.  These include colors,
+#' background-colors, and basic styles (CSI SGR codes 1-6, 8, 9).  Style 7, the
+#' "inverse" style, is implemented by explicitly switching foreground and
+#' background colors, if there are any.  Styles 5-6 (blink) are rendered as
+#' "text-decoration" but likely will do nothing in the browser.  Style 8
+#' (conceal) sets the color to transparent.
 #'
 #' Each element of the input vector is translated into a stand-alone valid HTML
 #' string.  In particular, any open SPAN tags are closed at the end of an
 #' element and re-opened on the subsequent element with the same style.  This
 #' allows safe combination of HTML translated strings, for example by
 #' [paste()]ing them together.  The trade-off is that there may be redundant
-#' HTML produced.  To avoid this first collapse your input vector into one
-#' string, being mindful that very large strings may exceed maximum string
-#' size when converted to HTML.
+#' HTML produced.  To reduce redundancy you can first collapse the input vector
+#' into one string, being mindful that very large strings may exceed maximum
+#' string size when converted to HTML.
 #'
-#' `make_styles` is a helper function to generate style sheets that use the
-#' default 8 bit color scheme `fansi` uses, and is a helper function for the
-#' examples.
+#' Any active SPAN tags are closed and new ones open anytime the "observable"
+#' state changes.  This may be inefficient at times, but since ANSI CSI SGR is a
+#' a state based formatting system it does not make sense to try to implemented
+#' with a recursive system like nested SPAN tags.
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @export
-#' @seealso [in_html()] for framing assorted HTML into an HTML page,
-#'   [sgr_256()] to generate a demo string with all 256 8 bit color.
+#' @family HTML functions
 #' @inheritParams substr_ctl
 #' @seealso [fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results,
 #'   [set_knit_hooks()] for how to use ANSI CSI styled text with knitr and HTML
-#'   output.
+#'   output, [sgr_256()] to generate a demo string with all 256 8 bit color.
 #' @param classes FALSE (default), TRUE, or character vector of either 16,
 #'   32, or 512 class names.  Character strings may only contain ASCII
 #'   characters corresponding to letters, numbers, the hyphen, or the
 #'   underscore.  It is the user's responsibility to provide values that are
-#'   legal class names.  `make_styles` only supports character vectors.
+#'   legal class names.
 #'
 #'   * FALSE: All colors rendered as inline CSS styles.
-#'   * TRUE: Each of the 256 basic colors is mapped to a class in form
+#'   * TRUE: Each of the 256 basic colors is mapped to a class in form.
 #'     "fansi-color-###" (or "fansi-bgcol-###" for background colors)
 #'     where "###" is a zero padded three digit number in 0:255.  Basic colors
 #'     specified with SGR codes 30-37 (or 40-47) map to 000:007, and bright ones
@@ -77,14 +83,9 @@
 #'   * character(256): Like character(16), except the basic, bright, and all 8
 #'     bit colors are mapped.
 #'
-#' @param rgb.mix 3 x 3 numeric matrix to remix color channels.  Each column
-#'   corresponds to the channel mix of each channel in the output.  Intended
-#'   primarily to easily generate style sheets with different colors for demo
-#'   purposes.  Values that end up out of range are truncated into range.
-#' @return for `sgr_to_html`, a character vector with all escape sequences
-#'   removed and any basic ANSI CSI SGR escape sequences applied via SPAN html
-#'   objects with inline css styles (see details), for `make_styles` a
-#'   character vector that can be used a style sheet.
+#' @return a character vector with all escape sequences removed and any basic
+#'   ANSI CSI SGR escape sequences applied via SPAN html objects with inline css
+#'   styles (see details).
 #' @examples
 #' sgr_to_html("hello\033[31;42;1mworld\033[m")
 #' sgr_to_html("hello\033[31;42;1mworld\033[m", classes=TRUE)
@@ -158,10 +159,36 @@ sgr_to_html <- function(
 
   .Call(FANSI_esc_to_html, enc2utf8(x), warn, term.cap.int, classes)
 }
-
+#' Generate CSS Mapping Classes to Colors
+#'
+#' Given a set of class names, produce the CSS that relates them to the default
+#' 8 bit colors.  This is a a helper function to generate style sheets for use
+#' examples.
+#'
+#' @family HTML functions
 #' @importFrom grDevices col2rgb rgb
-#' @rdname sgr_to_html
 #' @export
+#' @param classes character vector of either 16, 32, or 512 class names.  See
+#'   [sgr_to_html()] for details, though note that unlike [sgr_to_html()] this
+#'   function only accepts character vectors.
+#' @param rgb.mix 3 x 3 numeric matrix to remix color channels.  Each column
+#'   corresponds to the channel mix of each channel in the output.  Intended
+#'   primarily to easily generate style sheets with different colors for demo
+#'   purposes.  Values that end up out of range are truncated into range.
+#' @return a character vector that can be used a style sheet.
+#' @examples
+#' class.8 <- do.call(paste, c(expand.grid(c("fg", "bg"), 0:7), sep="-"))
+#' writeLines(make_styles(class.8))
+#' ## Use `rgb.mix` to remap color channels
+#' mix <- matrix(
+#'   c(
+#'     0, 1, 0,  # red output is green input
+#'     0, 0, 1,  # green output is blue input
+#'     1, 0, 0   # blue output is red input
+#'   ),
+#'   nrow=3, byrow=TRUE
+#' )
+#' writeLines(make_styles(class.8, rgb.mix=mix))
 
 make_styles <- function(classes, rgb.mix=diag(3)) {
   if(!is.character(classes)) stop("Argument `classes` is not character.")
@@ -208,18 +235,19 @@ check_classes <- function(classes) {
 }
 #' Frame HTML in a Web Page And Display
 #'
-#' Helper function that takes HTML content and CSS, assembles a web page around
-#' it, and uses [browseURL()] to display it.  For testing purposes only.  No
-#' effort is made to produce DOCTYPE, etc.
+#' Helper function that assembles user provided HTML and CSS into a webpage, and
+#' optionally displays it in the browser.  Intended for testing purposes.
 #'
 #' @export
-#' @param x character vector of html encoded strings
-#' @param css character vector of css styles
+#' @family HTML functions
+#' @param x character vector of html encoded strings.
+#' @param css character vector of css styles.
 #' @param display TRUE or FALSE, whether to display the resulting page in a
 #'   browser window.  If TRUE, will sleep for one second before returning, and
 #'   will delete the temporary file used to store the HTML.
 #' @param clean TRUE or FALSE, if TRUE and `display == TRUE`, will delete the
 #'   temporary file used for the web page, otherwise will leave it.
+#' @param pre TRUE (default) or FALSE, whether to wrap `x` in PRE tags.
 #' @return character(1L) the file location of the page, invisibly, but keep in
 #'   mind it will have been deleted if `clean=TRUE`.
 #' @seealso [make_styles()].
@@ -233,10 +261,13 @@ check_classes <- function(classes) {
 #' css <- "SPAN {text-decoration: underline;}"
 #' writeLines(readLines(in_html(txt, css=css, display=FALSE)))
 
-in_html <- function(x, css="", display=TRUE, clean=display) {
-  html <- c("<html><style>", css, "</style><body>", x, "</body></html>")
+in_html <- function(x, css="", pre=TRUE, display=TRUE, clean=display) {
+  html <- c(
+    "<!DOCTYPE html>",
+    "<html>", "<style>", css, "</style>","<body>", x, "</body>", "</html>"
+  )
   f <- tempfile()
-  writeLines(html, f)
+  writeLines(c(if(pre) "<pre>", html, if(pre) "</pre>"), f)
   if(display) browseURL(f)  # nocov, can't do this in tests
   if(clean) {
     Sys.sleep(1)

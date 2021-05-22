@@ -118,6 +118,24 @@ unitizer_sect("Corner cases", {
   # Sequential escape sequences
   sgr_to_html("\033[31mhello\033[m\033[42m world\033[m")
 
+  # Sequences in various spots
+
+  sgr_to_html("\033[33mhello")
+  sgr_to_html("he\033[33mllo")
+  sgr_to_html("hello\033[33m")
+
+  sgr_to_html(c("\033[33mhello", "world"))
+  sgr_to_html(c("\033[33mhello", "\033[43mworld"))
+  sgr_to_html(c("\033[33mhello", "wor\033[43mld"))
+  sgr_to_html(c("\033[33mhello", "world\033[43m"))
+  sgr_to_html(c("he\033[33mllo", "world"))
+  sgr_to_html(c("he\033[33mllo", "\033[43mworld"))
+  sgr_to_html(c("he\033[33mllo", "wor\033[43mld"))
+  sgr_to_html(c("he\033[33mllo", "world\033[43m"))
+  sgr_to_html(c("hello\033[33m", "world"))
+  sgr_to_html(c("hello\033[33m", "\033[43mworld"))
+  sgr_to_html(c("hello\033[33m", "wor\033[43mld"))
+  sgr_to_html(c("hello\033[33m", "world\033[43m"))
 })
 unitizer_sect("Bad inputs", {
   fansi:::esc_color_code_to_html(matrix(1:12, 4))

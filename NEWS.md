@@ -2,8 +2,10 @@
 
 ## v0.5.0
 
-* [#65](https://github.com/brodieG/fansi/issues/65): optionally convert CSI SGR
-  to classes instead of inline styles (h/t @hadley).
+* [#65](https://github.com/brodieG/fansi/issues/65): `sgr_to_html` optionally
+  converts CSI SGR to classes instead of inline styles.
+* [#69](https://github.com/brodieG/fansi/issues/69): `sgr_to_html` is more
+  disciplined about emitting unnecessary HTML (h/t @hadley).
 * Adjust for changes to `nchar(..., type='width')` for C0-C1 control characters
   in R 4.1.
 * Restore tests bypassed in 0.4.2.

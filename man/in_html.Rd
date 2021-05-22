@@ -4,24 +4,29 @@
 \alias{in_html}
 \title{Frame HTML in a Web Page And Display}
 \usage{
-in_html(x, css = "", display = TRUE)
+in_html(x, css = "", pre = TRUE, display = TRUE, clean = display)
 }
 \arguments{
-\item{x}{character vector of html encoded strings}
+\item{x}{character vector of html encoded strings.}
 
-\item{css}{character vector of css styles}
+\item{css}{character vector of css styles.}
+
+\item{pre}{TRUE (default) or FALSE, whether to wrap \code{x} in PRE tags.}
 
 \item{display}{TRUE or FALSE, whether to display the resulting page in a
 browser window.  If TRUE, will sleep for one second before returning, and
 will delete the temporary file used to store the HTML.}
+
+\item{clean}{TRUE or FALSE, if TRUE and \code{display == TRUE}, will delete the
+temporary file used for the web page, otherwise will leave it.}
 }
 \value{
-NULL invisibly
+character(1L) the file location of the page, invisibly, but keep in
+mind it will have been deleted if \code{clean=TRUE}.
 }
 \description{
-Helper function that takes HTML content and CSS, assembles a web page around
-it, and uses \code{\link[=browseURL]{browseURL()}} to display it.  For testing purposes only.  No
-effort is made to produce DOCTYPE, etc.
+Helper function that assembles user provided HTML and CSS into a webpage, and
+optionally displays it in the browser.  Intended for testing purposes.
 }
 \examples{
 txt <- "\033[31;42mHello \033[7mWorld\033[m"
@@ -29,10 +34,15 @@ writeLines(txt)
 \dontrun{
 in_html(txt) # spawns a browser window
 }
-readLines(in_html(txt, display=FALSE))
+writeLines(readLines(in_html(txt, display=FALSE)))
 css <- "SPAN {text-decoration: underline;}"
-readLines(in_html(txt, css=css, display=FALSE))
+writeLines(readLines(in_html(txt, css=css, display=FALSE)))
 }
 \seealso{
 \code{\link[=make_styles]{make_styles()}}.
+
+Other HTML functions: 
+\code{\link{make_styles}()},
+\code{\link{sgr_to_html}()}
 }
+\concept{HTML functions}
