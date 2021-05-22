@@ -261,13 +261,19 @@ check_classes <- function(classes) {
 #' css <- "SPAN {text-decoration: underline;}"
 #' writeLines(readLines(in_html(txt, css=css, display=FALSE)))
 
-in_html <- function(x, css="", pre=TRUE, display=TRUE, clean=display) {
+in_html <- function(x, css=character(), pre=TRUE, display=TRUE, clean=display) {
   html <- c(
     "<!DOCTYPE html>",
-    "<html>", "<style>", css, "</style>","<body>", x, "</body>", "</html>"
+    "<html>",
+    if(any(nzchar(css))) c("<style>", css, "</style>"),
+    "<body>",
+    if(pre) "<pre>",
+    x,
+    if(pre) "</pre>",
+    "</body>", "</html>"
   )
   f <- tempfile()
-  writeLines(c(if(pre) "<pre>", html, if(pre) "</pre>"), f)
+  writeLines(html, f)
   if(display) browseURL(f)  # nocov, can't do this in tests
   if(clean) {
     Sys.sleep(1)
