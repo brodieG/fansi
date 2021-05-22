@@ -47,7 +47,7 @@ SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn) {
   for(R_xlen_t i = 0; i < len; ++i) {
     FANSI_interrupt(i);
     SEXP chrsxp = STRING_ELT(x, i);
-    FANSI_check_enc(chrsxp, i);
+    FANSI_check_chrsxp(chrsxp, i);
     int res_tmp = FANSI_has_int(chrsxp, ctl_int);
     // no great, but need to watch out for NA_LOGICAL == INT_MIN
     if(res_tmp == -1 && warn_int) {

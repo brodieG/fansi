@@ -43,7 +43,7 @@ SEXP FANSI_nzchar(
   for(R_len_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
     SEXP string_elt = STRING_ELT(x, i);
-    FANSI_check_enc(string_elt, i);
+    FANSI_check_chrsxp(string_elt, i);
 
     if(string_elt == R_NaString) {
       if(keepNA_int == 1) {

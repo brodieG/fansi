@@ -69,7 +69,7 @@ SEXP FANSI_tabs_as_spaces(
 
     SEXP chr = STRING_ELT(vec, i);
     if(chr == NA_STRING) continue;
-    FANSI_check_enc(chr, i);
+    FANSI_check_chrsxp(chr, i);
 
     source = CHAR(chr);
 

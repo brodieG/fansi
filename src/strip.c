@@ -82,7 +82,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     FANSI_interrupt(i);
     SEXP x_chr = STRING_ELT(x, i);
     if(x_chr == NA_STRING) continue;
-    FANSI_check_enc(x_chr, i);
+    FANSI_check_chrsxp(x_chr, i);
 
     int has_ansi = 0;
     const char * chr = CHAR(x_chr);
@@ -231,7 +231,7 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
   for(R_xlen_t i = 0; i < len; ++i) {
     FANSI_interrupt(i);
     SEXP chrsxp = STRING_ELT(res, i);
-    FANSI_check_enc(chrsxp, i);
+    FANSI_check_chrsxp(chrsxp, i);
     const char * string = CHAR(chrsxp);
     const char * string_start = string;
     char * buff_track;

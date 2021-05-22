@@ -724,7 +724,7 @@ SEXP FANSI_state_at_pos_ext(
   SEXP res_chr, res_chr_prev = PROTECT(mkChar(""));
   // PROTECT should not be needed here, but rchk complaining
   SEXP text_chr = STRING_ELT(text, 0);
-  FANSI_check_enc(text_chr, 0);
+  FANSI_check_chrsxp(text_chr, 0);
   const char * string = CHAR(text_chr); // Should already be UTF-8 if needed
 
   SEXP R_true = PROTECT(ScalarLogical(1));

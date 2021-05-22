@@ -476,7 +476,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
     FANSI_interrupt(i);
 
     SEXP chrsxp = STRING_ELT(x, i);
-    FANSI_check_enc(chrsxp, i);
+    FANSI_check_chrsxp(chrsxp, i);
 
     const char * string = CHAR(chrsxp);
 

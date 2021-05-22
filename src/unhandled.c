@@ -53,7 +53,7 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
     SEXP chrsxp = STRING_ELT(x, i);
 
     if(chrsxp != NA_STRING && LENGTH(chrsxp)) {
-      FANSI_check_enc(chrsxp, i);
+      FANSI_check_chrsxp(chrsxp, i);
       const char * string, * string_start;
 
       string = string_start = CHAR(chrsxp);

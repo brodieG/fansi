@@ -365,7 +365,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   struct FANSI_state FANSI_reset_pos(struct FANSI_state state);
   struct FANSI_state FANSI_reset_width(struct FANSI_state state);
 
-  void FANSI_check_enc(SEXP x, R_xlen_t i);
+  void FANSI_check_chrsxp(SEXP x, R_xlen_t i);
   SEXP FANSI_check_enc_ext(SEXP x, SEXP i);
 
   int FANSI_ctl_as_int(SEXP ctl);
@@ -399,7 +399,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   struct FANSI_state FANSI_state_copy_style(
     struct FANSI_state target, struct FANSI_state current
   );
-  int FANSI_state_has_style_basic(struct FANSI_state state);
   int FANSI_state_size(struct FANSI_state state);
   int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len);
 

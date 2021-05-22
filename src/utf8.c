@@ -126,33 +126,44 @@ struct FANSI_string_as_utf8 FANSI_string_as_utf8(SEXP x) {
 // nocov end
 
 /*
- * Confirm encoding is not obviously wrong
+ * Confirm encoding is not obviously wrong, and length okay.
  */
 
-void FANSI_check_enc(SEXP x, R_xlen_t i) {
+void FANSI_check_chrsxp(SEXP x, R_xlen_t i) {
+  if(typeof(x) != CHARSXP)
+    error("Internal Error: expected CHARSXP, got %s.", type2char(TYPEOF(x)));
   cetype_t type = getCharCE(x);
   if(type != CE_NATIVE && type != CE_UTF8) {
+    intmax_t ind = i >= INTMAX_MAX ? -2 : i; // i == INTMAX_MAX is the issue
     if(type == CE_BYTES)
       error(
-        "%s at index %.0f. %s.",
-        "Byte encoded string encountered", (double) i + 1,
+        "%s at index %ju. %s.",
+        "Byte encoded string encountered", ind,
         "Byte encoded strings are not supported"
       );
     else
       // this should only happen if somehow a string not converted to UTF8
       // sneaks in.
       error(
-        "%s %d encountered at index %.0f. %s.",
+        "%s %d encountered at index %ju. %s.",
         "Internal Error: unexpected encoding", type,
-        (double) i + 1, "Contact maintainer"
+        ind, "Contact maintainer."
       );
   }
+  if(LENGTH(x) > FANSI_int_max) {
+    intmax_t ind = i >= INTMAX_MAX ? -2 : i; // i == INTMAX_MAX is the issue
+    error(
+      "Strings longer than INT_MAX not supported, encountered %ju at index %ju.",
+      (intmax_t)(LENGHT(x)), ind
+    );
+  }
 }
+
 /*
  * Testing interface
  */
 SEXP FANSI_check_enc_ext(SEXP x, SEXP i) {
-  FANSI_check_enc(STRING_ELT(x, asInteger(i) - 1), asInteger(i) - 1);
+  FANSI_check_chrsxp(STRING_ELT(x, asInteger(i) - 1), asInteger(i) - 1);
   return ScalarLogical(1);
 }
 
