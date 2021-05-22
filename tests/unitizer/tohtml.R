@@ -155,7 +155,6 @@ unitizer_sect("issue54", {
   string2 <- c("\033[3mhello\033[24m", "world\033[23m moon")
   fansi::sgr_to_html(string2)
 })
-
 unitizer_sect("Colors as classes (#65)", {
   sgr_to_html("\033[94mhello\033[31;42;1mworld\033[m", classes=TRUE)
 
@@ -197,4 +196,11 @@ unitizer_sect("Colors as classes (#65)", {
   make_styles(NULL)
 
   ## see examples for visual testing
+})
+unitizer_sect("helpers", {
+  html <- sgr_to_html("\033[42mHello")
+  f <- in_html(html, css="span {background-color: #CCC;}", display=FALSE)
+  readLines(f)
+  unlink(f)
+  in_html(html, css="span {background-color: #CCC;}", display=FALSE, clean=TRUE)
 })
