@@ -502,6 +502,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
     // an ESC from a prior element even if they have no ESCs.
     int has_esc = 0;
     int has_state = state_has_style_html(state);
+    int trail_span = 0;
 
     // Process the strings in two passes, in pass 1 we compute how many bytes
     // we'll need to store the string, and in the second we actually write it.
@@ -522,6 +523,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
     }
     // New in this element
     while(1) {
+      trail_span = state_has_style_html(state_prev);
       string = strchr(string, 0x1b);
       if(!string) string = state.string + bytes_init;
       else {
@@ -538,9 +540,10 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
           bytes_html += state_size_and_write_as_html(
             state, state_prev,  NULL, color_classes, i, bytes_html
           );
-          state_prev = state;
-          has_state |= state_has_style_html(state);
-        } else break; // nothing after state, so done
+        }
+        state_prev = state;
+        has_state |= state_has_style_html(state);
+        if(!*string) break; // nothing after state, so done
       } else break;
     }
     // - Pass 2: Write ---------------------------------------------------------
@@ -548,9 +551,10 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
     if(has_esc || has_state) {
       bytes_final = html_check_overflow(
         bytes_html, bytes_esc, bytes_init,
-        span_end_len * state_has_style_html(state_prev),// Last state has style?
+        span_end_len * trail_span, // Last non-terminal state has style?
         i
       );
+      trail_span = 0;
       // Allocate target vector if it hasn't been yet
       if(res == x) REPROTECT(res = duplicate(x), ipx);
 
@@ -574,6 +578,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       }
       while(1) {
         const char * string_prev = string;
+        trail_span = state_has_style_html(state_prev);
         string = strchr(string, 0x1b);
         if(!string) string = state.string + bytes_init;
         else state.pos_byte = (string - state.string);
@@ -592,12 +597,13 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
             buff_track += state_size_and_write_as_html(
               state, state_prev,  buff_track, color_classes, i, 0
             );
-            state_prev = state;
-          } else break; // nothing after state, so done
+          }
+          state_prev = state;
+          if(!*string) break; // nothing after state, so done
         } else break;
       }
       // Trailing SPAN if needed
-      if(state_has_style_html(state_prev)) {
+      if(trail_span) {
         memcpy(buff_track,span_end, span_end_len);
         buff_track += span_end_len;
       }
