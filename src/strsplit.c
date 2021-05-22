@@ -21,7 +21,7 @@
 // this is a temporarily un-used implementation, but we may re-use it later
 
 SEXP FANSI_strsplit(SEXP x, SEXP warn, SEXP term_cap) {
-  error("This code is disabled current");
+  error("This code is disabled currently.");
   warning("Handle UTF8");
   // UTF8 is a little tricky here, we're now using read_next, but we don't
   // really need it, so we could maybe have a version without read next that
