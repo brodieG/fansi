@@ -172,6 +172,7 @@ fansi_lines <- function(txt, step=1) {
 #' actual HTML as this function would destroy it.
 #'
 #' @export
+#' @family HTML functions
 #' @param x character vector
 #' @return character vector consisting of `x`, but with the "<", ">", and "&"
 #'   characters replaced by their HTML entity codes.
@@ -182,7 +183,7 @@ fansi_lines <- function(txt, step=1) {
 html_esc <- function(x) {
   if(!is.character(x))
     stop("Argument `x` must be character, is ", typeof(x), ".")
-  gsub("<", "&lt;", gsub(">", "&gt;", gsub("&", "&amp;", x)))
+  .Call(FANSI_esc_html, enc2utf8(x))
 }
 
 #' Format Character Vector for Display as Code in HTML

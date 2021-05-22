@@ -740,6 +740,7 @@ SEXP FANSI_esc_html(SEXP x) {
       FANSI_size_buff(&buff, final_string_size(bytes, i));
 
       char * buff_track = buff.buff;
+      string = CHAR(chrsxp);
 
       while(*string) {
         switch(*string) {
@@ -764,8 +765,12 @@ SEXP FANSI_esc_html(SEXP x) {
             buff_track += 4;
             break;
           default:
-            *(buff_track++) = *(string++);
-    } } }
+            *(buff_track++) = *string;
+        }
+        ++string;
+      }
+
+    }
     cetype_t chr_type = getCharCE(chrsxp);
     SEXP reschr = PROTECT(mkCharLenCE(buff.buff, (R_len_t)(bytes), chr_type));
     SET_STRING_ELT(res, i, reschr);
