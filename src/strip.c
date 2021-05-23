@@ -73,9 +73,8 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     if(chr_len > mem_req) mem_req = chr_len;
   }
   // Now strip
-
   int invalid_ansi = 0;
-  int invalid_idx = 0;
+  R_xlen_t invalid_idx = 0;
   char * chr_buff;
 
   for(i = 0; i < len; ++i) {
@@ -107,7 +106,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
         )
       ) {
         invalid_ansi = 1;
-        invalid_idx = i + 1;
+        invalid_idx = i;
       }
       if(csi.len) {
         has_ansi = 1;
