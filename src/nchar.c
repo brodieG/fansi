@@ -40,10 +40,10 @@ SEXP FANSI_nzchar(
 
   SEXP res = PROTECT(allocVector(LGLSXP, x_len));
 
-  for(R_len_t i = 0; i < x_len; ++i) {
+  for(R_xlen_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
     SEXP string_elt = STRING_ELT(x, i);
-    FANSI_check_enc(string_elt, i);
+    FANSI_check_chrsxp(string_elt, i);
 
     if(string_elt == R_NaString) {
       if(keepNA_int == 1) {
@@ -61,9 +61,9 @@ SEXP FANSI_nzchar(
         ) {
           warned = 1;
           warning(
-            "Encountered %s ESC sequence at index [%.0f], %s%s",
+            "Encountered %s ESC sequence at index [%jd], %s%s",
             !pos.valid ? "invalid" : "possibly incorrectly handled",
-            (double) i + 1,
+            FANSI_ind(i),
             "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
             "off these warnings."
           );

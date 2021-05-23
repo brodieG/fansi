@@ -73,16 +73,15 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     if(chr_len > mem_req) mem_req = chr_len;
   }
   // Now strip
-
   int invalid_ansi = 0;
-  int invalid_idx = 0;
+  R_xlen_t invalid_idx = 0;
   char * chr_buff;
 
   for(i = 0; i < len; ++i) {
     FANSI_interrupt(i);
     SEXP x_chr = STRING_ELT(x, i);
     if(x_chr == NA_STRING) continue;
-    FANSI_check_enc(x_chr, i);
+    FANSI_check_chrsxp(x_chr, i);
 
     int has_ansi = 0;
     const char * chr = CHAR(x_chr);
@@ -107,7 +106,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
         )
       ) {
         invalid_ansi = 1;
-        invalid_idx = i + 1;
+        invalid_idx = i;
       }
       if(csi.len) {
         has_ansi = 1;
@@ -177,6 +176,8 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
           res_track += chr_end - chr_track;
       } }
       *res_track = '\0';
+
+      FANSI_check_chr_size(res_start, res_track, i);
       SEXP chr_sexp = PROTECT(
         mkCharLenCE(
           res_start, res_track - res_start, getCharCE(x_chr)
@@ -189,9 +190,9 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     switch(warn_int) {
       case 1: {
         warning(
-          "Encountered %s index [%.0f], %s%s",
+          "Encountered %s index [%jd], %s%s",
           "invalid or possibly incorreclty handled ESC sequence at ",
-          (double) invalid_idx,
+          FANSI_ind(invalid_idx),
           "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
           "off these warnings."
         );
@@ -231,7 +232,7 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
   for(R_xlen_t i = 0; i < len; ++i) {
     FANSI_interrupt(i);
     SEXP chrsxp = STRING_ELT(res, i);
-    FANSI_check_enc(chrsxp, i);
+    FANSI_check_chrsxp(chrsxp, i);
     const char * string = CHAR(chrsxp);
     const char * string_start = string;
     char * buff_track;
@@ -384,14 +385,7 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
     }
     if(strip_this) {
       *(buff_track) = 0;
-      if(buff_track - buff->buff > FANSI_int_max)
-        // nocov start
-        error(
-          "%s%s",
-          "Internal Error: attempting to write string longer than INT_MAX; ",
-          "contact maintainer."
-        );
-        // nocov end
+      FANSI_check_chr_size(buff->buff, buff_track, i);
       SEXP chrsxp = PROTECT(
         mkCharLenCE(
           buff->buff, buff_track - buff->buff, getCharCE(STRING_ELT(input, i))

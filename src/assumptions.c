@@ -26,7 +26,7 @@
  * Intended to be run onload to make sure there isn't some weird system where
  * our baseline assumptions are not met
  *
- * returns TRUE on success, errors on failure
+ * returns TRUE on success, but throws warnings.
  */
 // nocov start
 // by definition none of the errors should be thrown, so no sense in
@@ -35,13 +35,11 @@ SEXP FANSI_check_assumptions() {
   const char * err_base = "Failed system assumption: %s%s";
 
   // Otherwise bit twiddling assumptions may not work as expected?
-
   if(CHAR_BIT != 8)
     warningcall(R_NilValue, err_base, "CHAR_BIT is not 8", "");
 
   // This is supposedly enforced by R, and we rely on it in several places (e.g.
   // to ensure bitmask large enough for styles)
-
   if(sizeof(int) != 4)
     warningcall(R_NilValue, err_base, "ints are not 32 bits", "");
 
@@ -58,34 +56,26 @@ SEXP FANSI_check_assumptions() {
 
   // Important for some our boundary condition assumptions, in particular that
   // NA_INTEGER < int x.
-
   if(INT_MIN != NA_INTEGER) {
     warningcall(
       R_NilValue, err_base, "INT_MIN != NA_INTEGER but the code in this ",
       "package assumes that they are equal; please contact maintainer."
     );
   }
-  // Mostly because we try to represent R_xlen_t values with %.0f
-
-  if(R_XLEN_T_MAX >= DBL_MAX)
-    warningcall(R_NilValue, err_base, "R_XLEN_T_MAX is not less than DBL_MAX");
-
+  // This also doesn't check R_LEN_T_MAX, should be possible to remove this
+  // assumption as we started to for html with fansi 0.5.0 by doing everything
+  // in int and checking on entry and onn exit it conforms with R_len_t.
   if(sizeof(R_len_t) != sizeof(int))
     warningcall(R_NilValue, err_base, "R_len_t not same size as int", "");
 
   // Because we check that strings are no longer than this, but then allocate
   // memory as INT_MAX + 1 with a size_t, so need to make sure that fits
-
+  // Update: now runtime check with fansi 0.5.0, at least for html, might still
+  // need to check in normal use.
   if(SIZE_MAX - 1 < INT_MAX)
     warningcall(
       R_NilValue, err_base,
       "SIZE_MAX not sufficiently larger than INT_MAX", ""
-    );
-
-  if(SIZE_MAX <= R_LEN_T_MAX)
-    warningcall(
-      R_NilValue, err_base,
-      "SIZE_MAX smaller than or equal to R_LEN_T_MAX", ""
     );
 
   return ScalarLogical(1);

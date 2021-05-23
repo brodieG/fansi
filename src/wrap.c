@@ -38,7 +38,7 @@ struct FANSI_prefix_dat {
 
 static struct FANSI_prefix_dat make_pre(SEXP x) {
   SEXP chrsxp = STRING_ELT(x, 0);
-  FANSI_check_enc(chrsxp, 0);
+  FANSI_check_chrsxp(chrsxp, 0);
   const char * x_utf8 = CHAR(chrsxp);
   // ideally we would IS_ASCII(x), but that's not available to extensions
   int x_has_utf8 = FANSI_has_utf8(x_utf8);
@@ -164,9 +164,14 @@ SEXP FANSI_writeline(
   // If we are going to pad the end, adjust sizes and widths
 
   if(target_size > (size_t) FANSI_int_max)
+    // Not possible for this to be longer than INT_MAX as we check on
+    // entry with FANSI_check_chrsxp and we're not expanding anything.
+    // nocov start, but jut in cae
     error(
-      "Substring to write (%.0f) is longer than INT_MAX.", (double) target_size
+      "Substring to write (%ju) is longer than INT_MAX.",
+      (uintmax_t) target_size
     );
+    // nocov end
 
   if(target_width <= (size_t) tar_width && *pad_chr) {
     target_pad = tar_width - target_width;
@@ -649,7 +654,7 @@ SEXP FANSI_strwrap_ext(
     FANSI_interrupt(i);
     SEXP chr = STRING_ELT(x, i);
     if(chr == NA_STRING) continue;
-    FANSI_check_enc(chr, i);
+    FANSI_check_chrsxp(chr, i);
     const char * chr_utf8 = CHAR(chr);
 
     SEXP str_i = PROTECT(

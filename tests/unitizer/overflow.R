@@ -35,15 +35,34 @@ unitizer_sect('wrap', {
 
   string4 <- '\033[31m0123456789'
   tce(strwrap_ctl(string4, 16))
+
+  ## Overflow when wrap adds a closing tag
+  invisible(fansi:::set_int_max(12))
+  tce(strwrap_ctl("hello\033[31m a", 5))
 })
 unitizer_sect('html', {
   invisible(fansi:::set_int_max(37))
-
-  sgr_to_html("\033[31m")
+  sgr_to_html("\033[31ma")
   # whole string over
-  tce(sgr_to_html("\033[31ma"))
+  tce(sgr_to_html("\033[31mab"))
   # Sequences alone over
   tce(sgr_to_html("\033[31m\033[42mhello"))
+  # Over due to classes
+  invisible(fansi:::set_int_max(57))
+  tce(sgr_to_html("\033[31m\033[42mhello", classes=TRUE))
+  # Fits exactly
+  invisible(fansi:::set_int_max(58))
+  (x <- sgr_to_html("\033[31m\033[42mhello", classes=TRUE))
+  nchar(x)
+  # Over
+  invisible(fansi:::set_int_max(4))
+  tce(sgr_to_html("hello"));
+
+  tce(html_esc("hello"));
+  tce(html_esc("<"));
+  tce(html_esc("<!"));
+  tce(html_esc("&"));
+  tce(html_esc("'"));
 })
 unitizer_sect('unhandled', {
   invisible(fansi:::set_int_max(10))

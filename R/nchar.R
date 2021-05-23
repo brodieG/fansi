@@ -30,6 +30,7 @@
 #'
 #' @inheritParams substr_ctl
 #' @inheritParams base::nchar
+#' @inheritParams strip_ctl
 #' @inheritSection substr_ctl _ctl vs. _sgr
 #' @note the `keepNA` parameter is ignored for R < 3.2.2.
 #' @export
