@@ -26,7 +26,7 @@
  * Intended to be run onload to make sure there isn't some weird system where
  * our baseline assumptions are not met
  *
- * returns TRUE on success, errors on failure
+ * returns TRUE on success, but throws warnings.
  */
 // nocov start
 // by definition none of the errors should be thrown, so no sense in
@@ -62,14 +62,7 @@ SEXP FANSI_check_assumptions() {
       "package assumes that they are equal; please contact maintainer."
     );
   }
-  // Mostly because we try to represent R_xlen_t values with %.0f, this is not
-  // actually necessary, we shoudl do it with intmax_t and %ju as we started to
-  // with html.
-
-  if(R_XLEN_T_MAX >= DBL_MAX)
-    warningcall(R_NilValue, err_base, "R_XLEN_T_MAX is not less than DBL_MAX");
-
-  // This also doesn't check R_LEN_T_MAX, should be possible to remove thi
+  // This also doesn't check R_LEN_T_MAX, should be possible to remove this
   // assumption as we started to for html with fansi 0.5.0 by doing everything
   // in int and checking on entry and onn exit it conforms with R_len_t.
   if(sizeof(R_len_t) != sizeof(int))

@@ -53,8 +53,8 @@ SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn) {
     if(res_tmp == -1 && warn_int) {
       res_tmp = -res_tmp;
       warning(
-        "Encountered invalid ESC sequence at index [%.0f], %s%s",
-        (double) i + 1,
+        "Encountered invalid ESC sequence at index [%jd], %s%s",
+        FANSI_ind(i),
         "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
         "off these warnings."
       );

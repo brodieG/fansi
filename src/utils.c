@@ -216,11 +216,12 @@ void FANSI_size_buff(struct FANSI_buff * buff, size_t size) {
         size = 128;  // in theory little penalty to ask this minimum
       else if(size > (size_t) FANSI_int_max + 1) {
         // nocov start
+        // assumptions check that  SIZE_T fits INT_MAX + 1
         // too difficult to test, all the code pretty much checks for overflow
         // before requesting memory
         error(
-          "Internal Error: requested buff size %.0f greater than INT_MAX + 1.",
-          (double) size
+          "Internal Error: requested buff size %zu greater than INT_MAX + 1.",
+           size
         );
         // nocov end
       }
@@ -242,9 +243,9 @@ void FANSI_size_buff(struct FANSI_buff * buff, size_t size) {
         // this can't really happen unless size starts off bigger than
         // INT_MAX + 1
         error(
-          "%s  Requesting %.0f",
+          "%s  Requesting %zu",
           "Internal Error: max allowed buffer size is INT_MAX + 1.",
-          (double) tmp_double_size
+           tmp_double_size
         );
         // nocov end
       buff->len = tmp_double_size;
@@ -504,3 +505,15 @@ SEXP FANSI_sort_chr(SEXP x) {
   }
   return res;
 }
+/*
+ * So we can use a consistent integer type in printing possibly large indeces.
+ *
+ * Returns in 1 based indexing, -1 in the unlikely case R_xlen_t == intmax_t.
+ */
+
+intmax_t FANSI_ind(R_xlen_t i) {
+  intmax_t ind = i >= INTMAX_MAX ? -2 : i; // i == INTMAX_MAX is the issue
+  return ind + 1;
+}
+
+

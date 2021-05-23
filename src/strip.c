@@ -189,9 +189,9 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     switch(warn_int) {
       case 1: {
         warning(
-          "Encountered %s index [%.0f], %s%s",
+          "Encountered %s index [%jd], %s%s",
           "invalid or possibly incorreclty handled ESC sequence at ",
-          (double) invalid_idx,
+          FANSI_ind(invalid_idx),
           "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
           "off these warnings."
         );

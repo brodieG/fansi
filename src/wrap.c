@@ -164,9 +164,14 @@ SEXP FANSI_writeline(
   // If we are going to pad the end, adjust sizes and widths
 
   if(target_size > (size_t) FANSI_int_max)
+    // Not possible for this to be longer than INT_MAX as we check on
+    // entry with FANSI_check_chrsxp and we're not expanding anything.
+    // nocov start, but jut in cae
     error(
-      "Substring to write (%.0f) is longer than INT_MAX.", (double) target_size
+      "Substring to write (%ju) is longer than INT_MAX.",
+      (uintmax_t) target_size
     );
+    // nocov end
 
   if(target_width <= (size_t) tar_width && *pad_chr) {
     target_pad = tar_width - target_width;

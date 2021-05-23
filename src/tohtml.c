@@ -253,7 +253,7 @@ static char * color_to_html(int color, int * color_extra, char * buff) {
 static void overflow_err(const char * type, R_xlen_t i) {
   intmax_t ind = i >= INTMAX_MAX ? -2 : i; // i == INTMAX_MAX is the issue
   error(
-    "%s %s %s %ju%s",
+    "%s %s %s %jd%s",
     "Expanding SGR sequences into HTML will create a string longer than",
     type, "at position", ind + 1, ". Try again with smaller strings."
   );
@@ -261,7 +261,7 @@ static void overflow_err(const char * type, R_xlen_t i) {
 static void overflow_err2(R_xlen_t i) {
   intmax_t ind = i >= INTMAX_MAX ? -2 : i; // i == INTMAX_MAX is the issue
   error(
-    "%s %s %s %ju%s",
+    "%s %s %s %jd%s",
     "Escaping HTML special characters will create a string longer than",
     "INT_MAX", "at position", ind + 1, ". Try again with smaller strings."
   );
