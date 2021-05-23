@@ -501,12 +501,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
     struct FANSI_state state_start = FANSI_reset_pos(state);
     state_prev = state_init;  // but there are no styles in the string yet
 
-    // R_len_t is currently (R4.1) int, but defend against change by doing all
-    // calcs in int and checking that fits.
-    R_len_t bytes_init0 = LENGTH(chrsxp);
-    if(bytes_init0 > FANSI_int_max)
-      error("Strings longer than INT_MAX not supported.");
-    int bytes_init = (int) bytes_init0;
+    int bytes_init = (int) LENGTH(chrsxp);
     int bytes_html = 0;
     int bytes_esc = 0;
 
