@@ -490,8 +490,8 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
     FANSI_interrupt(i);
 
     SEXP chrsxp = STRING_ELT(x, i);
+    if(chrsxp == NA_STRING) continue;
     FANSI_check_chrsxp(chrsxp, i);
-
     const char * string = CHAR(chrsxp);
 
     // Reset position info and string; rest of state info is preserved from
@@ -701,6 +701,7 @@ SEXP FANSI_esc_html(SEXP x) {
     FANSI_interrupt(i);
 
     SEXP chrsxp = STRING_ELT(x, i);
+    if(chrsxp == NA_STRING) continue;
     FANSI_check_chrsxp(chrsxp, i);
     int bytes = (int) LENGTH(chrsxp);
     const char * string = CHAR(chrsxp);
