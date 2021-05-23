@@ -123,6 +123,7 @@ unitizer_sect("HTML helper", {
   html_esc(c("hello", "wor<ld>s", NA, ""))
   html_esc(c("he'l\"lo", "wor<ld>s", NA, ""))
   html_esc("<<<<")
+  html_esc("<123hello>")
 
   txt <- c(
     "day > night",
