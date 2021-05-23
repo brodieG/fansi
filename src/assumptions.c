@@ -78,12 +78,6 @@ SEXP FANSI_check_assumptions() {
       "SIZE_MAX not sufficiently larger than INT_MAX", ""
     );
 
-  if(SIZE_MAX <= R_LEN_T_MAX)
-    warningcall(
-      R_NilValue, err_base,
-      "SIZE_MAX smaller than or equal to R_LEN_T_MAX", ""
-    );
-
   return ScalarLogical(1);
 }
 // nocov end

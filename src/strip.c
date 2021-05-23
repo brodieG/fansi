@@ -176,6 +176,8 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
           res_track += chr_end - chr_track;
       } }
       *res_track = '\0';
+
+      FANSI_check_chr_size(res_start, res_track, i);
       SEXP chr_sexp = PROTECT(
         mkCharLenCE(
           res_start, res_track - res_start, getCharCE(x_chr)
@@ -383,14 +385,7 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
     }
     if(strip_this) {
       *(buff_track) = 0;
-      if(buff_track - buff->buff > FANSI_int_max)
-        // nocov start
-        error(
-          "%s%s",
-          "Internal Error: attempting to write string longer than INT_MAX; ",
-          "contact maintainer."
-        );
-        // nocov end
+      FANSI_check_chr_size(buff->buff, buff_track, i);
       SEXP chrsxp = PROTECT(
         mkCharLenCE(
           buff->buff, buff_track - buff->buff, getCharCE(STRING_ELT(input, i))
