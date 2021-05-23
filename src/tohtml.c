@@ -710,6 +710,10 @@ SEXP FANSI_esc_html(SEXP x) {
     // - Pass 1: Measure -------------------------------------------------------
 
     while(*string) {
+      if(*string > '>') { // All specials are less than this
+        ++string;
+        continue;
+      }
       switch(*string) {
         case '&': // &amp;
           if(bytes <= FANSI_int_max - 4) bytes += 4;
@@ -744,6 +748,10 @@ SEXP FANSI_esc_html(SEXP x) {
       string = CHAR(chrsxp);
 
       while(*string) {
+        if(*string > '>') { // All specials are less than this
+          *(buff_track++) = *(string++);
+          continue;
+        }
         switch(*string) {
           case '&': // &amp;
             memcpy(buff_track, "&amp;", 5);
