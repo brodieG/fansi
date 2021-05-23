@@ -4,7 +4,7 @@
 \alias{in_html}
 \title{Frame HTML in a Web Page And Display}
 \usage{
-in_html(x, css = "", pre = TRUE, display = TRUE, clean = display)
+in_html(x, css = character(), pre = TRUE, display = TRUE, clean = display)
 }
 \arguments{
 \item{x}{character vector of html encoded strings.}
@@ -25,23 +25,29 @@ character(1L) the file location of the page, invisibly, but keep in
 mind it will have been deleted if \code{clean=TRUE}.
 }
 \description{
-Helper function that assembles user provided HTML and CSS into a webpage, and
-optionally displays it in the browser.  Intended for testing purposes.
+Helper function that assembles user provided HTML and CSS into a temporary
+text file, and by default displays it in the browser.  Intended for use in
+examples.
 }
 \examples{
 txt <- "\033[31;42mHello \033[7mWorld\033[m"
 writeLines(txt)
+html <- sgr_to_html(txt)
 \dontrun{
-in_html(txt) # spawns a browser window
+in_html(html) # spawns a browser window
 }
-writeLines(readLines(in_html(txt, display=FALSE)))
+writeLines(readLines(in_html(html, display=FALSE)))
 css <- "SPAN {text-decoration: underline;}"
-writeLines(readLines(in_html(txt, css=css, display=FALSE)))
+writeLines(readLines(in_html(html, css=css, display=FALSE)))
+\dontrun{
+in_html(html, css)
+}
 }
 \seealso{
 \code{\link[=make_styles]{make_styles()}}.
 
 Other HTML functions: 
+\code{\link{html_esc}()},
 \code{\link{make_styles}()},
 \code{\link{sgr_to_html}()}
 }

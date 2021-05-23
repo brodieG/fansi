@@ -10,8 +10,8 @@ html_esc(x)
 \item{x}{character vector}
 }
 \value{
-character vector consisting of \code{x}, but with the "<", ">", and "&"
-characters replaced by their HTML entity codes.
+\code{x}, but with "<", ">", "&", "'", and "\"" characters replaced by
+their HTML entity codes, and Encoding set to UTF-8.
 }
 \description{
 This allows displaying strings that contain them in HTML without disrupting
@@ -22,3 +22,10 @@ actual HTML as this function would destroy it.
 html_esc("day > night")
 html_esc("<SPAN>hello world</SPAN>")
 }
+\seealso{
+Other HTML functions: 
+\code{\link{in_html}()},
+\code{\link{make_styles}()},
+\code{\link{sgr_to_html}()}
+}
+\concept{HTML functions}

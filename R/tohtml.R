@@ -19,7 +19,7 @@
 #' Interprets CSI SGR sequences and produces a string with equivalent
 #' formats applied with SPAN elements and either inline-CSS styles, or
 #' optionally for colors, by adding classes to SPAN elements that the
-#' user can generate a corresponding style sheet for.  Input that contains
+#' user can provide a corresponding style sheet for.  Input that contains
 #' special HTML characters ("<", ">", "&", "'" "\""), particularly the first
 #' two, should be escaped with [`html_esc`].
 #'
@@ -39,10 +39,12 @@
 #' into one string, being mindful that very large strings may exceed maximum
 #' string size when converted to HTML.
 #'
-#' Any active SPAN tags are closed and new ones open anytime the "observable"
-#' state changes.  This may be inefficient at times, but since ANSI CSI SGR is a
-#' a state based formatting system it does not make sense to try to implemented
-#' with a recursive system like nested SPAN tags.
+#' Active SPAN tags are closed and new ones open anytime the "observable"
+#' state changes.  `sgr_to_html` never produces nested SPAN tags, even if at
+#' times that might produce more compact output.  This is because ANSI CSI SGR
+#' is a state based formatting system and is not constrained by the semantics of
+#' a nested one like HTML, so dealing with the complexity of nesting when it
+#' cannot reproduce all inputs anyway does not seem worthwhile.
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @export
@@ -83,8 +85,9 @@
 #'   * character(256): Like character(16), except the basic, bright, and all 8
 #'     bit colors are mapped.
 #'
-#' @return a character vector with all escape sequences removed and any basic
-#'   ANSI CSI SGR escape sequences applied via SPAN html objects.
+#' @return A character vector of the same length as `x` with all escape
+#'   sequences removed and any basic ANSI CSI SGR escape sequences applied via
+#'   SPAN HTML tags.
 #' @examples
 #' sgr_to_html("hello\033[31;42;1mworld\033[m")
 #' sgr_to_html("hello\033[31;42;1mworld\033[m", classes=TRUE)
@@ -168,25 +171,23 @@ sgr_to_html <- function(
 }
 #' Generate CSS Mapping Classes to Colors
 #'
-#' Given a set of class names, produce the CSS that relates them to the default
-#' 8 bit colors.  This is a helper function to generate style sheets for use
-#' in examples with either default or remixed `fansi` colors.
-#'
-#' This is a completely contrived function designed solely for use in this
-#' package's examples. In practice users will create their own style sheets
-#' mapping their classes to their preferred styles.
+#' Given a set of class names, produce the CSS that maps them to the default
+#' 8-bit colors.  This is a helper function to generate style sheets for use
+#' in examples with either default or remixed `fansi` colors.  In practice users
+#' will create their own style sheets mapping their classes to their preferred
+#' styles.
 #'
 #' @family HTML functions
 #' @importFrom grDevices col2rgb rgb
 #' @export
 #' @param classes a character vector of either 16, 32, or 512 class names, or a
-#'   scalar integer with values 8, 16, or 256.  The character vectors are
+#'   scalar integer with value 8, 16, or 256.  The character vectors are
 #'   described in [`sgr_to_html`].  The scalar integers will cause this function
 #'   to generate classes for the basic colors (8), basic + bright (16), or all
 #'   256 8-bit colors (256), with class names in "fansi-color-###" (or
-#'   "fansi-bgcol-###" for background colors), which is the default used by
-#'   [`sgr_to_html`] when custom user classes are not provided.  TRUE is also a
-#'   valid input and is equivalent to 256.
+#'   "fansi-bgcol-###" for background colors), which is what [`sgr_to_html`]
+#'   generates when-user defined classes are not provided.  TRUE is also a valid
+#'   input and is equivalent to 256.
 #' @param rgb.mix 3 x 3 numeric matrix to remix color channels.  Given a N x 3
 #'   matrix of numeric RGB colors `rgb`, the colors used in the style sheet will
 #'   be `rgb %*% rgb.mix`.  Out of range values are clipped to the nearest bound
@@ -209,10 +210,11 @@ sgr_to_html <- function(
 #' html <- sgr_to_html(string, classes=classes)
 #' writeLines(html)
 #'
-#' ## Combine in a page with styles
+#' ## Combine in a page with styles and display in browser
 #' \dontrun{
 #' in_html(html, css=c(css0, css1))
 #' }
+#'
 #' ## Change CSS by remixing colors, and apply to exact same HTML
 #' mix <- matrix(
 #'   c(
@@ -223,8 +225,9 @@ sgr_to_html <- function(
 #'   nrow=3, byrow=TRUE
 #' )
 #' css2 <- make_styles(classes, rgb.mix=mix)
+#' ## Display in browser: same HTML but colors changed by CSS
 #' \dontrun{
-#' in_html(html, css=c(css0, css2)
+#' in_html(html, css=c(css0, css2))
 #' }
 
 make_styles <- function(classes, rgb.mix=diag(3)) {
@@ -272,8 +275,9 @@ check_classes <- function(classes) {
 }
 #' Frame HTML in a Web Page And Display
 #'
-#' Helper function that assembles user provided HTML and CSS into a webpage, and
-#' by default displays it in the browser.  Intended for testing.
+#' Helper function that assembles user provided HTML and CSS into a temporary
+#' text file, and by default displays it in the browser.  Intended for use in
+#' examples.
 #'
 #' @export
 #' @family HTML functions
@@ -291,12 +295,16 @@ check_classes <- function(classes) {
 #' @examples
 #' txt <- "\033[31;42mHello \033[7mWorld\033[m"
 #' writeLines(txt)
+#' html <- sgr_to_html(txt)
 #' \dontrun{
-#' in_html(txt) # spawns a browser window
+#' in_html(html) # spawns a browser window
 #' }
-#' writeLines(readLines(in_html(txt, display=FALSE)))
+#' writeLines(readLines(in_html(html, display=FALSE)))
 #' css <- "SPAN {text-decoration: underline;}"
-#' writeLines(readLines(in_html(txt, css=css, display=FALSE)))
+#' writeLines(readLines(in_html(html, css=css, display=FALSE)))
+#' \dontrun{
+#' in_html(html, css)
+#' }
 
 in_html <- function(x, css=character(), pre=TRUE, display=TRUE, clean=display) {
   html <- c(
