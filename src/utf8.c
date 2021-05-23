@@ -134,11 +134,10 @@ void FANSI_check_chrsxp(SEXP x, R_xlen_t i) {
     error("Internal Error: expected CHARSXP.");  // nocov
   cetype_t type = getCharCE(x);
   if(type != CE_NATIVE && type != CE_UTF8) {
-    intmax_t ind = i >= INTMAX_MAX ? -2 : i; // i == INTMAX_MAX is the issue
     if(type == CE_BYTES)
       error(
         "%s at index %jd. %s.",
-        "Byte encoded string encountered", ind + 1,
+        "Byte encoded string encountered", FANSI_ind(i),
         "Byte encoded strings are not supported"
       );
     else
@@ -147,14 +146,13 @@ void FANSI_check_chrsxp(SEXP x, R_xlen_t i) {
       error(
         "%s %d encountered at index %jd. %s.",
         "Internal Error: unexpected encoding", type,
-        ind + 1, "Contact maintainer"
+        FANSI_ind(i), "Contact maintainer"
       );
   }
   if(LENGTH(x) > FANSI_int_max) {
-    intmax_t ind = i >= INTMAX_MAX ? -2 : i; // i == INTMAX_MAX is the issue
     error(
       "Strings longer than INT_MAX not supported (length %jd at index %jd).",
-      (intmax_t)(LENGTH(x)), ind + 1
+      (intmax_t)(LENGTH(x)), FANSI_ind(i)
     );
   }
 }

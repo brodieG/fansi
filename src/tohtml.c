@@ -251,19 +251,17 @@ static char * color_to_html(int color, int * color_extra, char * buff) {
 // Central error function.
 
 static void overflow_err(const char * type, R_xlen_t i) {
-  intmax_t ind = i >= INTMAX_MAX ? -2 : i; // i == INTMAX_MAX is the issue
   error(
     "%s %s %s %jd%s",
     "Expanding SGR sequences into HTML will create a string longer than",
-    type, "at position", ind + 1, ". Try again with smaller strings."
+    type, "at position", FANSI_ind(i), ". Try again with smaller strings."
   );
 }
 static void overflow_err2(R_xlen_t i) {
-  intmax_t ind = i >= INTMAX_MAX ? -2 : i; // i == INTMAX_MAX is the issue
   error(
     "%s %s %s %jd%s",
     "Escaping HTML special characters will create a string longer than",
-    "INT_MAX", "at position", ind + 1, ". Try again with smaller strings."
+    "INT_MAX", "at position", FANSI_ind(i), ". Try again with smaller strings."
   );
 }
 /*
