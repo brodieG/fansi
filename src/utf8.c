@@ -138,7 +138,7 @@ void FANSI_check_chrsxp(SEXP x, R_xlen_t i) {
     if(type == CE_BYTES)
       error(
         "%s at index %ju. %s.",
-        "Byte encoded string encountered", ind,
+        "Byte encoded string encountered", ind + 1,
         "Byte encoded strings are not supported"
       );
     else
@@ -147,14 +147,14 @@ void FANSI_check_chrsxp(SEXP x, R_xlen_t i) {
       error(
         "%s %d encountered at index %ju. %s.",
         "Internal Error: unexpected encoding", type,
-        ind, "Contact maintainer."
+        ind + 1, "Contact maintainer"
       );
   }
   if(LENGTH(x) > FANSI_int_max) {
     intmax_t ind = i >= INTMAX_MAX ? -2 : i; // i == INTMAX_MAX is the issue
     error(
-      "Strings longer than INT_MAX not supported, encountered %ju at index %ju.",
-      (intmax_t)(LENGTH(x)), ind
+      "Strings longer than INT_MAX not supported (length %ju at index %ju).",
+      (intmax_t)(LENGTH(x)), ind + 1
     );
   }
 }

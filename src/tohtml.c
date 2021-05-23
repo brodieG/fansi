@@ -675,11 +675,7 @@ SEXP FANSI_color_to_html_ext(SEXP x) {
 }
 
 /*
- * & -> &amp;    0x26
- * " -> &quot;   0x22
- * ' -> &#039;   0x27
- * < -> &lt;     0x3c
- * > -> &gt;     0x3e
+ * Escape special HTML characters.
  */
 
 SEXP FANSI_esc_html(SEXP x) {
@@ -773,12 +769,21 @@ SEXP FANSI_esc_html(SEXP x) {
         }
         ++string;
       }
+      *buff_track = 0;
+      if(buff_track - buff.buff != bytes)
+        // nocov start
+        error(
+          "Internal Error: %s (%td vs %zu).",
+          "buffer length mismatch in html escaping",
+          buff_track - buff.buff, bytes
+        );
+        // nocov end
 
+      cetype_t chr_type = getCharCE(chrsxp);
+      SEXP reschr = PROTECT(mkCharLenCE(buff.buff, (R_len_t)(bytes), chr_type));
+      SET_STRING_ELT(res, i, reschr);
+      UNPROTECT(1);
     }
-    cetype_t chr_type = getCharCE(chrsxp);
-    SEXP reschr = PROTECT(mkCharLenCE(buff.buff, (R_len_t)(bytes), chr_type));
-    SET_STRING_ELT(res, i, reschr);
-    UNPROTECT(1);
   }
   UNPROTECT(1);
   return res;
