@@ -18,10 +18,10 @@
 #'
 #' Interprets CSI SGR sequences and produces a string with equivalent
 #' formats applied with SPAN elements and either inline-CSS styles, or
-#' optionally for colors, by labeling the SPAN elements with user classes the
-#' user can generate a corresponding style sheet for.  The conversion operates
-#' under assumption that the input is free of HTML markup, and makes no
-#' guarantees on correctness if this is not true.
+#' optionally for colors, by adding classes to SPAN elements that the
+#' user can generate a corresponding style sheet for.  Input that contains
+#' special HTML characters ("<", ">", "&", "'" "\""), particularly the first
+#' two, should be escaped with [`html_esc`].
 #'
 #' Only "observable" styles are translated.  These include colors,
 #' background-colors, and basic styles (CSI SGR codes 1-6, 8, 9).  Style 7, the
@@ -34,7 +34,7 @@
 #' string.  In particular, any open SPAN tags are closed at the end of an
 #' element and re-opened on the subsequent element with the same style.  This
 #' allows safe combination of HTML translated strings, for example by
-#' [paste()]ing them together.  The trade-off is that there may be redundant
+#' [`paste`]ing them together.  The trade-off is that there may be redundant
 #' HTML produced.  To reduce redundancy you can first collapse the input vector
 #' into one string, being mindful that very large strings may exceed maximum
 #' string size when converted to HTML.
@@ -48,10 +48,10 @@
 #' @export
 #' @family HTML functions
 #' @inheritParams substr_ctl
-#' @seealso [fansi] for details on how _Control Sequences_ are
+#' @seealso [`fansi`] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results,
-#'   [set_knit_hooks()] for how to use ANSI CSI styled text with knitr and HTML
-#'   output, [sgr_256()] to generate a demo string with all 256 8 bit color.
+#'   [`set_knit_hooks`] for how to use ANSI CSI styled text with knitr and HTML
+#'   output, [`sgr_256`] to generate a demo string with all 256 8 bit colors.
 #' @param classes FALSE (default), TRUE, or character vector of either 16,
 #'   32, or 512 class names.  Character strings may only contain ASCII
 #'   characters corresponding to letters, numbers, the hyphen, or the
@@ -59,37 +59,46 @@
 #'   legal class names.
 #'
 #'   * FALSE: All colors rendered as inline CSS styles.
-#'   * TRUE: Each of the 256 basic colors is mapped to a class in form.
+#'   * TRUE: Each of the 256 basic colors is mapped to a class in form
 #'     "fansi-color-###" (or "fansi-bgcol-###" for background colors)
 #'     where "###" is a zero padded three digit number in 0:255.  Basic colors
 #'     specified with SGR codes 30-37 (or 40-47) map to 000:007, and bright ones
 #'     specified with 90-97 (or 100-107) map to 008:015.  8 bit colors specified
 #'     with SGR codes 38;5;### or 48;5;### map directly based on the value of
 #'     "###".  Implicitly, this maps the 8 bit colors in 0:7 to the basic
-#'     colors,  and those in 8:15 to the bright ones even though these are not
+#'     colors, and those in 8:15 to the bright ones even though these are not
 #'     exactly the same when using inline styles.  "truecolor"s specified with
 #'     38;2;#;#;# or 48;2;#;#;# do not map to classes and are rendered as inline
-#'     styles instead.
+#'     styles.
 #'   * character(16): The eight basic colors are mapped to the string values in
 #'     the vector, all others are rendered as inline CSS styles.  Basic colors
 #'     are mapped irrespective of whether they are encoded as the basic colors
-#'     or as 8 bit colors.  Sixteen elements are needed because there must be
-#'     eight classes for foreground colors, and 8 classes for background colors.
-#'     Classes should be ordered in ascending order of color number, with
-#'     foreground and background classes alternating starting with foreground
-#'     (see examples).
+#'     or as 8-bit colors.  Sixteen elements are needed because there must be
+#'     eight classes for foreground colors, and eight classes for background
+#'     colors.  Classes should be ordered in ascending order of color number,
+#'     with foreground and background classes alternating starting with
+#'     foreground (see examples).
 #'   * character(32): Like character(16), except the basic and bright colors are
 #'     mapped.
 #'   * character(256): Like character(16), except the basic, bright, and all 8
 #'     bit colors are mapped.
 #'
 #' @return a character vector with all escape sequences removed and any basic
-#'   ANSI CSI SGR escape sequences applied via SPAN html objects with inline css
-#'   styles (see details).
+#'   ANSI CSI SGR escape sequences applied via SPAN html objects.
 #' @examples
 #' sgr_to_html("hello\033[31;42;1mworld\033[m")
 #' sgr_to_html("hello\033[31;42;1mworld\033[m", classes=TRUE)
 #'
+#' ## Input contains HTML special chars
+#' x <- "<hello \033[42m'there' \033[34m &amp;\033[m \"moon\"!"
+#' writeLines(x)
+#' \dontrun{
+#' in_html(
+#'   c(
+#'     sgr_to_html(html_esc(x)),  # Good
+#'     sgr_to_html(x)             # Bad!
+#' ) )
+#' }
 #' ## Generate some class names for basic colors
 #' classes <- expand.grid(
 #'   "myclass",
@@ -98,12 +107,12 @@
 #' )
 #' classes  # order is important!
 #' classes <- do.call(paste, c(classes, sep="-"))
-#' ## Only basic colors are mapped to classes; others styled inline
+#' ## We only provide 16 classes, so Only basic colors are
+#' ## mapped to classes; others styled inline.
 #' sgr_to_html(
 #'   "\033[94mhello\033[m \033[31;42;1mworld\033[m",
 #'   classes=classes
 #' )
-#'
 #' ## Create a whole web page with a style sheet for 256 colors and
 #' ## the colors shown in a table.
 #' class.256 <- do.call(paste, c(expand.grid(c("fg", "bg"), 0:255), sep="-"))
@@ -114,8 +123,7 @@
 #' html.256 <- sgr_to_html(sgr.256, classes=class.256)
 #' writeLines(html.256[1])  # No inline colors
 #'
-#' ## Generate different style sheets.  We use `make_styles`
-#' ## for convenience but users should provide their own.
+#' ## Generate different style sheets.  See `?make_styles` for details.
 #' default <- make_styles(class.256)
 #' mix <- matrix(c(.6,.2,.2, .2,.6,.2, .2,.2,.6), 3)
 #' desaturated <- make_styles(class.256, mix)
@@ -123,11 +131,10 @@
 #' writeLines(desaturated[1:4])
 #'
 #' ## Embed in HTML page and diplay; only CSS changing
-#' html <- c("<pre>", html.256, "</pre>")
 #' \dontrun{
-#' in_html(html)                  # no CSS
-#' in_html(html, css=default)     # default CSS
-#' in_html(html, css=desaturated) # desaturated CSS
+#' in_html(html.256)                  # no CSS
+#' in_html(html.256, css=default)     # default CSS
+#' in_html(html.256, css=desaturated) # desaturated CSS
 #' }
 
 sgr_to_html <- function(
@@ -162,24 +169,51 @@ sgr_to_html <- function(
 #' Generate CSS Mapping Classes to Colors
 #'
 #' Given a set of class names, produce the CSS that relates them to the default
-#' 8 bit colors.  This is a a helper function to generate style sheets for use
-#' examples.
+#' 8 bit colors.  This is a helper function to generate style sheets for use
+#' in examples with either default or remixed `fansi` colors.
+#'
+#' This is a completely contrived function designed solely for use in this
+#' package's examples. In practice users will create their own style sheets
+#' mapping their classes to their preferred styles.
 #'
 #' @family HTML functions
 #' @importFrom grDevices col2rgb rgb
 #' @export
-#' @param classes character vector of either 16, 32, or 512 class names.  See
-#'   [sgr_to_html()] for details, though note that unlike [sgr_to_html()] this
-#'   function only accepts character vectors.
-#' @param rgb.mix 3 x 3 numeric matrix to remix color channels.  Each column
-#'   corresponds to the channel mix of each channel in the output.  Intended
-#'   primarily to easily generate style sheets with different colors for demo
-#'   purposes.  Values that end up out of range are truncated into range.
-#' @return a character vector that can be used a style sheet.
+#' @param classes a character vector of either 16, 32, or 512 class names, or a
+#'   scalar integer with values 8, 16, or 256.  The character vectors are
+#'   described in [`sgr_to_html`].  The scalar integers will cause this function
+#'   to generate classes for the basic colors (8), basic + bright (16), or all
+#'   256 8-bit colors (256), with class names in "fansi-color-###" (or
+#'   "fansi-bgcol-###" for background colors), which is the default used by
+#'   [`sgr_to_html`] when custom user classes are not provided.  TRUE is also a
+#'   valid input and is equivalent to 256.
+#' @param rgb.mix 3 x 3 numeric matrix to remix color channels.  Given a N x 3
+#'   matrix of numeric RGB colors `rgb`, the colors used in the style sheet will
+#'   be `rgb %*% rgb.mix`.  Out of range values are clipped to the nearest bound
+#'   of the range.
+#' @return A character vector that can be used as the contents of a style sheet.
 #' @examples
-#' class.8 <- do.call(paste, c(expand.grid(c("fg", "bg"), 0:7), sep="-"))
-#' writeLines(make_styles(class.8))
-#' ## Use `rgb.mix` to remap color channels
+#' ## Generate some class strings; order matters
+#' classes <- do.call(paste, c(expand.grid(c("fg", "bg"), 0:7), sep="-"))
+#' writeLines(classes[1:4])
+#'
+#' ## Some Default CSS
+#' css0 <- "span {font-size: 60pt; padding: 10px; display: inline-block}"
+#'
+#' ## Associated class strings to styles
+#' css1 <- make_styles(classes)
+#' writeLines(css1[1:4])
+#'
+#' ## Generate SGR-derived HTML, mapping to classes
+#' string <- "\033[43mYellow\033[m\n\033[45mMagenta\033[m\n\033[46mCyan\033[m"
+#' html <- sgr_to_html(string, classes=classes)
+#' writeLines(html)
+#'
+#' ## Combine in a page with styles
+#' \dontrun{
+#' in_html(html, css=c(css0, css1))
+#' }
+#' ## Change CSS by remixing colors, and apply to exact same HTML
 #' mix <- matrix(
 #'   c(
 #'     0, 1, 0,  # red output is green input
@@ -188,7 +222,10 @@ sgr_to_html <- function(
 #'   ),
 #'   nrow=3, byrow=TRUE
 #' )
-#' writeLines(make_styles(class.8, rgb.mix=mix))
+#' css2 <- make_styles(classes, rgb.mix=mix)
+#' \dontrun{
+#' in_html(html, css=c(css0, css2)
+#' }
 
 make_styles <- function(classes, rgb.mix=diag(3)) {
   if(!is.character(classes)) stop("Argument `classes` is not character.")
@@ -236,7 +273,7 @@ check_classes <- function(classes) {
 #' Frame HTML in a Web Page And Display
 #'
 #' Helper function that assembles user provided HTML and CSS into a webpage, and
-#' optionally displays it in the browser.  Intended for testing purposes.
+#' by default displays it in the browser.  Intended for testing.
 #'
 #' @export
 #' @family HTML functions

@@ -121,6 +121,7 @@ unitizer_sect("HTML helper", {
   html_esc("<he&llo>")
   html_esc("ow&wo")
   html_esc(c("hello", "wor<ld>s", NA, ""))
+  html_esc(c("he'l\"lo", "wor<ld>s", NA, ""))
   html_esc("<<<<")
 
   txt <- c(
