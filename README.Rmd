@@ -150,7 +150,7 @@ master branch typically mirrors CRAN and should be stable.
 * [ansistrings](https://github.com/r-lib/ansistrings/), which implements similar
   functionality.
 * [ECMA-48 - Control Functions For Coded Character
-  Sets](http://www.ecma-international.org/publications/standards/Ecma-048.htm),
+  Sets](https://www.ecma-international.org/publications-and-standards/standards/ecma-48/),
   in particular pages 10-12, and 61.
 * [CCITT Recommendation T.416](https://www.itu.int/rec/dologin_pub.asp?lang=e&id=T-REC-T.416-199303-I!!PDF-E&type=items)
 * [ANSI Escape Code - Wikipedia](https://en.wikipedia.org/wiki/ANSI_escape_code)
