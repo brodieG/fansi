@@ -6,6 +6,10 @@
   converts CSI SGR to classes instead of inline styles.
 * [#69](https://github.com/brodieG/fansi/issues/69): `sgr_to_html` is more
   disciplined about emitting unnecessary HTML (h/t @hadley).
+* New functions:
+    * `sgr_256`: Display all 256 8-bit colors.
+    * `in_html`: Easily output HTML in a web page.
+    * `make_styles`: Easily produce CSS that matches 8-bit colors.
 * Adjust for changes to `nchar(..., type='width')` for C0-C1 control characters
   in R 4.1.
 * Restore tests bypassed in 0.4.2.

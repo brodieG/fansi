@@ -280,6 +280,7 @@ check_classes <- function(classes) {
 #' examples.
 #'
 #' @export
+#' @importFrom utils browseURL
 #' @family HTML functions
 #' @param x character vector of html encoded strings.
 #' @param css character vector of css styles.
