@@ -186,9 +186,13 @@ master branch typically mirrors CRAN and should be stable.
   [roxygen2](https://cran.r-project.org/package=roxygen2).
 * [Yihui Xie](https://github.com/yihui) for
   [knitr](https://cran.r-project.org/package=knitr) and  [J.J.
-  Allaire](https://github.com/jjallaire) etal for
+  Allaire](https://github.com/jjallaire) et al. for
   [rmarkdown](https://cran.r-project.org/package=rmarkdown), and by extension
   John MacFarlane for [pandoc](https://pandoc.org/).
+* [Gábor Csárdi](https://github.com/gaborcsardi), the
+  [R-consortium](https://www.r-consortium.org/), et al. for
+  [revdepcheck](https://github.com/r-lib/revdepcheck) to simplify reverse
+  dependency checks.
 * Olaf Mersmann for
   [microbenchmark](https://cran.r-project.org/package=microbenchmark), because
   microsecond matter, and [Joshua Ulrich](https://github.com/joshuaulrich) for
