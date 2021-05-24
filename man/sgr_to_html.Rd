@@ -54,8 +54,8 @@ with foreground and background classes alternating starting with
 foreground (see examples).
 \item character(32): Like character(16), except the basic and bright colors are
 mapped.
-\item character(256): Like character(16), except the basic, bright, and all 8
-bit colors are mapped.
+\item character(512): Like character(16), except the basic, bright, and all
+other 8-bit colors are mapped.
 }}
 }
 \value{
