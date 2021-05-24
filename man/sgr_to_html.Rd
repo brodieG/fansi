@@ -65,11 +65,11 @@ SPAN HTML tags.
 }
 \description{
 Interprets CSI SGR sequences and produces a string with equivalent
-formats applied with SPAN elements and either inline-CSS styles, or
-optionally for colors, by adding classes to SPAN elements that the
-user can provide a corresponding style sheet for.  Input that contains
-special HTML characters ("<", ">", "&", "'" "\""), particularly the first
-two, should be escaped with \code{\link{html_esc}}.
+formats applied with SPAN elements and inline CSS styles.  Optionally for
+colors, the SPAN elements may be assigned classes instead of inline styles,
+in which case it is the user's responsibility to provide a style sheet.
+Input that contains special HTML characters ("<", ">", "&", "'", and "\""),
+particularly the first two, should be escaped with \code{\link{html_esc}}.
 }
 \details{
 Only "observable" styles are translated.  These include colors,

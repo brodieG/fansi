@@ -13,7 +13,7 @@ described in \code{\link{sgr_to_html}}.  The scalar integers will cause this fun
 to generate classes for the basic colors (8), basic + bright (16), or all
 256 8-bit colors (256), with class names in "fansi-color-###" (or
 "fansi-bgcol-###" for background colors), which is what \code{\link{sgr_to_html}}
-does when user defined classes are not provided.  TRUE is also a valid
+generates when-user defined classes are not provided.  TRUE is also a valid
 input and is equivalent to 256.}
 
 \item{rgb.mix}{3 x 3 numeric matrix to remix color channels.  Given a N x 3
