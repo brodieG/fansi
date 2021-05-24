@@ -7,7 +7,8 @@
 sgr_to_html(
   x,
   warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap")
+  term.cap = getOption("fansi.term.cap"),
+  classes = FALSE
 )
 }
 \arguments{
@@ -19,30 +20,145 @@ assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
-be any combination "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
+be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
 starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
-"38;2" or "48;2"). Changing this parameter changes how \code{fansi} interprets
-escape sequences, so you should ensure that it matches your terminal
-capabilities. See \link{term_cap_test} for details.}
+"38;2" or "48;2"). Changing this parameter changes how \code{fansi}
+interprets escape sequences, so you should ensure that it matches your
+terminal capabilities. See \link{term_cap_test} for details.}
+
+\item{classes}{FALSE (default), TRUE, or character vector of either 16,
+32, or 512 class names.  Character strings may only contain ASCII
+characters corresponding to letters, numbers, the hyphen, or the
+underscore.  It is the user's responsibility to provide values that are
+legal class names.
+\itemize{
+\item FALSE: All colors rendered as inline CSS styles.
+\item TRUE: Each of the 256 basic colors is mapped to a class in form
+"fansi-color-###" (or "fansi-bgcol-###" for background colors)
+where "###" is a zero padded three digit number in 0:255.  Basic colors
+specified with SGR codes 30-37 (or 40-47) map to 000:007, and bright ones
+specified with 90-97 (or 100-107) map to 008:015.  8 bit colors specified
+with SGR codes 38;5;### or 48;5;### map directly based on the value of
+"###".  Implicitly, this maps the 8 bit colors in 0:7 to the basic
+colors, and those in 8:15 to the bright ones even though these are not
+exactly the same when using inline styles.  "truecolor"s specified with
+38;2;#;#;# or 48;2;#;#;# do not map to classes and are rendered as inline
+styles.
+\item character(16): The eight basic colors are mapped to the string values in
+the vector, all others are rendered as inline CSS styles.  Basic colors
+are mapped irrespective of whether they are encoded as the basic colors
+or as 8-bit colors.  Sixteen elements are needed because there must be
+eight classes for foreground colors, and eight classes for background
+colors.  Classes should be ordered in ascending order of color number,
+with foreground and background classes alternating starting with
+foreground (see examples).
+\item character(32): Like character(16), except the basic and bright colors are
+mapped.
+\item character(256): Like character(16), except the basic, bright, and all 8
+bit colors are mapped.
+}}
 }
 \value{
-a character vector with all escape sequences removed and any basic
-ANSI CSI SGR escape sequences applied via SPAN html objects with
-inline css styles.
+A character vector of the same length as \code{x} with all escape
+sequences removed and any basic ANSI CSI SGR escape sequences applied via
+SPAN HTML tags.
 }
 \description{
-Only the colors, background-colors, and basic styles (CSI SGR codes 1-9) are
-translated.  Others are dropped silently.
+Interprets CSI SGR sequences and produces a string with equivalent
+formats applied with SPAN elements and either inline-CSS styles, or
+optionally for colors, by adding classes to SPAN elements that the
+user can provide a corresponding style sheet for.  Input that contains
+special HTML characters ("<", ">", "&", "'" "\""), particularly the first
+two, should be escaped with \code{\link{html_esc}}.
+}
+\details{
+Only "observable" styles are translated.  These include colors,
+background-colors, and basic styles (CSI SGR codes 1-6, 8, 9).  Style 7, the
+"inverse" style, is implemented by explicitly switching foreground and
+background colors, if there are any.  Styles 5-6 (blink) are rendered as
+"text-decoration" but likely will do nothing in the browser.  Style 8
+(conceal) sets the color to transparent.
+
+Each element of the input vector is translated into a stand-alone valid HTML
+string.  In particular, any open SPAN tags are closed at the end of an
+element and re-opened on the subsequent element with the same style.  This
+allows safe combination of HTML translated strings, for example by
+\code{\link{paste}}ing them together.  The trade-off is that there may be redundant
+HTML produced.  To reduce redundancy you can first collapse the input vector
+into one string, being mindful that very large strings may exceed maximum
+string size when converted to HTML.
+
+Active SPAN tags are closed and new ones open anytime the "observable"
+state changes.  \code{sgr_to_html} never produces nested SPAN tags, even if at
+times that might produce more compact output.  This is because ANSI CSI SGR
+is a state based formatting system and is not constrained by the semantics of
+a nested one like HTML, so dealing with the complexity of nesting when it
+cannot reproduce all inputs anyway does not seem worthwhile.
 }
 \note{
 Non-ASCII strings are converted to and returned in UTF-8 encoding.
 }
 \examples{
 sgr_to_html("hello\033[31;42;1mworld\033[m")
+sgr_to_html("hello\033[31;42;1mworld\033[m", classes=TRUE)
+
+## Input contains HTML special chars
+x <- "<hello \033[42m'there' \033[34m &amp;\033[m \"moon\"!"
+writeLines(x)
+\dontrun{
+in_html(
+  c(
+    sgr_to_html(html_esc(x)),  # Good
+    sgr_to_html(x)             # Bad!
+) )
+}
+## Generate some class names for basic colors
+classes <- expand.grid(
+  "myclass",
+  c("fg", "bg"),
+  c("black", "red", "green", "yellow", "blue", "magenta", "cyan", "white")
+)
+classes  # order is important!
+classes <- do.call(paste, c(classes, sep="-"))
+## We only provide 16 classes, so Only basic colors are
+## mapped to classes; others styled inline.
+sgr_to_html(
+  "\033[94mhello\033[m \033[31;42;1mworld\033[m",
+  classes=classes
+)
+## Create a whole web page with a style sheet for 256 colors and
+## the colors shown in a table.
+class.256 <- do.call(paste, c(expand.grid(c("fg", "bg"), 0:255), sep="-"))
+sgr.256 <- sgr_256()     # A demo of all 256 colors
+writeLines(sgr.256[1:8]) # SGR formatting
+
+## Convert to HTML using classes instead of inline styles:
+html.256 <- sgr_to_html(sgr.256, classes=class.256)
+writeLines(html.256[1])  # No inline colors
+
+## Generate different style sheets.  See `?make_styles` for details.
+default <- make_styles(class.256)
+mix <- matrix(c(.6,.2,.2, .2,.6,.2, .2,.2,.6), 3)
+desaturated <- make_styles(class.256, mix)
+writeLines(default[1:4])
+writeLines(desaturated[1:4])
+
+## Embed in HTML page and diplay; only CSS changing
+\dontrun{
+in_html(html.256)                  # no CSS
+in_html(html.256, css=default)     # default CSS
+in_html(html.256, css=desaturated) # desaturated CSS
+}
 }
 \seealso{
-\link{fansi} for details on how \emph{Control Sequences} are
+\code{\link{fansi}} for details on how \emph{Control Sequences} are
 interpreted, particularly if you are getting unexpected results,
-\code{\link[=set_knit_hooks]{set_knit_hooks()}} for how to use ANSI CSI styled text with knitr and HTML
-output.
+\code{\link{set_knit_hooks}} for how to use ANSI CSI styled text with knitr and HTML
+output, \code{\link{sgr_256}} to generate a demo string with all 256 8 bit colors.
+
+Other HTML functions: 
+\code{\link{html_esc}()},
+\code{\link{in_html}()},
+\code{\link{make_styles}()}
 }
+\concept{HTML functions}

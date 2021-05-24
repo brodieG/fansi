@@ -23,7 +23,7 @@ R.ver.gte.3.2.2 <- NA
 ## A version of unique that isn't terrible for very long strings that are
 ## actually the same
 
-unique_chr <- function(x) .Call(FANSI_unique_chr, x)
+unique_chr <- function(x) .Call(FANSI_unique_chr, enc2utf8(x))
 
 ## Testing interface for color code to HTML conversion
 

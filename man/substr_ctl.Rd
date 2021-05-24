@@ -62,11 +62,11 @@ assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
-be any combination "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
+be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
 starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
-"38;2" or "48;2"). Changing this parameter changes how \code{fansi} interprets
-escape sequences, so you should ensure that it matches your terminal
-capabilities. See \link{term_cap_test} for details.}
+"38;2" or "48;2"). Changing this parameter changes how \code{fansi}
+interprets escape sequences, so you should ensure that it matches your
+terminal capabilities. See \link{term_cap_test} for details.}
 
 \item{ctl}{character, which \emph{Control Sequences} should be treated
 specially. See the "_ctl vs. _sgr" section for details.
@@ -82,7 +82,11 @@ above, in which case it means "all but".
 }}
 
 \item{type}{character(1L) partial matching \code{c("chars", "width")}, although
-\code{type="width"} only works correctly with R >= 3.2.2.}
+\code{type="width"} only works correctly with R >= 3.2.2.  With "width", whether
+C0 and C1 are treated as zero width may depend on R version and locale in
+addition what the \code{ctl} parameter is set to.  For example, for R4.1 in
+UTF-8 locales C0 and C1 will be zero width even if the value of \code{ctl} is
+such that they wouldn't be so in other circumstances.}
 
 \item{round}{character(1L) partial matching
 \code{c("start", "stop", "both", "neither")}, controls how to resolve

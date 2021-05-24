@@ -59,7 +59,7 @@
 #' @section ANSI CSI SGR Control Sequences:
 #'
 #' **NOTE**: not all displays support ANSI CSI SGR sequences; run
-#' [term_cap_test] to see whether your display supports them.
+#' [`term_cap_test`] to see whether your display supports them.
 #'
 #' ANSI CSI SGR Control Sequences are the subset of CSI sequences that can be
 #' used to change text appearance (e.g. color).  These sequences begin with
@@ -131,10 +131,10 @@
 #' 3. Your display incorrectly handles a UTF-8 sequence.
 #'
 #' These issues are most likely to occur with invalid UTF-8 sequences,
-#' combining character sequences, and emoji.  For example, as of this writing R
-#' (and the OSX terminal) consider emojis to be one wide characters, when in
-#' reality they are two wide.  Do not expect the `fansi` width
-#' calculations to to work correctly with strings containing emoji.
+#' combining character sequences, and emoji.  For example, whether special
+#' characters such as emoji are considered one or two wide evolves as software
+#' adopts newer versions of Unicode.  Do not expect the `fansi` width
+#' calculations to always work correctly with strings containing emoji.
 #'
 #' Internally, `fansi` computes the width of every UTF-8 character sequence
 #' outside of the ASCII range using the native `R_nchar` function.  This will
@@ -172,13 +172,21 @@
 #' exception to this is [`nchar_ctl`] as that is just a thin wrapper around
 #' [`base::nchar`].
 #'
-#' @section Miscellaneous:
+#' @section Overflow:
 #'
 #' The native code in this package assumes that all strings are NULL terminated
 #' and no longer than (32 bit) INT_MAX (excluding the NULL).  This should be a
 #' safe assumption since the code is designed to work with STRSXPs and CHRSXPs.
 #' Behavior is undefined and probably bad if you somehow manage to provide to
 #' `fansi` strings that do not adhere to these assumptions.
+#'
+#' It is possible that during processing strings that are shorter than INT_MAX
+#' would become longer than that.  `fansi` checks for that overflow and will
+#' stop with an error if that happens.  A work-around for this situation is to
+#' break up large strings into smaller ones.  The limit is on each element of a
+#' character vector, not on the vector as a whole.  `fansi` will also error on
+#' your system if `R_len_t`, the R type used to measure string lengths, is less
+#' than the processed length of the string.
 #'
 #' @useDynLib fansi, .registration=TRUE, .fixes="FANSI_"
 #' @docType package

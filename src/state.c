@@ -587,13 +587,10 @@ char * FANSI_state_as_chr(struct FANSI_state state) {
  *
  * _basic is used just for the 1-9 SGR codes plus colors.
  */
-int FANSI_state_comp_basic(
+int FANSI_state_comp_color(
   struct FANSI_state target, struct FANSI_state current
 ) {
-  // 1023 is '11 1111 1111' in binary, so this will grab the last ten bits
-  // of the styles which are the 1-9 styles
   return !(
-    (target.style & 1023) == (current.style & 1023) &&
     target.color == current.color &&
     target.bg_color == current.bg_color &&
     target.color_extra[0] == current.color_extra[0] &&
@@ -605,6 +602,14 @@ int FANSI_state_comp_basic(
     target.color_extra[3] == current.color_extra[3] &&
     target.bg_color_extra[3] == current.bg_color_extra[3]
   );
+}
+int FANSI_state_comp_basic(
+  struct FANSI_state target, struct FANSI_state current
+) {
+  // 1023 is '11 1111 1111' in binary, so this will grab the last ten bits
+  // of the styles which are the 1-9 styles
+  return FANSI_state_comp_color(target, current) ||
+    (target.style & 1023) != (current.style & 1023);
 }
 int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
   return !(
@@ -620,9 +625,7 @@ int FANSI_state_has_style(struct FANSI_state state) {
     state.style || state.color >= 0 || state.bg_color >= 0 ||
     state.font || state.border || state.ideogram;
 }
-int FANSI_state_has_style_basic(struct FANSI_state state) {
-  return state.style || state.color >= 0 || state.bg_color >= 0;
-}
+
 /*
  * Copy the style members from current to target
  */
@@ -718,7 +721,7 @@ SEXP FANSI_state_at_pos_ext(
   SEXP res_chr, res_chr_prev = PROTECT(mkChar(""));
   // PROTECT should not be needed here, but rchk complaining
   SEXP text_chr = STRING_ELT(text, 0);
-  FANSI_check_enc(text_chr, 0);
+  FANSI_check_chrsxp(text_chr, 0);
   const char * string = CHAR(text_chr); // Should already be UTF-8 if needed
 
   SEXP R_true = PROTECT(ScalarLogical(1));
