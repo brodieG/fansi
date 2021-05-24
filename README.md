@@ -8,7 +8,7 @@ fansi - ANSI Control Sequence Aware String Functions
 
 [![R build
 status](https://github.com/brodieG/fansi/workflows/R-CMD-check/badge.svg)](https://github.com/brodieG/fansi/actions)
-[![](https://codecov.io/gh/brodieG/fansi/branch/master/graphs/badge.svg?branch=master)](https://codecov.io/gh/brodieG/fansi/branch/master/graphs/badge.svg?branch=master)
+[![](https://codecov.io/gh/brodieG/fansi/branch/master/graphs/badge.svg?branch=master)](https://codecov.io/github/brodieG/fansi?branch=master)
 [![](http://www.r-pkg.org/badges/version/fansi)](https://cran.r-project.org/package=fansi)
 [![Dependencies
 direct/recursive](https://tinyverse.netlify.app/badge/fansi)](https://tinyverse.netlify.app/)
