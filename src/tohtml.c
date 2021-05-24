@@ -387,7 +387,7 @@ static int state_size_and_write_as_html(
             len += copy_or_measure(&buff, css_style[i - 1].css, len, i);
           }
 
-        len += copy_or_measure(&buff, "'", len, i);
+        len += copy_or_measure(&buff, ";'", len, i);
       }
       len += copy_or_measure(&buff, ">", len, i);
   } }

@@ -41,7 +41,7 @@ unitizer_sect('wrap', {
   tce(strwrap_ctl("hello\033[31m a", 5))
 })
 unitizer_sect('html', {
-  invisible(fansi:::set_int_max(37))
+  invisible(fansi:::set_int_max(38))
   sgr_to_html("\033[31ma")
   # whole string over
   tce(sgr_to_html("\033[31mab"))

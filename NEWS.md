@@ -3,7 +3,7 @@
 ## v0.5.0
 
 * [#65](https://github.com/brodieG/fansi/issues/65): `sgr_to_html` optionally
-  converts CSI SGR to classes instead of inline styles.
+  converts CSI SGR to classes instead of inline styles (h/t @hadley).
 * [#69](https://github.com/brodieG/fansi/issues/69): `sgr_to_html` is more
   disciplined about emitting unnecessary HTML (h/t @hadley).
 * New functions:
