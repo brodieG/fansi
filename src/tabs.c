@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020  Brodie Gaslam
+ * Copyright (C) 2021  Brodie Gaslam
  *
  * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
  *
@@ -69,7 +69,7 @@ SEXP FANSI_tabs_as_spaces(
 
     SEXP chr = STRING_ELT(vec, i);
     if(chr == NA_STRING) continue;
-    FANSI_check_enc(chr, i);
+    FANSI_check_chrsxp(chr, i);
 
     source = CHAR(chr);
 
@@ -165,14 +165,7 @@ SEXP FANSI_tabs_as_spaces(
 
       cetype_t chr_type = CE_NATIVE;
       if(state.has_utf8) chr_type = CE_UTF8;
-      if(buff_track - buff_start > FANSI_int_max)
-        // nocov start
-        error(
-          "%s%s",
-          "Internal Error: attempting to write string longer than INT_MAX; ",
-          "contact maintainer (2)."
-        );
-        // nocov end
+      FANSI_check_chr_size(buff_start, buff_track, i);
       SEXP chr_sxp = PROTECT(
         mkCharLenCE(buff_start, (int) (buff_track - buff_start), chr_type)
       );

@@ -14,8 +14,8 @@ is the users responsibility to ensure the classes are valid CSS class
 names.}
 }
 \value{
-character(1L) \code{x}, with <PRE> and <CODE> HTML tags applied and
-collapsed into one line with newlines as the line separator.
+character(1L) \code{x}, with <PRE> and <CODE> HTML tags
+applied and collapsed into one line with newlines as the line separator.
 }
 \description{
 This simulates what \code{rmarkdown} / \code{knitr} do to the output of an R markdown

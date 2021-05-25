@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020  Brodie Gaslam
+ * Copyright (C) 2021  Brodie Gaslam
  *
  * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
  *
@@ -21,7 +21,7 @@
 // this is a temporarily un-used implementation, but we may re-use it later
 
 SEXP FANSI_strsplit(SEXP x, SEXP warn, SEXP term_cap) {
-  error("This code is disabled current");
+  error("This code is disabled currently.");
   warning("Handle UTF8");
   // UTF8 is a little tricky here, we're now using read_next, but we don't
   // really need it, so we could maybe have a version without read next that
@@ -72,7 +72,7 @@ SEXP FANSI_strsplit(SEXP x, SEXP warn, SEXP term_cap) {
       FANSI_interrupt(j);
 
       SEXP chrsxp = STRING_ELT(string, j);
-      FANSI_check_enc(chrsxp, j);
+      FANSI_check_chrsxp(chrsxp, j);
 
       if(chrsxp != NA_STRING) {
         const char * chr = CHAR(chrsxp);

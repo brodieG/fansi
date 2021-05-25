@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020  Brodie Gaslam
+ * Copyright (C) 2021  Brodie Gaslam
  *
  * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
  *
@@ -126,33 +126,44 @@ struct FANSI_string_as_utf8 FANSI_string_as_utf8(SEXP x) {
 // nocov end
 
 /*
- * Confirm encoding is not obviously wrong
+ * Confirm encoding is not obviously wrong, and length okay.
  */
 
-void FANSI_check_enc(SEXP x, R_xlen_t i) {
+void FANSI_check_chrsxp(SEXP x, R_xlen_t i) {
+  if(TYPEOF(x) != CHARSXP)
+    error("Internal Error: expected CHARSXP.");  // nocov
   cetype_t type = getCharCE(x);
   if(type != CE_NATIVE && type != CE_UTF8) {
     if(type == CE_BYTES)
       error(
-        "%s at index %.0f. %s.",
-        "Byte encoded string encountered", (double) i + 1,
+        "%s at index %jd. %s.",
+        "Byte encoded string encountered", FANSI_ind(i),
         "Byte encoded strings are not supported"
       );
     else
       // this should only happen if somehow a string not converted to UTF8
       // sneaks in.
       error(
-        "%s %d encountered at index %.0f. %s.",
+        "%s %d encountered at index %jd. %s.",
         "Internal Error: unexpected encoding", type,
-        (double) i + 1, "Contact maintainer"
+        FANSI_ind(i), "Contact maintainer"
       );
   }
+  if(LENGTH(x) > FANSI_int_max) {
+    error(
+      "Strings longer than INT_MAX not supported (length %jd at index %jd).",
+      (intmax_t)(LENGTH(x)), FANSI_ind(i)
+    );
+  }
 }
+
 /*
  * Testing interface
  */
 SEXP FANSI_check_enc_ext(SEXP x, SEXP i) {
-  FANSI_check_enc(STRING_ELT(x, asInteger(i) - 1), asInteger(i) - 1);
+  if(TYPEOF(x) != STRSXP)
+    error("Internal Error: expected character input."); // nocov
+  FANSI_check_chrsxp(STRING_ELT(x, asInteger(i) - 1), asInteger(i) - 1);
   return ScalarLogical(1);
 }
 

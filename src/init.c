@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020  Brodie Gaslam
+ * Copyright (C) 2021  Brodie Gaslam
  *
  * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
  *
@@ -30,7 +30,7 @@ R_CallMethodDef callMethods[] = {
   {"digits_in_int", (DL_FUNC) &FANSI_digits_in_int_ext, 1},
   {"tabs_as_spaces", (DL_FUNC) &FANSI_tabs_as_spaces_ext, 5},
   {"color_to_html", (DL_FUNC) &FANSI_color_to_html_ext, 1},
-  {"esc_to_html", (DL_FUNC) &FANSI_esc_to_html, 3},
+  {"esc_to_html", (DL_FUNC) &FANSI_esc_to_html, 4},
   {"unhandled_esc", (DL_FUNC) &FANSI_unhandled_esc, 2},
   {"unique_chr", (DL_FUNC) &FANSI_unique_chr, 1},
   {"nzchar_esc", (DL_FUNC) &FANSI_nzchar, 5},
@@ -44,6 +44,7 @@ R_CallMethodDef callMethods[] = {
   {"get_int_max", (DL_FUNC) &FANSI_get_int_max, 0},
   {"check_enc", (DL_FUNC) &FANSI_check_enc_ext, 2},
   {"ctl_as_int", (DL_FUNC) &FANSI_ctl_as_int_ext, 1},
+  {"esc_html", (DL_FUNC) &FANSI_esc_html, 1},
   {NULL, NULL, 0}
 };
 

@@ -48,6 +48,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   extern SEXP FANSI_warn_sym;
 
+
   // macros
 
   #define FANSI_ADD_INT(x, y) FANSI_add_int((x), (y), __FILE__, __LINE__)
@@ -131,6 +132,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * corresponding ANSI CSI SGR codes, 10 and greater are not necessarily
      * contiguous but were put here because they could co-exist with the style
      *
+     * - n ==  0: UNUSED, possibly an oversight?  Logic simpler though.
      * - n ==  1: bold
      * - n ==  2: blur/faint
      * - n ==  3: italic
@@ -145,7 +147,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * - n == 12: prop spacing
      *
      * UPDATE FANSI_STYLE_MAX if we add more here!!, make sure to check the
-     * size, read, and write funs any time this changes
+     * size, read, and write funs any time this changes.
+     *
+     * Also, if any HTML styles are added check those too.
      */
     unsigned int style;
 
@@ -326,7 +330,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP vec, SEXP tab_stops, SEXP warn, SEXP term_cap, SEXP ctl
   );
   SEXP FANSI_color_to_html_ext(SEXP x);
-  SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap);
+  SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP class_pre);
   SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap);
 
   SEXP FANSI_nchar(
@@ -353,6 +357,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   SEXP FANSI_set_int_max(SEXP x);
   SEXP FANSI_get_int_max();
+  SEXP FANSI_esc_html(SEXP x);
 
   // - Internal funs -----------------------------------------------------------
 
@@ -361,7 +366,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   struct FANSI_state FANSI_reset_pos(struct FANSI_state state);
   struct FANSI_state FANSI_reset_width(struct FANSI_state state);
 
-  void FANSI_check_enc(SEXP x, R_xlen_t i);
+  void FANSI_check_chrsxp(SEXP x, R_xlen_t i);
   SEXP FANSI_check_enc_ext(SEXP x, SEXP i);
 
   int FANSI_ctl_as_int(SEXP ctl);
@@ -385,6 +390,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP width, SEXP ctl
   );
   int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current);
+  int FANSI_state_comp_color(
+    struct FANSI_state target, struct FANSI_state current
+  );
   int FANSI_state_comp_basic(
     struct FANSI_state target, struct FANSI_state current
   );
@@ -392,7 +400,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   struct FANSI_state FANSI_state_copy_style(
     struct FANSI_state target, struct FANSI_state current
   );
-  int FANSI_state_has_style_basic(struct FANSI_state state);
   int FANSI_state_size(struct FANSI_state state);
   int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len);
 
@@ -404,6 +411,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   int FANSI_has_utf8(const char * x);
   void FANSI_interrupt(int i);
+  intmax_t FANSI_ind(R_xlen_t i);
+  void FANSI_check_chr_size(char * start, char * end, R_xlen_t i);
 
   // - Compatibility -----------------------------------------------------------
 

@@ -99,11 +99,11 @@ assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
-be any combination "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
+be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
 starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
-"38;2" or "48;2"). Changing this parameter changes how \code{fansi} interprets
-escape sequences, so you should ensure that it matches your terminal
-capabilities. See \link{term_cap_test} for details.}
+"38;2" or "48;2"). Changing this parameter changes how \code{fansi}
+interprets escape sequences, so you should ensure that it matches your
+terminal capabilities. See \link{term_cap_test} for details.}
 
 \item{ctl}{character, which \emph{Control Sequences} should be treated
 specially. See the "_ctl vs. _sgr" section for details.
