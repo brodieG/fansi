@@ -193,7 +193,7 @@ struct FANSI_state_pair FANSI_state_at_position(
     // Handle UTF-8, we need to record the byte size of the sequence as well as
     // the corresponding display width.
 
-    if(state.pos_byte == INT_MAX)
+    if(state.pos_byte == FANSI_lim.lim_int.max)
       // nocov start
       // ... a bit tricky here, because we read ahead a few bytes in some
       // circumstances, but not all, so the furthest pos_byte should be allowed

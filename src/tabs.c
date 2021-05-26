@@ -37,7 +37,7 @@ int FANSI_tab_width(struct FANSI_state state, SEXP tab_stops) {
     int stop_size = INTEGER(tab_stops)[stop_idx];
     if(stop_size < 1)
       error("Internal Error: stop size less than 1.");  // nocov
-    if(tab_width > FANSI_int_max - stop_size)
+    if(tab_width > FANSI_lim.lim_int.max - stop_size)
       error("Integer overflow when attempting to compute tab width."); // nocov
     tab_width += stop_size;
     if(stop_idx < stops - 1) stop_idx++;
@@ -97,7 +97,7 @@ SEXP FANSI_tabs_as_spaces(
       int tab_extra = max_tab_stop - 1;
 
       for(int k = 0; k < tab_count; ++k) {
-        if(new_buff_size > (size_t) (FANSI_int_max - tab_extra))
+        if(new_buff_size > (size_t) (FANSI_lim.lim_int.max - tab_extra))
           error(
             "%s%s",
             "Converting tabs to spaces will cause string to be longer than ",

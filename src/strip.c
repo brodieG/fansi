@@ -110,7 +110,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
       }
       if(csi.len) {
         has_ansi = 1;
-        if(csi.start - chr > FANSI_int_max - csi.len)
+        if(csi.start - chr > FANSI_lim.lim_int.max - csi.len)
           // nocov start
           error(
             "%s%s",
@@ -130,21 +130,14 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
 
           REPROTECT(res_fin = duplicate(x), ipx);
 
-          // Note the is guaranteed to be an over-allocation
-
-          if(mem_req == R_LEN_T_MAX)
-            // nocov start
-            error(
-              "%s%s",
-              "Internal error, string should be shorter than R_LEN_T_MAX, ",
-              "contact maintainer."
-            );
-            // nocov end
+          // Note the is guaranteed to be an over-allocation, as it's the
+          // longest string in the vector.  It should be guaranteed to be no
+          // longer than R_LEN_T_MAX.
 
           // The character buffer is large enough for the largest element in the
           // vector, and is re-used for every element in the vector.
 
-          chr_buff = (char *) R_alloc(mem_req + 1, sizeof(char));
+          chr_buff = (char *) R_alloc(((size_t) mem_req) + 1, sizeof(char));
           res_start = res_track = chr_buff;
         }
         // Is memcpy going to cause problems again by reading past end of

@@ -163,10 +163,10 @@ SEXP FANSI_writeline(
   }
   // If we are going to pad the end, adjust sizes and widths
 
-  if(target_size > (size_t) FANSI_int_max)
+  if(target_size > (uintmax_t) FANSI_lim.lim_int.max)
     // Not possible for this to be longer than INT_MAX as we check on
     // entry with FANSI_check_chrsxp and we're not expanding anything.
-    // nocov start, but jut in cae
+    // nocov start
     error(
       "Substring to write (%ju) is longer than INT_MAX.",
       (uintmax_t) target_size
@@ -176,8 +176,10 @@ SEXP FANSI_writeline(
   if(target_width <= (size_t) tar_width && *pad_chr) {
     target_pad = tar_width - target_width;
     if(
-      (target_size > (size_t) (FANSI_int_max - target_pad))
+      (target_size > (size_t) (FANSI_lim.lim_int.max - target_pad))
     ) {
+      FANSI_str_oe()
+
       error(
         "%s than INT_MAX while padding.",
         "Attempting to create string longer"
@@ -185,7 +187,7 @@ SEXP FANSI_writeline(
     }
     target_size = target_size + target_pad;
   }
-  if(target_size > (size_t)(FANSI_int_max - pre_dat.bytes)) {
+  if(target_size > (size_t)(FANSI_lim.lim_int.max - pre_dat.bytes)) {
     error(
       "%s%s",
       "Attempting to create string longer than INT_MAX when adding ",
@@ -194,14 +196,14 @@ SEXP FANSI_writeline(
   }
   target_size += pre_dat.bytes;
   int state_start_size = 0;
-  int start_close = 0;
+  int start_close = 1; // 1 for null terminator
 
   if(needs_close) start_close += 4;
   if(needs_start) {
     state_start_size = FANSI_state_size(state_start);
     start_close += state_start_size;  // this can't possibly overflow
   }
-  if(target_size > (size_t)(FANSI_int_max - start_close)) {
+  if(target_size > (size_t)(FANSI_lim.lim_int.max - start_close)) {
     error(
       "%s%s",
       "Attempting to create string longer than INT_MAX while adding leading ",
@@ -261,7 +263,7 @@ SEXP FANSI_writeline(
   cetype_t chr_type = CE_NATIVE;
   if((state_bound.has_utf8 || pre_dat.has_utf8)) chr_type = CE_UTF8;
 
-  if(buff_track - buff->buff > FANSI_int_max)
+  if(buff_track - buff->buff > FANSI_lim.lim_int.max)
     // nocov start
     error(
       "%s%s",

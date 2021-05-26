@@ -48,15 +48,30 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   extern SEXP FANSI_warn_sym;
 
-
   // macros
 
   #define FANSI_ADD_INT(x, y) FANSI_add_int((x), (y), __FILE__, __LINE__)
 
   // Global variables (see utils.c)
 
-  extern int FANSI_int_max;
-  extern int FANSI_int_min;  // no way to change this externally
+  struct FANSI_ulimit {
+    const char * name;
+    uintmax_t min;
+    uintmax_t max;
+  };
+  struct FANSI_slimit {
+    const char * name;
+    intmax_t min;
+    intmax_t max;
+  };
+  // Update assumption checks if any of this changes
+  struct FANSI_limits {
+    struct FANSI_slimit lim_int;
+    struct FANSI_slimit lim_R_len_t;
+    struct FANSI_slimit lim_R_xlen_t;
+    struct FANSI_ulimit lim_size_t;
+  };
+  extern struct FANSI_limits FANSI_lim;
 
   // - Structs -----------------------------------------------------------------
   /*

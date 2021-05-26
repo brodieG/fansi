@@ -101,7 +101,7 @@ SEXP FANSI_strsplit(SEXP x, SEXP warn, SEXP term_cap) {
           // really shouldn't overflow
           chr_size = FANSI_ADD_INT(chr_size, 4);
 
-          if(chr_len > FANSI_int_max - chr_size) {
+          if(chr_len > FANSI_lim.lim_int.max - chr_size) {
             error(
               "%s%s",
               "Overflow while attempting to reformat styles on split string; ",

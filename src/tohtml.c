@@ -280,10 +280,12 @@ static void overflow_err2(R_xlen_t i) {
 static unsigned int copy_or_measure(
   char ** buff, const char * tmp, unsigned int len, R_xlen_t i
 ) {
+  FANSI_C_OR_M(
   size_t tmp_len = strlen(tmp);
   // strictly it's possible for len > FANSI_int_max, but shouldn't happen even
   // in testing since we only grow len by first checking.
-  if(tmp_len > FANSI_int_max - len) overflow_err("INT_MAX", i);
+  if(tmp_len > FANSI_lim.lim_int.max - len)
+    FANSI_oe("INT_MAX", oe_sgr_html, i);
   if(*buff) {
     strcpy(*buff, tmp);
     *buff += tmp_len;
@@ -408,15 +410,12 @@ static int state_size_and_write_as_html(
 }
 /*
  * Final checks for unsual size, and include space for terminator.
+ *
+ * assumptions check that SIZE_MAX > INT_MAX + 1.
  */
 
 static size_t final_string_size(int bytes, R_xlen_t i) {
-  // In the extremely unlikely case we're on a systems with weird integer sizes
-  // or R changes what R_len_t.  >= SIZE_MAX b/c we need room for the extra NULL
-  // terminator byte
-  if(INT_MAX >= SIZE_MAX && (unsigned int) bytes >= SIZE_MAX)
-    overflow_err("SIZE_MAX", i);     // nocov
-  if(INT_MAX > R_LEN_T_MAX && bytes > R_LEN_T_MAX)
+  if(FANSI_lim.lim_int.max > R_LEN_T_MAX && bytes > R_LEN_T_MAX)
     overflow_err("R_LEN_T_MAX", i);  // nocov
 
   return (size_t) bytes + 1;   // include terminator
@@ -444,12 +443,12 @@ static size_t html_check_overflow(
   if(
     (
        bytes_extra >= 0 &&
-       bytes_init > FANSI_int_max - bytes_extra - span_extra
+       bytes_init > FANSI_lim.lim_int.max - bytes_extra - span_extra
     )
     ||
     (
        bytes_extra < 0 &&
-       bytes_init + bytes_extra > FANSI_int_max - span_extra
+       bytes_init + bytes_extra > FANSI_lim.lim_int.max - span_extra
     )
   ) overflow_err("INT_MAX", i);
 
@@ -705,17 +704,17 @@ SEXP FANSI_esc_html(SEXP x) {
       }
       switch(*string) {
         case '&': // &amp;
-          if(bytes <= FANSI_int_max - 4) bytes += 4;
+          if(bytes <= FANSI_lim.lim_int.max - 4) bytes += 4;
           else overflow_err2(i);
           break;
         case '"':
         case '\'':
-          if(bytes <= FANSI_int_max - 5) bytes += 5;
+          if(bytes <= FANSI_lim.lim_int.max - 5) bytes += 5;
           else overflow_err2(i);
           break;
         case '<':
         case '>':
-          if(bytes <= FANSI_int_max - 3) bytes += 3;
+          if(bytes <= FANSI_lim.lim_int.max - 3) bytes += 3;
           else overflow_err2(i);
           break;
       }

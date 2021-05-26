@@ -25,7 +25,7 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
     error("Argument `term_cap` must be an integer vector.");  // nocov
 
   R_xlen_t x_len = XLENGTH(x);
-  if(x_len >= FANSI_int_max)
+  if(x_len >= FANSI_lim.lim_int.max)
     // nocov start
     error(
       "This function does not support vectors of length INT_MAX or longer."
@@ -71,7 +71,7 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
         int esc_start_byte = state.pos_byte;
         state = FANSI_read_next(state);
         if(state.err_code) {
-          if(err_count == FANSI_int_max) {
+          if(err_count == FANSI_lim.lim_int.max) {
             warning(
               "%s%s",
               "There are more than INT_MAX unhandled sequences, returning ",
@@ -80,7 +80,10 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
             break_early = 1;
             break;
           }
-          if(esc_start == INT_MAX || state.pos_ansi == INT_MAX)
+          if(
+            esc_start == FANSI_lim.lim_int.max ||
+            state.pos_ansi == FANSI_lim.lim_int.max
+          )
             // nocov start
             error(
               "%s%s",
