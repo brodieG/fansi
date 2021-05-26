@@ -39,7 +39,7 @@ int FANSI_has_utf8(const char * x) {
   }
   return 0;
 }
-// nocov start
+// nocov start (not needed, use i10n_info!)
 int FANSI_is_utf8_loc() {
   error("Current not in use");
   SEXP sys_getlocale = PROTECT(install("Sys.getlocale"));

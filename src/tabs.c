@@ -86,8 +86,6 @@ SEXP FANSI_tabs_as_spaces(
       ++source;
     }
     if(tab_count) {
-      // Need to convert to UTF8 so width calcs work
-
       const char * string = CHAR(chr);
 
       // Figure out possible size of buffer, allowing max_tab_stop for every

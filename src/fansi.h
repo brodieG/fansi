@@ -53,6 +53,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   #define FANSI_ADD_INT(x, y) FANSI_add_int((x), (y), __FILE__, __LINE__)
 
   // Global variables (see utils.c)
+  // These should probably not be uintmax, this was all done originally when we
+  // thought we could feed the struct to one function, but that is not to be.
+  // (well TBD).
 
   struct FANSI_ulimit {
     const char * name;

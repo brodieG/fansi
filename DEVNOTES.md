@@ -2,6 +2,14 @@
 
 These are internal developer notes.
 
+## Todo
+
+* Make sure we check we're not using `intmax_t` or `uintmax_t` in a tight loop
+  anywhere.
+* Make FANSI_writeline static.
+* Do sgr_to_HTML (sgr_to_html2?), add check to sgr_to_html if any of the bad
+  characters are found to escape or use `sgr_to_html2`.
+
 ## Crayon Compatibility
 
 ### Updating Crayon

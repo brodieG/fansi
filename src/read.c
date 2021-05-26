@@ -671,6 +671,9 @@ static struct FANSI_state read_c0(struct FANSI_state state) {
  * Read a Character Off and Update State
  *
  * This can probably use some pretty serious optimization...
+ *
+ * We assume string being read <= INT_MAX, so no possibility of overflow.  Only
+ * use on strings sourced from CHARXPs
  */
 struct FANSI_state FANSI_read_next(struct FANSI_state state) {
   const char chr_val = state.string[state.pos_byte];
