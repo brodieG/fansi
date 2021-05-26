@@ -2,7 +2,55 @@
 
 These are internal developer notes.
 
-## Color Classes
+## Crayon Compatibility
+
+### Updating Crayon
+
+We could modify the code to add in addition to `st$open` and `st$close` a
+`st$closedby`, where the last would be transformed into a regex that matches any
+closing sequence.  This will work even nested as in e.g.
+
+red('hello ', red('wor\033[0mld') , ' yo')
+
+Result would be:
+
+    \033[32mhello \033[31mwo\033[0\033[32m\033[31mld\033[39m\033[32m yo\033[39m
+
+What happens is that the inner step is done first, adding its color after
+`\033[0m`, but then the outer step happens, and adds its color in between the
+`\033[0m` and the `\033[31m` just added, so the inner step dominates, which is
+exactly what we want.
+
+Issue are:
+
+* We need to use regular expressions, not fixed, so might be a little slower.
+* It will not deal with things like "\033[1;31m".
+
+### Fansi Changes
+
+`normalize_sgr`: take all known SGRs form `\033[31;42m` and re-write them into
+`\033[31m\033[42m`.
+
+> What about non SGR escapes?  Should process be: strip non-SGR, then normalize?
+> Or do we just ignore non-SGR and let the user decide what they want to do with
+> the warnings?
+
+One problem with `normalize_sgr` is it will substantially complicate the code
+for anything computing width if we try to make it part of it.  So likely best
+way to deal with it is in "crayon.compat" mode, do a two pass process: first
+normalize, second do our thing.  Obviously this will be slower.
+
+Should `normalize_sgr` convert `\033[0m` and similar to the exploded version?
+And should it be exploded to all closing tags, or only to the active ones?
+
+Aside: if we truly want to insulate `fansi` output from external SGR, we really
+should be starting with `\033[0m` too.  Maybe another option is to "insulate",
+which would just start and end with the null SGR, optionally?
+
+## Overflow
+
+Set R_LEN_T_MAX to INT_MAX - N, and check that on expansion we get the correct
+error at write time.
 
 Tests:
 
