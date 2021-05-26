@@ -114,17 +114,26 @@ static struct FANSI_prefix_dat drop_pre_indent(struct FANSI_prefix_dat dat) {
   return dat;
 }
 /*
+ * Given a state, produce a state that closes it
+ */
+static struct FANSI_state state_to_close_state(struct FANSI_state state) {
+
+}
+/*
  * Write a line
  *
  * @param state_bound the point where the boundary is
  * @param state_start the starting point of the line
+ * @param tar_width the target width, i.e. line width minus width of prepended
+ *   stuff.
  */
 
 SEXP FANSI_writeline(
   struct FANSI_state state_bound, struct FANSI_state state_start,
   struct FANSI_buff * buff,
   struct FANSI_prefix_dat pre_dat,
-  int tar_width, const char * pad_chr
+  int tar_width, const char * pad_chr,
+  R_xlen_t index
 ) {
   // Rprintf("  Writeline start with buff %p\n", *buff);
 
@@ -147,8 +156,13 @@ SEXP FANSI_writeline(
 
   if(tar_width < 0) tar_width = 0;
 
-  size_t target_size = state_bound.pos_byte - state_start.pos_byte;
-  size_t target_width = state_bound.pos_width - state_start.pos_width;
+  if(state_bound.pos_byte < state_start.pos_byte)
+    error("Internal Error: line ends backwards.");  // nocov
+  if(state_bound.pos_byte < state_start.pos_byte)
+    error("Internal Error: negative line width.");  // nocov
+
+  int target_size = state_bound.pos_byte - state_start.pos_byte;
+  int target_width = state_bound.pos_width - state_start.pos_width;
   int target_pad = 0;
 
   if(!target_size) {
@@ -225,7 +239,9 @@ SEXP FANSI_writeline(
     buff_track += 4;
   }
   *buff_track = 0;
-  // Rprintf("written %d\n", buff_track - (buff->buff) + 1);
+
+  if(buff_track - buff.buff != target_size)
+    error("Internal Error: writeline buffer size mismatch.");  // nocov
 
   // Now create the charsxp and append to the list, start by determining
   // what encoding to use.  If pos_byte is greater than pos_ansi it means
@@ -261,7 +277,8 @@ static SEXP strwrap(
   const char * pad_chr,
   int strip_spaces,
   SEXP warn, SEXP term_cap,
-  int first_only, SEXP ctl
+  int first_only, SEXP ctl,
+  R_xlen_t index
 ) {
   SEXP R_true = PROTECT(ScalarLogical(1));
   SEXP R_one = PROTECT(ScalarInteger(1));
@@ -392,7 +409,7 @@ static SEXP strwrap(
         FANSI_writeline(
           state_bound, state_start, buff,
           para_start ? pre_first : pre_next,
-          width_tar, pad_chr
+          width_tar, pad_chr, index
         )
       );
       first_line = 0;
@@ -627,7 +644,7 @@ SEXP FANSI_strwrap_ext(
         strip_spaces_int,
         warn, term_cap,
         first_only_int,
-        ctl
+        ctl, i
     ) );
     if(first_only_int) {
       SET_STRING_ELT(res, i, str_i);
