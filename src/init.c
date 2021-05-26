@@ -45,6 +45,7 @@ R_CallMethodDef callMethods[] = {
   {"check_enc", (DL_FUNC) &FANSI_check_enc_ext, 2},
   {"ctl_as_int", (DL_FUNC) &FANSI_ctl_as_int_ext, 1},
   {"esc_html", (DL_FUNC) &FANSI_esc_html, 1},
+  {"reset_limits", (DL_FUNC) &FANSI_reset_limits, 0},
   {NULL, NULL, 0}
 };
 

@@ -29,11 +29,13 @@
  * R_LEN_T_MAX.
  */
 
-struct FANSI_limits FANSI_lim = {
+struct FANSI_limits lim_init = {
   .lim_int={.name="INT", .min=INT_MIN, .max=INT_MAX},
   .lim_R_len_t={.name="R_LEN_T", .min=0, .max=R_LEN_T_MAX},
   .lim_size_t={.name="SIZE", .min=0, .max=SIZE_MAX}
 }
+struct FANSI_limits FANSI_lim = lim_init;
+
 SEXP FANSI_set_int_max(SEXP x) {
   if(TYPEOF(x) != INTSXP || XLENGTH(x) != 1)
     error("invalid int_max value");  // nocov
@@ -45,6 +47,10 @@ SEXP FANSI_set_int_max(SEXP x) {
   int old_int = FANSI_lim.lim_int.max;
   FANSI_lim.lim_int.max = (intmax_t) x_int;
   return ScalarInteger(old_int);
+}
+SEXP FANSI_reset_limits() {
+  FANSI_lim = lim_init;
+  return ScalarLogical(1);
 }
 // nocov start
 // used only for debugging
