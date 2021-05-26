@@ -356,7 +356,7 @@ int FANSI_pmatch(
 // still doing the calculation every iteration.  Probably okay though, the
 // alternative is just too much of a pain.
 
-void FANSI_interrupt(int i) {if(!(i & 1023)) R_CheckUserInterrupt();}
+void FANSI_interrupt(R_xlen_t i) {if(!(i & 1023)) R_CheckUserInterrupt();}
 /*
  * Split an integer vector into two equal size pieces
  */
