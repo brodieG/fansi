@@ -115,6 +115,14 @@ SEXP FANSI_check_assumptions() {
       "INT_MAX larger than R_XLEN_T_MAX", ""
     );
 
+  // We ensure strings don't exceed INT_MAX as we create them, but we do
+  // measure string length by doing end - start on pointers.
+  if(PTRDIFF_MAX < FANSI_lim.lim_int.max)
+    warningcall(
+      R_NilValue, err_base,
+      "PTRDIFF_MAX smaller than INT_MAX", ""
+    );
+
   return ScalarLogical(1);
 }
 // nocov end
