@@ -211,7 +211,6 @@ SEXP FANSI_writeline(
     );
   }
   target_size += start_close;
-  ++target_size; // for NULL terminator
 
   // Make sure buffer is large enough
   FANSI_size_buff(buff, target_size);
