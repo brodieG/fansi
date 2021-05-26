@@ -220,17 +220,20 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int ctl) {
  * We never intend to re-use what's already in memory so we don't realloc.  If
  * allocation is needed the buffer will be either twice as large as it was
  * before, or size `size` if that is greater than twice the size.
+ *
+ * Does NOT allocate extra byte for NULL!
  */
 void FANSI_size_buff(struct FANSI_buff * buff, size_t size) {
+  // assumptions check that  SIZE_T fits INT_MAX + 1
+  size_t buff_max = (size_t) FANSI_lim.lim_int.max + 1;
   if(size > buff->len) {
     // Special case for intial alloc
 
     if(!buff->len) {
       if(size < 128 && FANSI_lim.lim_int.max > 128)
         size = 128;  // in theory little penalty to ask this minimum
-      else if(size > (size_t) FANSI_lim.lim_int.max + 1) {
+      else if(size > buff_max) {
         // nocov start
-        // assumptions check that  SIZE_T fits INT_MAX + 1
         // too difficult to test, all the code pretty much checks for overflow
         // before requesting memory
         error(
@@ -245,14 +248,14 @@ void FANSI_size_buff(struct FANSI_buff * buff, size_t size) {
 
     if(size > buff->len) {
       size_t tmp_double_size = 0;
-      if(buff->len > (size_t) FANSI_lim.lim_int.max + 1 - buff->len) {
-        tmp_double_size = (size_t) FANSI_lim.lim_int.max + 1;
+      if(buff->len > buff_max - size) {
+        tmp_double_size = buff_max;
       } else {
         tmp_double_size = buff->len + buff->len;
       }
       if(size > tmp_double_size) tmp_double_size = size;
 
-      if(tmp_double_size > (size_t) FANSI_lim.lim_int.max + 1)
+      if(tmp_double_size > buff_max)
         // nocov start
         // this can't really happen unless size starts off bigger than
         // INT_MAX + 1
