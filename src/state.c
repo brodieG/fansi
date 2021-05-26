@@ -620,6 +620,7 @@ int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
     target.ideogram == current.ideogram
   );
 }
+// Keep synchronized with close_active_state
 int FANSI_state_has_style(struct FANSI_state state) {
   return
     state.style || state.color >= 0 || state.bg_color >= 0 ||

@@ -354,7 +354,8 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
         state.string[state.pos_byte] >= 0x40 &&
         state.string[state.pos_byte] <= 0x7E
       )
-        state.err_code = 6; else state.err_code = 7;
+        state.err_code = 6;
+      else state.err_code = 7;
 
       // Don't process additional ESC if it is there so we keep looping
 
@@ -482,7 +483,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
               state.err_code = 1;  // unknown token
             }
           } else if(tok_res.val >= 60 && tok_res.val < 70) {
-            // borders
+            // ideograms
 
             if(tok_res.val < 65) {
               state.ideogram |= (1U << (unsigned int)(tok_res.val - 60));
