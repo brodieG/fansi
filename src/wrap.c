@@ -163,58 +163,30 @@ SEXP FANSI_writeline(
   }
   // If we are going to pad the end, adjust sizes and widths
 
-  if(target_size > (uintmax_t) FANSI_lim.lim_int.max)
-    // Not possible for this to be longer than INT_MAX as we check on
-    // entry with FANSI_check_chrsxp and we're not expanding anything.
-    // nocov start
-    error(
-      "Substring to write (%ju) is longer than INT_MAX.",
-      (uintmax_t) target_size
-    );
-    // nocov end
-
-  if(target_width <= (size_t) tar_width && *pad_chr) {
+  if(target_width <= tar_width && *pad_chr) {
     target_pad = tar_width - target_width;
-    if(
-      (target_size > (size_t) (FANSI_lim.lim_int.max - target_pad))
-    ) {
-      FANSI_str_oe()
-
-      error(
-        "%s than INT_MAX while padding.",
-        "Attempting to create string longer"
-      );
-    }
+    FANSI_check_str_overflow("Adding padding", target_size, target_pad, index);
     target_size = target_size + target_pad;
   }
-  if(target_size > (size_t)(FANSI_lim.lim_int.max - pre_dat.bytes)) {
-    error(
-      "%s%s",
-      "Attempting to create string longer than INT_MAX when adding ",
-      "prefix/initial/indent/exdent."
-    );
-  }
+  FANSI_check_str_overflow(
+    "Adding prefix/initial/indent/exdent", target_size, pre_dat.bytes, index
+  );
   target_size += pre_dat.bytes;
   int state_start_size = 0;
-  int start_close = 1; // 1 for null terminator
+  int start_close = 0;
 
   if(needs_close) start_close += 4;
   if(needs_start) {
     state_start_size = FANSI_state_size(state_start);
     start_close += state_start_size;  // this can't possibly overflow
   }
-  if(target_size > (size_t)(FANSI_lim.lim_int.max - start_close)) {
-    error(
-      "%s%s",
-      "Attempting to create string longer than INT_MAX while adding leading ",
-      "and trailing CSI SGR sequences."
-    );
-  }
+  FANSI_check_str_overflow(
+    "Adding leading and/or trailing CSI SGR", target_size, start_close, index
+  );
   target_size += start_close;
 
   // Make sure buffer is large enough
-  FANSI_size_buff(buff, target_size);
-
+  FANSI_size_buff(buff, (size_t)target_size + 1);  // +1 for NULL
   char * buff_track = buff->buff;
 
   // Apply prevous CSI style
