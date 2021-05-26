@@ -352,9 +352,11 @@ int FANSI_pmatch(
 }
 // nocov end
 
-// concept borrowed from utf8-lite
+// concept borrowed from utf8-lite, but is not great because we're
+// still doing the calculation every iteration.  Probably okay though, the
+// alternative is just too much of a pain.
 
-void FANSI_interrupt(int i) {if(!(i % 1000)) R_CheckUserInterrupt();}
+void FANSI_interrupt(int i) {if(!(i & 1023)) R_CheckUserInterrupt();}
 /*
  * Split an integer vector into two equal size pieces
  */
