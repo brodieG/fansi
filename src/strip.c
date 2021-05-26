@@ -69,6 +69,8 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
 
   for(i = 0; i < len; ++i) {
     FANSI_interrupt(i);
+    SEXP x_chr = STRING_ELT(x, i);
+    FANSI_check_chrsxp(x_chr, i);
     R_len_t chr_len = LENGTH(STRING_ELT(x, i));
     if(chr_len > mem_req) mem_req = chr_len;
   }
