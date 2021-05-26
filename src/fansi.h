@@ -429,6 +429,13 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   void FANSI_interrupt(R_xlen_t i);
   intmax_t FANSI_ind(R_xlen_t i);
   void FANSI_check_chr_size(char * start, char * end, R_xlen_t i);
+  SEXP FANSI_mkChar(
+    const char * start, const char * end, cetype_t enc, R_xlen_t i
+  );
+  SEXP FANSI_reset_limits();
+  void FANSI_check_str_overflow(
+    const char * type, const char * msg, int cur, int extra, R_xlen_t i
+  );
 
   // - Compatibility -----------------------------------------------------------
 

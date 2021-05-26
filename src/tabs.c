@@ -165,9 +165,8 @@ SEXP FANSI_tabs_as_spaces(
 
       cetype_t chr_type = CE_NATIVE;
       if(state.has_utf8) chr_type = CE_UTF8;
-      FANSI_check_chr_size(buff_start, buff_track, i);
       SEXP chr_sxp = PROTECT(
-        mkCharLenCE(buff_start, (int) (buff_track - buff_start), chr_type)
+        FANSI_mkChar(buff_start, (int) (buff_track - buff_start), chr_type, i)
       );
       SET_STRING_ELT(res_sxp, i, chr_sxp);
       UNPROTECT(1);

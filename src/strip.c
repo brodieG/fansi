@@ -174,8 +174,8 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
 
       FANSI_check_chr_size(res_start, res_track, i);
       SEXP chr_sexp = PROTECT(
-        mkCharLenCE(
-          res_start, res_track - res_start, getCharCE(x_chr)
+        FANSI_mkChar(
+          res_start, res_track - res_start, getCharCE(x_chr), i
       ) );
       SET_STRING_ELT(res_fin, i, chr_sexp);
       UNPROTECT(1);

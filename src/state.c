@@ -701,7 +701,13 @@ SEXP FANSI_state_at_pos_ext(
   };
   SEXP res_rn = PROTECT(allocVector(STRSXP, res_cols));
   for(int i = 0; i < res_cols; i++)
-    SET_STRING_ELT(res_rn, i, mkChar(rownames[i]));
+    SET_STRING_ELT(
+      res_rn, i,
+      FANSI_mkChar(
+        rownames[i], rownames[i] + strlen(rownames[i]),
+        CE_NATIVE, (R_xlen_t) 0
+      )
+    );
 
   // Result will comprise a character vector with all the state tags at the
   // position as well as the various position translations in a matrix with as
@@ -719,7 +725,9 @@ SEXP FANSI_state_at_pos_ext(
   setAttrib(res_mx, R_DimNamesSymbol, dim_names);
 
   SEXP res_str = PROTECT(allocVector(STRSXP, len));
-  SEXP res_chr, res_chr_prev = PROTECT(mkChar(""));
+  const char * empty = "";
+  SEXP res_chr, res_chr_prev =
+    PROTECT(FANSI_mkChar(empty, empty, CE_NATIVE, (R_xlen_t) 0));
   // PROTECT should not be needed here, but rchk complaining
   SEXP text_chr = STRING_ELT(text, 0);
   FANSI_check_chrsxp(text_chr, 0);
@@ -777,7 +785,13 @@ SEXP FANSI_state_at_pos_ext(
       // Record color tag if state changed
 
       if(FANSI_state_comp(state, state_prev)) {
-        res_chr = PROTECT(mkChar(FANSI_state_as_chr(state)));
+        // this computes length twice..., we know state_char can be at most
+        // INT_MAX excluding NULL (and certainly will be much less).
+        char * state_chr = FANSI_state_as_chr(state);
+        res_chr = PROTECT(
+          FANSI_mkChar(
+            state_chr, state_chr + strlen(state_chr), CE_NATIVE, (R_len_t)0
+        ) );
       } else {
         res_chr = PROTECT(res_chr_prev);
       }

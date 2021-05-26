@@ -546,6 +546,74 @@ void FANSI_check_chr_size(char * start, char * end, R_xlen_t i) {
     // nocov end
   }
 }
+/*
+ * Check Whether String Would Overflow if Appended To
+ *
+ * Need to track for:
+ *
+ * * Strings
+ * * Memory allocation
+ * * Indeces
+ * * Tab stop computation
+ *
+ * @param cur current length
+ * @param extra how many bytes we're looking to append
+ */
 
+void FANSI_check_str_overflow(
+  const char * type, const char * msg, int cur, int extra, R_xlen_t i
+) {
+  if(cur < 0 || extra < 0)
+    error("Internal Error: negative lengths.");  // nocov
+  if(cur > FANSI_lim.lim_int.max - extra)
+    error(
+      "%s will create string longer than INT_MAX at index [%jd]%s",
+      msg, FANSI_ind(i), ". Try again with smaller strings."
+    );
+}
+/*
+ * Similar to mkCharCE
+ *
+ * Key differences are that we check for R_len_t overflow.
+ *
+ * String is assumed to have been checked to be no longer than INT_MAX,
+ * excluding the NULL terminator.
+ *
+ * @param start beginning of string to write
+ * @param end of string to write; care should be taken that it is indeed the
+ *   same string we're talking about.  This is done so that we can measure the
+ *   length of the strings directly as in most "write" scenarios we have a
+ *   pointer at the end of the buffer.
+ */
+SEXP FANSI_mkChar(
+  const char * start,
+  const char * end,
+  cetype_t enc, R_xlen_t i
+) {
+  if(end < start)
+    error("Internal Error: buffer reversed; contact maintainer."); // nocov
 
+  // PTRDIFF_MAX known to be >= INT_MAX (assumptions), and string should not
+  // be longer than INT_MAX, so no overflow possible here.
+  ptrdiff_t len = end - start;
+
+  if(len > FANSI_lim.lim_R_len_t.max)
+    error(
+      "%s at index [%jd]."
+      "Attempting to create CHARSXP longer than R_LEN_T_MAX",
+      FANSI_ind(i)
+    );
+
+  // Annoyingly mkCharLenCE accepts int parameter instead of R_len_t, so we need
+  // to check that too.
+
+  if(end - start > FANSI_lim.lim_int.max)
+    error(
+      "%s at index [%jd]."
+      "Attempting to create CHARSXP longer than INT_MAX",
+      FANSI_ind(i)
+    );
+
+  mkCharLenCE(name, len, enc);
+}
 
