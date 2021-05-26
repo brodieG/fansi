@@ -421,7 +421,7 @@ unitizer_sect("issue 54 ctd", {
     "#   time \033[3m\033[38;5;246m<list>\033[38;5;246m\033[23m, gc \033[3m\033[38;5;246m<list>\033[38;5;246m\033[23m\033[39m"
   )
   Encoding(string3) <- "UTF-8"
-  fansi::sgr_to_html(string3)
+  fansi::sgr_to_html(html_esc(string3))
 
   # head <- "<html><head><meta charset='utf-8'/></head><pre>"
   # f <- paste0(tempfile(), ".html")

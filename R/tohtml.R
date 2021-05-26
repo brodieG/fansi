@@ -1,4 +1,4 @@
-## Copyright (C) 2020  Brodie Gaslam
+## Copyright (C) 2021  Brodie Gaslam
 ##
 ## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
 ##
@@ -17,11 +17,11 @@
 #' Convert ANSI CSI SGR Escape Sequence to HTML Equivalents
 #'
 #' Interprets CSI SGR sequences and produces a string with equivalent
-#' formats applied with SPAN elements and either inline-CSS styles, or
-#' optionally for colors, by adding classes to SPAN elements that the
-#' user can provide a corresponding style sheet for.  Input that contains
-#' special HTML characters ("<", ">", "&", "'" "\""), particularly the first
-#' two, should be escaped with [`html_esc`].
+#' formats applied with SPAN elements and inline CSS styles.  Optionally for
+#' colors, the SPAN elements may be assigned classes instead of inline styles,
+#' in which case it is the user's responsibility to provide a style sheet.
+#' Input that contains special HTML characters ("<", ">", "&", "'", and "\""),
+#' particularly the first two, should be escaped with [`html_esc`].
 #'
 #' Only "observable" styles are translated.  These include colors,
 #' background-colors, and basic styles (CSI SGR codes 1-6, 8, 9).  Style 7, the
@@ -82,8 +82,8 @@
 #'     foreground (see examples).
 #'   * character(32): Like character(16), except the basic and bright colors are
 #'     mapped.
-#'   * character(256): Like character(16), except the basic, bright, and all 8
-#'     bit colors are mapped.
+#'   * character(512): Like character(16), except the basic, bright, and all
+#'     other 8-bit colors are mapped.
 #'
 #' @return A character vector of the same length as `x` with all escape
 #'   sequences removed and any basic ANSI CSI SGR escape sequences applied via
@@ -280,6 +280,7 @@ check_classes <- function(classes) {
 #' examples.
 #'
 #' @export
+#' @importFrom utils browseURL
 #' @family HTML functions
 #' @param x character vector of html encoded strings.
 #' @param css character vector of css styles.

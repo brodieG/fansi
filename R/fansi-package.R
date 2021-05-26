@@ -1,4 +1,4 @@
-## Copyright (C) 2020  Brodie Gaslam
+## Copyright (C) 2021  Brodie Gaslam
 ##
 ## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
 ##
@@ -38,8 +38,7 @@
 #'
 #' _Control Sequences_ starting with ESC are assumed to be two characters
 #' long (including the ESC) unless they are of the CSI variety, in which case
-#' their length is computed as per the [ECMA-48
-#'  specification](http://www.ecma-international.org/publications/standards/Ecma-048.htm).
+#' their length is computed as per the [ECMA-48 specification](https://www.ecma-international.org/publications-and-standards/standards/ecma-48/).
 #' There are non-CSI escape sequences that may be longer than two characters,
 #' but `fansi` will (incorrectly) treat them as if they were two characters
 #' long.
