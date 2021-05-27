@@ -133,7 +133,7 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
   res = res_start;
 
   for(int i = 0; i < err_count; ++i) {
-    FANSI_interrupt(i);
+    FANSI_interrupt((R_xlen_t) i);
     if(res == R_NilValue)
       // nocov start
       error(
