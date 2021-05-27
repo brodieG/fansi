@@ -249,9 +249,6 @@ static char * color_to_html(int color, int * color_extra, char * buff) {
   return buff;
 }
 static char * oe_sgr_html_err = "Expanding SGR sequences to HTML";
-static void check_append_htmlesc(int cur, int extra, R_xlen_t i) {
-  FANSI_check_append(cur, extra, "Escaping HTML special characters", i);
-}
 /*
  * If *buff is not NULL, copy tmp into it and advance, else measure tmp
  * and advance length
@@ -271,7 +268,8 @@ static int copy_or_measure(
   const char * err_msg
 ) {
   size_t tmp_len = strlen(tmp);
-  if(tmp_len > FANSI_lim.lim_int.max) FANSI_check_append_err(err_msg, i);
+  if(tmp_len > (size_t) FANSI_lim.lim_int.max)
+    FANSI_check_append_err(err_msg, i);
 
   FANSI_check_append(len, tmp_len, err_msg, i);
   if(*buff) {
@@ -281,7 +279,7 @@ static int copy_or_measure(
   }
   return tmp_len;
 }
-#define COPY_OR_MEASURE(A, B) copy_or_measure((A), (B), len, i, err_msg);
+#define COPY_OR_MEASURE(A, B) copy_or_measure((A), (B), len, i, err_msg)
 
 /*
  * Compute HTML Size of Each Individual State, Or Write It
@@ -357,7 +355,7 @@ static int state_size_and_write_as_html(
         (bg_color >= 0 && (!bgcol_class))
       ) {
         len += COPY_OR_MEASURE(&buff, " style='");
-        unsigned int len_start = len;
+        int len_start = len;
         char color_tmp[8];
         if(color >= 0 && (!color_class)) {
           len += COPY_OR_MEASURE(&buff, "color: ");
@@ -385,7 +383,7 @@ static int state_size_and_write_as_html(
   len -= bytes_html;
   if(buff) {
     *buff = 0;
-    if((unsigned int)(buff - buff_start) != len)
+    if(buff - buff_start != len)
       // nocov start
       error(
         "Internal Error: buffer length mismatch in html generation (%ud vs %ud).",
@@ -439,7 +437,7 @@ static int html_check_overflow(
     );
     // nocov end
   }
-  bytes_init + bytes_extra + span_extra;
+  return bytes_init + bytes_extra + span_extra;
 }
 
 SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
@@ -676,8 +674,8 @@ SEXP FANSI_esc_html(SEXP x) {
       string = CHAR(chrsxp);
       char * buff_track = buff.buff;
 
-      if(k & len > LENGTH(chrsxp)) {
-        FANSI_size_buff(&buff, (size_t)len + 1));
+      if(k && len > LENGTH(chrsxp)) {
+        FANSI_size_buff(&buff, (size_t)len + 1);
         len = LENGTH(chrsxp); // reset so we don't unecessary overflow
         // Allocate result vector if it hasn't been yet
         if(res == x) REPROTECT(res = duplicate(x), ipx);
@@ -695,13 +693,13 @@ SEXP FANSI_esc_html(SEXP x) {
         // COPY_OR_MEASURE ADVANCES buff!
         // - 1 because we're replacing 1 char by the escape
         switch(*string) {
-          case '&':  len += COPY_OR_MEASURE(buff_track, "&amp;") - 1;  break;
-          case '"':  len += COPY_OR_MEASURE(buff_track, "&quot;") - 1; break;
-          case '\'': len += COPY_OR_MEASURE(buff_track, "&#039;") - 1; break;
-          case '<':  len += COPY_OR_MEASURE(buff_track, "&lt;") - 1;   break;
-          case '>':  len += COPY_OR_MEASURE(buff_track, "&gt;") - 1;   break;
+          case '&':  len += COPY_OR_MEASURE(&buff_track, "&amp;") - 1;  break;
+          case '"':  len += COPY_OR_MEASURE(&buff_track, "&quot;") - 1; break;
+          case '\'': len += COPY_OR_MEASURE(&buff_track, "&#039;") - 1; break;
+          case '<':  len += COPY_OR_MEASURE(&buff_track, "&lt;") - 1;   break;
+          case '>':  len += COPY_OR_MEASURE(&buff_track, "&gt;") - 1;   break;
           default:
-            if(buff_track) *(buff_trac++) = *string;
+            if(buff_track) *(buff_track++) = *string;
         }
         ++string;
       }

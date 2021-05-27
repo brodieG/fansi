@@ -29,12 +29,13 @@
  * R_LEN_T_MAX.
  */
 
-struct FANSI_limits lim_init = {
-  .lim_int={.name="INT", .min=INT_MIN, .max=INT_MAX},
-  .lim_R_len_t={.name="R_LEN_T", .min=0, .max=R_LEN_T_MAX},
-  .lim_size_t={.name="SIZE", .min=0, .max=SIZE_MAX}
+#define LIM_INIT {\
+  .lim_int={.name="INT", .min=INT_MIN, .max=INT_MAX},       \
+  .lim_R_len_t={.name="R_LEN_T", .min=0, .max=R_LEN_T_MAX}, \
+  .lim_size_t={.name="SIZE", .min=0, .max=SIZE_MAX}         \
 }
-struct FANSI_limits FANSI_lim = lim_init;
+
+struct FANSI_limits lim_init = LIM_INIT;
 
 SEXP FANSI_set_int_max(SEXP x) {
   if(TYPEOF(x) != INTSXP || XLENGTH(x) != 1)
@@ -49,7 +50,7 @@ SEXP FANSI_set_int_max(SEXP x) {
   return ScalarInteger(old_int);
 }
 SEXP FANSI_reset_limits() {
-  FANSI_lim = lim_init;
+  FANSI_lim = LIM_INIT;
   return ScalarLogical(1);
 }
 // nocov start

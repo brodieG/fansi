@@ -574,6 +574,68 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
   return state;
 }
 /*
+ * End Active Sequences
+ *
+ * Inspects a state object, and produces the set of escape sequences that will
+ * close just the open sequences, to the extent possible.
+ *
+ * Intended for compatibility with crayon.
+ *
+ * If buff is NULL, then only the required size of the buffer is returned.
+  return
+    state.style || state.color >= 0 || state.bg_color >= 0 ||
+    state.font || state.border || state.ideogram;
+ */
+
+int close_active_state(struct FANSI_state state, char * buff) {
+  // char * buff_track = buff;
+  if(FANSI_state_has_style(state)) {
+    // We're deliberate in only closing things we know how to close in both the
+    // state and in the ouptut string, that way we can check state at the end to
+    // make sure we did actually close everything.
+
+    // Close color
+
+    if(state.color >= 0) {
+      // 39
+      state.color = -1;
+    }
+    if(state.bg_color >= 0) {
+      // 49
+      state.bg_color = -1;
+    }
+    if(state.font > 0) {
+      // 10
+      state.font = 0;
+    }
+    if(state.border > 1U & state.border < 4U) {
+      // 54 to close 51-52 (1-2)
+      // 55 to close 53 (3)
+      // state.border &= ~(
+    }
+    if(state.ideogram > 0U) {
+      // 65 to close all ideograms
+
+      state.ideogram &= ~((1U << 0U) & (1U << 1U) & (1U << 2U) & (1U << 3U));
+
+    }
+    if(state.style > 1U) {
+    }
+
+
+
+
+
+    // Close style
+
+    // Make sure we're not out of sync with has_style
+    if(FANSI_state_has_style(state))
+      error("Internal Error: did not successfully close all styles.");
+  }
+  return 0;
+}
+
+/*
  * Read UTF8 character
  */
 static struct FANSI_state read_utf8(struct FANSI_state state) {
