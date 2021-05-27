@@ -429,7 +429,7 @@ static size_t final_string_size(int bytes, R_xlen_t i) {
  *
  * @return the size of the string **including** the NULL terminator
  */
-static size_t html_check_overflow(
+static int html_check_overflow(
   int bytes_html, int bytes_esc, int bytes_init, int span_extra, R_xlen_t i
 ) {
   if(bytes_init < 0 || span_extra < 0)
@@ -459,8 +459,7 @@ static size_t html_check_overflow(
     );
     // nocov end
   }
-  int bytes_final = bytes_init + bytes_extra + span_extra;
-  return final_string_size(bytes_final, i);
+  bytes_init + bytes_extra + span_extra;
 }
 
 SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
@@ -499,8 +498,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
     int bytes_init = (int) LENGTH(chrsxp);
     int bytes_html = 0;
     int bytes_esc = 0;
-
-    size_t bytes_final = 0;
+    int bytes_final = 0;
 
     // Some ESCs may not produce any HTML, and some strings may gain HTML from
     // an ESC from a prior element even if they have no ESCs.
@@ -562,8 +560,8 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       // Allocate target vector if it hasn't been yet
       if(res == x) REPROTECT(res = duplicate(x), ipx);
 
-      // Allocate buffer and do second pass, bytes_final includes space for NULL
-      FANSI_size_buff(&buff, bytes_final);
+      // Allocate buffer and do second pass
+      FANSI_size_buff(&buff, (size_t)bytes_final + 1);  // +1 for NULL
       string = state.string;  // always points to first byte
       state_start.warn = state.warn;
       state = state_start;
@@ -614,12 +612,12 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       *(buff_track) = '0';  // not strictly needed
 
       // Final check that we're not out of sync (recall buff.len includes NULL)
-      if(buff_track - buff.buff != (int)(bytes_final - 1))
+      if(buff_track - buff.buff != bytes_final)
         // nocov start
         error(
-          "Internal Error: %s (%td vs %zu).",
+          "Internal Error: %s (%td vs %d).",
           "buffer length mismatch in html generation (2)",
-          buff_track - buff.buff, bytes_final - 1
+          buff_track - buff.buff, bytes_final
         );
         // nocov end
 
