@@ -552,27 +552,23 @@ void FANSI_check_chr_size(char * start, char * end, R_xlen_t i) {
 /*
  * Check Whether String Would Overflow if Appended To
  *
- * Need to track for:
- *
- * * Strings
- * * Memory allocation
- * * Indeces
- * * Tab stop computation
- *
  * @param cur current length
  * @param extra how many bytes we're looking to append
  */
 
-void FANSI_check_str_overflow(
-  const char * type, const char * msg, int cur, int extra, R_xlen_t i
+void FANSI_check_append_err(const char * msg, R_xlen_t i) {
+  error(
+    "%s will create string longer than INT_MAX at index [%jd]%s",
+    msg, FANSI_ind(i), ". Try again with smaller strings."
+  );
+}
+int FANSI_check_append(
+  int cur, int extra, const char * msg, R_xlen_t i
 ) {
   if(cur < 0 || extra < 0)
     error("Internal Error: negative lengths.");  // nocov
-  if(cur > FANSI_lim.lim_int.max - extra)
-    error(
-      "%s will create string longer than INT_MAX at index [%jd]%s",
-      msg, FANSI_ind(i), ". Try again with smaller strings."
-    );
+  if(cur > FANSI_lim.lim_int.max - extra) FANSI_check_append_err(msg, i);
+  return cur + extra;
 }
 /*
  * Similar to mkCharCE

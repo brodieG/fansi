@@ -179,13 +179,13 @@ SEXP FANSI_writeline(
 
   if(target_width <= tar_width && *pad_chr) {
     target_pad = tar_width - target_width;
-    FANSI_check_str_overflow("Adding padding", target_size, target_pad, index);
-    target_size = target_size + target_pad;
+    target_size = FANSI_check_append(
+      target_size, target_pad, "Adding padding", index
+    );
   }
-  FANSI_check_str_overflow(
-    "Adding prefix/initial/indent/exdent", target_size, pre_dat.bytes, index
+  target_size = FANSI_check_append(
+    target_size, pre_dat.bytes, "Adding prefix/initial/indent/exdent", index
   );
-  target_size += pre_dat.bytes;
   int state_start_size = 0;
   int start_close = 0;
 
@@ -194,10 +194,9 @@ SEXP FANSI_writeline(
     state_start_size = FANSI_state_size(state_start);
     start_close += state_start_size;  // this can't possibly overflow
   }
-  FANSI_check_str_overflow(
-    "Adding leading and/or trailing CSI SGR", target_size, start_close, index
+  target_size += FANSI_check_append(
+    target_size, start_close, "Adding leading and/or trailing CSI SGR", index
   );
-  target_size += start_close;
 
   // Make sure buffer is large enough
   FANSI_size_buff(buff, (size_t)target_size + 1);  // +1 for NULL
