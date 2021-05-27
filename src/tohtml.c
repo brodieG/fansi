@@ -685,95 +685,56 @@ SEXP FANSI_esc_html(SEXP x) {
     SEXP chrsxp = STRING_ELT(x, i);
     if(chrsxp == NA_STRING) continue;
     FANSI_check_chrsxp(chrsxp, i);
-    int bytes = (int) LENGTH(chrsxp);
+    int len = (int) LENGTH(chrsxp);
     const char * string = CHAR(chrsxp);
-    struct FANSI_buff buff = {.len=0};
+    struct FANSI_buff buff = {.buff=NULL, .len=0};
 
-    // - Pass 1: Measure -------------------------------------------------------
+    const char * err_msg = "Escaping HTML special characters";
+    len = LENGTH(chrsxp);
 
-    while(*string) {
-      if(*string > '>') { // All specials are less than this
-        ++string;
-        continue;
-      }
-      switch(*string) {
-        case '&': // &amp;
-          if(bytes <= FANSI_lim.lim_int.max - 4) bytes += 4;
-          else overflow_err2(i);
-          break;
-        case '"':
-        case '\'':
-          if(bytes <= FANSI_lim.lim_int.max - 5) bytes += 5;
-          else overflow_err2(i);
-          break;
-        case '<':
-        case '>':
-          if(bytes <= FANSI_lim.lim_int.max - 3) bytes += 3;
-          else overflow_err2(i);
-          break;
-      }
-      ++string;
-    }
-    // Leftover from prior element (only if can't be merged with new)
-
-    // - Pass 2: Write ---------------------------------------------------------
-
-    if(bytes > LENGTH(chrsxp)) {
-      // Allocate target vector if it hasn't been yet
-      if(res == x) REPROTECT(res = duplicate(x), ipx);
-
-      // Allocate buffer and do second pass, bytes_final includes space for NULL
-
-      FANSI_size_buff(&buff, final_string_size(bytes, i));
-
-      char * buff_track = buff.buff;
+    // Two passes (k), first one compute incremental length of string, second
+    // actually write to the buffer (signal is for buffer to be non-NULL.
+    for(int k = 0; k < 2; ++k) {
       string = CHAR(chrsxp);
+      char * buff_track = buff.buff;
+
+      if(k & len > LENGTH(chrsxp) {
+        FANSI_size_buff(&buff, final_string_size(len, i));
+        len = LENGTH(chrsxp); // reset so we don't unecessary overflow
+        // Allocate result vector if it hasn't been yet
+        if(res == x) REPROTECT(res = duplicate(x), ipx);
+      }
+      // No second pass if no incremental chars
+      else break;
 
       while(*string) {
         if(*string > '>') { // All specials are less than this
-          *(buff_track++) = *(string++);
+          if(buff_track) *(buff_track++) = *string;
+          ++string;
           continue;
         }
+        // COPY_OR_MEASURE requires variables len, i, and err_msg
+        // COPY_OR_MEASURE ADVANCES buff!
+        // - 1 because we're replacing 1 char by the escape
         switch(*string) {
-          case '&': // &amp;
-            memcpy(buff_track, "&amp;", 5);
-            buff_track += 5;
-            break;
-          case '"':
-            memcpy(buff_track, "&quot;", 6);
-            buff_track += 6;
-            break;
-          case '\'':
-            memcpy(buff_track, "&#039;", 6);
-            buff_track += 6;
-            break;
-          case '<':
-            memcpy(buff_track, "&lt;", 4);
-            buff_track += 4;
-            break;
-          case '>':
-            memcpy(buff_track, "&gt;", 4);
-            buff_track += 4;
-            break;
+          case '&':  len += COPY_OR_MEASURE(buff_track, "&amp;") - 1;  break;
+          case '"':  len += COPY_OR_MEASURE(buff_track, "&quot;") - 1; break;
+          case '\'': len += COPY_OR_MEASURE(buff_track, "&#039;") - 1; break;
+          case '<':  len += COPY_OR_MEASURE(buff_track, "&lt;") - 1;   break;
+          case '>':  len += COPY_OR_MEASURE(buff_track, "&gt;") - 1;   break;
           default:
-            *(buff_track++) = *string;
+            if(buff_track) *(buff_trac++) = *string;
         }
         ++string;
       }
-      *buff_track = 0;
-      if(buff_track - buff.buff != bytes)
-        // nocov start
-        error(
-          "Internal Error: %s (%td vs %zu).",
-          "buffer length mismatch in html escaping",
-          buff_track - buff.buff, bytes
-        );
-        // nocov end
-
-      cetype_t chr_type = getCharCE(chrsxp);
-      SEXP reschr = PROTECT(mkCharLenCE(buff.buff, (R_len_t)(bytes), chr_type));
-      SET_STRING_ELT(res, i, reschr);
-      UNPROTECT(1);
+      // Only get here in second pass if we've written
+      if(k) {
+        *buff_track = 0;
+        cetype_t chr_type = getCharCE(chrsxp);
+        SEXP reschr = PROTECT(FANSI_mkChar(buff.buff, buff_track, chr_type, i));
+        SET_STRING_ELT(res, i, reschr);
+        UNPROTECT(1);
+      }
     }
   }
   UNPROTECT(1);
