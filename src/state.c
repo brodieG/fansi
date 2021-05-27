@@ -114,6 +114,7 @@ struct FANSI_state FANSI_reset_width(struct FANSI_state state) {
   return state;
 }
 struct FANSI_state FANSI_inc_width(struct FANSI_state state, int inc) {
+  warning("need to add overflow check for inc_width");
   state.pos_width += inc;
   state.pos_width_target += inc;
   return state;
