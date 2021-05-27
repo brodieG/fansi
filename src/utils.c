@@ -634,6 +634,6 @@ SEXP FANSI_mkChar(
       FANSI_ind(i)
     );
 
-  mkCharLenCE(name, len, enc);
+  return mkCharLenCE(start, len, enc);
 }
 
