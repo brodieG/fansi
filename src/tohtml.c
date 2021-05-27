@@ -248,16 +248,7 @@ static char * color_to_html(int color, int * color_extra, char * buff) {
 
   return buff;
 }
-// Central error function.
-
-static void overflow_err(const char * type, R_xlen_t i) {
-  error(
-    "%s %s %s %jd%s",
-    "Expanding SGR sequences into HTML will create a string longer than",
-    type, "at position", FANSI_ind(i), ". Try again with smaller strings."
-  );
-}
-
+static char * oe_sgr_html_err = "Expanding SGR sequences to HTML";
 static void check_append_htmlesc(int cur, int extra, R_xlen_t i) {
   FANSI_check_append(cur, extra, "Escaping HTML special characters", i);
 }
@@ -326,7 +317,7 @@ static int state_size_and_write_as_html(
 
   const char * buff_start = buff;
   int len = bytes_html;            // this is for overflow check
-  const char * err_msg = "Expanding SGR sequences to HTML";
+  const char * err_msg = oe_sgr_html_err;
 
   // COPY_OR_MEASURE requires variables len, i, and err_msg
 
@@ -407,18 +398,6 @@ static int state_size_and_write_as_html(
   return (int)len;
 }
 /*
- * Final checks for unsual size, and include space for terminator.
- *
- * assumptions check that SIZE_MAX > INT_MAX + 1.
- */
-
-static size_t final_string_size(int bytes, R_xlen_t i) {
-  if(FANSI_lim.lim_int.max > R_LEN_T_MAX && bytes > R_LEN_T_MAX)
-    overflow_err("R_LEN_T_MAX", i);  // nocov
-
-  return (size_t) bytes + 1;   // include terminator
-}
-/*
  * Check for overall overflow, recall that R allows up to R_LEN_T_MAX long
  * strings (which currently is INT_MAX) excluding the NULL.
  *
@@ -448,7 +427,8 @@ static int html_check_overflow(
        bytes_extra < 0 &&
        bytes_init + bytes_extra > FANSI_lim.lim_int.max - span_extra
     )
-  ) overflow_err("INT_MAX", i);
+  )
+    FANSI_check_append_err(oe_sgr_html_err, i);
 
   if(bytes_init + bytes_extra + span_extra < 0) {
     // nocov start
@@ -664,11 +644,9 @@ SEXP FANSI_color_to_html_ext(SEXP x) {
   UNPROTECT(1);
   return res;
 }
-
 /*
  * Escape special HTML characters.
  */
-
 SEXP FANSI_esc_html(SEXP x) {
   if(TYPEOF(x) != STRSXP)
     error("Internal Error: `x` must be a character vector");  // nocov
@@ -698,8 +676,8 @@ SEXP FANSI_esc_html(SEXP x) {
       string = CHAR(chrsxp);
       char * buff_track = buff.buff;
 
-      if(k & len > LENGTH(chrsxp) {
-        FANSI_size_buff(&buff, final_string_size(len, i));
+      if(k & len > LENGTH(chrsxp)) {
+        FANSI_size_buff(&buff, (size_t)len + 1));
         len = LENGTH(chrsxp); // reset so we don't unecessary overflow
         // Allocate result vector if it hasn't been yet
         if(res == x) REPROTECT(res = duplicate(x), ipx);
