@@ -116,9 +116,9 @@ static struct FANSI_prefix_dat drop_pre_indent(struct FANSI_prefix_dat dat) {
 /*
  * Given a state, produce a state that closes it
  */
-static struct FANSI_state state_to_close_state(struct FANSI_state state) {
-
-}
+// static struct FANSI_state state_to_close_state(struct FANSI_state state) {
+// 
+// }
 /*
  * Write a line
  *
@@ -239,7 +239,7 @@ SEXP FANSI_writeline(
   }
   *buff_track = 0;
 
-  if(buff_track - buff.buff != target_size)
+  if(buff_track - buff->buff != target_size)
     error("Internal Error: writeline buffer size mismatch.");  // nocov
 
   // Now create the charsxp and append to the list, start by determining
