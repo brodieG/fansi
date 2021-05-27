@@ -257,12 +257,9 @@ static void overflow_err(const char * type, R_xlen_t i) {
     type, "at position", FANSI_ind(i), ". Try again with smaller strings."
   );
 }
-static void overflow_err2(R_xlen_t i) {
-  error(
-    "%s %s %s %jd%s",
-    "Escaping HTML special characters will create a string longer than",
-    "INT_MAX", "at position", FANSI_ind(i), ". Try again with smaller strings."
-  );
+
+static void check_append_htmlesc(int cur, int extra, R_xlen_t i) {
+  FANSI_check_append(cur, extra, "Escaping HTML special characters", i);
 }
 /*
  * If *buff is not NULL, copy tmp into it and advance, else measure tmp
@@ -275,17 +272,17 @@ static void overflow_err2(R_xlen_t i) {
  * This advances *buff so that it points to to the NULL terminator
  * the end of what is written to so string is ready to append to.
  *
+ * @len bytes already accumulated in the buffer (i.e. before the pointer).
  * @param i index in overal character vector, needed to report overflow string.
  */
-static unsigned int copy_or_measure(
-  char ** buff, const char * tmp, unsigned int len, R_xlen_t i
+static int copy_or_measure(
+  char ** buff, const char * tmp, int len, R_xlen_t i,
+  const char * err_msg
 ) {
-  FANSI_C_OR_M(
   size_t tmp_len = strlen(tmp);
-  // strictly it's possible for len > FANSI_int_max, but shouldn't happen even
-  // in testing since we only grow len by first checking.
-  if(tmp_len > FANSI_lim.lim_int.max - len)
-    FANSI_oe("INT_MAX", oe_sgr_html, i);
+  if(tmp_len > FANSI_lim.lim_int.max) FANSI_check_append_err(err_msg, i);
+
+  FANSI_check_append(len, tmp_len, err_msg, i);
   if(*buff) {
     strcpy(*buff, tmp);
     *buff += tmp_len;
@@ -293,6 +290,8 @@ static unsigned int copy_or_measure(
   }
   return tmp_len;
 }
+#define COPY_OR_MEASURE(A, B) copy_or_measure((A), (B), len, i, err_msg);
+
 /*
  * Compute HTML Size of Each Individual State, Or Write It
  *
@@ -326,17 +325,17 @@ static int state_size_and_write_as_html(
   int state_change = state_comp_html(state, state_prev);
 
   const char * buff_start = buff;
-  unsigned int len = bytes_html;  // this is for overflow check
+  int len = bytes_html;            // this is for overflow check
+  const char * err_msg = "Expanding SGR sequences to HTML";
+
+  // COPY_OR_MEASURE requires variables len, i, and err_msg
 
   if(state_change) {
-    if(!has_cur_state) {
-      len += copy_or_measure(&buff, "</span>", len, i);
-    } else {
-      if (!has_prev_state) {
-        len += copy_or_measure(&buff, "<span", len, i);
-      } else {
-        len += copy_or_measure(&buff, "</span><span", len, i);
-      }
+    if(!has_cur_state) len += COPY_OR_MEASURE(&buff, "</span>");
+    else {
+      if (!has_prev_state)  len += COPY_OR_MEASURE(&buff, "<span");
+      else len += COPY_OR_MEASURE(&buff, "</span><span");
+
       // Styles
       int invert = state.style & (1 << 7);
       int color = invert ? state.bg_color : state.color;
@@ -354,11 +353,11 @@ static int state_size_and_write_as_html(
       // Brights remapped to 8-15
 
       if(color_class || bgcol_class) {
-        len += copy_or_measure(&buff, " class='", len, i);
-        if(color_class) len += copy_or_measure(&buff, color_class, len, i);
-        if(color_class && bgcol_class) len += copy_or_measure(&buff, " ", len, i);
-        if(bgcol_class) len += copy_or_measure(&buff, bgcol_class, len, i);
-        len += copy_or_measure(&buff, "'", len, i);
+        len += COPY_OR_MEASURE(&buff, " class='");
+        if(color_class) len += COPY_OR_MEASURE(&buff, color_class);
+        if(color_class && bgcol_class) len += COPY_OR_MEASURE(&buff, " ");
+        if(bgcol_class) len += COPY_OR_MEASURE(&buff, bgcol_class);
+        len += COPY_OR_MEASURE(&buff, "'");
       }
       // inline style and/or colors
       if(
@@ -366,32 +365,31 @@ static int state_size_and_write_as_html(
         (color >= 0 && (!color_class)) ||
         (bg_color >= 0 && (!bgcol_class))
       ) {
-        len += copy_or_measure(&buff, " style='", len, i);
+        len += COPY_OR_MEASURE(&buff, " style='");
         unsigned int len_start = len;
         char color_tmp[8];
         if(color >= 0 && (!color_class)) {
-          len += copy_or_measure(&buff, "color: ", len, i);
-          len += copy_or_measure(
-            &buff, color_to_html(color, color_extra, color_tmp), len, i
+          len += COPY_OR_MEASURE(&buff, "color: ");
+          len += COPY_OR_MEASURE(
+            &buff, color_to_html(color, color_extra, color_tmp)
           );
         }
         if(bg_color >= 0 && (!bgcol_class)) {
-          if(len_start < len) len += copy_or_measure(&buff, "; ", len, i);
-          len += copy_or_measure(&buff,  "background-color: ", len, i);
-          len += copy_or_measure(
-            &buff, color_to_html(bg_color, bg_color_extra, color_tmp), len, i
+          if(len_start < len) len += COPY_OR_MEASURE(&buff, "; ");
+          len += COPY_OR_MEASURE(&buff,  "background-color: ");
+          len += COPY_OR_MEASURE(
+            &buff, color_to_html(bg_color, bg_color_extra, color_tmp)
           );
         }
         // Styles (need to go after color for transparent to work)
         for(int i = 1; i < 10; ++i)
           if(state.style & css_html_mask & (1 << i)) {
-            if(len_start < len) len += copy_or_measure(&buff, "; ", len, i);
-            len += copy_or_measure(&buff, css_style[i - 1].css, len, i);
+            if(len_start < len) len += COPY_OR_MEASURE(&buff, "; ");
+            len += COPY_OR_MEASURE(&buff, css_style[i - 1].css);
           }
-
-        len += copy_or_measure(&buff, ";'", len, i);
+        len += COPY_OR_MEASURE(&buff, ";'");
       }
-      len += copy_or_measure(&buff, ">", len, i);
+      len += COPY_OR_MEASURE(&buff, ">");
   } }
   len -= bytes_html;
   if(buff) {

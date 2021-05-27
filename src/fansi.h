@@ -436,9 +436,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     const char * start, const char * end, cetype_t enc, R_xlen_t i
   );
   SEXP FANSI_reset_limits();
-  void FANSI_check_str_overflow(
-    const char * type, const char * msg, int cur, int extra, R_xlen_t i
-  );
+  int FANSI_check_append(int cur, int extra, const char * msg, R_xlen_t i);
+  void FANSI_check_append_err(const char * msg, R_xlen_t i);
 
   // - Compatibility -----------------------------------------------------------
 
