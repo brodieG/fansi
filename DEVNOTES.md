@@ -4,11 +4,21 @@ These are internal developer notes.
 
 ## Todo
 
+* Confirm that in e.g. `intmax_t > int` everything the comparison is done in
+  `intmax_t` terms, not int.
 * Make sure we check we're not using `intmax_t` or `uintmax_t` in a tight loop
   anywhere.
 * Make FANSI_writeline static.
 * Do sgr_to_HTML (sgr_to_html2?), add check to sgr_to_html if any of the bad
   characters are found to escape or use `sgr_to_html2`.
+* Change state_init to intake a CHARSXP to ensure we cannot initialize with
+  something larger than R_len_t.
+* Get rid of `str_oe` and replace with `check_str_overflow`.
+* Review all overflow checks.
+* Cleanup limits structure, is it really needed now we have a better view of
+  what we're dealing with?
+* Can we manage the stack better with the growing buffer so we don't keep all
+  the prior half sized ones around until we exit so they are eligible for gc?
 
 ## Crayon Compatibility
 
