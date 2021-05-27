@@ -29,13 +29,13 @@
  * R_LEN_T_MAX.
  */
 
-#define LIM_INIT {\
-  .lim_int={.name="INT", .min=INT_MIN, .max=INT_MAX},       \
-  .lim_R_len_t={.name="R_LEN_T", .min=0, .max=R_LEN_T_MAX}, \
-  .lim_size_t={.name="SIZE", .min=0, .max=SIZE_MAX}         \
+#define LIM_INIT (struct FANSI_limits) {                       \
+  .lim_int={.name="INT", .min=INT_MIN, .max=INT_MAX},          \
+  .lim_R_len_t={.name="R_LEN_T", .min=0, .max=R_LEN_T_MAX},    \
+  .lim_R_xlen_t={.name="R_XLEN_T", .min=0, .max=R_XLEN_T_MAX}, \
+  .lim_size_t={.name="SIZE", .min=0, .max=SIZE_MAX}            \
 }
-
-struct FANSI_limits lim_init = LIM_INIT;
+struct FANSI_limits FANSI_lim = LIM_INIT;
 
 SEXP FANSI_set_int_max(SEXP x) {
   if(TYPEOF(x) != INTSXP || XLENGTH(x) != 1)
@@ -53,6 +53,26 @@ SEXP FANSI_reset_limits() {
   FANSI_lim = LIM_INIT;
   return ScalarLogical(1);
 }
+void FANSI_check_limits() {
+  // Rprintf(
+  //   "%jd %jd\n%jd %jd\n%jd %jd\n%ju %ju",
+  //   FANSI_lim.lim_int.max, FANSI_lim.lim_int.min,
+  //   FANSI_lim.lim_R_len_t.max, FANSI_lim.lim_R_len_t.min,
+  //   FANSI_lim.lim_R_xlen_t.max, FANSI_lim.lim_R_xlen_t.min,
+  //   // Unsigned
+  //   FANSI_lim.lim_size_t.max, FANSI_lim.lim_size_t.min
+  // );
+  if(
+    // Signed
+    FANSI_lim.lim_int.max < 1 || FANSI_lim.lim_int.min > -1 ||
+    FANSI_lim.lim_R_len_t.max < 1 || FANSI_lim.lim_R_len_t.min != 0 ||
+    FANSI_lim.lim_R_xlen_t.max < 1 || FANSI_lim.lim_R_xlen_t.min != 0 ||
+    // Unsigned
+    FANSI_lim.lim_size_t.max < 1U || FANSI_lim.lim_size_t.min != 0U
+  )
+    error("Invalid custom limit; contact maintainer.");
+}
+
 // nocov start
 // used only for debugging
 SEXP FANSI_get_int_max() {

@@ -37,15 +37,7 @@ SEXP FANSI_check_assumptions() {
     "Failed system assumption: %s%s; please contact maintainer.";
 
   // Check custom limits
-  if(
-    // Signed
-    FANSI_lim.lim_int.max < 1 || FANSI_lim.lim_int.min > -1 ||
-    FANSI_lim.lim_R_len_t.max < 1 || FANSI_lim.lim_R_len_t.min != 0 ||
-    FANSI_lim.lim_R_xlen_t.max < 1 || FANSI_lim.lim_R_xlen_t.min != 0 ||
-    // Unsigned
-    FANSI_lim.lim_size_t.max < 1U || FANSI_lim.lim_size_t.min != 0U
-  )
-    error("Invalid custom limit; contact maintainer.");
+  FANSI_check_limits();
 
   // Otherwise bit twiddling assumptions may not work as expected?
   if(CHAR_BIT != 8)
