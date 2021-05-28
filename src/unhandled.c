@@ -53,14 +53,11 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
     SEXP chrsxp = STRING_ELT(x, i);
 
     if(chrsxp != NA_STRING && LENGTH(chrsxp)) {
-      FANSI_check_chrsxp(chrsxp, i);
-      const char * string, * string_start;
-
-      string = string_start = CHAR(chrsxp);
-
       struct FANSI_state state = FANSI_state_init_full(
-        string, no_warn, term_cap, R_true, R_true, R_one, ctl_all
+        x, no_warn, term_cap, R_true, R_true, R_one, ctl_all, i
       );
+      const char * string;
+      string = state.string;
       int has_errors = 0;
 
       while(state.string[state.pos_byte]) {

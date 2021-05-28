@@ -69,8 +69,6 @@ SEXP FANSI_tabs_as_spaces(
 
     SEXP chr = STRING_ELT(vec, i);
     if(chr == NA_STRING) continue;
-    FANSI_check_chrsxp(chr, i);
-
     source = CHAR(chr);
 
     while(*source && (source = strchr(source, '\t'))) {
@@ -86,8 +84,6 @@ SEXP FANSI_tabs_as_spaces(
       ++source;
     }
     if(tab_count) {
-      const char * string = CHAR(chr);
-
       // Figure out possible size of buffer, allowing max_tab_stop for every
       // tab, which should over-allocate
 
@@ -110,7 +106,7 @@ SEXP FANSI_tabs_as_spaces(
       SEXP R_true = PROTECT(ScalarLogical(1));
       SEXP R_one = PROTECT(ScalarInteger(1));
       struct FANSI_state state = FANSI_state_init_full(
-        string, warn, term_cap, R_true, R_true, R_one, ctl
+        vec, warn, term_cap, R_true, R_true, R_one, ctl, i
       );
       UNPROTECT(2);
 
