@@ -74,18 +74,7 @@ Tests:
 
 * State carrying over from one string element to the next?
 
-* 39/49, much of the code assumes it won't get there.
-* Overflows
-  * Caused by classes
-  * Caused otherwise
-* 8, 16, and 256 colors
-  * Boundaries
-  * Thing that should be covered and not (i.e. both basic and bright with
-    8, basic/bright and 8 bit with 16, true color with 256).
-  * Both background and color classes
-  * Background yes color no, and vice versa
-
-html_compute_size compute the size of each sequential escape collection.
+* Close all styles, half of the styles, the other half.
 
 ## To HTML
 
