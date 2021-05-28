@@ -449,7 +449,10 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
   R_xlen_t x_len = XLENGTH(x);
   struct FANSI_buff buff = {.len=0};
   struct FANSI_state state, state_prev, state_init;
-  state = state_prev = state_init = FANSI_state_init("", warn, term_cap);
+  SEXP empty = PROTECT(mkString(""));
+  state = state_prev = state_init =
+    FANSI_state_init(empty, warn, term_cap, (R_xlen_t) 0);
+  UNPROTECT(1);
   const char * span_end = "</span>";
   int span_end_len = (int) strlen(span_end);
 

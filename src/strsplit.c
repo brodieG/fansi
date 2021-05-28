@@ -65,29 +65,29 @@ SEXP FANSI_strsplit(SEXP x, SEXP warn, SEXP term_cap) {
       // nocov end
 
     R_xlen_t chr_len = XLENGTH(string);
-    struct FANSI_state state_prev = FANSI_state_init("", warn, term_cap);
+    SEXP empty = PROTECT(mkString(""));
+    struct FANSI_state state_prev =
+      FANSI_state_init(empty, warn, term_cap, (R_xlen_t)0);
 
     for(R_xlen_t j = 0; j < chr_len; ++j) {
 
       FANSI_interrupt(j);
 
       SEXP chrsxp = STRING_ELT(string, j);
-      FANSI_check_chrsxp(chrsxp, j);
 
       if(chrsxp != NA_STRING) {
-        const char * chr = CHAR(chrsxp);
         R_len_t chr_len = LENGTH(chrsxp);
-        const char * chr_track = chr;
 
-        struct FANSI_state state = FANSI_state_init(chr, warn, term_cap);
+        struct FANSI_state state = FANSI_state_init(string, warn, term_cap, i);
+        const char * chr_track = state.string;
 
         // Read all escapes; note we only care about the state at the end of a
         // string
 
         while(*chr_track && (chr_track = strchr(chr_track, 0x1b))) {
-          state.pos_byte = (chr_track - chr);
+          state.pos_byte = (chr_track - state.string);
           state = FANSI_read_next(state);
-          chr_track = chr + state.pos_byte;
+          chr_track = state.string + state.pos_byte;
         }
         int has = FANSI_state_has_style(state);
         int has_prev = FANSI_state_has_style(state_prev);
@@ -132,7 +132,7 @@ SEXP FANSI_strsplit(SEXP x, SEXP warn, SEXP term_cap) {
             FANSI_csi_write(buff_track, state_prev, chr_size_prev);
             buff_track += chr_size_prev;
           }
-          memcpy(buff_track, chr, chr_len);
+          memcpy(buff_track, state.string, chr_len);
           buff_track += chr_len;
           memcpy(buff_track, "\033[0m", 4);
           buff_track += 4;

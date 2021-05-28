@@ -582,14 +582,24 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
  * Intended for compatibility with crayon.
  *
  * If buff is NULL, then only the required size of the buffer is returned.
+ *
+ * Ideally we would store all the styles in e.g. 2 uint64_t, and then maybe each
+ * style would have an associated 2 uint64_t of what they turn on and off, and
+ * somehow we would have a system to determine what the minimal combination of
+ * styles required to turn off all active styles.  This would guarantee we can
+ * keep the on-off styles in sync, at the cost of quite a bit of complexity.
+ *
+ * So instead we hard-code everything and hope we keep it in sync.
   return
     state.style || state.color >= 0 || state.bg_color >= 0 ||
     state.font || state.border || state.ideogram;
- */
 
-int close_active_state(struct FANSI_state state, char * buff) {
+int close_active_state(
+  struct FANSI_state state, char * buff, int len, R_xlen_t i
+) {
   // char * buff_track = buff;
   if(FANSI_state_has_style(state)) {
+    //
     // We're deliberate in only closing things we know how to close in both the
     // state and in the ouptut string, that way we can check state at the end to
     // make sure we did actually close everything.
@@ -634,7 +644,6 @@ int close_active_state(struct FANSI_state state, char * buff) {
   }
   return 0;
 }
-
 /*
  * Read UTF8 character
  */

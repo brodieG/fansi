@@ -28,10 +28,25 @@
  * all other cases `R_nchar` shoudl be set to not `allowNA`.
  */
 struct FANSI_state FANSI_state_init_full(
-  const char * string, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
-  SEXP width, SEXP ctl
+  SEXP strsxp, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
+  SEXP width, SEXP ctl, R_xlen_t i
 ) {
   // nocov start
+  if(TYPEOF(strsxp) != STRSXP) {
+    error(
+      "Internal error: state_init with bad type for strsxp (%s)",
+      type2char(TYPEOF(warn))
+    );
+  }
+  if(i < 0 || i > XLENGTH(strsxp))
+    error(
+      "Internal error: state_init with out of bounds index [%jd] for strsxp.",
+      FANSI_ind(i)
+    );
+  SEXP chrsxp = STRING_ELT(strsxp, i);
+  FANSI_check_chrsxp(chrsxp, i);
+  const char * string = CHAR(chrsxp);
+
   if(TYPEOF(warn) != LGLSXP)
     error(
       "Internal error: state_init with bad type for warn (%s)",
@@ -93,17 +108,18 @@ struct FANSI_state FANSI_state_init_full(
   };
 }
 struct FANSI_state FANSI_state_init(
-  const char * string, SEXP warn, SEXP term_cap
+  SEXP strsxp, SEXP warn, SEXP term_cap, R_xlen_t i
 ) {
   SEXP R_false = PROTECT(ScalarLogical(0));
   SEXP R_true = PROTECT(ScalarLogical(1));
   SEXP R_zero = PROTECT(ScalarInteger(0));
   struct FANSI_state res = FANSI_state_init_full(
-    string, warn, term_cap,
+    strsxp, warn, term_cap,
     R_true,  // allowNA for invalid multibyte
     R_false,
     R_zero,  // Don't use width by default
-    R_zero   // Don't treat any escapes as special by default
+    R_zero,  // Don't treat any escapes as special by default
+    i
   );
   UNPROTECT(3);
   return res;
@@ -666,21 +682,23 @@ SEXP FANSI_state_at_pos_ext(
 
   // no errors should make it here, it should be handled R side
   if(TYPEOF(text) != STRSXP && XLENGTH(text) != 1)
-    error("Argument `text` must be character(1L)");   // nocov
+    error("Argument `text` must be character(1L).");   // nocov
+  if(STRING_ELT(text, 0) == NA_STRING)
+    error("Argument `text` may not be NA.");   // nocov
   if(TYPEOF(pos) != INTSXP)
-    error("Argument `pos` must be integer");          // nocov
+    error("Argument `pos` must be integer.");          // nocov
   if(TYPEOF(lag) != LGLSXP)
-    error("Argument `lag` must be logical");          // nocov
+    error("Argument `lag` must be logical.");          // nocov
   if(XLENGTH(pos) != XLENGTH(lag))
-    error("Argument `lag` must be the same length as `pos`");  // nocov
+    error("Argument `lag` must be the same length as `pos`.");  // nocov
   if(XLENGTH(pos) != XLENGTH(ends))
-    error("Argument `ends` must be the same length as `pos`"); // nocov
+    error("Argument `ends` must be the same length as `pos`."); // nocov
   if(TYPEOF(warn) != LGLSXP)
-    error("Argument `warn` must be integer");         // nocov
+    error("Argument `warn` must be integer.");         // nocov
   if(TYPEOF(term_cap) != INTSXP)
-    error("Argument `term.cap` must be integer");     // nocov
+    error("Argument `term.cap` must be integer.");     // nocov
   if(TYPEOF(ctl) != INTSXP)
-    error("Argument `ctl` must be integer");         // nocov
+    error("Argument `ctl` must be integer.");         // nocov
 
   R_xlen_t len = XLENGTH(pos);
 
@@ -729,17 +747,13 @@ SEXP FANSI_state_at_pos_ext(
   SEXP res_chr, res_chr_prev =
     PROTECT(FANSI_mkChar(empty, empty, CE_NATIVE, (R_xlen_t) 0));
   // PROTECT should not be needed here, but rchk complaining
-  SEXP text_chr = STRING_ELT(text, 0);
-  FANSI_check_chrsxp(text_chr, 0);
-  const char * string = CHAR(text_chr); // Should already be UTF-8 if needed
-
   SEXP R_true = PROTECT(ScalarLogical(1));
-  struct FANSI_state state =
-    FANSI_state_init_full(string, warn, term_cap, R_true, R_true, type, ctl);
+  struct FANSI_state state = FANSI_state_init_full(
+    text, warn, term_cap, R_true, R_true, type, ctl, (R_xlen_t) 0
+  );
   UNPROTECT(1);
-  struct FANSI_state state_prev = state;
 
-  state.string = state_prev.string = string;
+  struct FANSI_state state_prev = state;
   state_pair.cur = state;
   state_pair.prev = state_prev;
 
@@ -751,11 +765,8 @@ SEXP FANSI_state_at_pos_ext(
   for(R_xlen_t i = 0; i < len; i++) {
     R_CheckUserInterrupt();
     pos_i = INTEGER(pos)[i];
-    if(text_chr == NA_STRING || pos_i == NA_INTEGER) {
+    if(pos_i == NA_INTEGER) {
       error("Internal Error: NAs not allowed"); // nocov
-      // // used to allow, leaving old code for ref
-      // for(R_xlen_t j = 0; j < res_cols; j++)
-      //   REAL(res_mx)[i * res_cols + j] = NA_REAL;
     } else {
       if(pos_i < pos_prev)
         // nocov start

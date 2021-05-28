@@ -268,7 +268,7 @@ SEXP FANSI_writeline(
  */
 
 static SEXP strwrap(
-  const char * x, int width,
+  SEXP x, int width,
   struct FANSI_prefix_dat pre_first,
   struct FANSI_prefix_dat pre_next,
   int wrap_always,
@@ -282,7 +282,7 @@ static SEXP strwrap(
   SEXP R_true = PROTECT(ScalarLogical(1));
   SEXP R_one = PROTECT(ScalarInteger(1));
   struct FANSI_state state = FANSI_state_init_full(
-    x, warn, term_cap, R_true, R_true, R_one, ctl
+    x, warn, term_cap, R_true, R_true, R_one, ctl, index
   );
   UNPROTECT(2);
 
@@ -630,12 +630,10 @@ SEXP FANSI_strwrap_ext(
     FANSI_interrupt(i);
     SEXP chr = STRING_ELT(x, i);
     if(chr == NA_STRING) continue;
-    FANSI_check_chrsxp(chr, i);
-    const char * chr_utf8 = CHAR(chr);
 
     SEXP str_i = PROTECT(
       strwrap(
-        chr_utf8, width_int,
+        x, width_int,
         i ? pre_first_dat : ini_first_dat,
         pre_next_dat,
         wrap_always_int, &buff,
