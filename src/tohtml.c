@@ -629,9 +629,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       // removing SGR and adding FANSI, it should be okay.
 
       cetype_t chr_type = getCharCE(chrsxp);
-      SEXP chrsxp = PROTECT(
-        mkCharLenCE(buff.buff, (R_len_t)(buff_track - buff.buff), chr_type)
-      );
+      SEXP chrsxp = PROTECT(FANSI_mkChar(buff.buff, buff_track, chr_type, i));
       SET_STRING_ELT(res, i, chrsxp);
       UNPROTECT(1);
     }

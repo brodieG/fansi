@@ -174,9 +174,8 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
 
       FANSI_check_chr_size(res_start, res_track, i);
       SEXP chr_sexp = PROTECT(
-        FANSI_mkChar(
-          res_start, res_track - res_start, getCharCE(x_chr), i
-      ) );
+        FANSI_mkChar(res_start, res_track, getCharCE(x_chr), i)
+      );
       SET_STRING_ELT(res_fin, i, chr_sexp);
       UNPROTECT(1);
     }
@@ -380,11 +379,9 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
     }
     if(strip_this) {
       *(buff_track) = 0;
-      FANSI_check_chr_size(buff->buff, buff_track, i);
       SEXP chrsxp = PROTECT(
-        mkCharLenCE(
-          buff->buff, buff_track - buff->buff, getCharCE(STRING_ELT(input, i))
-      ) );
+        FANSI_mkChar(buff->buff, buff_track, getCharCE(STRING_ELT(input, i)), i)
+      );
       SET_STRING_ELT(res, i, chrsxp);
       UNPROTECT(1);
     }

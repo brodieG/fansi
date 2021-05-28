@@ -138,9 +138,9 @@ SEXP FANSI_strsplit(SEXP x, SEXP warn, SEXP term_cap) {
           buff_track += 4;
           *buff_track = 0;  // not strictly necessary
 
-          SEXP chrsxp_new =
-            PROTECT(mkCharLenCE(buff.buff, chr_size, getCharCE(chrsxp)));
-
+          SEXP chrsxp_new = PROTECT(
+            FANSI_mkChar(buff.buff, buff_track, getCharCE(chrsxp), i)
+          );
           SET_STRING_ELT(string, j, chrsxp_new);
           UNPROTECT(1);
 

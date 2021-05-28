@@ -706,8 +706,7 @@ SEXP FANSI_state_at_pos_ext(
       FANSI_mkChar(
         rownames[i], rownames[i] + strlen(rownames[i]),
         CE_NATIVE, (R_xlen_t) 0
-      )
-    );
+    ) );
 
   // Result will comprise a character vector with all the state tags at the
   // position as well as the various position translations in a matrix with as
