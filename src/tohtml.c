@@ -249,37 +249,6 @@ static char * color_to_html(int color, int * color_extra, char * buff) {
   return buff;
 }
 static char * oe_sgr_html_err = "Expanding SGR sequences to HTML";
-/*
- * If *buff is not NULL, copy tmp into it and advance, else measure tmp
- * and advance length
- *
- *   vvvvvvvv
- * !> DANGER <!
- *   ^^^^^^^^
- *
- * This advances *buff so that it points to to the NULL terminator
- * the end of what is written to so string is ready to append to.
- *
- * @len bytes already accumulated in the buffer (i.e. before the pointer).
- * @param i index in overal character vector, needed to report overflow string.
- */
-static int copy_or_measure(
-  char ** buff, const char * tmp, int len, R_xlen_t i,
-  const char * err_msg
-) {
-  size_t tmp_len = strlen(tmp);
-  if(tmp_len > (size_t) FANSI_lim.lim_int.max)
-    FANSI_check_append_err(err_msg, i);
-
-  FANSI_check_append(len, tmp_len, err_msg, i);
-  if(*buff) {
-    strcpy(*buff, tmp);
-    *buff += tmp_len;
-    **buff = 0;  // not necessary, but helps to debug
-  }
-  return tmp_len;
-}
-#define COPY_OR_MEASURE(A, B) copy_or_measure((A), (B), len, i, err_msg)
 
 /*
  * Compute HTML Size of Each Individual State, Or Write It

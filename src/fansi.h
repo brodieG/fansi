@@ -441,6 +441,12 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_check_append(int cur, int extra, const char * msg, R_xlen_t i);
   void FANSI_check_append_err(const char * msg, R_xlen_t i);
 
+  int FANSI_copy_or_measure(
+    char ** buff, const char * tmp, int len, R_xlen_t i,
+    const char * err_msg
+  );
+  #define COPY_OR_MEASURE(A, B) FANSI_copy_or_measure((A), (B), len, i, err_msg)
+
   // - Compatibility -----------------------------------------------------------
 
   // R_nchar does not exist prior to 3.2.2, so we sub in this dummy
