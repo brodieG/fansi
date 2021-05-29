@@ -138,6 +138,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * The original string the state corresponds to.  This should always be
      * a pointer to the beginning of the string, use the
      * `state.string[state.pos_byte]` to access the current position.
+     *
+     * Should be no longer than INT_MAX excluding terminating NULL.
      */
     const char * string;
     /*
@@ -283,7 +285,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      *
      */
     int term_cap;
-    // Whether at end of a CSI escape sequence
+    // Whether at end of a CSI escape sequence (i.e. found an 'm').
     int last;
     // Whether the last control sequence that was completely read is known to be
     // an SGR sequence.  This is used as part of the `read_esc` process and is
@@ -296,6 +298,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     // Whether to use R_nchar, really only needed when we're doing things in
     // width mode
     int use_nchar;
+    // Whether the most recently read escape sequence is adjacent a NULL, which
+    // allows us to decide not to write it back out as it would be redundant.
+    int terminal;
 
     /*
      * These support the arguments of the same names for nchar
