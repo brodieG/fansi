@@ -34,7 +34,10 @@
 #' @examples
 #' strtrim_ctl("\033[42mHello world\033[m", 6)
 
-strtrim_ctl <- function(x, width, warn=getOption('fansi.warn'), ctl='all'){
+strtrim_ctl <- function(
+  x, width, warn=getOption('fansi.warn'), ctl='all',
+  normalize=getOption('fansi.normalize')
+) {
   if(!is.character(x)) x <- as.character(x)
 
   if(!is.numeric(width) || length(width) != 1L || is.na(width) || width < 0)
@@ -43,6 +46,10 @@ strtrim_ctl <- function(x, width, warn=getOption('fansi.warn'), ctl='all'){
   if(!is.logical(warn)) warn <- as.logical(warn)
   if(length(warn) != 1L || is.na(warn))
     stop("Argument `warn` must be TRUE or FALSE.")
+
+  if(!isTRUE(normalize %in% c(FALSE, TRUE)))
+    stop("Argument `normalize` must be TRUE or FALSE.")
+  normalize <- as.logical(normalize)
 
   if(!is.character(ctl))
     stop("Argument `ctl` must be character.")
@@ -72,7 +79,8 @@ strtrim_ctl <- function(x, width, warn=getOption('fansi.warn'), ctl='all'){
     FALSE, 8L,
     warn, term.cap.int,
     TRUE,      # first only
-    ctl.int
+    ctl.int,
+    normalize
   )
   res
 }
@@ -83,7 +91,7 @@ strtrim2_ctl <- function(
   x, width, warn=getOption('fansi.warn'),
   tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
   tab.stops=getOption('fansi.tab.stops'),
-  ctl='all'
+  ctl='all', normalize=getOption('fansi.normalize')
 ) {
   if(!is.character(x)) x <- as.character(x)
 
@@ -93,6 +101,10 @@ strtrim2_ctl <- function(
   if(!is.logical(warn)) warn <- as.logical(warn)
   if(length(warn) != 1L || is.na(warn))
     stop("Argument `warn` must be TRUE or FALSE.")
+
+  if(!isTRUE(normalize %in% c(FALSE, TRUE)))
+    stop("Argument `normalize` must be TRUE or FALSE.")
+  normalize <- as.logical(normalize)
 
   if(!is.logical(tabs.as.spaces)) tabs.as.spaces <- as.logical(tabs.as.spaces)
   if(length(tabs.as.spaces) != 1L || is.na(tabs.as.spaces))

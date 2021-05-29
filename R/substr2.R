@@ -105,6 +105,11 @@
 #'   "38;2" or "48;2"). Changing this parameter changes how `fansi`
 #'   interprets escape sequences, so you should ensure that it matches your
 #'   terminal capabilities. See [term_cap_test] for details.
+#' @param normalize TRUE or FALSE (default) whether SGR sequence should be
+#'   expanded out such that there is one distinct sequence for each SGR code.
+#'   Normalized strings will occupy more space (e.g. "\033[31;42m" becomes
+#'   "\033[31m\033[42m"), but will work better with code that assumes each SGR
+#'   code will be in its own escape as `crayon` does.
 #' @examples
 #' substr_ctl("\033[42mhello\033[m world", 1, 9)
 #' substr_ctl("\033[42mhello\033[m world", 3, 9)
@@ -131,10 +136,11 @@ substr_ctl <- function(
   x, start, stop,
   warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap'),
-  ctl='all'
+  ctl='all', normalize=getOption('fansi.normalize', FALSE)
 )
   substr2_ctl(
-    x=x, start=start, stop=stop, warn=warn, term.cap=term.cap, ctl=ctl
+    x=x, start=start, stop=stop, warn=warn, term.cap=term.cap, ctl=ctl,
+    normalize=normalize
   )
 
 #' @rdname substr_ctl
@@ -146,7 +152,7 @@ substr2_ctl <- function(
   tab.stops=getOption('fansi.tab.stops'),
   warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap'),
-  ctl='all'
+  ctl='all', normalize=getOption('fansi.normalize', FALSE)
 ) {
   if(!is.character(x)) x <- as.character(x)
   x <- enc2utf8(x)
@@ -162,6 +168,9 @@ substr2_ctl <- function(
   if(!is.logical(warn)) warn <- as.logical(warn)
   if(length(warn) != 1L || is.na(warn))
     stop("Argument `warn` must be TRUE or FALSE.")
+  if(!isTRUE(normalize %in% c(FALSE, TRUE)))
+    stop("Argument `normalize` must be TRUE or FALSE.")
+  normalize <- as.logical(normalize)
 
   if(!is.character(term.cap))
     stop("Argument `term.cap` must be character.")
@@ -218,7 +227,7 @@ substr2_ctl <- function(
     round.start=round == 'start' || round == 'both',
     round.stop=round == 'stop' || round == 'both',
     x.len=length(x),
-    ctl.int=ctl.int
+    ctl.int=ctl.int, normalize=normalize.int
   )
   res[!no.na] <- NA_character_
   res
@@ -229,7 +238,8 @@ substr2_ctl <- function(
 substr_sgr <- function(
   x, start, stop,
   warn=getOption('fansi.warn'),
-  term.cap=getOption('fansi.term.cap')
+  term.cap=getOption('fansi.term.cap'),
+  normalize=getOption('fansi.normalize', FALSE)
 )
   substr2_ctl(
     x=x, start=start, stop=stop, warn=warn, term.cap=term.cap, ctl='sgr'
@@ -243,12 +253,14 @@ substr2_sgr <- function(
   tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
   tab.stops=getOption('fansi.tab.stops'),
   warn=getOption('fansi.warn'),
-  term.cap=getOption('fansi.term.cap')
+  term.cap=getOption('fansi.term.cap'),
+  normalize=getOption('fansi.normalize', FALSE)
 )
   substr2_ctl(
     x=x, start=start, stop=stop, type=type, round=round,
     tabs.as.spaces=tabs.as.spaces,
-    tab.stops=tab.stops, warn=warn, term.cap=term.cap, ctl='sgr'
+    tab.stops=tab.stops, warn=warn, term.cap=term.cap, ctl='sgr',
+    normalize=normalize
   )
 
 ## Lower overhead version of the function for use by strwrap
@@ -259,7 +271,7 @@ substr2_sgr <- function(
 substr_ctl_internal <- function(
   x, start, stop, type.int, round, tabs.as.spaces,
   tab.stops, warn, term.cap.int, round.start, round.stop,
-  x.len, ctl.int
+  x.len, ctl.int, normalize.int
 ) {
   # For each unique string, compute the state at each start and stop position
   # and re-map the positions to "ansi" space
@@ -294,7 +306,7 @@ substr_ctl_internal <- function(
       u, e.sort - 1L, type.int,
       e.lag, e.ends,
       warn, term.cap.int,
-      ctl.int
+      ctl.int, normalize.int
     )
     # Recover the matching values for e.sort
 

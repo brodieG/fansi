@@ -19,6 +19,7 @@ These are internal developer notes.
   what we're dealing with?
 * Can we manage the stack better with the growing buffer so we don't keep all
   the prior half sized ones around until we exit so they are eligible for gc?
+* Make sure normalize param is exposed everywhere.
 
 ## Crayon Compatibility
 

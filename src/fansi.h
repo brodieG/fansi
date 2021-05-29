@@ -341,7 +341,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP strip_spaces,
     SEXP tabs_as_spaces, SEXP tab_stops,
     SEXP warn, SEXP term_cap,
-    SEXP first_only, SEXP ctl
+    SEXP first_only, SEXP ctl, SEXP norm
   );
   SEXP FANSI_process(SEXP input, struct FANSI_buff * buff);
   SEXP FANSI_process_ext(SEXP input);

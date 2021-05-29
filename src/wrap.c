@@ -128,12 +128,13 @@ static struct FANSI_prefix_dat drop_pre_indent(struct FANSI_prefix_dat dat) {
  *   stuff.
  */
 
-SEXP FANSI_writeline(
+static SEXP writeline(
   struct FANSI_state state_bound, struct FANSI_state state_start,
   struct FANSI_buff * buff,
   struct FANSI_prefix_dat pre_dat,
   int tar_width, const char * pad_chr,
-  R_xlen_t index
+  R_xlen_t index,
+  int normalize
 ) {
   // Rprintf("  Writeline start with buff %p\n", *buff);
 
@@ -277,7 +278,8 @@ static SEXP strwrap(
   int strip_spaces,
   SEXP warn, SEXP term_cap,
   int first_only, SEXP ctl,
-  R_xlen_t index
+  R_xlen_t index,
+  int normalize
 ) {
   SEXP R_true = PROTECT(ScalarLogical(1));
   SEXP R_one = PROTECT(ScalarInteger(1));
@@ -405,10 +407,10 @@ static SEXP strwrap(
       // Write the string
 
       res_sxp = PROTECT(
-        FANSI_writeline(
+        writeline(
           state_bound, state_start, buff,
           para_start ? pre_first : pre_next,
-          width_tar, pad_chr, index
+          width_tar, pad_chr, index, normalize
         )
       );
       first_line = 0;
@@ -505,7 +507,7 @@ SEXP FANSI_strwrap_ext(
   SEXP tabs_as_spaces, SEXP tab_stops,
   SEXP warn, SEXP term_cap,
   SEXP first_only,
-  SEXP ctl
+  SEXP ctl, SEXP norm
 ) {
   if(
     TYPEOF(x) != STRSXP || TYPEOF(width) != INTSXP ||
@@ -518,9 +520,15 @@ SEXP FANSI_strwrap_ext(
     TYPEOF(tabs_as_spaces) != LGLSXP ||
     TYPEOF(tab_stops) != INTSXP ||
     TYPEOF(first_only) != LGLSXP ||
-    TYPEOF(ctl) != INTSXP
+    TYPEOF(ctl) != INTSXP ||
+    TYPEOF(norm) != LGLSXP
   )
     error("Internal Error: arg type error 1; contact maintainer.");  // nocov
+
+  if(XLENGTH(norm) != 1)
+    error("Internal Error: arg norm should be scalar.");  // nocov
+
+  int normalize = asInteger(norm);
 
   const char * pad = CHAR(asChar(pad_end));
   if(*pad != 0 && (*pad < 0x20 || *pad > 0x7e))
@@ -641,7 +649,7 @@ SEXP FANSI_strwrap_ext(
         strip_spaces_int,
         warn, term_cap,
         first_only_int,
-        ctl, i
+        ctl, i, normalize
     ) );
     if(first_only_int) {
       SET_STRING_ELT(res, i, str_i);
