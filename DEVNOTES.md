@@ -61,10 +61,44 @@ normalize, second do our thing.  Obviously this will be slower.
 
 Should `normalize_sgr` convert `\033[0m` and similar to the exploded version?
 And should it be exploded to all closing tags, or only to the active ones?
+Probably only the active ones.
+
+It's probably out of the question to normalize as we process, but it's not out
+of the question to write the closing tags on each.  What would it take to
+normalize as we process?
+
+* Known how to compute the normalized size.  Won't be able to use the
+  `copy_or_measure` framework as we won't know ahead of time what the string is,
+  which means we would have to generate it twice to use `copy_or_measure`.
+* Instead of skipping all the way to the end of the line and copying the whole
+  thing, we'd have to copy up to each ESC, and write the normalized version of
+  it.
+
+We get most of the value by just writing the end-tags, and that's easy and cheap
+to do.  It's just that then there is no great interface.  Either we normalize
+everything after the fact at the cost of rewriting it all, or we do a half-assed
+version where we hope we don't have to normalize the internals and write the
+normalized end tags.  Maybe that's the compromise.  Look for unnormalized tags
+inside, and if any exist, then use the full second pass, otherwise just write
+the normalized end tags.
+
+We also need to decide what is unnormalized.  For crayon, all we really care
+about is that "close" tags be pulled out, and they don't even have to be really
+pulled out, they just need to be appended.
+
+There is also the R level functions which use `substr`, so those will have to be
+two-pass unless we rewrite substr internally.
+
+So maybe first thing to do is the normalize version?  Then we can think if we
+want to change writelines?
 
 Aside: if we truly want to insulate `fansi` output from external SGR, we really
 should be starting with `\033[0m` too.  Maybe another option is to "insulate",
 which would just start and end with the null SGR, optionally?
+
+The other thing we can do is accept an "state.initial" input, and output a
+"state.end".  This way we can merge with any other SGR strings.
+
 
 ## Overflow
 

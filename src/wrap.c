@@ -114,11 +114,119 @@ static struct FANSI_prefix_dat drop_pre_indent(struct FANSI_prefix_dat dat) {
   return dat;
 }
 /*
- * Given a state, produce a state that closes it
+ * End Active Sequences
+ *
+ * Inspects a state object, and produces the set of escape sequences that will
+ * close just the open sequences, to the extent possible.
+ *
+ * Intended for compatibility with crayon.
+ *
+ * If buff is NULL, then only the required size of the buffer is returned.
+ *
+ * Ideally we would store all the styles in e.g. 2 uint64_t, and then maybe each
+ * style would have an associated 2 uint64_t of what they turn on and off, and
+ * somehow we would have a system to determine what the minimal combination of
+ * styles required to turn off all active styles.  This would guarantee we can
+ * keep the on-off styles in sync, at the cost of quite a bit of complexity.
+ *
+ * So instead we hard-code everything and hope we keep it in sync.
  */
-// static struct FANSI_state state_to_close_state(struct FANSI_state state) {
-// 
-// }
+
+static int write_end_state(
+  struct FANSI_state state, char * buff, int len, R_xlen_t i, int normalize
+) {
+  // char * buff_track = buff;
+  int len0 = len;
+  const char * err_msg = "Generating closing SGR";
+
+  if(FANSI_state_has_style(state)) {
+    if(normalize) {
+      // We're deliberate in only closing things we know how to close in both the
+      // state and in the ouptut string, that way we can check state at the end to
+      // make sure we did actually close everything.
+
+      // Close color
+
+      if(state.color >= 0) {
+        state.color = -1;
+        len += COPY_OR_MEASURE(&buff, "\033[39m");
+      }
+      if(state.bg_color >= 0) {
+        state.bg_color = -1;
+        len += COPY_OR_MEASURE(&buff, "\033[49m");
+      }
+      if(state.font > 0) {
+        state.font = 0;
+        len += COPY_OR_MEASURE(&buff, "\033[10m");
+      }
+      if(state.border & (1U << 1U | 1U << 2U)) {
+        state.border & ~(1U << 1U | 1U << 2U);
+        len += COPY_OR_MEASURE(&buff, "\033[54m");
+      }
+      if(state.border & (1U << 3U) {
+        state.border & ~(1U << 3U);
+        len += COPY_OR_MEASURE(&buff, "\033[55m");
+      }
+      if(state.ideogram > 0U) {
+        state.ideogram &= ~((1U << 0U) & (1U << 1U) & (1U << 2U) & (1U << 3U));
+        len += COPY_OR_MEASURE(&buff, "\033[65m");
+      }
+      unsigned int s_boldfaint = (1U << 1U | 1U << 2U);
+      unsigned int s_frakital = (1U << 3U | 1U << 10U);
+      unsigned int s_underline = (1U << 4U | 1U << 11U);
+      unsigned int s_blink = (1U << 5U | 1U << 6U)
+      unsigned int s_propspc = 1U << 12U
+      unsigned int s_inverse = 1U << 7U
+      unsigned int s_conceal = 1U << 8U
+      unsigned int s_strikethrough = 1U << 9U
+
+      if(state.style & s_boldfaint) {
+        state.style &= ~s_boldfaint;
+        len += COPY_OR_MEASURE(&buff, "\033[22m");
+      }
+      if(state.style & s_frakital) {
+        state.style &= ~s_frakital;
+        len += COPY_OR_MEASURE(&buff, "\033[23m");
+      }
+      if(state.style & s_underline) {
+        state.style &= ~s_underline
+        len += COPY_OR_MEASURE(&buff, "\033[24m");
+      }
+      if(state.style & s_blink) {
+        state.style &= ~s_blink;
+        len += COPY_OR_MEASURE(&buff, "\033[25m");
+      }
+      if(state.style & s_propspc) {
+        state.style &= ~s_propspc;
+        len += COPY_OR_MEASURE(&buff, "\033[26m");
+      }
+      if(state.style & s_inverse) {
+        state.style &= ~s_inverse;
+        len += COPY_OR_MEASURE(&buff, "\033[27m");
+      }
+      if(state.style & s_conceal) {
+        state.style &= ~s_conceal;
+        len += COPY_OR_MEASURE(&buff, "\033[28m");
+      }
+      if(state.style & s_strikethrough) {
+        state.style &= ~s_strikethrough;
+        len += COPY_OR_MEASURE(&buff, "\033[29m");
+      }
+      // Make sure we're not out of sync with has_style
+      if(FANSI_state_has_style(state))
+        error("Internal Error: did not successfully close all styles.");
+    } else {
+      if(buff) {
+        memcpy(buff, "\033[0m", 4);
+        buff += 4;
+        len += 4;
+        *buff = 0;
+      }
+    }
+  }
+  return len - len0;
+}
+
 /*
  * Write a line
  *

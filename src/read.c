@@ -574,109 +574,24 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
   return state;
 }
 /*
- * End Active Sequences
+ * Need to:
  *
- * Inspects a state object, and produces the set of escape sequences that will
- * close just the open sequences, to the extent possible.
+ * * Count how many sub-elements there are.
+ * * For each one, allocate two more bytes (ESC + [)
  *
- * Intended for compatibility with crayon.
+ * * As we copy, seek from ESC to ESC.
+ * * Write down the string.
  *
- * If buff is NULL, then only the required size of the buffer is returned.
+ * So, for write, need a function that accepts:
  *
- * Ideally we would store all the styles in e.g. 2 uint64_t, and then maybe each
- * style would have an associated 2 uint64_t of what they turn on and off, and
- * somehow we would have a system to determine what the minimal combination of
- * styles required to turn off all active styles.  This would guarantee we can
- * keep the on-off styles in sync, at the cost of quite a bit of complexity.
- *
- * So instead we hard-code everything and hope we keep it in sync.
+ * * The input string starting at ESC.
+ * * The output buffer ready to append to.
+ * * Seeks and copies semi-colon to semi-colon until the N.
  */
-
-static int close_active_state(
-  struct FANSI_state state, char * buff, int len, R_xlen_t i
-) {
-  // char * buff_track = buff;
-  int len0 = len;
-  const char * err_msg = ""
-  if(FANSI_state_has_style(state)) {
-    //
-    // We're deliberate in only closing things we know how to close in both the
-    // state and in the ouptut string, that way we can check state at the end to
-    // make sure we did actually close everything.
-
-    // Close color
-
-    if(state.color >= 0) {
-      state.color = -1;
-      len += COPY_OR_MEASURE(&buff, "39");
-    }
-    if(state.bg_color >= 0) {
-      state.bg_color = -1;
-      len += COPY_OR_MEASURE(&buff, "49");
-    }
-    if(state.font > 0) {
-      state.font = 0;
-      len += COPY_OR_MEASURE(&buff, "10");
-    }
-    if(state.border & (1U << 1U | 1U << 2U)) {
-      state.border & ~(1U << 1U | 1U << 2U);
-      len += COPY_OR_MEASURE(&buff, "54");
-    }
-    if(state.border & (1U << 3U) {
-      state.border & ~(1U << 3U);
-      len += COPY_OR_MEASURE(&buff, "55");
-    }
-    if(state.ideogram > 0U) {
-      state.ideogram &= ~((1U << 0U) & (1U << 1U) & (1U << 2U) & (1U << 3U));
-      len += COPY_OR_MEASURE(&buff, "65");
-    }
-    unsigned int s_boldfaint = (1U << 1U | 1U << 2U);
-    unsigned int s_frakital = (1U << 3U | 1U << 10U);
-    unsigned int s_underline = (1U << 4U | 1U << 11U);
-    unsigned int s_blink = (1U << 5U | 1U << 6U)
-    unsigned int s_propspc = 1U << 12U
-    unsigned int s_inverse = 1U << 7U
-    unsigned int s_conceal = 1U << 8U
-    unsigned int s_strikethrough = 1U << 9U
-
-    if(state.style & s_boldfaint) {
-      state.style &= ~s_boldfaint;
-      len += COPY_OR_MEASURE(&buff, "22");
-    }
-    if(state.style & s_frakital) {
-      state.style &= ~s_frakital;
-      len += COPY_OR_MEASURE(&buff, "23");
-    }
-    if(state.style & s_underline) {
-      state.style &= ~s_underline
-      len += COPY_OR_MEASURE(&buff, "24");
-    }
-    if(state.style & s_blink) {
-      state.style &= ~s_blink;
-      len += COPY_OR_MEASURE(&buff, "25");
-    }
-    if(state.style & s_propspc) {
-      state.style &= ~s_propspc;
-      len += COPY_OR_MEASURE(&buff, "26");
-    }
-    if(state.style & s_inverse) {
-      state.style &= ~s_inverse;
-      len += COPY_OR_MEASURE(&buff, "27");
-    }
-    if(state.style & s_conceal) {
-      state.style &= ~s_conceal;
-      len += COPY_OR_MEASURE(&buff, "28");
-    }
-    if(state.style & s_strikethrough) {
-      state.style &= ~s_strikethrough;
-      len += COPY_OR_MEASURE(&buff, "29");
-    }
-    // Make sure we're not out of sync with has_style
-    if(FANSI_state_has_style(state))
-      error("Internal Error: did not successfully close all styles.");
-  }
-  return len - len0;
+static int normalize_state() {
+  return 1;
 }
+
 /*
  * Read UTF8 character
  */
