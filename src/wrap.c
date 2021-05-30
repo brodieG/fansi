@@ -132,14 +132,14 @@ static struct FANSI_prefix_dat drop_pre_indent(struct FANSI_prefix_dat dat) {
  * So instead we hard-code everything and hope we keep it in sync.
  */
 
-static int write_end_state(
-  struct FANSI_state state, char * buff, int len, R_xlen_t i, int normalize
+static int write_end_sgr(
+  struct FANSI_sgr sgr, char * buff, int len, R_xlen_t i, int normalize
 ) {
   // char * buff_track = buff;
   int len0 = len;
   const char * err_msg = "Generating closing SGR";
 
-  if(FANSI_state_has_style(state)) {
+  if(FANSI_sgr_active(sgr)) {
     if(normalize) {
       // We're deliberate in only closing things we know how to close in both the
       // state and in the ouptut string, that way we can check state at the end to
@@ -147,28 +147,28 @@ static int write_end_state(
 
       // Close color
 
-      if(state.color >= 0) {
-        state.color = -1;
+      if(sgr.color >= 0) {
+        sgr.color = -1;
         len += COPY_OR_MEASURE(&buff, "\033[39m");
       }
-      if(state.bg_color >= 0) {
-        state.bg_color = -1;
+      if(sgr.bg_color >= 0) {
+        sgr.bg_color = -1;
         len += COPY_OR_MEASURE(&buff, "\033[49m");
       }
-      if(state.font > 0) {
-        state.font = 0;
+      if(sgr.font > 0) {
+        sgr.font = 0;
         len += COPY_OR_MEASURE(&buff, "\033[10m");
       }
-      if(state.border & (1U << 1U | 1U << 2U)) {
-        state.border & ~(1U << 1U | 1U << 2U);
+      if(sgr.border & (1U << 1U | 1U << 2U)) {
+        sgr.border & ~(1U << 1U | 1U << 2U);
         len += COPY_OR_MEASURE(&buff, "\033[54m");
       }
-      if(state.border & (1U << 3U) {
-        state.border & ~(1U << 3U);
+      if(sgr.border & (1U << 3U) {
+        sgr.border & ~(1U << 3U);
         len += COPY_OR_MEASURE(&buff, "\033[55m");
       }
-      if(state.ideogram > 0U) {
-        state.ideogram &= ~((1U << 0U) & (1U << 1U) & (1U << 2U) & (1U << 3U));
+      if(sgr.ideogram > 0U) {
+        sgr.ideogram &= ~((1U << 0U) & (1U << 1U) & (1U << 2U) & (1U << 3U));
         len += COPY_OR_MEASURE(&buff, "\033[65m");
       }
       unsigned int s_boldfaint = (1U << 1U | 1U << 2U);
@@ -180,40 +180,40 @@ static int write_end_state(
       unsigned int s_conceal = 1U << 8U
       unsigned int s_strikethrough = 1U << 9U
 
-      if(state.style & s_boldfaint) {
-        state.style &= ~s_boldfaint;
+      if(sgr.style & s_boldfaint) {
+        sgr.style &= ~s_boldfaint;
         len += COPY_OR_MEASURE(&buff, "\033[22m");
       }
-      if(state.style & s_frakital) {
-        state.style &= ~s_frakital;
+      if(sgr.style & s_frakital) {
+        sgr.style &= ~s_frakital;
         len += COPY_OR_MEASURE(&buff, "\033[23m");
       }
-      if(state.style & s_underline) {
-        state.style &= ~s_underline
+      if(sgr.style & s_underline) {
+        sgr.style &= ~s_underline
         len += COPY_OR_MEASURE(&buff, "\033[24m");
       }
-      if(state.style & s_blink) {
-        state.style &= ~s_blink;
+      if(sgr.style & s_blink) {
+        sgr.style &= ~s_blink;
         len += COPY_OR_MEASURE(&buff, "\033[25m");
       }
-      if(state.style & s_propspc) {
-        state.style &= ~s_propspc;
+      if(sgr.style & s_propspc) {
+        sgr.style &= ~s_propspc;
         len += COPY_OR_MEASURE(&buff, "\033[26m");
       }
-      if(state.style & s_inverse) {
-        state.style &= ~s_inverse;
+      if(sgr.style & s_inverse) {
+        sgr.style &= ~s_inverse;
         len += COPY_OR_MEASURE(&buff, "\033[27m");
       }
-      if(state.style & s_conceal) {
-        state.style &= ~s_conceal;
+      if(sgr.style & s_conceal) {
+        sgr.style &= ~s_conceal;
         len += COPY_OR_MEASURE(&buff, "\033[28m");
       }
-      if(state.style & s_strikethrough) {
-        state.style &= ~s_strikethrough;
+      if(sgr.style & s_strikethrough) {
+        sgr.style &= ~s_strikethrough;
         len += COPY_OR_MEASURE(&buff, "\033[29m");
       }
       // Make sure we're not out of sync with has_style
-      if(FANSI_state_has_style(state))
+      if(FANSI_active_sgr(sgr))
         error("Internal Error: did not successfully close all styles.");
     } else {
       if(buff) {
@@ -249,8 +249,8 @@ static SEXP writeline(
   // Check if we are in a CSI state b/c if we are we neeed extra room for
   // the closing state tag
 
-  int needs_close = FANSI_state_has_style(state_bound);
-  int needs_start = FANSI_state_has_style(state_start);
+  int needs_close = FANSI_active_sgr(state_bound.sgr);
+  int needs_start = FANSI_active_sgr(state_start.sgr);
 
   // state_bound.pos_byte 1 past what we need, so this should include room
   // for NULL terminator

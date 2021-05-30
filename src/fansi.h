@@ -106,17 +106,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     // what types of control sequences were found, seel also FANSI_state.ctl
     int ctl;
   };
-
   /*
-   * Captures the ANSI state at any particular position in a string.  Note this
-   * is only designed to capture SGR CSI codes (i.e. those of format
-   * "ESC[n;n;n;m") where "n" is a number.  This is a small subset of the
-   * possible ANSI escape codes.
-   *
-   * Note that the struct fields are ordered by size
+   * Encode Active SGR
    */
-
-  struct FANSI_state {
+  struct FANSI_sgr {
     /*
      * Encode the additional information required to render the 38 color code in
      * an array of 4 numbers:
@@ -135,17 +128,24 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int bg_color_extra[4];
 
     /*
+     * A number in 0-9, corrsponds to the ansi codes in the [3-4][0-9] range, if
+     * less than zero or 9 means no color is active.  If 8 (i.e. corresponding
+     * to the `38` code), then `color_extra` contains additional color info.
+     *
+     * If > 9 then for color in 90-97, the bright color, for bg_color, in
+     * 100-107 the bright bg color.
+     */
+
+    int color;           // the number following the 3 in 3[0-9]
+    int bg_color;        // the number following the 4 in 4[0-9]
+
+    /*
      * The original string the state corresponds to.  This should always be
      * a pointer to the beginning of the string, use the
      * `state.string[state.pos_byte]` to access the current position.
      *
      * Should be no longer than INT_MAX excluding terminating NULL.
      */
-    const char * string;
-    /*
-     * Any error associated with err_code
-     */
-    const char * err_msg;
 
     /*
      * should be interpreted as bit mask where with 2^n., 1-9 match to the
@@ -204,18 +204,26 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     /* Alternative fonts, 10-19, where 0 is the primary font */
 
     int font;
+  };
+
+  /*
+   * Captures the ANSI state at any particular position in a string.  Note this
+   * is only designed to capture SGR CSI codes (i.e. those of format
+   * "ESC[n;n;n;m") where "n" is a number.  This is a small subset of the
+   * possible ANSI escape codes.
+   *
+   * Note that the struct fields are ordered by size
+   */
+
+  struct FANSI_state {
+    struct FANSI_sgr sgr;
+    struct FANSI_sgr sgr_prev;
+
+    const char * string;
     /*
-     * A number in 0-9, corrsponds to the ansi codes in the [3-4][0-9] range, if
-     * less than zero or 9 means no color is active.  If 8 (i.e. corresponding
-     * to the `38` code), then `color_extra` contains additional color info.
-     *
-     * If > 9 then for color in 90-97, the bright color, for bg_color, in
-     * 100-107 the bright bg color.
+     * Any error associated with err_code
      */
-
-    int color;           // the number following the 3 in 3[0-9]
-    int bg_color;        // the number following the 4 in 4[0-9]
-
+    const char * err_msg;
     /*
      * Position markers (all zero index), we use int because these numbers
      * need to make it back to R which doesn't have a `size_t` type.
@@ -291,7 +299,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     // an SGR sequence.  This is used as part of the `read_esc` process and is
     // really intended to be internal.  It's really only meaningful when
     // `state.last` is true.
-    int sgr;
+    int is_sgr;
     // Whether to issue warnings if err_code is non-zero, if -1 means that the
     // warning was issued at least once so may not need to be re-issued
     int warn;
@@ -420,10 +428,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_state_comp_basic(
     struct FANSI_state target, struct FANSI_state current
   );
-  int FANSI_state_has_style(struct FANSI_state state);
-  struct FANSI_state FANSI_state_copy_style(
-    struct FANSI_state target, struct FANSI_state current
-  );
+  int FANSI_sgr_active(struct FANSI_sgr sgr);
   int FANSI_state_size(struct FANSI_state state);
   int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len);
 

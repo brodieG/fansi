@@ -378,21 +378,21 @@ int FANSI_color_size(int color, int * color_extra) {
  * to a string that has nothing else in it remember to allocate an extra byte
  * for the NULL terminator.
  */
-int FANSI_state_size(struct FANSI_state state) {
+int FANSI_sgr_size(struct FANSI_sgr sgr) {
   int size = 0;
-  if(FANSI_state_has_style(state)) {
-    int color_size = FANSI_color_size(state.color, state.color_extra);
-    int bg_color_size = FANSI_color_size(state.bg_color, state.bg_color_extra);
+  if(FANSI_sgr_active(sgr)) {
+    int color_size = FANSI_color_size(sgr.color, sgr.color_extra);
+    int bg_color_size = FANSI_color_size(sgr.bg_color, sgr.bg_color_extra);
 
     // styles are stored as bits, styles less than 10 correspond to 0-9, the
     // others are random ones but will need one more byte, hence the
     // `(2 + (i > 9))`
 
     int style_size = 0;
-    if(state.style) {
+    if(sgr.style) {
       for(int i = 1; i <= FANSI_STYLE_MAX; ++i){
         style_size +=
-          ((state.style & (1 << i)) > 0) *
+          ((sgr.style & (1 << i)) > 0) *
           (2 + (i > 9));
     } }
     // Some question of whether we are adding a slowdown to check for rarely use
@@ -401,23 +401,23 @@ int FANSI_state_size(struct FANSI_state state) {
     // Border
 
     int border_size = 0;
-    if(state.border) {
+    if(sgr.border) {
       for(int i = 1; i < 4; ++i){
-        border_size += ((state.border & (1 << i)) > 0) * 3;
+        border_size += ((sgr.border & (1 << i)) > 0) * 3;
       }
     }
     // Ideogram
 
     int ideogram_size = 0;
-    if(state.ideogram) {
+    if(sgr.ideogram) {
       for(int i = 0; i < 5; ++i){
-        ideogram_size += ((state.ideogram & (1 << i)) > 0) * 3;
+        ideogram_size += ((sgr.ideogram & (1 << i)) > 0) * 3;
       }
     }
     // font
 
     int font_size = 0;
-    if(state.font) font_size = 3;
+    if(sgr.font) font_size = 3;
 
     size += color_size + bg_color_size + style_size +
       border_size + ideogram_size + font_size + 2; // +2 for ESC[
@@ -491,7 +491,7 @@ unsigned int FANSI_color_write(
  *
  * return how many bytes were written
  */
-int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
+int FANSI_sgr_write(char * buff, struct FANSI_sgr sgr, int buff_len) {
   /****************************************************\
   | IMPORTANT: KEEP THIS ALIGNED WITH state_as_html    |
   | although right now ignoring rare escapes in html   |
@@ -499,31 +499,31 @@ int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
 
   int str_pos = 0;
 
-  if(FANSI_state_has_style(state)) {
+  if(FANSI_sgr_active(sgr)) {
     buff[str_pos++] = 27;    // ESC
     buff[str_pos++] = '[';
     // styles
 
     for(int i = 1; i < 10; i++) {
-      if((1 << i) & state.style) {
+      if((1 << i) & sgr.style) {
         buff[str_pos++] = '0' + i;
         buff[str_pos++] = ';';
     } }
     // styles outside 0-9
 
-    if(state.style & (1 << 10)) {
+    if(sgr.style & (1 << 10)) {
       // fraktur
       buff[str_pos++] = '2';
       buff[str_pos++] = '0';
       buff[str_pos++] = ';';
     }
-    if(state.style & (1 << 11)) {
+    if(sgr.style & (1 << 11)) {
       // double underline
       buff[str_pos++] = '2';
       buff[str_pos++] = '1';
       buff[str_pos++] = ';';
     }
-    if(state.style & (1 << 12)) {
+    if(sgr.style & (1 << 12)) {
       // prop spacing
       buff[str_pos++] = '2';
       buff[str_pos++] = '6';
@@ -532,34 +532,34 @@ int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
     // colors
 
     str_pos += FANSI_color_write(
-      &(buff[str_pos]), state.color, state.color_extra, 3
+      &(buff[str_pos]), sgr.color, sgr.color_extra, 3
     );
     str_pos += FANSI_color_write(
-      &(buff[str_pos]), state.bg_color, state.bg_color_extra, 4
+      &(buff[str_pos]), sgr.bg_color, sgr.bg_color_extra, 4
     );
     // Borders
 
-    if(state.border) {
+    if(sgr.border) {
       for(int i = 1; i < 4; ++i){
-        if((1 << i) & state.border) {
+        if((1 << i) & sgr.border) {
           buff[str_pos++] = '5';
           buff[str_pos++] = '0' + i;
           buff[str_pos++] = ';';
     } } }
     // Ideogram
 
-    if(state.ideogram) {
+    if(sgr.ideogram) {
       for(int i = 0; i < 5; ++i){
-        if((1 << i) & state.ideogram) {
+        if((1 << i) & sgr.ideogram) {
           buff[str_pos++] = '6';
           buff[str_pos++] = '0' + i;
           buff[str_pos++] = ';';
     } } }
     // font
 
-    if(state.font) {
+    if(sgr.font) {
       buff[str_pos++] = '1';
-      buff[str_pos++] = '0' + (state.font % 10);
+      buff[str_pos++] = '0' + (sgr.font % 10);
       buff[str_pos++] = ';';
     }
     // Finalize
@@ -581,16 +581,16 @@ int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len) {
  * Generate the ANSI tag corresponding to the state and write it out as a NULL
  * terminated string.
  */
-char * FANSI_state_as_chr(struct FANSI_state state) {
+char * FANSI_sgr_as_chr(struct FANSI_sgr sgr) {
   // First pass computes total size of tag; we need to account for the
   // separator as well
 
-  int tag_len = FANSI_state_size(state);
+  int tag_len = FANSI_sgr_size(sgr);
 
   // Now allocate and generate tag
 
   char * tag_tmp = R_alloc(tag_len + 1, sizeof(char));
-  int tag_len_written = FANSI_csi_write(tag_tmp, state, tag_len);
+  int tag_len_written = FANSI_sgr_write(tag_tmp, sgr, tag_len);
   if(tag_len_written > tag_len)
     error("Internal Error: CSI written larger than expected."); // nocov
   tag_tmp[tag_len_written] = 0;
@@ -609,16 +609,16 @@ int FANSI_state_comp_color(
   struct FANSI_state target, struct FANSI_state current
 ) {
   return !(
-    target.color == current.color &&
-    target.bg_color == current.bg_color &&
-    target.color_extra[0] == current.color_extra[0] &&
-    target.bg_color_extra[0] == current.bg_color_extra[0] &&
-    target.color_extra[1] == current.color_extra[1] &&
-    target.bg_color_extra[1] == current.bg_color_extra[1] &&
-    target.color_extra[2] == current.color_extra[2] &&
-    target.bg_color_extra[2] == current.bg_color_extra[2] &&
-    target.color_extra[3] == current.color_extra[3] &&
-    target.bg_color_extra[3] == current.bg_color_extra[3]
+    target.sgr.color == current.sgr.color &&
+    target.sgr.bg_color == current.sgr.bg_color &&
+    target.sgr.color_extra[0] == current.sgr.color_extra[0] &&
+    target.sgr.bg_color_extra[0] == current.sgr.bg_color_extra[0] &&
+    target.sgr.color_extra[1] == current.sgr.color_extra[1] &&
+    target.sgr.bg_color_extra[1] == current.sgr.bg_color_extra[1] &&
+    target.sgr.color_extra[2] == current.sgr.color_extra[2] &&
+    target.sgr.bg_color_extra[2] == current.sgr.bg_color_extra[2] &&
+    target.sgr.color_extra[3] == current.sgr.color_extra[3] &&
+    target.sgr.bg_color_extra[3] == current.sgr.bg_color_extra[3]
   );
 }
 int FANSI_state_comp_basic(
@@ -627,44 +627,22 @@ int FANSI_state_comp_basic(
   // 1023 is '11 1111 1111' in binary, so this will grab the last ten bits
   // of the styles which are the 1-9 styles
   return FANSI_state_comp_color(target, current) ||
-    (target.style & 1023) != (current.style & 1023);
+    (target.sgr.style & 1023) != (current.sgr.style & 1023);
 }
 int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
   return !(
-    !FANSI_state_comp_basic(target, current) &&
-    target.style == current.style &&
-    target.border == current.border &&
-    target.font == current.font &&
-    target.ideogram == current.ideogram
+    !FANSI_state_comp_basic(target.sgr, current.sgr) &&
+    target.sgr.style == current.sgr.style &&
+    target.sgr.border == current.sgr.border &&
+    target.sgr.font == current.sgr.font &&
+    target.sgr.ideogram == current.sgr.ideogram
   );
 }
-// Keep synchronized with close_active_state
-int FANSI_state_has_style(struct FANSI_state state) {
+// Keep synchronized with write_end_state
+int FANSI_sgr_active(struct FANSI_sgr sgr) {
   return
-    state.style || state.color >= 0 || state.bg_color >= 0 ||
-    state.font || state.border || state.ideogram;
-}
-
-/*
- * Copy the style members from current to target
- */
-struct FANSI_state FANSI_state_copy_style(
-  struct FANSI_state target, struct FANSI_state current
-) {
-  target.style = current.style;
-  target.border = current.border;
-  target.font = current.font;
-  target.ideogram = current.ideogram;
-
-  target.color = current.color;
-  for(int i = 0; i < 4; ++i) {
-    target.color_extra[i] = current.color_extra[i];
-  }
-  target.bg_color = current.bg_color;
-  for(int i = 0; i < 4; ++i) {
-    target.bg_color_extra[i] = current.bg_color_extra[i];
-  }
-  return target;
+    sgr.style || sgr.color >= 0 || sgr.bg_color >= 0 ||
+    sgr.font || sgr.border || sgr.ideogram;
 }
 /*
  * R interface for FANSI_state_at_position

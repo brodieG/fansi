@@ -67,20 +67,20 @@ static unsigned int style_html_mask() {
   }
   return css_html_mask;
 }
-static int state_has_color(struct FANSI_state state) {
-  return state.color >= 0 || state.bg_color >= 0;
+static int sgr_has_color(struct FANSI_sgr sgr) {
+  return sgr.color >= 0 || sgr.bg_color >= 0;
 }
-static int state_has_style_html(struct FANSI_state state) {
+static int sgr_has_style_html(struct FANSI_sgr sgr) {
   // generate mask first time around.
-  return (state.style & style_html_mask()) ||
-    state.color >= 0 || state.bg_color >= 0;
+  return (sgr.style & style_html_mask()) ||
+    sgr.color >= 0 || sgr.bg_color >= 0;
 }
-static int state_comp_html(
-  struct FANSI_state target, struct FANSI_state current
+static int sgr_comp_html(
+  struct FANSI_sgr target, struct FANSI_sgr current
 ) {
   return
     // Colors are Different
-    FANSI_state_comp_color(target, current) ||
+    FANSI_sgr_comp_color(target, current) ||
     // HTML rendered styles are different
     (
       (target.style & style_html_mask()) !=
@@ -89,11 +89,10 @@ static int state_comp_html(
     // If one has color both have the same color, but we need to check
     // whether they have different invert status
     (
-      (state_has_color(target)) &&
+      (sgr_has_color(target)) &&
       (target.style & (1U << 7)) ^ (current.style & (1U << 7))
     );
 }
-
 /*
  * Converts basic, bright and 8 bit colors to a range of 0:255.
  * Returns -1 for other values including no color.
@@ -144,7 +143,7 @@ static const char * get_color_class(
  * @param color an integer expected to be in 0:9, 90:97, 100:107. NB: ranges
  *   30:39 and 40:49 already converted to 0:9.
  * @param color_extra a pointer to a 4 long integer array as you would get in
- *   struct FANSI_state.color_extra
+ *   struct FANSI_sgr.color_extra
  * @param buff a buffer with at least 8 bytes allocated.
  * @return the *buff pointer
  */
@@ -251,7 +250,7 @@ static char * color_to_html(int color, int * color_extra, char * buff) {
 static char * oe_sgr_html_err = "Expanding SGR sequences to HTML";
 
 /*
- * Compute HTML Size of Each Individual State, Or Write It
+ * Compute HTML Size of Each Individual SGR Sequence, Or Write It
  *
  * This used to be two distinct functions, but the risk of getting out of sync
  * was too high so we merged them into one.  We try to minimize the
@@ -263,9 +262,9 @@ static char * oe_sgr_html_err = "Expanding SGR sequences to HTML";
  * @param buff the buffer to write to, if it is null only computes size instead
  *   also of writing.
  */
-static int state_size_and_write_as_html(
-  struct FANSI_state state,
-  struct FANSI_state state_prev,
+static int sgr_size_and_write_as_html(
+  struct FANSI_sgr sgr,
+  struct FANSI_sgr sgr_prev,
   char * buff,
   SEXP color_classes, R_xlen_t i,
   int bytes_html
@@ -275,12 +274,11 @@ static int state_size_and_write_as_html(
   | although right now ignoring rare escapes in html   |
   \****************************************************/
 
-  // Not all basic styles are html styles (e.g. invert), so state only changes
+  // Not all basic styles are html styles (e.g. invert), so sgr only changes
   // on invert when current or previous also has a color style
-
-  int has_cur_state = state_has_style_html(state);
-  int has_prev_state = state_has_style_html(state_prev);
-  int state_change = state_comp_html(state, state_prev);
+  int has_cur_sgr = sgr_has_style_html(sgr);
+  int has_prev_sgr = sgr_has_style_html(sgr_prev);
+  int sgr_change = sgr_comp_html(sgr, sgr_prev);
 
   const char * buff_start = buff;
   int len = bytes_html;            // this is for overflow check
@@ -288,18 +286,18 @@ static int state_size_and_write_as_html(
 
   // COPY_OR_MEASURE requires variables len, i, and err_msg
 
-  if(state_change) {
-    if(!has_cur_state) len += COPY_OR_MEASURE(&buff, "</span>");
+  if(sgr_change) {
+    if(!has_cur_sgr) len += COPY_OR_MEASURE(&buff, "</span>");
     else {
-      if (!has_prev_state)  len += COPY_OR_MEASURE(&buff, "<span");
+      if (!has_prev_sgr)  len += COPY_OR_MEASURE(&buff, "<span");
       else len += COPY_OR_MEASURE(&buff, "</span><span");
 
       // Styles
-      int invert = state.style & (1 << 7);
-      int color = invert ? state.bg_color : state.color;
-      int * color_extra = invert ? state.bg_color_extra : state.color_extra;
-      int bg_color = invert ? state.color : state.bg_color;
-      int * bg_color_extra = invert ? state.color_extra : state.bg_color_extra;
+      int invert = sgr.style & (1U << 7U);
+      int color = invert ? sgr.bg_color : sgr.color;
+      int * color_extra = invert ? sgr.bg_color_extra : sgr.color_extra;
+      int bg_color = invert ? sgr.color : sgr.bg_color;
+      int * bg_color_extra = invert ? sgr.color_extra : sgr.bg_color_extra;
 
       // Use provided classes instead of inline styles?
       const char * color_class =
@@ -319,7 +317,7 @@ static int state_size_and_write_as_html(
       }
       // inline style and/or colors
       if(
-        state.style & css_html_mask ||
+        sgr.style & style_html_mask() ||
         (color >= 0 && (!color_class)) ||
         (bg_color >= 0 && (!bgcol_class))
       ) {
@@ -340,8 +338,8 @@ static int state_size_and_write_as_html(
           );
         }
         // Styles (need to go after color for transparent to work)
-        for(int i = 1; i < 10; ++i)
-          if(state.style & css_html_mask & (1 << i)) {
+        for(unsigned int i = 1U; i < 10U; ++i)
+          if(sgr.style & style_html_mask() & (1U << i)) {
             if(len_start < len) len += COPY_OR_MEASURE(&buff, "; ");
             len += COPY_OR_MEASURE(&buff, css_style[i - 1].css);
           }
@@ -453,7 +451,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
     // Some ESCs may not produce any HTML, and some strings may gain HTML from
     // an ESC from a prior element even if they have no ESCs.
     int has_esc = 0;
-    int has_state = state_has_style_html(state);
+    int has_state = sgr_has_style_html(state.sgr);
     int trail_span = 0;
 
     // Process the strings in two passes, in pass 1 we compute how many bytes
@@ -467,15 +465,15 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
     // - Pass 1: Measure -------------------------------------------------------
 
     // Leftover from prior element (only if can't be merged with new)
-    if(*string && *string != 0x1b && state_has_style_html(state)) {
-      bytes_html += state_size_and_write_as_html(
-        state, state_prev,  NULL, color_classes, i, bytes_html
+    if(*string && *string != 0x1b && sgr_has_style_html(state.sgr)) {
+      bytes_html += sgr_size_and_write_as_html(
+        state.sgr, state_prev.sgr,  NULL, color_classes, i, bytes_html
       );
       state_prev = state;
     }
     // New in this element
     while(1) {
-      trail_span = state_has_style_html(state_prev);
+      trail_span = sgr_has_style_html(state_prev);
       string = strchr(string, 0x1b);
       if(!string) string = state.string + bytes_init;
       else {
@@ -489,12 +487,12 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
         string = state.string + state.pos_byte;
         bytes_esc += state.pos_byte - esc_start;  // cannot overflow int
         if(*string) {
-          bytes_html += state_size_and_write_as_html(
-            state, state_prev,  NULL, color_classes, i, bytes_html
+          bytes_html += sgr_size_and_write_as_html(
+            state.sgr, state_prev.sgr,  NULL, color_classes, i, bytes_html
           );
         }
         state_prev = state;
-        has_state |= state_has_style_html(state);
+        has_state |= sgr_has_style_html(state.sgr);
         if(!*string) break; // nothing after state, so done
       } else break;
     }
@@ -522,15 +520,15 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       // Very similar to pass 1 loop, but different enough it would be annoying
       // to make a common function
 
-      if(*string && *string != 0x1b && state_has_style_html(state)) {
-        buff_track += state_size_and_write_as_html(
-          state, state_prev,  buff_track, color_classes, i, 0
+      if(*string && *string != 0x1b && sgr_has_style_html(sgr)) {
+        buff_track += sgr_size_and_write_as_html(
+          state.sgr, state_prev.sgr,  buff_track, color_classes, i, 0
         );
         state_prev = state;
       }
       while(1) {
         const char * string_prev = string;
-        trail_span = state_has_style_html(state_prev);
+        trail_span = sgr_has_style_html(state_prev);
         string = strchr(string, 0x1b);
         if(!string) string = state.string + bytes_init;
         else state.pos_byte = (string - state.string);
@@ -546,8 +544,8 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
           state = FANSI_read_next(state);
           string = state.string + state.pos_byte;
           if(*string) {
-            buff_track += state_size_and_write_as_html(
-              state, state_prev,  buff_track, color_classes, i, 0
+            buff_track += sgr_size_and_write_as_html(
+              state.sgr, state_prev.sgr,  buff_track, color_classes, i, 0
             );
           }
           state_prev = state;
@@ -587,7 +585,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
  * Testing interface
  *
  * x is a 5 x N matrix where, for each column the first value is a color code,
- * and subsequent values correspond to the state.color_extra values.
+ * and subsequent values correspond to the state.sgr.color_extra values.
  */
 
 SEXP FANSI_color_to_html_ext(SEXP x) {
