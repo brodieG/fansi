@@ -298,9 +298,10 @@ static SEXP writeline(
   int state_start_size = 0;
   int start_close = 0;
 
-  if(needs_close) start_close += 4;
+  if(needs_close) start_close +=
+    write_end_sgr(state_bound.sgr, NULL, start_close, index, normalize);
   if(needs_start) {
-    state_start_size = FANSI_state_size(state_start);
+    state_start_size = FANSI_sgr_size(state_start.sgr, normalize);
     start_close += state_start_size;  // this can't possibly overflow
   }
   target_size += FANSI_check_append(
@@ -315,7 +316,7 @@ static SEXP writeline(
 
   if(needs_start) {
     // Rprintf("  writing start: %d\n", state_start_size);
-    FANSI_csi_write(buff_track, state_start, state_start_size);
+    FANSI_csi_write(buff_track, state_start, state_start_size, normalize);
     buff_track += state_start_size;
   }
   // Apply indent/exdent prefix/initial
@@ -341,11 +342,9 @@ static SEXP writeline(
   }
   // And turn off CSI styles if needed
 
-  if(needs_close) {
-    // Rprintf("  close\n");
-    memcpy(buff_track, "\033[0m", 4);
-    buff_track += 4;
-  }
+  if(needs_close)
+    write_end_sgr(state_bound.sgr, buff_track, start_close, index, normalize);
+
   *buff_track = 0;
 
   if(buff_track - buff->buff != target_size)
@@ -449,17 +448,14 @@ static SEXP strwrap(
     // state_bound for the special case where we are in strip space mode
     // and we happen to hit the width in a two space sequence such as we might
     // get after [.!?].
+    //
+    // We're ignoring otherw word boundaries, but strwrap does too.
 
     if(
       state.string[state.pos_byte] == ' ' ||
       state.string[state.pos_byte] == '\t' ||
       state.string[state.pos_byte] == '\n'
     ) {
-      // Rprintf(
-      //   "Bound @ %d raw: %d chr: %d prev: %d\n",
-      //   state.pos_byte - state_start.pos_byte, state.pos_byte,
-      //   state.string[state.pos_byte], prev_boundary
-      // );
       if(strip_spaces && !prev_boundary) state_bound = state;
       else if(!strip_spaces) state_bound = state;
       has_boundary = prev_boundary = 1;
