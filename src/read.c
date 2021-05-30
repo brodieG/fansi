@@ -18,6 +18,18 @@
 
 #include "fansi.h"
 
+/*
+ * GENERAL NOTES ON read_ FUNCTIONS
+ *
+ * * state.pos_byte is taken to be the first unread character.
+ * * state.pos_byte will be the first unread character after a call to `read_*`
+ * * It is assumed that the string pointed to by a state cannot be longer than
+ *   INT_MAX, so we do not check for overflow (this is checked on state init).
+ * * Except for width calculations, which we'll have to decided whether we want
+ *   to check overflow on or not since in UTF8 currently widest string is 2 wide
+ *   and no single byte characters are more than 1 wide.
+ */
+
 // Can a byte be interpreted as ASCII number?
 
 static int is_num(const char * string) {
@@ -251,6 +263,8 @@ static struct FANSI_state parse_colors(
 /*
  * Read a Character Off when we know it is an ascii char, this is so we have a
  * consistent way of advancing state.
+ *
+ * See GENERAL NOTES atop.
  */
 static struct FANSI_state read_ascii(struct FANSI_state state) {
   ++state.pos_byte;
@@ -263,6 +277,8 @@ static struct FANSI_state read_ascii(struct FANSI_state state) {
 }
 /*
  * Parses ESC sequences
+ *
+ * See GENERAL NOTES atop.
  *
  * In particular, special treatment for ANSI CSI SGR sequences.
  *
@@ -589,6 +605,8 @@ static int normalize_state() {
 
 /*
  * Read UTF8 character
+ *
+ * See GENERAL NOTES atop.
  */
 static struct FANSI_state read_utf8(struct FANSI_state state) {
   int byte_size = FANSI_utf8clen(state.string[state.pos_byte]);
@@ -661,6 +679,8 @@ static struct FANSI_state read_utf8(struct FANSI_state state) {
 }
 /*
  * C0 ESC sequences treated as zero width and do not count as characters either
+ *
+ * See GENERAL NOTES atop.
  */
 static struct FANSI_state read_c0(struct FANSI_state state) {
   int is_nl = state.string[state.pos_byte] == '\n';
@@ -684,10 +704,9 @@ static struct FANSI_state read_c0(struct FANSI_state state) {
 /*
  * Read a Character Off and Update State
  *
- * This can probably use some pretty serious optimization...
+ * See GENERAL NOTES atop.
  *
- * We assume string being read <= INT_MAX, so no possibility of overflow.  Only
- * use on strings sourced from CHARXPs
+ * This can probably use some pretty serious optimization...
  */
 struct FANSI_state FANSI_read_next(struct FANSI_state state) {
   const char chr_val = state.string[state.pos_byte];
