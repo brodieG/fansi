@@ -51,7 +51,7 @@ static int as_num(const char * string) {
 /*
  * Reset all the display attributes, but not the position ones
  */
-static struct FANSI_state reset_sgr(struct FANSI_sgr sgr) {
+static struct FANSI_sgr reset_sgr(struct FANSI_sgr sgr) {
   sgr.style = 0;
   sgr.color = -1;
   for(int i = 0; i < 4; i++) sgr.color_extra[i] = 0;
@@ -60,7 +60,6 @@ static struct FANSI_state reset_sgr(struct FANSI_sgr sgr) {
   sgr.border = 0;
   sgr.ideogram = 0;
   sgr.font = 0;
-
   return  sgr;
 }
 // Store the result of reading a parameter substring token
@@ -85,9 +84,9 @@ struct FANSI_tok_res {
 static struct FANSI_tok_res parse_token(const char * string) {
   unsigned int mult, val;
   int len, len_intermediate, len_tail, last, non_standard, private, err_code,
-    leading_zeros, not_zero, sgr;
+    leading_zeros, not_zero, is_sgr, terminal;
   len = len_intermediate = len_tail = val = last = non_standard = private =
-    err_code = leading_zeros = not_zero = sgr = 0;
+    err_code = leading_zeros = not_zero = is_sgr = terminal = 0;
   mult = 1;
 
   // `private` a bit redundant since we don't actually use it differentially to
@@ -114,7 +113,7 @@ static struct FANSI_tok_res parse_token(const char * string) {
   }
   // check for final byte
 
-  terminal = sgr = 0;
+  terminal = is_sgr = 0;
   last = 1;
   if((*string == ';' || *string == 'm') && !len_intermediate) {
     // valid end of SGR parameter substring
@@ -124,7 +123,7 @@ static struct FANSI_tok_res parse_token(const char * string) {
     // can parse multiple CSI sequences one after the other, and we accumulate
     // the err_code value, it's cleaner to just explicitly determine whether
     // sequence is actually sgr.
-    if(*string == 'm') sgr = 1;
+    if(*string == 'm') is_sgr = 1;
     if(last && *(string + 1) == 0) terminal = 1;
   } else if(*string >= 0x40 && *string <= 0x7E && len_intermediate <= 1) {
     // valid final byte
@@ -344,6 +343,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
     // nocov end
 
   int err_code = 0;                       // track worst error code
+  struct FANSI_sgr sgr_prev = state.sgr;
 
   // consume all contiguous ESC sequences; some complexity due to the addition
   // of the requirement that we only actually interpret the ESC sequences if
@@ -412,7 +412,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
           // error codes should be the only things changing.
 
           if(!tok_res.val) {
-            state = reset_sgr(state);
+            state.sgr = reset_sgr(state.sgr);
           } else if (tok_res.val < 10) {
             // 1-9 are the standard styles (bold/italic)
             // We use a bit mask on to track these
@@ -498,7 +498,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
             } else if (tok_res.val == 55) {
               state.sgr.border &= ~(1U << 3);
             } else {
-              state.sgr.err_code = 1;  // unknown token
+              state.err_code = 1;  // unknown token
             }
           } else if(tok_res.val >= 60 && tok_res.val < 70) {
             // ideograms
@@ -581,7 +581,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
   }
   // Useful to know what prior style was in case this series of escapes ends up
   // being the last thing before terminal NULL.
-  state.sgr_prev = state_prev.sgr;
+  state.sgr_prev = sgr_prev;
   return state;
 }
 /*

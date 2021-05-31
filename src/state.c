@@ -96,9 +96,9 @@ struct FANSI_state FANSI_state_init_full(
     term_cap_int |= 1 << (term_int[i] - 1);
   }
   return (struct FANSI_state) {
+    .sgr = (struct FANSI_sgr) {.color = -1, .bg_color = -1},
+    .sgr_prev = (struct FANSI_sgr) {.color = -1, .bg_color = -1},
     .string = string,
-    .color = -1,
-    .bg_color = -1,
     .warn = warn_int,
     .term_cap = term_cap_int,
     .allowNA = asLogical(allowNA),
@@ -370,230 +370,194 @@ int FANSI_color_size(int color, int * color_extra) {
   return size;
 }
 /*
- * Computes how many bytes we need to write out a state
- *
- * No overflow worries here b/c ints are 32bit+
- *
- * Includes the ESC[m size, but not the NULL terminator, so if you are writing
- * to a string that has nothing else in it remember to allocate an extra byte
- * for the NULL terminator.
+ * Helper to make an SGR token, possibly full SGR if in normalize mode
  */
-int FANSI_sgr_size(struct FANSI_sgr sgr) {
-  int size = 0;
-  if(FANSI_sgr_active(sgr)) {
-    int color_size = FANSI_color_size(sgr.color, sgr.color_extra);
-    int bg_color_size = FANSI_color_size(sgr.bg_color, sgr.bg_color_extra);
-
-    // styles are stored as bits, styles less than 10 correspond to 0-9, the
-    // others are random ones but will need one more byte, hence the
-    // `(2 + (i > 9))`
-
-    int style_size = 0;
-    if(sgr.style) {
-      for(int i = 1; i <= FANSI_STYLE_MAX; ++i){
-        style_size +=
-          ((sgr.style & (1 << i)) > 0) *
-          (2 + (i > 9));
-    } }
-    // Some question of whether we are adding a slowdown to check for rarely use
-    // ESC sequences such as these...
-
-    // Border
-
-    int border_size = 0;
-    if(sgr.border) {
-      for(int i = 1; i < 4; ++i){
-        border_size += ((sgr.border & (1 << i)) > 0) * 3;
-      }
-    }
-    // Ideogram
-
-    int ideogram_size = 0;
-    if(sgr.ideogram) {
-      for(int i = 0; i < 5; ++i){
-        ideogram_size += ((sgr.ideogram & (1 << i)) > 0) * 3;
-      }
-    }
-    // font
-
-    int font_size = 0;
-    if(sgr.font) font_size = 3;
-
-    size += color_size + bg_color_size + style_size +
-      border_size + ideogram_size + font_size + 2; // +2 for ESC[
+static char * make_token(char * buff, const char * val, int normalize) {
+  if(val[2])
+    error("Internal error: token maker limited to 2 chars max."); // nocov
+  if(!normalize) {
+    strcpy(buff, val);
+    strcat(buff, ";");
+  } else {
+    char * buff_track = buff;
+    *(buff_track++) = '\033';
+    *(buff_track++) = '[';
+    strcpy(buff_track, val);
+    strcat(buff_track, "m");
   }
-  return size;
+  return buff;
 }
 /*
  * Write extra color info to string
  *
- * Modifies string by reference.  This assumes
- * that the 3 or 4 has been written already and that we're not in a -1 color
- * state that shouldn't have color.
- *
- * String should be a pointer to the location we want to start writing, so
- * should already be offset.  The return value is the offset from the original
- * position
+ * buff should be at least 20 bytes.
+ * largest: "\033[48;2;255;255;255m", 19 chars + NULL
  */
-unsigned int FANSI_color_write(
-  char * string, int color, int * color_extra, int mode
+static char * color_token(
+  char * buff, int color, int * color_extra, int mode, int normalize
 ) {
   if(mode != 3 && mode != 4)
     error("Internal Error: color mode must be 3 or 4");  // nocov
 
-  unsigned int str_off = 0;
-  if(color >= 0 && color < 10) {
-    string[str_off++] = mode == 3 ? '3' : '4';
+  char * buff_track = buff;
 
-    if(color != 8) {
-      string[str_off++] = '0' + color;
-      string[str_off++] = ';';
-    } else {
-      string[str_off++] = '8';
-      string[str_off++] = ';';
-
-      int write_chrs = -1;
+  if(normalize) {
+    *(buff_track++) = '\033';
+    *(buff_track++) = '[';
+  }
+  if(color >= 0 && color < 10) {  // should this be < 9?
+    *(buff_track++) = '0' + mode;
+    *(buff_track++) = '0' + color;
+    if(color == 8) {
+      *(buff_track++) = ';';
+      int write_chrs = 0;
       if(color_extra[0] == 2) {
         write_chrs = sprintf(
-          string + str_off,
-          "2;%d;%d;%d;", color_extra[1], color_extra[2], color_extra[3]
+          buff_track, "2;%d;%d;%d",
+          color_extra[1], color_extra[2], color_extra[3]
         );
-      } else if (color_extra[0] == 5) {
-        write_chrs = sprintf(string + str_off, "5;%d;", color_extra[1]);
+      } else if(color_extra[0] == 5) {
+        write_chrs = sprintf(buff_track, "5;%d", color_extra[1]);
       } else error("Internal Error: unexpected color code.");  // nocov
-
       if(write_chrs < 0)
-        error("Internal Error: failed writing color code.");  // nocov
-      str_off += write_chrs;
+        error("Internal Error: failed writing color code.");   // nocov
+      buff_track += write_chrs;
     }
   } else if(color >= 100 && color <= 107) {
     // bright colors, we don't actually need to worry about bg vs fg since the
     // actual color values are different
-
-    string[str_off++] = '1';
-    string[str_off++] = '0';
-    string[str_off++] = '0' + color - 100;
-    string[str_off++] = ';';
+    *(buff_track++) = '1';
+    *(buff_track++) = '0';
+    *(buff_track++) = '0' + color - 100;
   } else if(color >= 90 && color <= 97) {
-    string[str_off++] = '9';
-    string[str_off++] = '0' + color - 90;
-    string[str_off++] = ';';
+    *(buff_track++) = '0';
+    *(buff_track++) = '0' + color - 90;
+  } else {
+    error("Internal Error: unexpected color code.");  // nocov
   }
-  return str_off;
+  if(normalize) *(buff_track++) = 'm';
+  else *(buff_track++) = ';';
+  *buff_track = 0;
+  if(buff_track - buff > 19)  // too late if this happened...
+    error("Internal Error: exceeded color buffer.");  // nocov
+  return buff;
 }
 /*
- * We split this part out because in some cases we want to modify pre-existing
- * buffers
+ * Output an SGR state as a string.
  *
- * Modifies the buffer by reference.
+ * Set buff to NULL to get size instead of writing.
  *
- * DOES NOT ADD NULL TERMINATOR.
- *
- * return how many bytes were written
+ * Return how many needed / written bytes.
  */
-int FANSI_sgr_write(char * buff, struct FANSI_sgr sgr, int buff_len) {
+int FANSI_sgr_write(
+  char * buff, struct FANSI_sgr sgr, int len, R_xlen_t i, int normalize
+) {
   /****************************************************\
   | IMPORTANT: KEEP THIS ALIGNED WITH state_as_html    |
   | although right now ignoring rare escapes in html   |
   \****************************************************/
 
-  int str_pos = 0;
+  int len0 = len;
+  const char * err_msg = "Writing SGR tokens"; // for COPY_OR_MEASURE
+  // biggest would be "\033[XXm" + NULL, won't fit e.g bright color codes
+  // CAREFUL if we modify code to use `tmp` for other purposes.
+  char tmp[6] = {0};
+  char * buff_track  = buff;
 
   if(FANSI_sgr_active(sgr)) {
-    buff[str_pos++] = 27;    // ESC
-    buff[str_pos++] = '[';
+    if(!normalize) len += COPY_OR_MEASURE(&buff_track, "\033[");
     // styles
-
+    char * tokval = "0";
     for(int i = 1; i < 10; i++) {
       if((1 << i) & sgr.style) {
-        buff[str_pos++] = '0' + i;
-        buff[str_pos++] = ';';
+        tokval[0] = '0' + i;
+        len += COPY_OR_MEASURE(&buff_track, make_token(tmp, tokval, normalize));
     } }
     // styles outside 0-9
 
     if(sgr.style & (1 << 10)) {
       // fraktur
-      buff[str_pos++] = '2';
-      buff[str_pos++] = '0';
-      buff[str_pos++] = ';';
+      len += COPY_OR_MEASURE(&buff_track, make_token(tmp, "20", normalize));
     }
     if(sgr.style & (1 << 11)) {
       // double underline
-      buff[str_pos++] = '2';
-      buff[str_pos++] = '1';
-      buff[str_pos++] = ';';
+      len += COPY_OR_MEASURE(&buff_track, make_token(tmp, "21", normalize));
     }
     if(sgr.style & (1 << 12)) {
       // prop spacing
-      buff[str_pos++] = '2';
-      buff[str_pos++] = '6';
-      buff[str_pos++] = ';';
+      len += COPY_OR_MEASURE(&buff_track, make_token(tmp, "26", normalize));
     }
     // colors
-
-    str_pos += FANSI_color_write(
-      &(buff[str_pos]), sgr.color, sgr.color_extra, 3
-    );
-    str_pos += FANSI_color_write(
-      &(buff[str_pos]), sgr.bg_color, sgr.bg_color_extra, 4
-    );
+    if(sgr.color > -1) {
+      char tokval[17] = {0};  // largest: "38;2;255;255;255", 16 chars + NULL
+      len += COPY_OR_MEASURE(
+        &buff_track,
+        color_token(tokval, sgr.color, sgr.color_extra, 3, normalize)
+      );
+    }
+    if(sgr.bg_color > -1) {
+      char tokval[17] = {0};
+      len += COPY_OR_MEASURE(
+        &buff_track,
+        color_token(tokval, sgr.bg_color, sgr.bg_color_extra, 4, normalize)
+      );
+    }
     // Borders
-
     if(sgr.border) {
-      for(int i = 1; i < 4; ++i){
+      char * tokval = "50";
+      for(int i = 1; i < 4; ++i) {
         if((1 << i) & sgr.border) {
-          buff[str_pos++] = '5';
-          buff[str_pos++] = '0' + i;
-          buff[str_pos++] = ';';
+          tokval[1] = '0' + i;
+          len +=
+            COPY_OR_MEASURE(&buff_track, make_token(tmp, tokval, normalize));
     } } }
     // Ideogram
-
     if(sgr.ideogram) {
+      char * tokval = "60";
       for(int i = 0; i < 5; ++i){
         if((1 << i) & sgr.ideogram) {
-          buff[str_pos++] = '6';
-          buff[str_pos++] = '0' + i;
-          buff[str_pos++] = ';';
+          tokval[1] = '0' + i;
+          len +=
+            COPY_OR_MEASURE(&buff_track, make_token(tmp, tokval, normalize));
     } } }
     // font
-
     if(sgr.font) {
-      buff[str_pos++] = '1';
-      buff[str_pos++] = '0' + (sgr.font % 10);
-      buff[str_pos++] = ';';
+      char * tokval = "10";
+      tokval[1] = '0' + (sgr.font % 10);
+      len += COPY_OR_MEASURE(&buff_track, make_token(tmp, tokval, normalize));
     }
     // Finalize
 
-    if(str_pos != buff_len)
+    if(buff) {
+      buff[len - 1] = 'm';
       // nocov start
       // note this error is really too late, as we could have written past
       // allocation in the steps above
-      error(
-        "Internal Error: tag mem allocation mismatch (%u, %u)",
-        str_pos, buff_len
-      );
+      if(buff_track - buff != len - len0)
+        // nocov start
+        error(
+          "Internal Error: %s (%td vs %d).",
+          "buffer length mismatch in writing SGR generation (2)",
+          buff_track - buff, len - len0
+        );
       // nocov end
-    buff[str_pos - 1] = 'm';
+    }
   }
-  return str_pos;
+  return len;
 }
 /*
  * Generate the ANSI tag corresponding to the state and write it out as a NULL
  * terminated string.
  */
-char * FANSI_sgr_as_chr(struct FANSI_sgr sgr) {
-  // First pass computes total size of tag; we need to account for the
-  // separator as well
+char * FANSI_sgr_as_chr(struct FANSI_sgr sgr, int normalize, R_xlen_t i) {
+  // First pass computes total size of tag
+  int tag_len = FANSI_sgr_write(NULL, sgr, 0, i, normalize);
 
-  int tag_len = FANSI_sgr_size(sgr);
+  // Now write
+  char * tag_tmp = R_alloc((size_t) tag_len + 1, sizeof(char));
+  FANSI_sgr_write(tag_tmp, sgr, tag_len, normalize, i);
+  tag_tmp[tag_len] = 0;
 
-  // Now allocate and generate tag
-
-  char * tag_tmp = R_alloc(tag_len + 1, sizeof(char));
-  int tag_len_written = FANSI_sgr_write(tag_tmp, sgr, tag_len);
-  if(tag_len_written > tag_len)
-    error("Internal Error: CSI written larger than expected."); // nocov
-  tag_tmp[tag_len_written] = 0;
   return tag_tmp;
 }
 /*
@@ -605,37 +569,37 @@ char * FANSI_sgr_as_chr(struct FANSI_sgr sgr) {
  *
  * _basic is used just for the 1-9 SGR codes plus colors.
  */
-int FANSI_state_comp_color(
-  struct FANSI_state target, struct FANSI_state current
+int FANSI_sgr_comp_color(
+  struct FANSI_sgr target, struct FANSI_sgr current
 ) {
   return !(
-    target.sgr.color == current.sgr.color &&
-    target.sgr.bg_color == current.sgr.bg_color &&
-    target.sgr.color_extra[0] == current.sgr.color_extra[0] &&
-    target.sgr.bg_color_extra[0] == current.sgr.bg_color_extra[0] &&
-    target.sgr.color_extra[1] == current.sgr.color_extra[1] &&
-    target.sgr.bg_color_extra[1] == current.sgr.bg_color_extra[1] &&
-    target.sgr.color_extra[2] == current.sgr.color_extra[2] &&
-    target.sgr.bg_color_extra[2] == current.sgr.bg_color_extra[2] &&
-    target.sgr.color_extra[3] == current.sgr.color_extra[3] &&
-    target.sgr.bg_color_extra[3] == current.sgr.bg_color_extra[3]
+    target.color == current.color &&
+    target.bg_color == current.bg_color &&
+    target.color_extra[0] == current.color_extra[0] &&
+    target.bg_color_extra[0] == current.bg_color_extra[0] &&
+    target.color_extra[1] == current.color_extra[1] &&
+    target.bg_color_extra[1] == current.bg_color_extra[1] &&
+    target.color_extra[2] == current.color_extra[2] &&
+    target.bg_color_extra[2] == current.bg_color_extra[2] &&
+    target.color_extra[3] == current.color_extra[3] &&
+    target.bg_color_extra[3] == current.bg_color_extra[3]
   );
 }
-int FANSI_state_comp_basic(
-  struct FANSI_state target, struct FANSI_state current
+int FANSI_sgr_comp_basic(
+  struct FANSI_sgr target, struct FANSI_sgr current
 ) {
   // 1023 is '11 1111 1111' in binary, so this will grab the last ten bits
   // of the styles which are the 1-9 styles
-  return FANSI_state_comp_color(target, current) ||
-    (target.sgr.style & 1023) != (current.sgr.style & 1023);
+  return FANSI_sgr_comp_color(target, current) ||
+    (target.style & 1023) != (current.style & 1023);
 }
-int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current) {
+int FANSI_sgr_comp(struct FANSI_sgr target, struct FANSI_sgr current) {
   return !(
-    !FANSI_state_comp_basic(target.sgr, current.sgr) &&
-    target.sgr.style == current.sgr.style &&
-    target.sgr.border == current.sgr.border &&
-    target.sgr.font == current.sgr.font &&
-    target.sgr.ideogram == current.sgr.ideogram
+    !FANSI_sgr_comp_basic(target, current) &&
+    target.style == current.style &&
+    target.border == current.border &&
+    target.font == current.font &&
+    target.ideogram == current.ideogram
   );
 }
 // Keep synchronized with write_end_state
@@ -653,7 +617,8 @@ int FANSI_sgr_active(struct FANSI_sgr sgr) {
 SEXP FANSI_state_at_pos_ext(
   SEXP text, SEXP pos, SEXP type,
   SEXP lag, SEXP ends,
-  SEXP warn, SEXP term_cap, SEXP ctl
+  SEXP warn, SEXP term_cap, SEXP ctl,
+  SEXP norm
 ) {
   /*******************************************\
   * IMPORTANT: INPUT MUST ALREADY BE IN UTF8! *
@@ -678,8 +643,11 @@ SEXP FANSI_state_at_pos_ext(
     error("Argument `term.cap` must be integer.");     // nocov
   if(TYPEOF(ctl) != INTSXP)
     error("Argument `ctl` must be integer.");         // nocov
+  if(TYPEOF(norm) != LGLSXP)
+    error("Argument `norm` must be logical.");         // nocov
 
   R_xlen_t len = XLENGTH(pos);
+  int normalize = asInteger(norm);
 
   const int res_cols = 4;  // if change this, need to change rownames init
   if(len > R_XLEN_T_MAX / res_cols) {
@@ -774,13 +742,13 @@ SEXP FANSI_state_at_pos_ext(
 
       // Record color tag if state changed
 
-      if(FANSI_state_comp(state, state_prev)) {
+      if(FANSI_sgr_comp(state.sgr, state_prev.sgr)) {
         // this computes length twice..., we know state_char can be at most
         // INT_MAX excluding NULL (and certainly will be much less).
-        char * state_chr = FANSI_state_as_chr(state);
+        char * state_chr = FANSI_sgr_as_chr(state.sgr, normalize, i);
         res_chr = PROTECT(
           FANSI_mkChar(
-            state_chr, state_chr + strlen(state_chr), CE_NATIVE, (R_len_t)0
+            state_chr, state_chr + strlen(state_chr), CE_NATIVE, i
         ) );
       } else {
         res_chr = PROTECT(res_chr_prev);

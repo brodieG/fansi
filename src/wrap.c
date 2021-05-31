@@ -132,8 +132,8 @@ static struct FANSI_prefix_dat drop_pre_indent(struct FANSI_prefix_dat dat) {
  * So instead we hard-code everything and hope we keep it in sync.
  */
 
-static int write_end_sgr(
-  struct FANSI_sgr sgr, char * buff, int len, R_xlen_t i, int normalize
+static int close_active_sgr(
+  char * buff, struct FANSI_sgr sgr, int len, R_xlen_t i, int normalize
 ) {
   // char * buff_track = buff;
   int len0 = len;
@@ -160,11 +160,11 @@ static int write_end_sgr(
         len += COPY_OR_MEASURE(&buff, "\033[10m");
       }
       if(sgr.border & (1U << 1U | 1U << 2U)) {
-        sgr.border & ~(1U << 1U | 1U << 2U);
+        sgr.border &= ~(1U << 1U | 1U << 2U);
         len += COPY_OR_MEASURE(&buff, "\033[54m");
       }
-      if(sgr.border & (1U << 3U) {
-        sgr.border & ~(1U << 3U);
+      if(sgr.border & (1U << 3U)) {
+        sgr.border &= ~(1U << 3U);
         len += COPY_OR_MEASURE(&buff, "\033[55m");
       }
       if(sgr.ideogram > 0U) {
@@ -174,11 +174,11 @@ static int write_end_sgr(
       unsigned int s_boldfaint = (1U << 1U | 1U << 2U);
       unsigned int s_frakital = (1U << 3U | 1U << 10U);
       unsigned int s_underline = (1U << 4U | 1U << 11U);
-      unsigned int s_blink = (1U << 5U | 1U << 6U)
-      unsigned int s_propspc = 1U << 12U
-      unsigned int s_inverse = 1U << 7U
-      unsigned int s_conceal = 1U << 8U
-      unsigned int s_strikethrough = 1U << 9U
+      unsigned int s_blink = (1U << 5U | 1U << 6U);
+      unsigned int s_propspc = 1U << 12U;
+      unsigned int s_inverse = 1U << 7U;
+      unsigned int s_conceal = 1U << 8U;
+      unsigned int s_strikethrough = 1U << 9U;
 
       if(sgr.style & s_boldfaint) {
         sgr.style &= ~s_boldfaint;
@@ -189,7 +189,7 @@ static int write_end_sgr(
         len += COPY_OR_MEASURE(&buff, "\033[23m");
       }
       if(sgr.style & s_underline) {
-        sgr.style &= ~s_underline
+        sgr.style &= ~s_underline;
         len += COPY_OR_MEASURE(&buff, "\033[24m");
       }
       if(sgr.style & s_blink) {
@@ -213,7 +213,7 @@ static int write_end_sgr(
         len += COPY_OR_MEASURE(&buff, "\033[29m");
       }
       // Make sure we're not out of sync with has_style
-      if(FANSI_active_sgr(sgr))
+      if(FANSI_sgr_active(sgr))
         error("Internal Error: did not successfully close all styles.");
     } else {
       if(buff) {
@@ -244,17 +244,13 @@ static SEXP writeline(
   R_xlen_t index,
   int normalize
 ) {
-  // Rprintf("  Writeline start with buff %p\n", *buff);
-
   // Check if we are in a CSI state b/c if we are we neeed extra room for
   // the closing state tag
-
-  int needs_close = FANSI_active_sgr(state_bound.sgr);
-  int needs_start = FANSI_active_sgr(state_start.sgr);
+  int needs_start = FANSI_sgr_active(state_start.sgr);
+  int needs_close = FANSI_sgr_active(state_bound.sgr);
 
   // state_bound.pos_byte 1 past what we need, so this should include room
   // for NULL terminator
-
   if(
     (state_bound.pos_byte < state_start.pos_byte) ||
     (state_bound.pos_width < state_start.pos_width)
@@ -270,6 +266,8 @@ static SEXP writeline(
   if(state_bound.pos_byte < state_start.pos_byte)
     error("Internal Error: negative line width.");  // nocov
 
+  // - Pass 1 - Measure --------------------------------------------------------
+
   int target_size = state_bound.pos_byte - state_start.pos_byte;
   int target_width = state_bound.pos_width - state_start.pos_width;
   int target_pad = 0;
@@ -281,7 +279,6 @@ static SEXP writeline(
     //
     // We do not re-terminate the string, instead relying on widths / sizes to
     // make sure only the non-indent bit is copied
-
     pre_dat = drop_pre_indent(pre_dat);
   }
   // If we are going to pad the end, adjust sizes and widths
@@ -295,40 +292,28 @@ static SEXP writeline(
   target_size = FANSI_check_append(
     target_size, pre_dat.bytes, "Adding prefix/initial/indent/exdent", index
   );
-  int state_start_size = 0;
-  int start_close = 0;
+  if(needs_start) target_size +=
+    FANSI_sgr_write(NULL, state_start.sgr, target_size, index, normalize);
+  if(needs_close) target_size +=
+    close_active_sgr(NULL, state_bound.sgr, target_size, index, normalize);
 
-  if(needs_close) start_close +=
-    write_end_sgr(state_bound.sgr, NULL, start_close, index, normalize);
-  if(needs_start) {
-    state_start_size = FANSI_sgr_size(state_start.sgr, normalize);
-    start_close += state_start_size;  // this can't possibly overflow
-  }
-  target_size += FANSI_check_append(
-    target_size, start_close, "Adding leading and/or trailing CSI SGR", index
-  );
+  // - Pass 2 - Write ----------------------------------------------------------
 
   // Make sure buffer is large enough
   FANSI_size_buff(buff, (size_t)target_size + 1);  // +1 for NULL
   char * buff_track = buff->buff;
 
-  // Apply prevous CSI style
+  // Apply previous CSI style
+  if(needs_start) buff_track +=
+    FANSI_sgr_write(buff_track, state_start.sgr, 0, index, normalize);
 
-  if(needs_start) {
-    // Rprintf("  writing start: %d\n", state_start_size);
-    FANSI_csi_write(buff_track, state_start, state_start_size, normalize);
-    buff_track += state_start_size;
-  }
   // Apply indent/exdent prefix/initial
-
   if(pre_dat.bytes) {
-    // Rprintf("  writing pre %s of size %d\n", pre, pre_size);
     memcpy(buff_track, pre_dat.string, pre_dat.bytes);
     buff_track += pre_dat.bytes;
   }
   // Actual string, remember state_bound.pos_byte is one past what we need
   // (but what if we're in strip.space=FALSE?)
-
   memcpy(
     buff_track, state_start.string + state_start.pos_byte,
     state_bound.pos_byte - state_start.pos_byte
@@ -336,24 +321,19 @@ static SEXP writeline(
   buff_track += state_bound.pos_byte - state_start.pos_byte;
 
   // Add padding if needed
+  while(target_pad--) *(buff_track++) = *pad_chr;
 
-  while(target_pad--) {
-    *(buff_track++) = *pad_chr;
-  }
   // And turn off CSI styles if needed
-
-  if(needs_close)
-    write_end_sgr(state_bound.sgr, buff_track, start_close, index, normalize);
+  if(needs_close) buff_track +=
+    close_active_sgr(buff_track, state_bound.sgr, 0, index, normalize);
 
   *buff_track = 0;
-
   if(buff_track - buff->buff != target_size)
     error("Internal Error: writeline buffer size mismatch.");  // nocov
 
   // Now create the charsxp and append to the list, start by determining
   // what encoding to use.  If pos_byte is greater than pos_ansi it means
   // we must have hit a UTF8 encoded character
-
   cetype_t chr_type = CE_NATIVE;
   if((state_bound.has_utf8 || pre_dat.has_utf8)) chr_type = CE_UTF8;
 

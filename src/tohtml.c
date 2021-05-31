@@ -473,7 +473,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
     }
     // New in this element
     while(1) {
-      trail_span = sgr_has_style_html(state_prev);
+      trail_span = sgr_has_style_html(state_prev.sgr);
       string = strchr(string, 0x1b);
       if(!string) string = state.string + bytes_init;
       else {
@@ -520,7 +520,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       // Very similar to pass 1 loop, but different enough it would be annoying
       // to make a common function
 
-      if(*string && *string != 0x1b && sgr_has_style_html(sgr)) {
+      if(*string && *string != 0x1b && sgr_has_style_html(state.sgr)) {
         buff_track += sgr_size_and_write_as_html(
           state.sgr, state_prev.sgr,  buff_track, color_classes, i, 0
         );
@@ -528,7 +528,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       }
       while(1) {
         const char * string_prev = string;
-        trail_span = sgr_has_style_html(state_prev);
+        trail_span = sgr_has_style_html(state_prev.sgr);
         string = strchr(string, 0x1b);
         if(!string) string = state.string + bytes_init;
         else state.pos_byte = (string - state.string);

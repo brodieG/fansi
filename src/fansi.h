@@ -345,7 +345,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn);
   SEXP FANSI_state_at_pos_ext(
     SEXP text, SEXP pos, SEXP type, SEXP lag, SEXP ends,
-    SEXP warn, SEXP term_cap, SEXP ctl
+    SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm
   );
   SEXP FANSI_strwrap_ext(
     SEXP x, SEXP width,
@@ -369,7 +369,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP x, SEXP type, SEXP allowNA, SEXP keepNA, SEXP warn, SEXP term_cap
   );
   SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap, SEXP ctl);
-  SEXP FANSI_strsplit(SEXP x, SEXP warn, SEXP term_cap);
   SEXP FANSI_tabs_as_spaces(
     SEXP vec, SEXP tab_stops, struct FANSI_buff * buff, SEXP warn,
     SEXP term_cap, SEXP ctl
@@ -421,16 +420,12 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP strsxp, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
     SEXP width, SEXP ctl, R_xlen_t i
   );
-  int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current);
-  int FANSI_state_comp_color(
-    struct FANSI_state target, struct FANSI_state current
-  );
-  int FANSI_state_comp_basic(
-    struct FANSI_state target, struct FANSI_state current
-  );
   int FANSI_sgr_active(struct FANSI_sgr sgr);
-  int FANSI_state_size(struct FANSI_state state);
-  int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len);
+  int FANSI_sgr_write(
+    char * buff, struct FANSI_sgr sgr, int len, R_xlen_t i, int normalize
+  );
+
+  int FANSI_sgr_comp_color(struct FANSI_sgr target, struct FANSI_sgr current);
 
   struct FANSI_state FANSI_read_next(struct FANSI_state state);
 
