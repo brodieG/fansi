@@ -161,7 +161,7 @@ strwrap_ctl <- function(
     FALSE, 8L,
     warn, term.cap.int,
     FALSE,   # first_only
-    ctl.int
+    ctl.int, normalize
   )
   if(simplify) unlist(res) else res
 }
@@ -267,7 +267,7 @@ strwrap2_ctl <- function(
     tabs.as.spaces, tab.stops,
     warn, term.cap.int,
     FALSE,   # first_only
-    ctl.int
+    ctl.int, normalize
   )
   if(simplify) unlist(res) else res
 }
@@ -277,12 +277,13 @@ strwrap2_ctl <- function(
 strwrap_sgr <- function(
   x, width = 0.9 * getOption("width"), indent = 0,
   exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
-  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
+  normalize=getOption('fansi.normalize', FALSE)
 )
   strwrap_ctl(
     x=x, width=width, indent=indent,
     exdent=exdent, prefix=prefix, simplify=simplify, initial=initial,
-    warn=warn, term.cap=term.cap, ctl='sgr'
+    warn=warn, term.cap=term.cap, ctl='sgr', normalize=normalize
   )
 #' @export
 #' @rdname strwrap_ctl
@@ -294,7 +295,8 @@ strwrap2_sgr <- function(
   strip.spaces=!tabs.as.spaces,
   tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
   tab.stops=getOption('fansi.tab.stops'),
-  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
+  normalize=getOption('fansi.normalize', FALSE)
 )
   strwrap2_ctl(
     x=x, width=width, indent=indent,
@@ -303,6 +305,6 @@ strwrap2_sgr <- function(
     strip.spaces=strip.spaces,
     tabs.as.spaces=tabs.as.spaces,
     tab.stops=tab.stops,
-    warn=warn, term.cap=term.cap, ctl='sgr'
+    warn=warn, term.cap=term.cap, ctl='sgr', normalize=normalize
   )
 

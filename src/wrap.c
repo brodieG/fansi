@@ -79,7 +79,6 @@ static struct FANSI_prefix_dat pad_pre(
   char * res_start = "";
   if(alloc_size > 1) {
     // Can't use buff here because we don't write this string out
-    // Rprintf("Allocating pre size %d\n", alloc_size);
 
     char * res = res_start = R_alloc(alloc_size, sizeof(char));
     memcpy(res, pre_chr, pre_len);
@@ -250,7 +249,7 @@ static SEXP writeline(
     state_bound.sgr = state_bound.sgr_prev;
     state_bound.terminal = 0;
   }
-  // Check if we are in a CSI state b/c if we are we neeed extra room for
+  // Check if we are in a CSI state b/c if we need extra room for
   // the closing state tag
   int needs_start = FANSI_sgr_active(state_start.sgr);
   int needs_close = FANSI_sgr_active(state_bound.sgr);
@@ -527,12 +526,6 @@ static SEXP strwrap(
       // there are any and we are in strip_space mode.  If there was no boundary
       // then we're hard breaking and we reset position to the next position.
 
-      // Rprintf(
-      //   "Positions has_b: %d, state: %d bound: %d prev: %d next: %d\n",
-      //   has_boundary,
-      //   state.pos_byte, state_bound.pos_byte, state_prev.pos_byte,
-      //   state_next.pos_byte
-      // );
       if(has_boundary && para_start) {
         state_bound = FANSI_read_next(state_bound);
       } else if(!has_boundary) {
@@ -618,7 +611,7 @@ SEXP FANSI_strwrap_ext(
   if(XLENGTH(norm) != 1)
     error("Internal Error: arg norm should be scalar.");  // nocov
 
-  int normalize = asInteger(norm);
+  int normalize = asLogical(norm);
 
   const char * pad = CHAR(asChar(pad_end));
   if(*pad != 0 && (*pad < 0x20 || *pad > 0x7e))
@@ -637,6 +630,7 @@ SEXP FANSI_strwrap_ext(
   // and initial, so we don't either
 
   int strip_spaces_int = asInteger(strip_spaces);
+
 
   if(strip_spaces_int) x = PROTECT(FANSI_process(x, &buff));
   else PROTECT(x);
