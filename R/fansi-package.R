@@ -33,7 +33,9 @@
 #'
 #' * "C0" control characters, such as tabs and carriage returns (we include
 #'   delete in this set, even though technically it is not part of it).
-#' * Sequences starting in "ESC&#91;", also known as ANSI CSI sequences.
+#' * Sequences starting in "ESC&#91;", also known as ANSI Control Sequence
+#'   Introducer (CSI) sequences, of which the Select Graphic Rendition (SGR)
+#'   sequences used to format terminal output are a subset.
 #' * Sequences starting in "ESC" and followed by something other than "&#91;".
 #'
 #' _Control Sequences_ starting with ESC are assumed to be two characters
@@ -45,8 +47,8 @@
 #'
 #' In theory it is possible to encode _Control Sequences_ with a single
 #' byte introducing character in the 0x40-0x5F range instead of the traditional
-#' "ESC&#91;".  Since this is rare and it conflicts with UTF-8 encoding, we do
-#' not support it.
+#' "ESC&#91;".  Since this is rare and it conflicts with UTF-8 encoding, `fansi`
+#' does not support it.
 #'
 #' The special treatment of _Control Sequences_ is to compute their
 #' display/character width as zero.  For the SGR subset of the ANSI CSI

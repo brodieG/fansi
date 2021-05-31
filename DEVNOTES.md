@@ -4,22 +4,32 @@ These are internal developer notes.
 
 ## Todo
 
-* Confirm that in e.g. `intmax_t > int` everything the comparison is done in
-  `intmax_t` terms, not int.
+* All writing functions should advance for consistency, and have same sig.
 * Make sure we check we're not using `intmax_t` or `uintmax_t` in a tight loop
   anywhere.
-* Make FANSI_writeline static.
-* Do sgr_to_HTML (sgr_to_html2?), add check to sgr_to_html if any of the bad
-  characters are found to escape or use `sgr_to_html2`.
-* Change state_init to intake a CHARSXP to ensure we cannot initialize with
-  something larger than R_len_t.
-* Get rid of `str_oe` and replace with `check_str_overflow`.
 * Review all overflow checks.
 * Cleanup limits structure, is it really needed now we have a better view of
   what we're dealing with?
 * Can we manage the stack better with the growing buffer so we don't keep all
   the prior half sized ones around until we exit so they are eligible for gc?
-* Make sure normalize param is exposed everywhere.
+* Do sgr_to_HTML (sgr_to_html2?), add check to sgr_to_html if any of the bad
+  characters are found to escape or use `sgr_to_html2`.
+
+## Done
+
+* Confirm that in e.g. `intmax_t > int` everything the comparison is done in
+  `intmax_t` terms, not int.
+
+Yes, the only issue is when a possibly signed value needs to be promoted to an
+unsigned one (I think).
+
+* Make FANSI_writeline static.
+
+* Change state_init to intake a CHARSXP to ensure we cannot initialize with
+  something larger than R_len_t.
+
+Currently takes STRSXP.  A little awkward though, but we did it that way because
+we had the index.
 
 ## Crayon Compatibility
 
@@ -98,6 +108,22 @@ which would just start and end with the null SGR, optionally?
 
 The other thing we can do is accept an "state.initial" input, and output a
 "state.end".  This way we can merge with any other SGR strings.
+
+### Normalize
+
+Biggest issue is dealing with the concept of closing tags, which we're really
+not set up to deal with.  However, we can have a pre-state, and a post-state,
+and we can figure out what transformations need to be applied to go from one to
+the other.
+
+So maybe we can't get fully away from mapping all the open and close styles in
+some way.
+
+If pre had color, but post does not, close color.
+If pre had x, but post does not, issue closing tag.
+
+Generate a list of the styles that pre had but post doesn't, and only those.
+Then, generate a `close_active_sgr` on that style.
 
 
 ## Overflow

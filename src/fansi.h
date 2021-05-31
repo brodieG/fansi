@@ -309,6 +309,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     // Whether the most recently read escape sequence is adjacent a NULL, which
     // allows us to decide not to write it back out as it would be redundant.
     int terminal;
+    // Last sequence of SGRs contained non-normal escapes
+    int non_normal;
 
     /*
      * These support the arguments of the same names for nchar
@@ -390,6 +392,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_get_int_max();
   SEXP FANSI_esc_html(SEXP x);
 
+  SEXP FANSI_normalize_sgr_ext(SEXP x, SEXP warn, SEXP term_cap);
+
   // - Internal funs -----------------------------------------------------------
 
   struct FANSI_csi_pos FANSI_find_esc(const char * x, int ctl);
@@ -430,7 +434,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     char * buff, struct FANSI_sgr sgr, int len, R_xlen_t i, int normalize
   );
   int FANSI_sgr_comp_color(struct FANSI_sgr target, struct FANSI_sgr current);
-
+  struct FANSI_sgr FANSI_sgr_setdiff(struct FANSI_sgr old, struct FANSI_sgr new);
   struct FANSI_state FANSI_read_next(struct FANSI_state state, R_xlen_t i);
 
   int FANSI_add_int(int x, int y, const char * file, int line);

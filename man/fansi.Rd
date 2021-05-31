@@ -181,7 +181,7 @@ Behavior is undefined and probably bad if you somehow manage to provide to
 \code{fansi} strings that do not adhere to these assumptions.
 
 It is possible that during processing strings that are shorter than INT_MAX
-would become longer than that.  \code{fansi} checks for that overflow and will
+would become longer than that. \code{fansi} checks for that overflow and will
 stop with an error if that happens.  A work-around for this situation is to
 break up large strings into smaller ones.  The limit is on each element of a
 character vector, not on the vector as a whole.  \code{fansi} will also error on

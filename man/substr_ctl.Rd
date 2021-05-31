@@ -13,7 +13,8 @@ substr_ctl(
   stop,
   warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"),
-  ctl = "all"
+  ctl = "all",
+  normalize = getOption("fansi.normalize", FALSE)
 )
 
 substr2_ctl(
@@ -26,7 +27,8 @@ substr2_ctl(
   tab.stops = getOption("fansi.tab.stops"),
   warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"),
-  ctl = "all"
+  ctl = "all",
+  normalize = getOption("fansi.normalize", FALSE)
 )
 
 substr_sgr(
@@ -34,7 +36,8 @@ substr_sgr(
   start,
   stop,
   warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap")
+  term.cap = getOption("fansi.term.cap"),
+  normalize = getOption("fansi.normalize", FALSE)
 )
 
 substr2_sgr(
@@ -46,7 +49,8 @@ substr2_sgr(
   tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
   tab.stops = getOption("fansi.tab.stops"),
   warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap")
+  term.cap = getOption("fansi.term.cap"),
+  normalize = getOption("fansi.normalize", FALSE)
 )
 }
 \arguments{
@@ -80,6 +84,12 @@ for newlines and the actual ESC (0x1B) character.
 \item "all": all of the above, except when used in combination with any of the
 above, in which case it means "all but".
 }}
+
+\item{normalize}{TRUE or FALSE (default) whether SGR sequence should be
+expanded out such that there is one distinct sequence for each SGR code.
+Normalized strings will occupy more space (e.g. "\033[31;42m" becomes
+"\033[31m\033[42m"), but will work better with code that assumes each SGR
+code will be in its own escape as \code{crayon} does.}
 
 \item{type}{character(1L) partial matching \code{c("chars", "width")}, although
 \code{type="width"} only works correctly with R >= 3.2.2.  With "width", whether
