@@ -711,7 +711,8 @@ static struct FANSI_state read_c0(struct FANSI_state state) {
 struct FANSI_state FANSI_read_next(struct FANSI_state state) {
   const char chr_val = state.string[state.pos_byte];
   state.err_code = 0; // reset err code after each char
-  state.terminal = 0; // this can only be one if the last thing read is a CSI
+  // this can only be one if the last thing read is a CSI
+  if(chr_val) state.terminal = 0;
 
   // Normal ASCII characters
   if(chr_val >= 0x20 && chr_val < 0x7F) state = read_ascii(state);
@@ -723,7 +724,6 @@ struct FANSI_state FANSI_read_next(struct FANSI_state state) {
   else if(chr_val) state = read_c0(state);
   // Shouldn't happen, all code using read_next should bail. It's not a big
   // deal, but it makes terminal detection more complex if we allow it.
-  else error("Internal Error: tried to read NULL terminator.");
 
   if(state.warn > 0 && state.err_code) {
     warning(
