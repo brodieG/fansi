@@ -666,4 +666,25 @@ int FANSI_copy_or_measure(
   }
   return tmp_len;
 }
-
+/*
+ * Like copy_or_measure, but uses memcpy and a known length to copy.
+ *
+ *   vvvvvvvv
+ * !> DANGER <!
+ *   ^^^^^^^^
+ *
+ * This advances *buff so that it points to to the NULL terminator
+ * the end of what is written to so string is ready to append to.
+ */
+int FANSI_mcopy_or_measure(
+  char ** buff, const char * tmp, int tmp_len, int len, R_xlen_t i,
+  const char * err_msg
+) {
+  FANSI_check_append(len, tmp_len, err_msg, i);
+  if(*buff) {
+    memcpy(*buff, tmp, (size_t) tmp_len);
+    *buff += tmp_len;
+    **buff = 0;  // not necessary, but helps to debug
+  }
+  return tmp_len;
+}

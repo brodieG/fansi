@@ -426,7 +426,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_sgr_write(
     char * buff, struct FANSI_sgr sgr, int len, R_xlen_t i, int normalize
   );
-
+  int FANSI_sgr_close(
+    char * buff, struct FANSI_sgr sgr, int len, R_xlen_t i, int normalize
+  );
   int FANSI_sgr_comp_color(struct FANSI_sgr target, struct FANSI_sgr current);
 
   struct FANSI_state FANSI_read_next(struct FANSI_state state, R_xlen_t i);
@@ -453,6 +455,13 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   );
   // Requires `len`, `i`, and `err_msg` defined in scope.
   #define COPY_OR_MEASURE(A, B) FANSI_copy_or_measure((A), (B), len, i, err_msg)
+
+  int FANSI_mcopy_or_measure(
+    char ** buff, const char * tmp, int tmp_len, int len, R_xlen_t i,
+    const char * err_msg
+  );
+  #define MCOPY_OR_MEASURE(A, B, C) FANSI_mcopy_or_measure(\
+    (A), (B), (C), len, i, err_msg)
 
   // - Compatibility -----------------------------------------------------------
 

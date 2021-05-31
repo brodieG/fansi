@@ -112,120 +112,6 @@ static struct FANSI_prefix_dat drop_pre_indent(struct FANSI_prefix_dat dat) {
     // nocov end
   return dat;
 }
-/*
- * End Active Sequences
- *
- * Inspects a state object, and produces the set of escape sequences that will
- * close just the open sequences, to the extent possible.
- *
- * Intended for compatibility with crayon.
- *
- * If buff is NULL, then only the required size of the buffer is returned.
- *
- * Ideally we would store all the styles in e.g. 2 uint64_t, and then maybe each
- * style would have an associated 2 uint64_t of what they turn on and off, and
- * somehow we would have a system to determine what the minimal combination of
- * styles required to turn off all active styles.  This would guarantee we can
- * keep the on-off styles in sync, at the cost of quite a bit of complexity.
- *
- * So instead we hard-code everything and hope we keep it in sync.
- */
-
-static int close_active_sgr(
-  char * buff, struct FANSI_sgr sgr, int len, R_xlen_t i, int normalize
-) {
-  // char * buff_track = buff;
-  int len0 = len;
-  const char * err_msg = "Generating closing SGR";
-
-  if(FANSI_sgr_active(sgr)) {
-    if(normalize) {
-      // We're deliberate in only closing things we know how to close in both the
-      // state and in the ouptut string, that way we can check state at the end to
-      // make sure we did actually close everything.
-
-      // Close color
-
-      if(sgr.color >= 0) {
-        sgr.color = -1;
-        len += COPY_OR_MEASURE(&buff, "\033[39m");
-      }
-      if(sgr.bg_color >= 0) {
-        sgr.bg_color = -1;
-        len += COPY_OR_MEASURE(&buff, "\033[49m");
-      }
-      if(sgr.font > 0) {
-        sgr.font = 0;
-        len += COPY_OR_MEASURE(&buff, "\033[10m");
-      }
-      if(sgr.border & (1U << 1U | 1U << 2U)) {
-        sgr.border &= ~(1U << 1U | 1U << 2U);
-        len += COPY_OR_MEASURE(&buff, "\033[54m");
-      }
-      if(sgr.border & (1U << 3U)) {
-        sgr.border &= ~(1U << 3U);
-        len += COPY_OR_MEASURE(&buff, "\033[55m");
-      }
-      if(sgr.ideogram > 0U) {
-        sgr.ideogram &= ~((1U << 0U) & (1U << 1U) & (1U << 2U) & (1U << 3U));
-        len += COPY_OR_MEASURE(&buff, "\033[65m");
-      }
-      unsigned int s_boldfaint = (1U << 1U | 1U << 2U);
-      unsigned int s_frakital = (1U << 3U | 1U << 10U);
-      unsigned int s_underline = (1U << 4U | 1U << 11U);
-      unsigned int s_blink = (1U << 5U | 1U << 6U);
-      unsigned int s_propspc = 1U << 12U;
-      unsigned int s_inverse = 1U << 7U;
-      unsigned int s_conceal = 1U << 8U;
-      unsigned int s_strikethrough = 1U << 9U;
-
-      if(sgr.style & s_boldfaint) {
-        sgr.style &= ~s_boldfaint;
-        len += COPY_OR_MEASURE(&buff, "\033[22m");
-      }
-      if(sgr.style & s_frakital) {
-        sgr.style &= ~s_frakital;
-        len += COPY_OR_MEASURE(&buff, "\033[23m");
-      }
-      if(sgr.style & s_underline) {
-        sgr.style &= ~s_underline;
-        len += COPY_OR_MEASURE(&buff, "\033[24m");
-      }
-      if(sgr.style & s_blink) {
-        sgr.style &= ~s_blink;
-        len += COPY_OR_MEASURE(&buff, "\033[25m");
-      }
-      if(sgr.style & s_propspc) {
-        sgr.style &= ~s_propspc;
-        len += COPY_OR_MEASURE(&buff, "\033[26m");
-      }
-      if(sgr.style & s_inverse) {
-        sgr.style &= ~s_inverse;
-        len += COPY_OR_MEASURE(&buff, "\033[27m");
-      }
-      if(sgr.style & s_conceal) {
-        sgr.style &= ~s_conceal;
-        len += COPY_OR_MEASURE(&buff, "\033[28m");
-      }
-      if(sgr.style & s_strikethrough) {
-        sgr.style &= ~s_strikethrough;
-        len += COPY_OR_MEASURE(&buff, "\033[29m");
-      }
-      // Make sure we're not out of sync with has_style
-      if(FANSI_sgr_active(sgr))
-        error("Internal Error: did not successfully close all styles.");
-    } else {
-      int clen  = 4;
-      len += clen;
-      if(buff) {
-        memcpy(buff, "\033[0m", clen);
-        buff += clen;
-        *buff = 0;
-      }
-    }
-  }
-  return len - len0;
-}
 
 /*
  * Write a line
@@ -301,7 +187,7 @@ static SEXP writeline(
   if(needs_start) target_size +=
     FANSI_sgr_write(NULL, state_start.sgr, target_size, index, normalize);
   if(needs_close) target_size +=
-    close_active_sgr(NULL, state_bound.sgr, target_size, index, normalize);
+    FANSI_sgr_close(NULL, state_bound.sgr, target_size, index, normalize);
 
   // - Pass 2 - Write ----------------------------------------------------------
 
@@ -331,7 +217,7 @@ static SEXP writeline(
 
   // And turn off CSI styles if needed
   if(needs_close) buff_track +=
-    close_active_sgr(buff_track, state_bound.sgr, 0, index, normalize);
+    FANSI_sgr_close(buff_track, state_bound.sgr, 0, index, normalize);
 
   *buff_track = 0;
   if(buff_track - buff->buff != target_size)
