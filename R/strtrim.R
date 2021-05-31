@@ -36,7 +36,7 @@
 
 strtrim_ctl <- function(
   x, width, warn=getOption('fansi.warn'), ctl='all',
-  normalize=getOption('fansi.normalize')
+  normalize=getOption('fansi.normalize', FALSE)
 ) {
   if(!is.character(x)) x <- as.character(x)
 
@@ -91,7 +91,7 @@ strtrim2_ctl <- function(
   x, width, warn=getOption('fansi.warn'),
   tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
   tab.stops=getOption('fansi.tab.stops'),
-  ctl='all', normalize=getOption('fansi.normalize')
+  ctl='all', normalize=getOption('fansi.normalize', FALSE)
 ) {
   if(!is.character(x)) x <- as.character(x)
 
@@ -149,17 +149,21 @@ strtrim2_ctl <- function(
 #' @export
 #' @rdname strtrim_ctl
 
-strtrim_sgr <- function(x, width, warn=getOption('fansi.warn'))
-  strtrim_ctl(x=x, width=width, warn=warn, ctl='sgr')
+strtrim_sgr <- function(
+  x, width, warn=getOption('fansi.warn'),
+  normalize=getOption('fansi.normalize', FALSE)
+)
+  strtrim_ctl(x=x, width=width, warn=warn, ctl='sgr', normalize=normalize)
 
 #' @export
 #' @rdname strtrim_ctl
 
 strtrim2_sgr <- function(x, width, warn=getOption('fansi.warn'),
   tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
-  tab.stops=getOption('fansi.tab.stops')
+  tab.stops=getOption('fansi.tab.stops'),
+  normalize=getOption('fansi.normalize', FALSE)
 )
   strtrim2_ctl(
     x=x, width=width, warn=warn, tabs.as.spaces=tabs.as.spaces,
-    tab.stops=tab.stops, ctl='sgr'
+    tab.stops=tab.stops, ctl='sgr', normalize=normalize
   )
