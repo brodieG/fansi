@@ -425,7 +425,7 @@ static SEXP strwrap(
     if(!state.string[state.pos_byte]){
       state_next = state;
     } else {
-      state_next = FANSI_read_next(state);
+      state_next = FANSI_read_next(state, index);
     }
     state.warn = state_bound.warn = state_next.warn;  // avoid double warning
 
@@ -491,7 +491,7 @@ static SEXP strwrap(
         ) &&
         state_bound.pos_byte < state.pos_byte
       ) {
-        state_bound = FANSI_read_next(state_bound);
+        state_bound = FANSI_read_next(state_bound, index);
       }
       // Write the string
 
@@ -527,13 +527,13 @@ static SEXP strwrap(
       // then we're hard breaking and we reset position to the next position.
 
       if(has_boundary && para_start) {
-        state_bound = FANSI_read_next(state_bound);
+        state_bound = FANSI_read_next(state_bound, index);
       } else if(!has_boundary) {
         state_bound = state;
       }
       if(strip_spaces) {
         while(state_bound.string[state_bound.pos_byte] == ' ') {
-          state_bound = FANSI_read_next(state_bound);
+          state_bound = FANSI_read_next(state_bound, index);
       } }
       has_boundary = 0;
       state_bound.pos_width = 0;

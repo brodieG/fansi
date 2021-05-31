@@ -608,7 +608,7 @@ static int normalize_state() {
  *
  * See GENERAL NOTES atop.
  */
-static struct FANSI_state read_utf8(struct FANSI_state state) {
+static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
   int byte_size = FANSI_utf8clen(state.string[state.pos_byte]);
 
   // Make sure string doesn't end before UTF8 char supposedly does
@@ -632,7 +632,9 @@ static struct FANSI_state read_utf8(struct FANSI_state state) {
       // shouldn't actually be possible to reach this point since in all use
       // cases we chose to allowNA, except for `nchar_ctl`, which internally
       // uses `nchar` so would never get here anyway
-      error("invalid multiyte string, %s", mb_err_str);
+      error(
+        "Invalid multiyte string and index [%jd], %s", FANSI_ind(i), mb_err_str
+      );
       // nocov end
     }
   } else {
@@ -658,9 +660,11 @@ static struct FANSI_state read_utf8(struct FANSI_state state) {
       disp_size = 1;
     }
   }
-  // Need to check overflow?  Really only for pos_width?  Maybe that's not
-  // even true because you need at least two bytes to encode a double wide
-  // character, and there is nothing wider than 2?
+  // We are guaranteed that any string here is at most INT_MAX bytes long, so
+  // nothing should overflow, except maybe width if we ever add some width
+  // measures that could exceed byte count (like the 6 or 10 from '\u' or '\U'
+  // encoded versions of Unicode chars).  Shouldn't be an issue, but playing it
+  // safe.
 
   state.pos_byte += byte_size;
   ++state.pos_ansi;
@@ -672,8 +676,13 @@ static struct FANSI_state read_utf8(struct FANSI_state state) {
     disp_size = byte_size;
   }
   state.last_char_width = disp_size;
-  state.pos_width += disp_size;
+  if(state.pos_width_target > FANSI_lim.lim_int.max - disp_size)
+    error(
+      "String with display width greater than INT_MAX at index [%jd].",
+      FANSI_ind(i)
+    );
   state.pos_width_target += disp_size;
+  state.pos_width += disp_size;        // won't overflow if _target doesn't
   state.has_utf8 = 1;
   return state;
 }
@@ -708,7 +717,9 @@ static struct FANSI_state read_c0(struct FANSI_state state) {
  *
  * This can probably use some pretty serious optimization...
  */
-struct FANSI_state FANSI_read_next(struct FANSI_state state) {
+struct FANSI_state FANSI_read_next(
+  struct FANSI_state state, R_xlen_t i
+) {
   const char chr_val = state.string[state.pos_byte];
   state.err_code = 0; // reset err code after each char
   // this can only be one if the last thing read is a CSI
@@ -717,17 +728,15 @@ struct FANSI_state FANSI_read_next(struct FANSI_state state) {
   // Normal ASCII characters
   if(chr_val >= 0x20 && chr_val < 0x7F) state = read_ascii(state);
   // UTF8 characters (if chr_val is signed, then > 0x7f will be negative)
-  else if (chr_val < 0 || chr_val > 0x7f) state = read_utf8(state);
+  else if (chr_val < 0 || chr_val > 0x7f) state = read_utf8(state, i);
   // ESC sequences
   else if (chr_val == 0x1B) state = read_esc(state);
   // C0 escapes (e.g. \t, \n, etc)
   else if(chr_val) state = read_c0(state);
-  // Shouldn't happen, all code using read_next should bail. It's not a big
-  // deal, but it makes terminal detection more complex if we allow it.
 
   if(state.warn > 0 && state.err_code) {
     warning(
-      "Encountered %s, %s%s", state.err_msg,
+      "Encountered %s at index [%jd], %s%s", state.err_msg, FANSI_ind(i),
       "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
       "off these warnings."
     );

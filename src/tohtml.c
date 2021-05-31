@@ -483,7 +483,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       // State as html, skip if at end of string
       if(*string) {
         int esc_start = state.pos_byte;
-        state = FANSI_read_next(state);
+        state = FANSI_read_next(state, i);
         string = state.string + state.pos_byte;
         bytes_esc += state.pos_byte - esc_start;  // cannot overflow int
         if(*string) {
@@ -541,7 +541,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
 
         // State as html, skip if at end of string
         if(*string) {
-          state = FANSI_read_next(state);
+          state = FANSI_read_next(state, i);
           string = state.string + state.pos_byte;
           if(*string) {
             buff_track += sgr_size_and_write_as_html(

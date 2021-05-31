@@ -137,10 +137,10 @@ SEXP FANSI_tabs_as_spaces(
           // consume tab and advance
 
           state.warn = 0;
-          state = FANSI_read_next(state);
+          state = FANSI_read_next(state, i);
           state.warn = warn_old;
           cur_chr = state.string[state.pos_byte];
-          state = FANSI_inc_width(state, extra_spaces);
+          state = FANSI_inc_width(state, extra_spaces, i);
           last_byte = state.pos_byte;
 
           // actually write the extra spaces
@@ -153,7 +153,7 @@ SEXP FANSI_tabs_as_spaces(
           if(!cur_chr) *buff_track = 0;
         }
         if(!cur_chr) break;
-        state = FANSI_read_next(state);
+        state = FANSI_read_next(state, i);
       }
       // Write the CHARSXP
 

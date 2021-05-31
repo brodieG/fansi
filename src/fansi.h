@@ -393,7 +393,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   // - Internal funs -----------------------------------------------------------
 
   struct FANSI_csi_pos FANSI_find_esc(const char * x, int ctl);
-  struct FANSI_state FANSI_inc_width(struct FANSI_state state, int inc);
+  struct FANSI_state FANSI_inc_width(
+    struct FANSI_state state, int inc, R_xlen_t i
+  );
   struct FANSI_state FANSI_reset_pos(struct FANSI_state state);
   struct FANSI_state FANSI_reset_width(struct FANSI_state state);
 
@@ -427,12 +429,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   int FANSI_sgr_comp_color(struct FANSI_sgr target, struct FANSI_sgr current);
 
-  struct FANSI_state FANSI_read_next(struct FANSI_state state);
+  struct FANSI_state FANSI_read_next(struct FANSI_state state, R_xlen_t i);
 
   int FANSI_add_int(int x, int y, const char * file, int line);
 
   // Utilities
-
   int FANSI_has_utf8(const char * x);
   void FANSI_interrupt(R_xlen_t i);
   intmax_t FANSI_ind(R_xlen_t i);
@@ -450,6 +451,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     char ** buff, const char * tmp, int len, R_xlen_t i,
     const char * err_msg
   );
+  // Requires `len`, `i`, and `err_msg` defined in scope.
   #define COPY_OR_MEASURE(A, B) FANSI_copy_or_measure((A), (B), len, i, err_msg)
 
   // - Compatibility -----------------------------------------------------------

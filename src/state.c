@@ -129,10 +129,18 @@ struct FANSI_state FANSI_reset_width(struct FANSI_state state) {
   state.pos_width_target = 0;
   return state;
 }
-struct FANSI_state FANSI_inc_width(struct FANSI_state state, int inc) {
-  warning("need to add overflow check for inc_width");
-  state.pos_width += inc;
+// Error message specific to use in adding spaces for tabs.
+struct FANSI_state FANSI_inc_width(
+  struct FANSI_state state, int inc, R_xlen_t i
+) {
+  if(state.pos_width_target > FANSI_lim.lim_int.max - inc)
+    error(
+      "Expanding tabs will cause string to exceed INT_MAX at index [%ju].",
+      FANSI_ind(i)
+    );
+
   state.pos_width_target += inc;
+  state.pos_width += inc;
   return state;
 }
 /*
@@ -179,8 +187,9 @@ struct FANSI_state FANSI_reset_pos(struct FANSI_state state) {
  *   part of the `stop` parameter) (1), or not (0) (i.e. as part of the start
  *   parameters).
  */
-struct FANSI_state_pair FANSI_state_at_position(
-  int pos, struct FANSI_state_pair state_pair, int type, int lag, int end
+static struct FANSI_state_pair state_at_position(
+  int pos, struct FANSI_state_pair state_pair, int type, int lag, int end,
+  R_xlen_t i
 ) {
   struct FANSI_state state = state_pair.cur;
   int pos_init = type ? state.pos_width : state.pos_raw;
@@ -219,7 +228,7 @@ struct FANSI_state_pair FANSI_state_at_position(
       error("Internal Error: counter overflow while reading string.");
       // nocov end
 
-    state = FANSI_read_next(state);
+    state = FANSI_read_next(state, i);
 
     // cond is just how many units we have left until our requested position.
     // we can overshoot and it can be negative
@@ -300,8 +309,8 @@ struct FANSI_state_pair FANSI_state_at_position(
   if(end) {
     struct FANSI_state state_next, state_next_prev, state_next_prev_prev;
     state_next_prev_prev = state_res;
-    state_next_prev = FANSI_read_next(state_next_prev_prev);
-    state_next = FANSI_read_next(state_next_prev);
+    state_next_prev = FANSI_read_next(state_next_prev_prev, i);
+    state_next = FANSI_read_next(state_next_prev, i);
 
     /*
     Rprintf(
@@ -332,7 +341,7 @@ struct FANSI_state_pair FANSI_state_at_position(
       */
       state_next_prev_prev = state_next_prev;
       state_next_prev = state_next;
-      state_next = FANSI_read_next(state_next);
+      state_next = FANSI_read_next(state_next, i);
       if(!state_next.string[state_next.pos_byte]) break;
     }
     state_res = state_next_prev_prev;
@@ -609,7 +618,7 @@ int FANSI_sgr_active(struct FANSI_sgr sgr) {
     sgr.font || sgr.border || sgr.ideogram;
 }
 /*
- * R interface for FANSI_state_at_position
+ * R interface for state_at_position
  * @param string we're interested in state of
  * @param pos integer positions along the string, one index, sorted
  */
@@ -725,8 +734,8 @@ SEXP FANSI_state_at_pos_ext(
 
       if(pos_i == pos_prev) state_pair.cur = state_pair.prev;
 
-      state_pair = FANSI_state_at_position(
-        pos_i, state_pair, type_int, INTEGER(lag)[i], INTEGER(ends)[i]
+      state_pair = state_at_position(
+        pos_i, state_pair, type_int, INTEGER(lag)[i], INTEGER(ends)[i], i
       );
       state = state_pair.cur;
 
