@@ -244,6 +244,12 @@ static SEXP writeline(
   R_xlen_t index,
   int normalize
 ) {
+  // In case the last state read was at the end of the string, use the prior
+  // state.  No point writing a state that will be immediately closed.
+  if(state_bound.terminal) {
+    state_bound.sgr = state_bound.sgr_prev;
+    state_bound.terminal = 0;
+  }
   // Check if we are in a CSI state b/c if we are we neeed extra room for
   // the closing state tag
   int needs_start = FANSI_sgr_active(state_start.sgr);
