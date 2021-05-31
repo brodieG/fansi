@@ -552,7 +552,7 @@ int FANSI_sgr_write(
       // nocov end
     }
   }
-  return len;
+  return len - len0;
 }
 /*
  * Generate the ANSI tag corresponding to the state and write it out as a NULL

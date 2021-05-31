@@ -215,10 +215,11 @@ static int close_active_sgr(
       if(FANSI_sgr_active(sgr))
         error("Internal Error: did not successfully close all styles.");
     } else {
+      int clen  = 4;
+      len += clen;
       if(buff) {
-        memcpy(buff, "\033[0m", 4);
-        buff += 4;
-        len += 4;
+        memcpy(buff, "\033[0m", clen);
+        buff += clen;
         *buff = 0;
       }
     }
@@ -334,7 +335,12 @@ static SEXP writeline(
 
   *buff_track = 0;
   if(buff_track - buff->buff != target_size)
-    error("Internal Error: writeline buffer size mismatch.");  // nocov
+    // nocov start
+    error(
+      "Internal Error: line buffer size mismatch (%jd vs %d) at index [%jd].",
+      buff_track - buff->buff, target_size, FANSI_ind(index)
+    );
+    // nocov end
 
   // Now create the charsxp and append to the list, start by determining
   // what encoding to use.  If pos_byte is greater than pos_ansi it means
