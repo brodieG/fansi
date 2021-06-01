@@ -242,11 +242,14 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int ctl) {
  * allocation is needed the buffer will be either twice as large as it was
  * before, or size `size` if that is greater than twice the size.
  *
- * Does NOT allocate extra byte for NULL!
+ * Only the requested `size` bytes are allocated, thus `size` should acccount
+ * for the space for a trailing NULL
  */
 void FANSI_size_buff(struct FANSI_buff * buff, size_t size) {
   // assumptions check that  SIZE_T fits INT_MAX + 1
   size_t buff_max = (size_t) FANSI_lim.lim_int.max + 1;
+  if(!size)  // Otherwise could not reset string by starting with 0
+    error("Internal Error: cannot size buffer to 0.");
   if(size > buff->len) {
     // Special case for intial alloc
 
@@ -290,6 +293,9 @@ void FANSI_size_buff(struct FANSI_buff * buff, size_t size) {
     }
     buff->buff = R_alloc(buff->len, sizeof(char));
   }
+  if(!buff->buff)
+    error("Internal Error: buffer not allocated.");
+  *(buff->buff) = 0;  // Always reset the string, guaranteed one byte.
 }
 /*
  * Compute how many digits are in a number
