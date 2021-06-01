@@ -353,8 +353,8 @@ static int sgr_size_and_write_as_html(
     if(buff - buff_start != len)
       // nocov start
       error(
-        "Internal Error: buffer length mismatch in html generation (%ud vs %ud).",
-        len, (unsigned int)(buff - buff_start)
+        "Internal Error: buffer length mismatch in html generation (%d vs %td).",
+        len, buff - buff_start
       );
       // nocov end
   }

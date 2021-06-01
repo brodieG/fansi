@@ -241,15 +241,6 @@ static struct FANSI_state_pair state_at_position(
         error("Internal Error: Illegal offset type; contact maintainer.");
         // nocov end
     }
-    /*
-    Rprintf(
-      "cnd %2d x %2d lag %d end %d w (%2d %2d) ansi (%2d %2d) bt (%2d %2d)\n",
-      cond, pos, lag, end,
-      state.pos_width, state_prev.pos_width,
-      state.pos_ansi, state_prev.pos_ansi,
-      state.pos_byte, state_prev.pos_byte
-    );
-    */
     // If zero width advance, we want to update prev state to be the newest
     // state
 

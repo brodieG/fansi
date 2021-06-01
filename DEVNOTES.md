@@ -4,6 +4,8 @@ These are internal developer notes.
 
 ## Todo
 
+* rename normalize -> expand (normalize not quite right).
+* add tests with sgr -> normalize -> html comparisons
 * Try to ensure index is in the same spot in all the writing funs.
 * Document the semantics of style across a vector with multiple elements.
 * All writing functions should advance for consistency, and have same sig.
