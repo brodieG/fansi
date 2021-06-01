@@ -4,6 +4,7 @@ These are internal developer notes.
 
 ## Todo
 
+* Document the semantics of style across a vector with multiple elements.
 * All writing functions should advance for consistency, and have same sig.
 * Make sure we check we're not using `intmax_t` or `uintmax_t` in a tight loop
   anywhere.
