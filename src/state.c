@@ -173,7 +173,7 @@ struct FANSI_state FANSI_reset_pos(struct FANSI_state state) {
  * monotonically increasing values of `pos`.  This allows us to compute state at
  * multiple positions while re-using the work we did on the earlier positions.
  * To transfer the state info from earlier positions we use a FANSI_state_pair
- * object that contains the state info from the previous compuation.
+ * object that contains the state info from the previous computation.
  *
  * @param pos the raw position (i.e. treating parseable ansi tags as zero
  *   length) we want the state for
@@ -471,7 +471,7 @@ int FANSI_sgr_write(
   // biggest would be "\033[XXm" + NULL, won't fit e.g bright color codes
   // CAREFUL if we modify code to use `tmp` for other purposes.
   char tmp[6] = {0};
-  char * buff_track  = buff;
+  char * buff_track = buff;
 
   if(FANSI_sgr_active(sgr)) {
     if(!normalize) len += COPY_OR_MEASURE(&buff_track, "\033[");
@@ -561,10 +561,11 @@ int FANSI_sgr_write(
 char * FANSI_sgr_as_chr(struct FANSI_sgr sgr, int normalize, R_xlen_t i) {
   // First pass computes total size of tag
   int tag_len = FANSI_sgr_write(NULL, sgr, 0, i, normalize);
+  Rprintf("sgr as char %d\n", tag_len);
 
   // Now write
   char * tag_tmp = R_alloc((size_t) tag_len + 1, sizeof(char));
-  FANSI_sgr_write(tag_tmp, sgr, tag_len, normalize, i);
+  FANSI_sgr_write(tag_tmp, sgr, 0, i, normalize);
   tag_tmp[tag_len] = 0;
 
   return tag_tmp;
@@ -745,7 +746,7 @@ int FANSI_sgr_close(
       if(FANSI_sgr_active(sgr))
         error("Internal Error: did not successfully close all styles.");
     } else {
-      int clen  = 4;
+      int clen = 4;
       len += clen;
       if(buff) {
         memcpy(buff, "\033[0m", clen);

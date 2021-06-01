@@ -413,6 +413,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
           // error codes should be the only things changing.
 
           if(!tok_res.val) {
+            non_normal = 1;
             state.sgr = reset_sgr(state.sgr);
           } else if (tok_res.val < 10) {
             // 1-9 are the standard styles (bold/italic)
