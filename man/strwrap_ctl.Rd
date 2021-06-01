@@ -18,7 +18,7 @@ strwrap_ctl(
   warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"),
   ctl = "all",
-  normalize = getOption("fansi.normalize", FALSE)
+  expand = getOption("fansi.expand", FALSE)
 )
 
 strwrap2_ctl(
@@ -37,7 +37,7 @@ strwrap2_ctl(
   warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"),
   ctl = "all",
-  normalize = getOption("fansi.normalize", FALSE)
+  expand = getOption("fansi.expand", FALSE)
 )
 
 strwrap_sgr(
@@ -50,7 +50,7 @@ strwrap_sgr(
   initial = prefix,
   warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"),
-  normalize = getOption("fansi.normalize", FALSE)
+  expand = getOption("fansi.expand", FALSE)
 )
 
 strwrap2_sgr(
@@ -68,7 +68,7 @@ strwrap2_sgr(
   tab.stops = getOption("fansi.tab.stops"),
   warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"),
-  normalize = getOption("fansi.normalize", FALSE)
+  expand = getOption("fansi.expand", FALSE)
 )
 }
 \arguments{
@@ -122,9 +122,9 @@ for newlines and the actual ESC (0x1B) character.
 above, in which case it means "all but".
 }}
 
-\item{normalize}{TRUE or FALSE (default) whether SGR sequence should be
+\item{expand}{TRUE or FALSE (default) whether SGR sequence should be
 expanded out such that there is one distinct sequence for each SGR code.
-Normalized strings will occupy more space (e.g. "\033[31;42m" becomes
+Expanded strings will occupy more space (e.g. "\033[31;42m" becomes
 "\033[31m\033[42m"), but will work better with code that assumes each SGR
 code will be in its own escape as \code{crayon} does.}
 

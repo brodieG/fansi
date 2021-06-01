@@ -370,12 +370,12 @@ int FANSI_color_size(int color, int * color_extra) {
   return size;
 }
 /*
- * Helper to make an SGR token, possibly full SGR if in normalize mode
+ * Helper to make an SGR token, possibly full SGR if in expand mode
  */
-static char * make_token(char * buff, const char * val, int normalize) {
+static char * make_token(char * buff, const char * val, int expand) {
   if(strlen(val) > 2)
     error("Internal error: token maker limited to 2 chars max."); // nocov
-  if(!normalize) {
+  if(!expand) {
     strcpy(buff, val);
     strcat(buff, ";");
   } else {
@@ -394,14 +394,14 @@ static char * make_token(char * buff, const char * val, int normalize) {
  * largest: "\033[48;2;255;255;255m", 19 chars + NULL
  */
 static char * color_token(
-  char * buff, int color, int * color_extra, int mode, int normalize
+  char * buff, int color, int * color_extra, int mode, int expand
 ) {
   if(mode != 3 && mode != 4)
     error("Internal Error: color mode must be 3 or 4");  // nocov
 
   char * buff_track = buff;
 
-  if(normalize) {
+  if(expand) {
     *(buff_track++) = '\033';
     *(buff_track++) = '[';
   }
@@ -435,7 +435,7 @@ static char * color_token(
   } else {
     error("Internal Error: unexpected color code.");  // nocov
   }
-  if(normalize) *(buff_track++) = 'm';
+  if(expand) *(buff_track++) = 'm';
   else *(buff_track++) = ';';
   *buff_track = 0;
   if(buff_track - buff > 19)  // too late if this happened...
@@ -450,7 +450,7 @@ static char * color_token(
  * Return how many needed / written bytes.
  */
 int FANSI_sgr_write(
-  char * buff, struct FANSI_sgr sgr, int len, R_xlen_t i, int normalize
+  char * buff, struct FANSI_sgr sgr, int len, R_xlen_t i, int expand
 ) {
   /****************************************************\
   | IMPORTANT: KEEP THIS ALIGNED WITH state_as_html    |
@@ -465,41 +465,41 @@ int FANSI_sgr_write(
   char * buff_track = buff;
 
   if(FANSI_sgr_active(sgr)) {
-    if(!normalize) len += COPY_OR_MEASURE(&buff_track, "\033[");
+    if(!expand) len += COPY_OR_MEASURE(&buff_track, "\033[");
     // styles
     char tokval[2] = {0};
     for(unsigned int i = 1; i < 10; i++) {
       if((1U << i) & sgr.style) {
         *tokval = '0' + (char) i;
-        len += COPY_OR_MEASURE(&buff_track, make_token(tmp, tokval, normalize));
+        len += COPY_OR_MEASURE(&buff_track, make_token(tmp, tokval, expand));
     } }
     // styles outside 0-9
 
     if(sgr.style & (1 << 10)) {
       // fraktur
-      len += COPY_OR_MEASURE(&buff_track, make_token(tmp, "20", normalize));
+      len += COPY_OR_MEASURE(&buff_track, make_token(tmp, "20", expand));
     }
     if(sgr.style & (1 << 11)) {
       // double underline
-      len += COPY_OR_MEASURE(&buff_track, make_token(tmp, "21", normalize));
+      len += COPY_OR_MEASURE(&buff_track, make_token(tmp, "21", expand));
     }
     if(sgr.style & (1 << 12)) {
       // prop spacing
-      len += COPY_OR_MEASURE(&buff_track, make_token(tmp, "26", normalize));
+      len += COPY_OR_MEASURE(&buff_track, make_token(tmp, "26", expand));
     }
     // colors
     if(sgr.color > -1) {
       char tokval[17] = {0};  // largest: "38;2;255;255;255", 16 chars + NULL
       len += COPY_OR_MEASURE(
         &buff_track,
-        color_token(tokval, sgr.color, sgr.color_extra, 3, normalize)
+        color_token(tokval, sgr.color, sgr.color_extra, 3, expand)
       );
     }
     if(sgr.bg_color > -1) {
       char tokval[17] = {0};
       len += COPY_OR_MEASURE(
         &buff_track,
-        color_token(tokval, sgr.bg_color, sgr.bg_color_extra, 4, normalize)
+        color_token(tokval, sgr.bg_color, sgr.bg_color_extra, 4, expand)
       );
     }
     // Borders
@@ -509,7 +509,7 @@ int FANSI_sgr_write(
         if((1 << i) & sgr.border) {
           tokval[1] = '0' + i;
           len +=
-            COPY_OR_MEASURE(&buff_track, make_token(tmp, tokval, normalize));
+            COPY_OR_MEASURE(&buff_track, make_token(tmp, tokval, expand));
     } } }
     // Ideogram
     if(sgr.ideogram) {
@@ -518,13 +518,13 @@ int FANSI_sgr_write(
         if((1 << i) & sgr.ideogram) {
           tokval[1] = '0' + i;
           len +=
-            COPY_OR_MEASURE(&buff_track, make_token(tmp, tokval, normalize));
+            COPY_OR_MEASURE(&buff_track, make_token(tmp, tokval, expand));
     } } }
     // font
     if(sgr.font) {
       char tokval[3] = {'1', '0'};
       tokval[1] = '0' + (sgr.font % 10);
-      len += COPY_OR_MEASURE(&buff_track, make_token(tmp, tokval, normalize));
+      len += COPY_OR_MEASURE(&buff_track, make_token(tmp, tokval, expand));
     }
     // Finalize
 
@@ -549,13 +549,13 @@ int FANSI_sgr_write(
  * Generate the ANSI tag corresponding to the state and write it out as a NULL
  * terminated string.
  */
-char * FANSI_sgr_as_chr(struct FANSI_sgr sgr, int normalize, R_xlen_t i) {
+char * FANSI_sgr_as_chr(struct FANSI_sgr sgr, int expand, R_xlen_t i) {
   // First pass computes total size of tag
-  int tag_len = FANSI_sgr_write(NULL, sgr, 0, i, normalize);
+  int tag_len = FANSI_sgr_write(NULL, sgr, 0, i, expand);
 
   // Now write
   char * tag_tmp = R_alloc((size_t) tag_len + 1, sizeof(char));
-  FANSI_sgr_write(tag_tmp, sgr, 0, i, normalize);
+  FANSI_sgr_write(tag_tmp, sgr, 0, i, expand);
   tag_tmp[tag_len] = 0;
 
   return tag_tmp;
@@ -653,14 +653,14 @@ int FANSI_sgr_active(struct FANSI_sgr sgr) {
  */
 
 int FANSI_sgr_close(
-  char * buff, struct FANSI_sgr sgr, int len, R_xlen_t i, int normalize
+  char * buff, struct FANSI_sgr sgr, int len, R_xlen_t i, int expand
 ) {
   // char * buff_track = buff;
   int len0 = len;
   const char * err_msg = "Generating closing SGR";
 
   if(FANSI_sgr_active(sgr)) {
-    if(normalize) {
+    if(expand) {
       // We're deliberate in only closing things we know how to close in both the
       // state and in the ouptut string, that way we can check state at the end to
       // make sure we did actually close everything.
@@ -787,7 +787,7 @@ SEXP FANSI_state_at_pos_ext(
     error("Argument `norm` must be logical.");         // nocov
 
   R_xlen_t len = XLENGTH(pos);
-  int normalize = asInteger(norm);
+  int expand = asInteger(norm);
 
   const int res_cols = 4;  // if change this, need to change rownames init
   if(len > R_XLEN_T_MAX / res_cols) {
@@ -885,7 +885,7 @@ SEXP FANSI_state_at_pos_ext(
       if(FANSI_sgr_comp(state.sgr, state_prev.sgr)) {
         // this computes length twice..., we know state_char can be at most
         // INT_MAX excluding NULL (and certainly will be much less).
-        char * state_chr = FANSI_sgr_as_chr(state.sgr, normalize, i);
+        char * state_chr = FANSI_sgr_as_chr(state.sgr, expand, i);
         res_chr = PROTECT(
           FANSI_mkChar(
             state_chr, state_chr + strlen(state_chr), CE_NATIVE, i

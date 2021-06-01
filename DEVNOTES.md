@@ -4,6 +4,7 @@ These are internal developer notes.
 
 ## Todo
 
+* Bunch of docs don't have @return tags, oddly.
 * rename normalize -> expand (normalize not quite right).
 * add tests with sgr -> normalize -> html comparisons
 * Try to ensure index is in the same spot in all the writing funs.

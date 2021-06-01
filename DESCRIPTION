@@ -42,4 +42,4 @@ Collate:
     'substr2.R'
     'tohtml.R'
     'unhandled.R'
-    'normalize.R'
+    'expand.R'

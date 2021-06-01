@@ -343,7 +343,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
     // nocov end
 
   int err_code = 0;                       // track worst error code
-  int non_normal = 0;
+  int non_expanded = 0;
   struct FANSI_sgr sgr_prev = state.sgr;
 
   // consume all contiguous ESC sequences; some complexity due to the addition
@@ -413,7 +413,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
           // error codes should be the only things changing.
 
           if(!tok_res.val) {
-            non_normal = 1;
+            non_expanded = 1;
             state.sgr = reset_sgr(state.sgr);
           } else if (tok_res.val < 10) {
             // 1-9 are the standard styles (bold/italic)
@@ -528,7 +528,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
         // struct, so better to deal with that directly
         if(state.err_code > err_code) err_code = state.err_code;
         if(state.last) break;
-        non_normal = 1;
+        non_expanded = 1;
       } while(1);
       // Need to check that sequence actually is SGR, and if not, we need to
       // restore the state (this is done later on checking esc_recognized).
@@ -585,7 +585,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
   // Useful to know what prior style was in case this series of escapes ends up
   // being the last thing before terminal NULL.
   state.sgr_prev = sgr_prev;
-  state.non_normal = non_normal;
+  state.non_expanded = non_expanded;
   return state;
 }
 /*

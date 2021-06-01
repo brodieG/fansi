@@ -45,7 +45,7 @@ R_CallMethodDef callMethods[] = {
   {"ctl_as_int", (DL_FUNC) &FANSI_ctl_as_int_ext, 1},
   {"esc_html", (DL_FUNC) &FANSI_esc_html, 1},
   {"reset_limits", (DL_FUNC) &FANSI_reset_limits, 0},
-  {"normalize_sgr", (DL_FUNC) &FANSI_normalize_sgr_ext, 3},
+  {"expand_sgr", (DL_FUNC) &FANSI_expand_sgr_ext, 3},
   {NULL, NULL, 0}
 };
 
