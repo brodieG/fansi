@@ -688,3 +688,16 @@ int FANSI_mcopy_or_measure(
   }
   return tmp_len;
 }
+
+
+void FANSI_print(char * x) {
+  if(x) {
+    size_t len = strlen(x);
+    for(size_t i = 0; i < len; ++i)
+      if(*(x + i) < 0x20 || *(x + i) > 0x7F)
+        Rprintf("\\x%2x", *(x + i));
+      else
+        Rprintf("%c", *(x + i));
+    Rprintf("\n");
+  }
+}

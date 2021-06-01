@@ -441,6 +441,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_add_int(int x, int y, const char * file, int line);
 
   // Utilities
+  void FANSI_print(char * x);
   int FANSI_has_utf8(const char * x);
   void FANSI_interrupt(R_xlen_t i);
   intmax_t FANSI_ind(R_xlen_t i);
