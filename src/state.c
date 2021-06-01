@@ -382,7 +382,7 @@ int FANSI_color_size(int color, int * color_extra) {
  * Helper to make an SGR token, possibly full SGR if in normalize mode
  */
 static char * make_token(char * buff, const char * val, int normalize) {
-  if(val[2])
+  if(strlen(val) > 2)
     error("Internal error: token maker limited to 2 chars max."); // nocov
   if(!normalize) {
     strcpy(buff, val);
@@ -476,10 +476,10 @@ int FANSI_sgr_write(
   if(FANSI_sgr_active(sgr)) {
     if(!normalize) len += COPY_OR_MEASURE(&buff_track, "\033[");
     // styles
-    char * tokval = "0";
-    for(int i = 1; i < 10; i++) {
-      if((1 << i) & sgr.style) {
-        tokval[0] = '0' + i;
+    char tokval[2] = {0};
+    for(unsigned int i = 1; i < 10; i++) {
+      if((1U << i) & sgr.style) {
+        *tokval = '0' + (char) i;
         len += COPY_OR_MEASURE(&buff_track, make_token(tmp, tokval, normalize));
     } }
     // styles outside 0-9
@@ -513,7 +513,7 @@ int FANSI_sgr_write(
     }
     // Borders
     if(sgr.border) {
-      char * tokval = "50";
+      char tokval[3] = {'5', '0'};
       for(int i = 1; i < 4; ++i) {
         if((1 << i) & sgr.border) {
           tokval[1] = '0' + i;
@@ -522,7 +522,7 @@ int FANSI_sgr_write(
     } } }
     // Ideogram
     if(sgr.ideogram) {
-      char * tokval = "60";
+      char tokval[3] = {'6', '0'};
       for(int i = 0; i < 5; ++i){
         if((1 << i) & sgr.ideogram) {
           tokval[1] = '0' + i;
@@ -531,7 +531,7 @@ int FANSI_sgr_write(
     } } }
     // font
     if(sgr.font) {
-      char * tokval = "10";
+      char tokval[3] = {'1', '0'};
       tokval[1] = '0' + (sgr.font % 10);
       len += COPY_OR_MEASURE(&buff_track, make_token(tmp, tokval, normalize));
     }
@@ -561,7 +561,6 @@ int FANSI_sgr_write(
 char * FANSI_sgr_as_chr(struct FANSI_sgr sgr, int normalize, R_xlen_t i) {
   // First pass computes total size of tag
   int tag_len = FANSI_sgr_write(NULL, sgr, 0, i, normalize);
-  Rprintf("sgr as char %d\n", tag_len);
 
   // Now write
   char * tag_tmp = R_alloc((size_t) tag_len + 1, sizeof(char));
