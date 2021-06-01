@@ -45,7 +45,7 @@ static int expand(
 
   // Leftover from prior element (only if can't be merged with new)
   if(*string && *string != 0x1b && FANSI_sgr_active(state.sgr))
-    len += FANSI_sgr_write(buff_track, state.sgr, len, i, 1);
+    len += FANSI_sgr_write(buff_track, state.sgr, len, 1, i);
 
   // Find other ESCs
   while(1) {
@@ -65,12 +65,12 @@ static int expand(
         // Any prior open styles not overriden by new one need to be closed
         struct FANSI_sgr to_close =
           FANSI_sgr_setdiff(state.sgr_prev, state.sgr);
-        len += FANSI_sgr_close(buff_track, to_close, len, i, 1);
+        len += FANSI_sgr_close(buff_track, to_close, len, 1, i);
         if(buff_track) buff_track = buff + len;
 
         // Any newly open styles will need to be opened
         struct FANSI_sgr to_open = FANSI_sgr_setdiff(state.sgr, state.sgr_prev);
-        len += FANSI_sgr_write(buff_track, to_open, len, i, 1);
+        len += FANSI_sgr_write(buff_track, to_open, len, 1, i);
         if(buff_track) buff_track = buff + len;
 
         // Keep track of the last point we copied

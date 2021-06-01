@@ -450,7 +450,7 @@ static char * color_token(
  * Return how many needed / written bytes.
  */
 int FANSI_sgr_write(
-  char * buff, struct FANSI_sgr sgr, int len, R_xlen_t i, int expand
+  char * buff, struct FANSI_sgr sgr, int len, int expand, R_xlen_t i
 ) {
   /****************************************************\
   | IMPORTANT: KEEP THIS ALIGNED WITH state_as_html    |
@@ -551,11 +551,11 @@ int FANSI_sgr_write(
  */
 char * FANSI_sgr_as_chr(struct FANSI_sgr sgr, int expand, R_xlen_t i) {
   // First pass computes total size of tag
-  int tag_len = FANSI_sgr_write(NULL, sgr, 0, i, expand);
+  int tag_len = FANSI_sgr_write(NULL, sgr, 0, expand, i);
 
   // Now write
   char * tag_tmp = R_alloc((size_t) tag_len + 1, sizeof(char));
-  FANSI_sgr_write(tag_tmp, sgr, 0, i, expand);
+  FANSI_sgr_write(tag_tmp, sgr, 0, expand, i);
   tag_tmp[tag_len] = 0;
 
   return tag_tmp;
@@ -653,7 +653,7 @@ int FANSI_sgr_active(struct FANSI_sgr sgr) {
  */
 
 int FANSI_sgr_close(
-  char * buff, struct FANSI_sgr sgr, int len, R_xlen_t i, int expand
+  char * buff, struct FANSI_sgr sgr, int len, int expand, R_xlen_t i
 ) {
   // char * buff_track = buff;
   int len0 = len;

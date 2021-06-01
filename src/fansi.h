@@ -429,10 +429,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_sgr_active(struct FANSI_sgr sgr);
   char * FANSI_sgr_as_chr(struct FANSI_sgr sgr, int expand, R_xlen_t i);
   int FANSI_sgr_write(
-    char * buff, struct FANSI_sgr sgr, int len, R_xlen_t i, int expand
+    char * buff, struct FANSI_sgr sgr, int len, int expand, R_xlen_t i
   );
   int FANSI_sgr_close(
-    char * buff, struct FANSI_sgr sgr, int len, R_xlen_t i, int expand
+    char * buff, struct FANSI_sgr sgr, int len, int expand, R_xlen_t i
   );
   int FANSI_sgr_comp_color(struct FANSI_sgr target, struct FANSI_sgr current);
   struct FANSI_sgr FANSI_sgr_setdiff(struct FANSI_sgr old, struct FANSI_sgr new);

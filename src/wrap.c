@@ -185,9 +185,9 @@ static SEXP writeline(
     target_size, pre_dat.bytes, "Adding prefix/initial/indent/exdent", index
   );
   if(needs_start) target_size +=
-    FANSI_sgr_write(NULL, state_start.sgr, target_size, index, expand);
+    FANSI_sgr_write(NULL, state_start.sgr, target_size, expand, index);
   if(needs_close) target_size +=
-    FANSI_sgr_close(NULL, state_bound.sgr, target_size, index, expand);
+    FANSI_sgr_close(NULL, state_bound.sgr, target_size, expand, index);
 
   // - Pass 2 - Write ----------------------------------------------------------
 
@@ -197,7 +197,7 @@ static SEXP writeline(
 
   // Apply previous CSI style
   if(needs_start) buff_track +=
-    FANSI_sgr_write(buff_track, state_start.sgr, 0, index, expand);
+    FANSI_sgr_write(buff_track, state_start.sgr, 0, expand, index);
 
   // Apply indent/exdent prefix/initial
   if(pre_dat.bytes) {
@@ -217,7 +217,7 @@ static SEXP writeline(
 
   // And turn off CSI styles if needed
   if(needs_close) buff_track +=
-    FANSI_sgr_close(buff_track, state_bound.sgr, 0, index, expand);
+    FANSI_sgr_close(buff_track, state_bound.sgr, 0, expand, index);
 
   *buff_track = 0;
   if(buff_track - buff->buff != target_size)
