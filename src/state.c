@@ -688,7 +688,7 @@ int FANSI_sgr_close(
         len += COPY_OR_MEASURE(&buff, "\033[55m");
       }
       if(sgr.ideogram > 0U) {
-        sgr.ideogram &= ~((1U << 0U) & (1U << 1U) & (1U << 2U) & (1U << 3U));
+        for(unsigned int k = 0; k < 5; ++k) sgr.ideogram &= ~(1U << k);
         len += COPY_OR_MEASURE(&buff, "\033[65m");
       }
       unsigned int s_boldfaint = (1U << 1U | 1U << 2U);
@@ -734,7 +734,11 @@ int FANSI_sgr_close(
       }
       // Make sure we're not out of sync with has_style
       if(FANSI_sgr_active(sgr))
-        error("Internal Error: did not successfully close all styles.");
+        error(
+          "Internal Error: %s (clr: %d bg: %d st: %u bd: %u id %u).",
+          "did not successfully close all styles",
+          sgr.color, sgr.bg_color, sgr.style, sgr.border, sgr.ideogram
+        );
     } else {
       int clen = 4;
       len += clen;
