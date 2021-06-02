@@ -29,7 +29,7 @@
  */
 
 static int expand(
-  char * buff, struct FANSI_state state, struct FANSI_sgr *sgr, R_xlen_t i
+  char * buff, struct FANSI_state state, R_xlen_t i
 ) {
   const char * string, * string_prev, * string_last;
   string_prev = string_last = string = state.string + state.pos_byte;
@@ -43,11 +43,6 @@ static int expand(
 
   // Logic based on FANSI_esc_to_html
 
-  // Leftover from prior element (only if can't be merged with new)
-  if(*string && *string != 0x1b && FANSI_sgr_active(state.sgr)) {
-    len += FANSI_sgr_write(buff_track, state.sgr, len, 1, i);
-    if(buff) buff_track = buff + len;
-  }
   // Find other ESCs
   while(1) {
     string = strchr(string_prev, 0x1b);
@@ -92,7 +87,6 @@ static int expand(
   }
   if(buff && (buff_track - buff != len))
     error("Internal Error: buffer sync mismatch in expand SGR."); // nocov
-  *sgr = state.sgr;
   return len;
 }
 
@@ -113,13 +107,13 @@ SEXP FANSI_expand_sgr_ext(SEXP x, SEXP warn, SEXP term_cap) {
     SEXP chrsxp = STRING_ELT(x, i);
     if(chrsxp == NA_STRING) continue;
     struct FANSI_state state = FANSI_state_init(x, warn, term_cap, i);
-    state.sgr = sgr_end;  // Carry over prior state?
-    int len = expand(NULL, state, &sgr_end, i);
+    int len = expand(NULL, state, i);
     if(len < 0) continue;
 
+    // Write
     if(res == x) REPROTECT(res = duplicate(x), ipx);
     FANSI_size_buff(&buff, (size_t)len + 1);
-    expand(buff.buff, state, &sgr_end, i);
+    expand(buff.buff, state, i);
     cetype_t chr_type = getCharCE(chrsxp);
     SEXP reschr =
       PROTECT(FANSI_mkChar(buff.buff, buff.buff + len, chr_type, i));
