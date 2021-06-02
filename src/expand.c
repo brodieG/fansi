@@ -100,7 +100,6 @@ SEXP FANSI_expand_sgr_ext(SEXP x, SEXP warn, SEXP term_cap) {
   PROTECT_INDEX ipx;
   PROTECT_WITH_INDEX(res, &ipx);
   struct FANSI_buff buff = {.buff=NULL, .len=0};
-  struct FANSI_sgr sgr_end = {.color = -1, .bg_color = -1};
 
   for(R_xlen_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
@@ -113,6 +112,7 @@ SEXP FANSI_expand_sgr_ext(SEXP x, SEXP warn, SEXP term_cap) {
     // Write
     if(res == x) REPROTECT(res = duplicate(x), ipx);
     FANSI_size_buff(&buff, (size_t)len + 1);
+    state.warn = 0;  // avoid double warnings
     expand(buff.buff, state, i);
     cetype_t chr_type = getCharCE(chrsxp);
     SEXP reschr =
