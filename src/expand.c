@@ -44,9 +44,10 @@ static int expand(
   // Logic based on FANSI_esc_to_html
 
   // Leftover from prior element (only if can't be merged with new)
-  if(*string && *string != 0x1b && FANSI_sgr_active(state.sgr))
+  if(*string && *string != 0x1b && FANSI_sgr_active(state.sgr)) {
     len += FANSI_sgr_write(buff_track, state.sgr, len, 1, i);
-
+    if(buff) buff_track = buff + len;
+  }
   // Find other ESCs
   while(1) {
     string = strchr(string_prev, 0x1b);

@@ -4,6 +4,7 @@ These are internal developer notes.
 
 ## Todo
 
+* How does `substr_ctl` manage continuation of styles across elements?
 * Bunch of docs don't have @return tags, oddly.
 * rename normalize -> expand (normalize not quite right).
 * add tests with sgr -> normalize -> html comparisons
