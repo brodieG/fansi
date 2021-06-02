@@ -22,7 +22,13 @@ if(getRversion() < "3.2.2") {
   on.exit(old.opt)
   unitize_dir(
     'unitizer',
-    pattern="has|misc|nchar|overflow|strip|strsplit|substr|tabs|tohtml|wrap",
+    pattern=paste0(
+      c(
+        "has", "misc", "nchar", "overflow", "strip", "strsplit", "substr", 
+        "tabs", "tohtml", "wrap", "expand"
+      ),
+      collapse="|"
+    ),
     state='recommended'
   )
   # we skip utf8 tests on solaris due to the problems with deparse (and maybe

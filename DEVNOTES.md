@@ -4,7 +4,16 @@ These are internal developer notes.
 
 ## Todo
 
-* How does `substr_ctl` manage continuation of styles across elements?
+* Check double warnings in all functions doing the two pass reading.
+* How do we currently handle styles across elements?
+    * We don't.  `strwrap` carries the style within one single character
+      vector, it's just that in the output the result might span a few
+      elements.
+    * This needs to be properly documented.  Will also simplify
+      implementation of normalize.
+
+* Write docs about behavior of bleeding.
+* Warn about closing tags that don't close anything, pointing to docs.
 * Bunch of docs don't have @return tags, oddly.
 * rename normalize -> expand (normalize not quite right).
 * add tests with sgr -> normalize -> html comparisons
@@ -131,6 +140,32 @@ If pre had x, but post does not, issue closing tag.
 Generate a list of the styles that pre had but post doesn't, and only those.
 Then, generate a `close_active_sgr` on that style.
 
+How do we handle closing styles when there are not corresponding opening
+styles?  If there is a lone ESC[m in the string, what do we close?
+Nothing?  Everything?  Do we give the user the option of providing a
+vector of starting styles to consider active (and possibly to instruct us
+on which action to take)?  We could e.g. give the user the option to close
+everything.
+
+Do we warn about closing tags that don't close an active style?  Maybe we
+do that, and then point to docs about bleed.  But it does mean we should
+include the bleed argument.
+
+## Bleed
+
+Add a `bleed` param that is a single string (or TRUE) that causes the
+program to bleed from string to string, with the initial state specified
+by that argument (or TRUE for just no starting state).  But this
+precludes using the argument in a form that recycles to the beginning of
+each string; really, bleeding and starts with X should be distinct,
+possibly orthogonal.
+
+What cares about bleed?  `expand`, obviously.  Maybe `strwrap` as that
+adds a terminator.  What about `substr`?
+
+Do we really want a "starts with x" option?  Probably not worth it?  Is it
+sufficiently different and important relative to bleed?  Under what
+circumstances would we really want it?
 
 ## Overflow
 
