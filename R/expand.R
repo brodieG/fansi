@@ -35,10 +35,19 @@
 #' expand_sgr("hello\033[42;33m world\033[m")
 #' expand_sgr("\033[4mhello\033[42;33m world\033[m")
 
-expand_sgr <- function(x, warn=getOption('fansi.warn')) {
+expand_sgr <- function(
+  x, warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+) {
   if(!is.logical(warn)) warn <- as.logical(warn)
   if(!is.character(x)) stop("Argument `x` should be a character vector.")
+  if(!is.character(term.cap))
+    stop("Argument `term.cap` must be character.")
+  if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
+    stop(
+      "Argument `term.cap` may only contain values in ",
+      deparse(VALID.TERM.CAP)
+    )
 
-  .Call(FANSI_expand_sgr, enc2utf8(x), warn, seq_along(VALID.TERM.CAP))
+  .Call(FANSI_expand_sgr, enc2utf8(x), warn, term.cap.int)
 }
 
