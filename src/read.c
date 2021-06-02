@@ -502,7 +502,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
             } else {
               state.err_code = 1;  // unknown token
             }
-          } else if(tok_res.val >= 60 && tok_res.val < 65) {
+          } else if(tok_res.val >= 60 && tok_res.val <= 65) {
             // ideograms
             if(tok_res.val < 65) {
               state.sgr.ideogram |= (1U << (unsigned int)(tok_res.val - 60));
