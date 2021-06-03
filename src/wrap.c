@@ -128,7 +128,7 @@ static SEXP writeline(
   struct FANSI_prefix_dat pre_dat,
   int tar_width, const char * pad_chr,
   R_xlen_t index,
-  int expand
+  int normalize
 ) {
   // In case the last state read was at the end of the string, use the prior
   // state.  No point writing a state that will be immediately closed.
@@ -185,9 +185,9 @@ static SEXP writeline(
     target_size, pre_dat.bytes, "Adding prefix/initial/indent/exdent", index
   );
   if(needs_start) target_size +=
-    FANSI_sgr_write(NULL, state_start.sgr, target_size, expand, index);
+    FANSI_sgr_write(NULL, state_start.sgr, target_size, normalize, index);
   if(needs_close) target_size +=
-    FANSI_sgr_close(NULL, state_bound.sgr, target_size, expand, index);
+    FANSI_sgr_close(NULL, state_bound.sgr, target_size, normalize, index);
 
   // - Pass 2 - Write ----------------------------------------------------------
 
@@ -197,7 +197,7 @@ static SEXP writeline(
 
   // Apply previous CSI style
   if(needs_start) buff_track +=
-    FANSI_sgr_write(buff_track, state_start.sgr, 0, expand, index);
+    FANSI_sgr_write(buff_track, state_start.sgr, 0, normalize, index);
 
   // Apply indent/exdent prefix/initial
   if(pre_dat.bytes) {
@@ -217,7 +217,7 @@ static SEXP writeline(
 
   // And turn off CSI styles if needed
   if(needs_close) buff_track +=
-    FANSI_sgr_close(buff_track, state_bound.sgr, 0, expand, index);
+    FANSI_sgr_close(buff_track, state_bound.sgr, 0, normalize, index);
 
   *buff_track = 0;
   if(buff_track - buff->buff != target_size)
@@ -263,7 +263,7 @@ static SEXP strwrap(
   SEXP warn, SEXP term_cap,
   int first_only, SEXP ctl,
   R_xlen_t index,
-  int expand
+  int normalize
 ) {
   SEXP R_true = PROTECT(ScalarLogical(1));
   SEXP R_one = PROTECT(ScalarInteger(1));
@@ -391,7 +391,7 @@ static SEXP strwrap(
         writeline(
           state_bound, state_start, buff,
           para_start ? pre_first : pre_next,
-          width_tar, pad_chr, index, expand
+          width_tar, pad_chr, index, normalize
         )
       );
       first_line = 0;
@@ -503,7 +503,7 @@ SEXP FANSI_strwrap_ext(
   if(XLENGTH(norm) != 1)
     error("Internal Error: arg norm should be scalar.");  // nocov
 
-  int expand = asLogical(norm);
+  int normalize = asLogical(norm);
 
   const char * pad = CHAR(asChar(pad_end));
   if(*pad != 0 && (*pad < 0x20 || *pad > 0x7e))
@@ -625,7 +625,7 @@ SEXP FANSI_strwrap_ext(
         strip_spaces_int,
         warn, term_cap,
         first_only_int,
-        ctl, i, expand
+        ctl, i, normalize
     ) );
     if(first_only_int) {
       SET_STRING_ELT(res, i, str_i);

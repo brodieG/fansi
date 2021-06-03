@@ -99,7 +99,7 @@ strwrap_ctl <- function(
   x, width = 0.9 * getOption("width"), indent = 0,
   exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
-  ctl='all', expand=getOption('fansi.expand', FALSE)
+  ctl='all', normalize=getOption('fansi.normalize', FALSE)
 ) {
   if(!is.character(x)) x <- as.character(x)
 
@@ -124,9 +124,9 @@ strwrap_ctl <- function(
   if(length(warn) != 1L || is.na(warn))
     stop("Argument `warn` must be TRUE or FALSE.")
 
-  if(!isTRUE(expand %in% c(FALSE, TRUE)))
-    stop("Argument `expand` must be TRUE or FALSE.")
-  expand <- as.logical(expand)
+  if(!isTRUE(normalize %in% c(FALSE, TRUE)))
+    stop("Argument `normalize` must be TRUE or FALSE.")
+  normalize <- as.logical(normalize)
 
   if(!is.character(term.cap))
     stop("Argument `term.cap` must be character.")
@@ -161,7 +161,7 @@ strwrap_ctl <- function(
     FALSE, 8L,
     warn, term.cap.int,
     FALSE,   # first_only
-    ctl.int, expand
+    ctl.int, normalize
   )
   if(simplify) unlist(res) else res
 }
@@ -176,7 +176,7 @@ strwrap2_ctl <- function(
   tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
   tab.stops=getOption('fansi.tab.stops'),
   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
-  ctl='all', expand=getOption('fansi.expand', FALSE)
+  ctl='all', normalize=getOption('fansi.normalize', FALSE)
 ) {
   # {{{ validation
 
@@ -203,9 +203,9 @@ strwrap2_ctl <- function(
   if(length(warn) != 1L || is.na(warn))
     stop("Argument `warn` must be TRUE or FALSE.")
 
-  if(!isTRUE(expand %in% c(FALSE, TRUE)))
-    stop("Argument `expand` must be TRUE or FALSE.")
-  expand <- as.logical(expand)
+  if(!isTRUE(normalize %in% c(FALSE, TRUE)))
+    stop("Argument `normalize` must be TRUE or FALSE.")
+  normalize <- as.logical(normalize)
 
   if(!is.character(term.cap))
     stop("Argument `term.cap` must be character.")
@@ -267,7 +267,7 @@ strwrap2_ctl <- function(
     tabs.as.spaces, tab.stops,
     warn, term.cap.int,
     FALSE,   # first_only
-    ctl.int, expand
+    ctl.int, normalize
   )
   if(simplify) unlist(res) else res
 }
@@ -278,12 +278,12 @@ strwrap_sgr <- function(
   x, width = 0.9 * getOption("width"), indent = 0,
   exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
-  expand=getOption('fansi.expand', FALSE)
+  normalize=getOption('fansi.normalize', FALSE)
 )
   strwrap_ctl(
     x=x, width=width, indent=indent,
     exdent=exdent, prefix=prefix, simplify=simplify, initial=initial,
-    warn=warn, term.cap=term.cap, ctl='sgr', expand=expand
+    warn=warn, term.cap=term.cap, ctl='sgr', normalize=normalize
   )
 #' @export
 #' @rdname strwrap_ctl
@@ -296,7 +296,7 @@ strwrap2_sgr <- function(
   tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
   tab.stops=getOption('fansi.tab.stops'),
   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
-  expand=getOption('fansi.expand', FALSE)
+  normalize=getOption('fansi.normalize', FALSE)
 )
   strwrap2_ctl(
     x=x, width=width, indent=indent,
@@ -305,6 +305,6 @@ strwrap2_sgr <- function(
     strip.spaces=strip.spaces,
     tabs.as.spaces=tabs.as.spaces,
     tab.stops=tab.stops,
-    warn=warn, term.cap=term.cap, ctl='sgr', expand=expand
+    warn=warn, term.cap=term.cap, ctl='sgr', normalize=normalize
   )
 

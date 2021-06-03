@@ -12,7 +12,7 @@ strtrim_ctl(
   width,
   warn = getOption("fansi.warn"),
   ctl = "all",
-  expand = getOption("fansi.expand", FALSE)
+  normalize = getOption("fansi.normalize", FALSE)
 )
 
 strtrim2_ctl(
@@ -22,14 +22,14 @@ strtrim2_ctl(
   tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
   tab.stops = getOption("fansi.tab.stops"),
   ctl = "all",
-  expand = getOption("fansi.expand", FALSE)
+  normalize = getOption("fansi.normalize", FALSE)
 )
 
 strtrim_sgr(
   x,
   width,
   warn = getOption("fansi.warn"),
-  expand = getOption("fansi.expand", FALSE)
+  normalize = getOption("fansi.normalize", FALSE)
 )
 
 strtrim2_sgr(
@@ -38,7 +38,7 @@ strtrim2_sgr(
   warn = getOption("fansi.warn"),
   tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
   tab.stops = getOption("fansi.tab.stops"),
-  expand = getOption("fansi.expand", FALSE)
+  normalize = getOption("fansi.normalize", FALSE)
 )
 }
 \arguments{
@@ -65,9 +65,9 @@ for newlines and the actual ESC (0x1B) character.
 above, in which case it means "all but".
 }}
 
-\item{expand}{TRUE or FALSE (default) whether SGR sequence should be
-expanded out such that there is one distinct sequence for each SGR code.
-Expanded strings will occupy more space (e.g. "\033[31;42m" becomes
+\item{normalize}{TRUE or FALSE (default) whether SGR sequence should be
+normalized out such that there is one distinct sequence for each SGR code.
+normalized strings will occupy more space (e.g. "\033[31;42m" becomes
 "\033[31m\033[42m"), but will work better with code that assumes each SGR
 code will be in its own escape as \code{crayon} does.}
 

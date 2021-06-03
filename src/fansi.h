@@ -310,7 +310,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     // allows us to decide not to write it back out as it would be redundant.
     int terminal;
     // Last sequence of SGRs contained non-normal escapes
-    int non_expanded;
+    int non_normalized;
 
     /*
      * These support the arguments of the same names for nchar
@@ -392,7 +392,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_get_int_max();
   SEXP FANSI_esc_html(SEXP x);
 
-  SEXP FANSI_expand_sgr_ext(SEXP x, SEXP warn, SEXP term_cap);
+  SEXP FANSI_normalize_sgr_ext(SEXP x, SEXP warn, SEXP term_cap);
 
   // - Internal funs -----------------------------------------------------------
 
@@ -427,12 +427,12 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP width, SEXP ctl, R_xlen_t i
   );
   int FANSI_sgr_active(struct FANSI_sgr sgr);
-  char * FANSI_sgr_as_chr(struct FANSI_sgr sgr, int expand, R_xlen_t i);
+  char * FANSI_sgr_as_chr(struct FANSI_sgr sgr, int normalize, R_xlen_t i);
   int FANSI_sgr_write(
-    char * buff, struct FANSI_sgr sgr, int len, int expand, R_xlen_t i
+    char * buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
   );
   int FANSI_sgr_close(
-    char * buff, struct FANSI_sgr sgr, int len, int expand, R_xlen_t i
+    char * buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
   );
   int FANSI_sgr_comp_color(struct FANSI_sgr target, struct FANSI_sgr current);
   struct FANSI_sgr FANSI_sgr_setdiff(struct FANSI_sgr old, struct FANSI_sgr new);

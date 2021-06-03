@@ -4,7 +4,7 @@ These are internal developer notes.
 
 ## Todo
 
-* Add prop spacing to HTML
+* Change `unhandled_ctl` to point out specific problem sequence.
 * Expand is also not quite the right name, e.g. with "\033[31m\033[mA" the
   result is "A", so normalize is closer to being right.  The problem with
   normalize is that we guarantee that two different strings will compare
@@ -19,7 +19,6 @@ These are internal developer notes.
       implementation of normalize.
 
 * Write docs about behavior of bleeding.
-* Warn about closing tags that don't close anything, pointing to docs.
 
 * Bunch of docs don't have @return tags, oddly.
 * add tests with sgr -> normalize -> html comparisons
@@ -36,6 +35,14 @@ These are internal developer notes.
   check for unescaped '<', '>', and '&'?
 
 ## Done
+
+* Add prop spacing to HTML?
+
+No, there is no good way to do this, it would have to be a different font.
+
+* Warn about closing tags that don't close anything, pointing to docs.
+
+Decided against doing this.
 
 * Confirm that in e.g. `intmax_t > int` everything the comparison is done in
   `intmax_t` terms, not int.

@@ -14,7 +14,7 @@ substr_ctl(
   warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"),
   ctl = "all",
-  expand = getOption("fansi.expand", FALSE)
+  normalize = getOption("fansi.normalize", FALSE)
 )
 
 substr2_ctl(
@@ -28,7 +28,7 @@ substr2_ctl(
   warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"),
   ctl = "all",
-  expand = getOption("fansi.expand", FALSE)
+  normalize = getOption("fansi.normalize", FALSE)
 )
 
 substr_sgr(
@@ -37,7 +37,7 @@ substr_sgr(
   stop,
   warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"),
-  expand = getOption("fansi.expand", FALSE)
+  normalize = getOption("fansi.normalize", FALSE)
 )
 
 substr2_sgr(
@@ -50,7 +50,7 @@ substr2_sgr(
   tab.stops = getOption("fansi.tab.stops"),
   warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"),
-  expand = getOption("fansi.expand", FALSE)
+  normalize = getOption("fansi.normalize", FALSE)
 )
 }
 \arguments{
@@ -85,9 +85,9 @@ for newlines and the actual ESC (0x1B) character.
 above, in which case it means "all but".
 }}
 
-\item{expand}{TRUE or FALSE (default) whether SGR sequence should be
-expanded out such that there is one distinct sequence for each SGR code.
-Expanded strings will occupy more space (e.g. "\033[31;42m" becomes
+\item{normalize}{TRUE or FALSE (default) whether SGR sequence should be
+normalized out such that there is one distinct sequence for each SGR code.
+normalized strings will occupy more space (e.g. "\033[31;42m" becomes
 "\033[31m\033[42m"), but will work better with code that assumes each SGR
 code will be in its own escape as \code{crayon} does.}
 

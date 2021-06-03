@@ -19,7 +19,7 @@
 #include "fansi.h"
 
 /*
- * Writes out a String With Expanded SGR
+ * Writes out a String With normalized SGR
  *
  * Or computes the size required
  *
@@ -28,7 +28,7 @@
  * @param buff if NULL, computes the size required, if not writes it.
  */
 
-static int expand(
+static int normalize(
   char * buff, struct FANSI_state state, R_xlen_t i
 ) {
   const char * string, * string_prev, * string_last;
@@ -37,7 +37,7 @@ static int expand(
   int any_to_exp = 0;
   char * buff_track = buff;
 
-  const char * err_msg = "Expanding SGR";
+  const char * err_msg = "Normalizing SGR";
 
   // - Pass 1: Measure -------------------------------------------------------
 
@@ -52,8 +52,8 @@ static int expand(
     // We encountered an ESC
     if(*string && *string == 0x1b) {
       state = FANSI_read_next(state, i);
-      // Not all ESC sequences are SGR, and only non-expanded need re-writing
-      if(state.is_sgr && state.non_expanded) {
+      // Not all ESC sequences are SGR, and only non-normalized need re-writing
+      if(state.is_sgr && state.non_normalized) {
         any_to_exp = 1;
         // stuff prior to SGR
         len += MCOPY_OR_MEASURE(&buff_track, string_last, string - string_last);
@@ -86,11 +86,11 @@ static int expand(
     string_prev = string;
   }
   if(buff && (buff_track - buff != len))
-    error("Internal Error: buffer sync mismatch in expand SGR."); // nocov
+    error("Internal Error: buffer sync mismatch in normalize SGR."); // nocov
   return len;
 }
 
-SEXP FANSI_expand_sgr_ext(SEXP x, SEXP warn, SEXP term_cap) {
+SEXP FANSI_normalize_sgr_ext(SEXP x, SEXP warn, SEXP term_cap) {
   if(TYPEOF(x) != STRSXP)
     error("Internal Error: `x` must be a character vector");  // nocov
 
@@ -106,14 +106,14 @@ SEXP FANSI_expand_sgr_ext(SEXP x, SEXP warn, SEXP term_cap) {
     SEXP chrsxp = STRING_ELT(x, i);
     if(chrsxp == NA_STRING) continue;
     struct FANSI_state state = FANSI_state_init(x, warn, term_cap, i);
-    int len = expand(NULL, state, i);
+    int len = normalize(NULL, state, i);
     if(len < 0) continue;
 
     // Write
     if(res == x) REPROTECT(res = duplicate(x), ipx);
     FANSI_size_buff(&buff, (size_t)len + 1);
     state.warn = 0;  // avoid double warnings
-    expand(buff.buff, state, i);
+    normalize(buff.buff, state, i);
     cetype_t chr_type = getCharCE(chrsxp);
     SEXP reschr =
       PROTECT(FANSI_mkChar(buff.buff, buff.buff + len, chr_type, i));

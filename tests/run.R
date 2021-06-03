@@ -25,7 +25,7 @@ if(getRversion() < "3.2.2") {
     pattern=paste0(
       c(
         "has", "misc", "nchar", "overflow", "strip", "strsplit", "substr", 
-        "tabs", "tohtml", "wrap", "expand"
+        "tabs", "tohtml", "wrap", "normalize"
       ),
       collapse="|"
     ),
