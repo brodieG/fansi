@@ -4,6 +4,12 @@ These are internal developer notes.
 
 ## Todo
 
+* Add prop spacing to HTML
+* Expand is also not quite the right name, e.g. with "\033[31m\033[mA" the
+  result is "A", so normalize is closer to being right.  The problem with
+  normalize is that we guarantee that two different strings will compare
+  equal once normalized, always.  So we lock ourselves into the order in
+  which things are done.  Why did we not think this was a normalization?
 * Check double warnings in all functions doing the two pass reading.
 * How do we currently handle styles across elements?
     * We don't.  `strwrap` carries the style within one single character
@@ -14,11 +20,9 @@ These are internal developer notes.
 
 * Write docs about behavior of bleeding.
 * Warn about closing tags that don't close anything, pointing to docs.
+
 * Bunch of docs don't have @return tags, oddly.
-* rename normalize -> expand (normalize not quite right).
 * add tests with sgr -> normalize -> html comparisons
-* Try to ensure index is in the same spot in all the writing funs.
-* Document the semantics of style across a vector with multiple elements.
 * All writing functions should advance for consistency, and have same sig.
 * Make sure we check we're not using `intmax_t` or `uintmax_t` in a tight loop
   anywhere.
@@ -28,7 +32,8 @@ These are internal developer notes.
 * Can we manage the stack better with the growing buffer so we don't keep all
   the prior half sized ones around until we exit so they are eligible for gc?
 * Do sgr_to_HTML (sgr_to_html2?), add check to sgr_to_html if any of the bad
-  characters are found to escape or use `sgr_to_html2`.
+  characters are found to escape or use `sgr_to_html2`.  Or do we just
+  check for unescaped '<', '>', and '&'?
 
 ## Done
 

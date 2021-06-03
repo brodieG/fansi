@@ -479,7 +479,8 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
             (tok_res.val >= 100 && tok_res.val <= 107)
           ) {
             // Does terminal support bright colors? We do not consider it an
-            // error if it doesn't.
+            // error if it doesn't because the color will just be ignored
+            // and won't cause a trainwreck like unsupported truecolor.
 
             if(state.term_cap & 1) {
               if (tok_res.val < 100) {
@@ -495,10 +496,10 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
             if(tok_res.val < 54) {
               state.sgr.border |= (1U << (unsigned int)(tok_res.val - 50));
             } else if (tok_res.val == 54) {
-              state.sgr.border &= ~(1U << 1);
-              state.sgr.border &= ~(1U << 2);
+              state.sgr.border &= ~(1U << 1U);
+              state.sgr.border &= ~(1U << 2U);
             } else if (tok_res.val == 55) {
-              state.sgr.border &= ~(1U << 3);
+              state.sgr.border &= ~(1U << 3U);
             } else {
               state.err_code = 1;  // unknown token
             }

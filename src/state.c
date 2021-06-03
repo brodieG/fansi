@@ -453,8 +453,13 @@ int FANSI_sgr_write(
   char * buff, struct FANSI_sgr sgr, int len, int expand, R_xlen_t i
 ) {
   /****************************************************\
-  | IMPORTANT: KEEP THIS ALIGNED WITH state_as_html    |
+  | IMPORTANT:                                         |
+  | KEEP THIS ALIGNED WITH state_as_html               |
   | although right now ignoring rare escapes in html   |
+  |                                                    |
+  | DO NOT CHANGE ORDER of writing.  Added tokens      |
+  | go at end.  We picked a bad order at the beginning |
+  | and now we're stuck.                               |
   \****************************************************/
 
   int len0 = len;
@@ -531,8 +536,6 @@ int FANSI_sgr_write(
     if(buff) {
       buff[len - 1] = 'm';
       // nocov start
-      // note this error is really too late, as we could have written past
-      // allocation in the steps above
       if(buff_track - buff != len - len0)
         // nocov start
         error(
@@ -661,35 +664,13 @@ int FANSI_sgr_close(
 
   if(FANSI_sgr_active(sgr)) {
     if(expand) {
-      // We're deliberate in only closing things we know how to close in both the
-      // state and in the ouptut string, that way we can check state at the end to
-      // make sure we did actually close everything.
+      // We're deliberate in only closing things we know how to close in
+      // both the state and in the ouptut string, that way we can check
+      // state at the end to make sure we did actually close everything.
 
-      // Close color
-
-      if(sgr.color >= 0) {
-        sgr.color = -1;
-        len += COPY_OR_MEASURE(&buff, "\033[39m");
-      }
-      if(sgr.bg_color >= 0) {
-        sgr.bg_color = -1;
-        len += COPY_OR_MEASURE(&buff, "\033[49m");
-      }
-      if(sgr.font > 0) {
+      if(sgr.font) {
         sgr.font = 0;
         len += COPY_OR_MEASURE(&buff, "\033[10m");
-      }
-      if(sgr.border & (1U << 1U | 1U << 2U)) {
-        sgr.border &= ~(1U << 1U | 1U << 2U);
-        len += COPY_OR_MEASURE(&buff, "\033[54m");
-      }
-      if(sgr.border & (1U << 3U)) {
-        sgr.border &= ~(1U << 3U);
-        len += COPY_OR_MEASURE(&buff, "\033[55m");
-      }
-      if(sgr.ideogram > 0U) {
-        for(unsigned int k = 0; k < 5; ++k) sgr.ideogram &= ~(1U << k);
-        len += COPY_OR_MEASURE(&buff, "\033[65m");
       }
       unsigned int s_boldfaint = (1U << 1U | 1U << 2U);
       unsigned int s_frakital = (1U << 3U | 1U << 10U);
@@ -716,10 +697,7 @@ int FANSI_sgr_close(
         sgr.style &= ~s_blink;
         len += COPY_OR_MEASURE(&buff, "\033[25m");
       }
-      if(sgr.style & s_propspc) {
-        sgr.style &= ~s_propspc;
-        len += COPY_OR_MEASURE(&buff, "\033[26m");
-      }
+      // 26 is opening prop spacing (50 to close)
       if(sgr.style & s_inverse) {
         sgr.style &= ~s_inverse;
         len += COPY_OR_MEASURE(&buff, "\033[27m");
@@ -732,6 +710,34 @@ int FANSI_sgr_close(
         sgr.style &= ~s_strikethrough;
         len += COPY_OR_MEASURE(&buff, "\033[29m");
       }
+      // Colors
+      if(sgr.color >= 0) {
+        sgr.color = -1;
+        len += COPY_OR_MEASURE(&buff, "\033[39m");
+      }
+      if(sgr.bg_color >= 0) {
+        sgr.bg_color = -1;
+        len += COPY_OR_MEASURE(&buff, "\033[49m");
+      }
+      // Prop spacing
+      if(sgr.style & s_propspc) {
+        sgr.style &= ~s_propspc;
+        len += COPY_OR_MEASURE(&buff, "\033[50m");
+      }
+      // Border and ideogram
+      if(sgr.border & (1U << 1U | 1U << 2U)) {
+        sgr.border &= ~(1U << 1U | 1U << 2U);
+        len += COPY_OR_MEASURE(&buff, "\033[54m");
+      }
+      if(sgr.border & (1U << 3U)) {
+        sgr.border &= ~(1U << 3U);
+        len += COPY_OR_MEASURE(&buff, "\033[55m");
+      }
+      if(sgr.ideogram > 0U) {
+        for(unsigned int k = 0; k < 5; ++k) sgr.ideogram &= ~(1U << k);
+        len += COPY_OR_MEASURE(&buff, "\033[65m");
+      }
+
       // Make sure we're not out of sync with has_style
       if(FANSI_sgr_active(sgr))
         error(
