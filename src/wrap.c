@@ -523,7 +523,6 @@ SEXP FANSI_strwrap_ext(
 
   int strip_spaces_int = asInteger(strip_spaces);
 
-
   if(strip_spaces_int) x = PROTECT(FANSI_process(x, &buff));
   else PROTECT(x);
 
