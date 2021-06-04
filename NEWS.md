@@ -1,5 +1,10 @@
 # fansi Release Notes
 
+## v1.0.0
+
+* `html_esc` gains a `what` parameter to indicate which HTML special characters
+  should be escaped.
+
 ## v0.5.0
 
 * [#65](https://github.com/brodieG/fansi/issues/65): `sgr_to_html` optionally

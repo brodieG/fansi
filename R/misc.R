@@ -175,16 +175,23 @@ fansi_lines <- function(txt, step=1) {
 #' @export
 #' @family HTML functions
 #' @param x character vector
-#' @return `x`, but with "<", ">", "&", "'", and "\"" characters replaced by
-#'   their HTML entity codes, and Encoding set to UTF-8.
+#' @param what character(1) containing any combination of ASCII characters
+#'   "<", ">", "&", "'", or "\"".  These characters are special in HTML contexts
+#'   and will be substituted by their HTML entity code.  By default, all
+#'   special characters are escaped, but in many cases "<>&" or even "<>" might
+#'   be sufficient.  @return `x`, but with the `what` characters replaced by
+#'   their HTML entity codes, and Encoding set to UTF-8 if non-ASCII input are
+#'   present in `x`.
 #' @examples
 #' html_esc("day > night")
 #' html_esc("<SPAN>hello world</SPAN>")
 
-html_esc <- function(x) {
+html_esc <- function(x, what=getOption("fansi.html.esc", "<>&'\"")) {
   if(!is.character(x))
     stop("Argument `x` must be character, is ", typeof(x), ".")
-  .Call(FANSI_esc_html, enc2utf8(x))
+  if(!is.character(what))
+    stop("Argument `what` must be character, is ", typeof(what), ".")
+  .Call(FANSI_esc_html, enc2utf8(x), what)
 }
 
 #' Format Character Vector for Display as Code in HTML

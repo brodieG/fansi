@@ -615,11 +615,41 @@ SEXP FANSI_color_to_html_ext(SEXP x) {
 /*
  * Escape special HTML characters.
  */
-SEXP FANSI_esc_html(SEXP x) {
+SEXP FANSI_esc_html(SEXP x, SEXP what) {
   if(TYPEOF(x) != STRSXP)
     error("Internal Error: `x` must be a character vector");  // nocov
+  if(TYPEOF(what) != STRSXP)
+    error("Internal Error: `x` must be a character vector");  // nocov
 
+  if(XLENGTH(what) != 1 || STRING_ELT(what, 0) == NA_STRING)
+    error("Argument `what` must be scalar character and not NA.");
+
+  SEXP what_chrsxp = STRING_ELT(what, 0);
   R_xlen_t x_len = XLENGTH(x);
+  R_len_t what_len = LENGTH(what_chrsxp);
+
+  if(what_len == 0 || x_len == 0) return x;
+
+  // Create a lookup "bitfield" for the 5 chars we can escape
+  const unsigned char * what_chr = (const unsigned char *) CHAR(what_chrsxp);
+  unsigned int what_val = 0;
+
+  for(R_len_t i = 0; i < what_len; ++i) {
+    unsigned const char wc = *(what_chr + i);
+    switch(wc) {
+      case '&':  what_val |= 1U << 0U; break;
+      case '"':  what_val |= 1U << 1U; break;
+      case '\'': what_val |= 1U << 2U; break;
+      case '<':  what_val |= 1U << 3U; break;
+      case '>':  what_val |= 1U << 4U; break;
+      default:
+        error(
+          "%s %s.",
+          "Argument `what` may only contain ASCII characters",
+          "\"&\", \"<\", \">\", \"'\", or \"\\\"\""
+        );
+  } }
+
   SEXP res = x;
   // Reserve spot on protection stack
   PROTECT_INDEX ipx;
@@ -663,15 +693,18 @@ SEXP FANSI_esc_html(SEXP x) {
         // COPY_OR_MEASURE requires variables len, i, and err_msg
         // COPY_OR_MEASURE ADVANCES buff!
         // - 1 because we're replacing 1 char by the escape
-        switch(*string) {
-          case '&':  len += COPY_OR_MEASURE(&buff_track, "&amp;") - 1;  break;
-          case '"':  len += COPY_OR_MEASURE(&buff_track, "&quot;") - 1; break;
-          case '\'': len += COPY_OR_MEASURE(&buff_track, "&#039;") - 1; break;
-          case '<':  len += COPY_OR_MEASURE(&buff_track, "&lt;") - 1;   break;
-          case '>':  len += COPY_OR_MEASURE(&buff_track, "&gt;") - 1;   break;
-          default:
-            if(buff_track) *(buff_track++) = *string;
-        }
+        if(*string == '&' &&       what_val & 1U << 0U)
+          len += COPY_OR_MEASURE(&buff_track, "&amp;")  - 1;
+        else if(*string == '"' &&  what_val & 1U << 1U)
+          len += COPY_OR_MEASURE(&buff_track, "&quot;") - 1;
+        else if(*string == '\'' && what_val & 1U << 2U)
+          len += COPY_OR_MEASURE(&buff_track, "&#039;") - 1;
+        else if(*string == '<' &&  what_val & 1U << 3U)
+          len += COPY_OR_MEASURE(&buff_track, "&lt;")   - 1;
+        else if(*string == '>' &&  what_val & 1U << 4U)
+          len += COPY_OR_MEASURE(&buff_track, "&gt;")   - 1;
+        // Just advance copy string otherwse
+        else if(buff_track) *(buff_track++) = *string;
         ++string;
       }
       // Only get here in second pass if we've written
