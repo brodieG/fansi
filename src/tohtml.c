@@ -642,7 +642,6 @@ SEXP FANSI_esc_html(SEXP x) {
     // actually write to the buffer (signal is for buffer to be non-NULL.
     for(int k = 0; k < 2; ++k) {
       string = CHAR(chrsxp);
-      char * buff_track = buff.buff;
 
       if(k && len > LENGTH(chrsxp)) {
         FANSI_size_buff(&buff, (size_t)len + 1);
@@ -651,7 +650,9 @@ SEXP FANSI_esc_html(SEXP x) {
         if(res == x) REPROTECT(res = duplicate(x), ipx);
       }
       // No second pass if no incremental chars
-      else break;
+      else if (k) break;
+
+      char * buff_track = buff.buff;
 
       while(*string) {
         if(*string > '>') { // All specials are less than this
@@ -674,7 +675,7 @@ SEXP FANSI_esc_html(SEXP x) {
         ++string;
       }
       // Only get here in second pass if we've written
-      if(k) {
+      if(k && buff_track) {
         *buff_track = 0;
         cetype_t chr_type = getCharCE(chrsxp);
         SEXP reschr = PROTECT(FANSI_mkChar(buff.buff, buff_track, chr_type, i));
