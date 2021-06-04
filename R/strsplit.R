@@ -53,7 +53,7 @@
 strsplit_ctl <- function(
   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
-  ctl='all'
+  ctl='all', normalize=getOption('fansi.normalize', FALSE)
 ) {
   x <- as.character(x)
   if(any(Encoding(x) == "bytes"))
@@ -79,6 +79,10 @@ strsplit_ctl <- function(
   if(!is.logical(useBytes)) useBytes <- as.logical(useBytes)
   if(length(useBytes) != 1L || is.na(useBytes))
     stop("Argument `useBytes` must be TRUE or FALSE.")
+
+  if(!isTRUE(normalize %in% c(FALSE, TRUE)))
+    stop("Argument `normalize` must be TRUE or FALSE.")
+  normalize <- as.logical(normalize)
 
   if(!is.character(term.cap))
     stop("Argument `term.cap` must be character.")
@@ -149,7 +153,7 @@ strsplit_ctl <- function(
         round.start=TRUE, round.stop=FALSE,
         tabs.as.spaces=FALSE, tab.stops=8L, warn=warn,
         term.cap.int=term.cap.int, x.len=length(starts),
-        ctl.int=ctl.int
+        ctl.int=ctl.int, normalize=normalize
       )
     } else {
       res[[i]] <- x[[i]]
@@ -167,11 +171,12 @@ strsplit_ctl <- function(
 
 strsplit_sgr <- function(
   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
-  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
+  normalize=getOption('fansi.normalize', FALSE)
 )
   strsplit_ctl(
     x=x, split=split, fixed=fixed, perl=perl, useBytes=useBytes,
-    warn=warn, term.cap=term.cap, ctl='sgr'
+    warn=warn, term.cap=term.cap, ctl='sgr', normalize=normalize
   )
 
 # # old interface to split happening directly in C code

@@ -142,7 +142,8 @@ strtrim2_ctl <- function(
     tabs.as.spaces, tab.stops,
     warn, term.cap.int,
     TRUE,      # first only
-    ctl.int
+    ctl.int,
+    normalize
   )
   res
 }
