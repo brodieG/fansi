@@ -20,21 +20,17 @@ if(getRversion() < "3.2.2") {
     # warnPartialMatchDollar = TRUE
   )
   on.exit(old.opt)
+  pattern <- "^[^.].*\\.[Rr]$"
+  pattern <- "misc"
   unitize_dir(
     'unitizer',
-    pattern=paste0(
-      c(
-        "has", "misc", "nchar", "overflow", "strip", "strsplit", "substr", 
-        "tabs", "tohtml", "wrap", "normalize"
-      ),
-      collapse="|"
-    ),
-    state='recommended'
+    pattern=pattern,
+    state='suggested'
   )
   # we skip utf8 tests on solaris due to the problems with deparse (and maybe
   # others, don't have a solaris system handy for testing)
 
   if(!grepl("solaris|sun", Sys.info()[['sysname']], ignore.case=TRUE)) {
-    unitize('unitizer/utf8.R')
+    unitize_dir('special', state='suggested')
   }
 }

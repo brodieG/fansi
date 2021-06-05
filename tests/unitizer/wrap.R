@@ -87,6 +87,10 @@ unitizer_sect("Basic Ansi", {
   hello2.3 <- c(hello2.1, hello2.2)
   strwrap_ctl(hello2.3, 10, simplify=FALSE)
   strwrap2_ctl(hello2.3, 10, simplify=FALSE)
+
+  # closed at end
+  strwrap_ctl("aliquip \033[31mex ea commodo consequat\033[0m\n", 25)
+
 })
 unitizer_sect("Long Wrap", {
   # wrap.nrm <- strwrap(strip_ctl(lorem.r.thanks, "sgr"), 40)
