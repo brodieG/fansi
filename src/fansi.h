@@ -229,6 +229,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * need to make it back to R which doesn't have a `size_t` type.
      *
      * - pos_byte: the byte in the string
+     * - pos_byte_sgr_start: the starting position of the last sgr read, really
+     *     only intended to be use din conjuction with 'terminal' so that if we
+     *     decide not to write a terminal SGR we know where to stop instead.
      * - pos_ansi: actual character position, different from pos_byte due to
      *   multi-byte characters (i.e. UTF-8)
      * - pos_raw: the character position after we strip the handled ANSI tags,
@@ -250,6 +253,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int pos_width;
     int pos_width_target;
     int pos_byte;
+    int pos_byte_sgr_start;
 
     // Are there bytes outside of 0-127
 

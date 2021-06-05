@@ -134,6 +134,7 @@ static SEXP writeline(
   // state.  No point writing a state that will be immediately closed.
   if(state_bound.terminal) {
     state_bound.sgr = state_bound.sgr_prev;
+    state_bound.pos_byte = state_bound.pos_byte_sgr_start;
     state_bound.terminal = 0;
   }
   // Check if we are in a CSI state b/c if we need extra room for

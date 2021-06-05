@@ -21,6 +21,7 @@
 /*
  * GENERAL NOTES ON read_ FUNCTIONS
  *
+ * * read_* should never be used directly, use FANSI_read_next.
  * * state.pos_byte is taken to be the first unread character.
  * * state.pos_byte will be the first unread character after a call to `read_*`
  * * It is assumed that the string pointed to by a state cannot be longer than
@@ -343,13 +344,18 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
     // nocov end
 
   int err_code = 0;                       // track worst error code
+  int seq_start = state.pos_byte;
   int non_normalized = 0;
+  unsigned int esc_types = 0;          // 1 == normal, 2 == SGR
   struct FANSI_sgr sgr_prev = state.sgr;
 
-  // consume all contiguous ESC sequences; some complexity due to the addition
-  // of the requirement that we only actually interpret the ESC sequences if
-  // they are active via `ctl`, but the impossibility of knowing what type of
-  // ESC sequence we're dealing with until we've parsed it.
+  // Consume all contiguous ESC sequences so long as they are all either
+  // completely SGR or completely not SGR.
+  //
+  // some complexity due to the addition of the requirement that we only
+  // actually interpret the ESC sequences if they are active via `ctl`, but the
+  // impossibility of knowing what type of ESC sequence we're dealing with until
+  // we've parsed it.
 
   while(state.string[state.pos_byte] == 27) {
     struct FANSI_state state_prev = state;
@@ -365,6 +371,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
     } else if(
       state.string[state.pos_byte] != '[' && state.ctl & FANSI_CTL_ESC
     ) {
+      esc_types |= 1U;
       esc_recognized = 1;
 
       // Other ESC sequence; note there are technically multi character
@@ -533,6 +540,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       // restore the state (this is done later on checking esc_recognized).
       if(!state.is_sgr) {
         // CSI
+        esc_types |= 1U;
         if(state.ctl & FANSI_CTL_CSI) {
           state.sgr = state_prev.sgr;
           esc_recognized = 1;
@@ -540,7 +548,13 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       } else if (state.ctl & FANSI_CTL_SGR) {
         // SGR and SGR tracking enabled
         esc_recognized = 1;
+        esc_types |= 2U;
       }
+    }
+    // Did we read mixed escapes? If so unwind the last read and break loop
+    if(esc_types == (1U | 2U)) {
+      state = state_prev;
+      break;
     }
     // If the ESC was recognized then record error and advance, otherwise reset
     // the state and advance as if reading an ASCII character.
@@ -585,6 +599,9 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
   // being the last thing before terminal NULL.
   state.sgr_prev = sgr_prev;
   state.non_normalized = non_normalized;
+  if(esc_types & 2U) {
+    state.pos_byte_sgr_start = seq_start;
+  }
   return state;
 }
 /*
@@ -705,6 +722,7 @@ struct FANSI_state FANSI_read_next(
   struct FANSI_state state, R_xlen_t i
 ) {
   const char chr_val = state.string[state.pos_byte];
+  state.is_sgr = 0;
   state.err_code = 0; // reset err code after each char
   // this can only be one if the last thing read is a CSI
   if(chr_val) state.terminal = 0;

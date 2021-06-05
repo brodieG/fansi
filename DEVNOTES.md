@@ -4,6 +4,9 @@ These are internal developer notes.
 
 ## Todo
 
+* Make sure we don't accidentally omit a non-SGR sequence because it's terminal.
+* Test combinations of escape sequences, including with errors (e.g. a correct
+  SGR with an invalid code).
 * Change `unhandled_ctl` to point out specific problem sequence.
 * Expand is also not quite the right name, e.g. with "\033[31m\033[mA" the
   result is "A", so normalize is closer to being right.  The problem with
