@@ -338,7 +338,10 @@ substr_ctl_internal <- function(
 ## Need to expose this so we can test bad UTF8 handling because substr will
 ## behave different with bad UTF8 pre and post R 3.6.0
 
-state_at_pos <- function(x, starts, ends, warn=getOption('fansi.warn')) {
+state_at_pos <- function(
+  x, starts, ends, warn=getOption('fansi.warn'),
+  normalize=getOption('fansi.normalize', FALSE)
+) {
   is.start <- c(rep(TRUE, length(starts)), rep(FALSE, length(ends)))
   .Call(
     FANSI_state_at_pos_ext,
@@ -348,6 +351,7 @@ state_at_pos <- function(x, starts, ends, warn=getOption('fansi.warn')) {
     !is.start, # ends
     warn,
     seq_along(VALID.TERM.CAP),
-    seq_along(VALID.CTL)
+    seq_along(VALID.CTL),
+    normalize
   )
 }
