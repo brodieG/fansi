@@ -130,41 +130,28 @@ static SEXP writeline(
   R_xlen_t index,
   int normalize
 ) {
+  // - Pass 1 - Measure --------------------------------------------------------
+
+  // First thing we need to do is check whether we need to pad as that affects
+  // how we treat the boundary.
+
+  int target_width = state_bound.pos_width - state_start.pos_width;
+  int target_pad = 0;
+  if(target_width <= tar_width && *pad_chr) {
+    target_pad = tar_width - target_width;
+  }
   // In case the last state read was at the end of the string, use the prior
-  // state.  No point writing a state that will be immediately closed.
-  if(state_bound.terminal) {
+  // state.  No point writing a state that will be immediately closed.  But we
+  // must write it if we're going to add padding.
+
+  if(state_bound.terminal && !target_pad) {
     state_bound.sgr = state_bound.sgr_prev;
     state_bound.pos_byte = state_bound.pos_byte_sgr_start;
     state_bound.terminal = 0;
   }
-  // Check if we are in a CSI state b/c if we need extra room for
-  // the closing state tag
-  int needs_start = FANSI_sgr_active(state_start.sgr);
-  int needs_close = FANSI_sgr_active(state_bound.sgr);
-
-  // state_bound.pos_byte 1 past what we need, so this should include room
-  // for NULL terminator
-  if(
-    (state_bound.pos_byte < state_start.pos_byte) ||
-    (state_bound.pos_width < state_start.pos_width)
-  )
-    // nocov start
-    error("Internal Error: boundary leading position; contact maintainer.");
-    // nocov end
-
-  if(tar_width < 0) tar_width = 0;
-
-  if(state_bound.pos_byte < state_start.pos_byte)
-    error("Internal Error: line ends backwards.");  // nocov
-  if(state_bound.pos_byte < state_start.pos_byte)
-    error("Internal Error: negative line width.");  // nocov
-
-  // - Pass 1 - Measure --------------------------------------------------------
+  // Compute size
 
   int target_size = state_bound.pos_byte - state_start.pos_byte;
-  int target_width = state_bound.pos_width - state_start.pos_width;
-  int target_pad = 0;
-
   if(!target_size) {
     // handle corner case for empty strings that don't get indented by strwrap;
     // we considered testing width instead of size as that would also prevent
@@ -176,8 +163,7 @@ static SEXP writeline(
   }
   // If we are going to pad the end, adjust sizes and widths
 
-  if(target_width <= tar_width && *pad_chr) {
-    target_pad = tar_width - target_width;
+  if(target_pad) {
     target_size = FANSI_check_append(
       target_size, target_pad, "Adding padding", index
     );
@@ -185,6 +171,28 @@ static SEXP writeline(
   target_size = FANSI_check_append(
     target_size, pre_dat.bytes, "Adding prefix/initial/indent/exdent", index
   );
+  if(tar_width < 0) tar_width = 0;
+
+  // state_bound.pos_byte 1 past what we need, so this should include room
+  // for NULL terminator
+  if(
+    (state_bound.pos_byte < state_start.pos_byte) ||
+    (state_bound.pos_width < state_start.pos_width)
+  )
+    // nocov start
+    error("Internal Error: boundary leading position; contact maintainer.");
+    // nocov end
+
+  if(state_bound.pos_byte < state_start.pos_byte)
+    error("Internal Error: line ends backwards.");  // nocov
+  if(state_bound.pos_byte < state_start.pos_byte)
+    error("Internal Error: negative line width.");  // nocov
+
+  // Check if we are in a CSI state b/c if we need extra room for
+  // the closing state tag
+  int needs_start = FANSI_sgr_active(state_start.sgr);
+  int needs_close = FANSI_sgr_active(state_bound.sgr);
+
   if(needs_start) target_size +=
     FANSI_sgr_write(NULL, state_start.sgr, target_size, normalize, index);
   if(needs_close) target_size +=
@@ -217,17 +225,20 @@ static SEXP writeline(
   while(target_pad--) *(buff_track++) = *pad_chr;
 
   // And turn off CSI styles if needed
-  if(needs_close) buff_track +=
-    FANSI_sgr_close(buff_track, state_bound.sgr, 0, normalize, index);
+  if(needs_close) {
+    buff_track +=
+      FANSI_sgr_close(buff_track, state_bound.sgr, 0, normalize, index);
+  }
 
   *buff_track = 0;
-  if(buff_track - buff->buff != target_size)
+  if(buff_track - buff->buff != target_size) {
     // nocov start
     error(
       "Internal Error: line buffer size mismatch (%jd vs %d) at index [%jd].",
       buff_track - buff->buff, target_size, FANSI_ind(index)
     );
     // nocov end
+  }
 
   // Now create the charsxp and append to the list, start by determining
   // what encoding to use.  If pos_byte is greater than pos_ansi it means
