@@ -105,6 +105,11 @@
 #'   "38;2" or "48;2"). Changing this parameter changes how `fansi`
 #'   interprets escape sequences, so you should ensure that it matches your
 #'   terminal capabilities. See [term_cap_test] for details.
+#' @param normalize TRUE or FALSE (default) whether SGR sequence should be
+#'   normalized out such that there is one distinct sequence for each SGR code.
+#'   normalized strings will occupy more space (e.g. "\033[31;42m" becomes
+#'   "\033[31m\033[42m"), but will work better with code that assumes each SGR
+#'   code will be in its own escape as `crayon` does.
 #' @examples
 #' substr_ctl("\033[42mhello\033[m world", 1, 9)
 #' substr_ctl("\033[42mhello\033[m world", 3, 9)
@@ -131,10 +136,11 @@ substr_ctl <- function(
   x, start, stop,
   warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap'),
-  ctl='all'
+  ctl='all', normalize=getOption('fansi.normalize', FALSE)
 )
   substr2_ctl(
-    x=x, start=start, stop=stop, warn=warn, term.cap=term.cap, ctl=ctl
+    x=x, start=start, stop=stop, warn=warn, term.cap=term.cap, ctl=ctl,
+    normalize=normalize
   )
 
 #' @rdname substr_ctl
@@ -146,7 +152,7 @@ substr2_ctl <- function(
   tab.stops=getOption('fansi.tab.stops'),
   warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap'),
-  ctl='all'
+  ctl='all', normalize=getOption('fansi.normalize', FALSE)
 ) {
   if(!is.character(x)) x <- as.character(x)
   x <- enc2utf8(x)
@@ -162,6 +168,9 @@ substr2_ctl <- function(
   if(!is.logical(warn)) warn <- as.logical(warn)
   if(length(warn) != 1L || is.na(warn))
     stop("Argument `warn` must be TRUE or FALSE.")
+  if(!isTRUE(normalize %in% c(FALSE, TRUE)))
+    stop("Argument `normalize` must be TRUE or FALSE.")
+  normalize <- as.logical(normalize)
 
   if(!is.character(term.cap))
     stop("Argument `term.cap` must be character.")
@@ -218,7 +227,7 @@ substr2_ctl <- function(
     round.start=round == 'start' || round == 'both',
     round.stop=round == 'stop' || round == 'both',
     x.len=length(x),
-    ctl.int=ctl.int
+    ctl.int=ctl.int, normalize=normalize
   )
   res[!no.na] <- NA_character_
   res
@@ -229,10 +238,12 @@ substr2_ctl <- function(
 substr_sgr <- function(
   x, start, stop,
   warn=getOption('fansi.warn'),
-  term.cap=getOption('fansi.term.cap')
+  term.cap=getOption('fansi.term.cap'),
+  normalize=getOption('fansi.normalize', FALSE)
 )
   substr2_ctl(
-    x=x, start=start, stop=stop, warn=warn, term.cap=term.cap, ctl='sgr'
+    x=x, start=start, stop=stop, warn=warn, term.cap=term.cap, ctl='sgr',
+    normalize=normalize
   )
 
 #' @rdname substr_ctl
@@ -243,23 +254,23 @@ substr2_sgr <- function(
   tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
   tab.stops=getOption('fansi.tab.stops'),
   warn=getOption('fansi.warn'),
-  term.cap=getOption('fansi.term.cap')
+  term.cap=getOption('fansi.term.cap'),
+  normalize=getOption('fansi.normalize', FALSE)
 )
   substr2_ctl(
     x=x, start=start, stop=stop, type=type, round=round,
     tabs.as.spaces=tabs.as.spaces,
-    tab.stops=tab.stops, warn=warn, term.cap=term.cap, ctl='sgr'
+    tab.stops=tab.stops, warn=warn, term.cap=term.cap, ctl='sgr',
+    normalize=normalize
   )
 
-## Lower overhead version of the function for use by strwrap
-##
 ## @x must already have been converted to UTF8
 ## @param type.int is supposed to be the matched version of type, minus 1
 
 substr_ctl_internal <- function(
   x, start, stop, type.int, round, tabs.as.spaces,
   tab.stops, warn, term.cap.int, round.start, round.stop,
-  x.len, ctl.int
+  x.len, ctl.int, normalize
 ) {
   # For each unique string, compute the state at each start and stop position
   # and re-map the positions to "ansi" space
@@ -272,6 +283,11 @@ substr_ctl_internal <- function(
 
   x.scalar <- length(x) == 1
   x.u <- if(x.scalar) x else unique_chr(x)
+
+  # We compute style at each start and stop position by getting all those
+  # positions into a vector and then ordering them by position, keeping track of
+  # original order and whether they are starting or ending positions (affects
+  # how multi-byte characters are trimmed/kept).
 
   for(u in x.u) {
     elems <- which(x == u & s.s.valid)
@@ -292,9 +308,10 @@ substr_ctl_internal <- function(
     state <- .Call(
       FANSI_state_at_pos_ext,
       u, e.sort - 1L, type.int,
-      e.lag, e.ends,
+      e.lag,   # whether to include a partially covered multi-byte character
+      e.ends,  # whether it's a start or end position
       warn, term.cap.int,
-      ctl.int
+      ctl.int, normalize
     )
     # Recover the matching values for e.sort
 
@@ -312,11 +329,20 @@ substr_ctl_internal <- function(
 
     # if there is any ANSI CSI at end then add a terminating CSI
 
-    end.csi <- character(length(start.tag))
-    end.csi[nzchar(stop.tag)] <- '\033[0m'
-
+    if(normalize) {
+      end.csi <- close_sgr(stop.tag)
+    } else {
+      end.csi <- character(length(stop.tag))
+      end.csi[nzchar(stop.tag)] <- '\033[0m'
+    }
+    tmp <- paste0(
+      start.tag,
+      substr(x.elems, start.ansi, stop.ansi)
+    )
     res[elems] <- paste0(
-      start.tag, substr(x.elems, start.ansi, stop.ansi), end.csi
+      if(normalize)
+        normalize_sgr(tmp, warn=warn, term.cap=VALID.TERM.CAP[term.cap.int])
+      else tmp, end.csi
     )
   }
   res
@@ -325,7 +351,10 @@ substr_ctl_internal <- function(
 ## Need to expose this so we can test bad UTF8 handling because substr will
 ## behave different with bad UTF8 pre and post R 3.6.0
 
-state_at_pos <- function(x, starts, ends, warn=getOption('fansi.warn')) {
+state_at_pos <- function(
+  x, starts, ends, warn=getOption('fansi.warn'),
+  normalize=getOption('fansi.normalize', FALSE)
+) {
   is.start <- c(rep(TRUE, length(starts)), rep(FALSE, length(ends)))
   .Call(
     FANSI_state_at_pos_ext,
@@ -335,6 +364,7 @@ state_at_pos <- function(x, starts, ends, warn=getOption('fansi.warn')) {
     !is.start, # ends
     warn,
     seq_along(VALID.TERM.CAP),
-    seq_along(VALID.CTL)
+    1L,        # ctl="all"
+    normalize
   )
 }

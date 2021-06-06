@@ -2,24 +2,206 @@
 
 These are internal developer notes.
 
-## Color Classes
+## Todo
+
+* How to deal with wraps of `"hello \033[33;44m world"`.  Notice extra space.
+* Once we add isolate, make sure that trailing sequences are not omitted if the
+  end is not isolated.
+* Make sure we don't accidentally omit a non-SGR sequence because it's terminal.
+* Test combinations of escape sequences, including with errors (e.g. a correct
+  SGR with an invalid code).
+* Change `unhandled_ctl` to point out specific problem sequence.
+* Expand is also not quite the right name, e.g. with "\033[31m\033[mA" the
+  result is "A", so normalize is closer to being right.  The problem with
+  normalize is that we guarantee that two different strings will compare
+  equal once normalized, always.  So we lock ourselves into the order in
+  which things are done.  Why did we not think this was a normalization?
+* Check double warnings in all functions doing the two pass reading.
+* How do we currently handle styles across elements?
+    * We don't.  `strwrap` carries the style within one single character
+      vector, it's just that in the output the result might span a few
+      elements.
+    * This needs to be properly documented.  Will also simplify
+      implementation of normalize.
+
+* Write docs about behavior of bleeding.
+
+* Bunch of docs don't have @return tags, oddly.
+* add tests with sgr -> normalize -> html comparisons
+* All writing functions should advance for consistency, and have same sig.
+* Make sure we check we're not using `intmax_t` or `uintmax_t` in a tight loop
+  anywhere.
+* Review all overflow checks.
+* Cleanup limits structure, is it really needed now we have a better view of
+  what we're dealing with?
+* Can we manage the stack better with the growing buffer so we don't keep all
+  the prior half sized ones around until we exit so they are eligible for gc?
+* Do sgr_to_HTML (sgr_to_html2?), add check to sgr_to_html if any of the bad
+  characters are found to escape or use `sgr_to_html2`.  Or do we just
+  check for unescaped '<', '>', and '&'?
+
+## Done
+
+* Add prop spacing to HTML?
+
+No, there is no good way to do this, it would have to be a different font.
+
+* Warn about closing tags that don't close anything, pointing to docs.
+
+Decided against doing this.
+
+* Confirm that in e.g. `intmax_t > int` everything the comparison is done in
+  `intmax_t` terms, not int.
+
+Yes, the only issue is when a possibly signed value needs to be promoted to an
+unsigned one (I think).
+
+* Make FANSI_writeline static.
+
+* Change state_init to intake a CHARSXP to ensure we cannot initialize with
+  something larger than R_len_t.
+
+Currently takes STRSXP.  A little awkward though, but we did it that way because
+we had the index.
+
+## Crayon Compatibility
+
+### Updating Crayon
+
+We could modify the code to add in addition to `st$open` and `st$close` a
+`st$closedby`, where the last would be transformed into a regex that matches any
+closing sequence.  This will work even nested as in e.g.
+
+red('hello ', red('wor\033[0mld') , ' yo')
+
+Result would be:
+
+    \033[32mhello \033[31mwo\033[0\033[32m\033[31mld\033[39m\033[32m yo\033[39m
+
+What happens is that the inner step is done first, adding its color after
+`\033[0m`, but then the outer step happens, and adds its color in between the
+`\033[0m` and the `\033[31m` just added, so the inner step dominates, which is
+exactly what we want.
+
+Issue are:
+
+* We need to use regular expressions, not fixed, so might be a little slower.
+* It will not deal with things like "\033[1;31m".
+
+### Fansi Changes
+
+`normalize_sgr`: take all known SGRs form `\033[31;42m` and re-write them into
+`\033[31m\033[42m`.
+
+> What about non SGR escapes?  Should process be: strip non-SGR, then normalize?
+> Or do we just ignore non-SGR and let the user decide what they want to do with
+> the warnings?
+
+One problem with `normalize_sgr` is it will substantially complicate the code
+for anything computing width if we try to make it part of it.  So likely best
+way to deal with it is in "crayon.compat" mode, do a two pass process: first
+normalize, second do our thing.  Obviously this will be slower.
+
+Should `normalize_sgr` convert `\033[0m` and similar to the exploded version?
+And should it be exploded to all closing tags, or only to the active ones?
+Probably only the active ones.
+
+It's probably out of the question to normalize as we process, but it's not out
+of the question to write the closing tags on each.  What would it take to
+normalize as we process?
+
+* Known how to compute the normalized size.  Won't be able to use the
+  `copy_or_measure` framework as we won't know ahead of time what the string is,
+  which means we would have to generate it twice to use `copy_or_measure`.
+* Instead of skipping all the way to the end of the line and copying the whole
+  thing, we'd have to copy up to each ESC, and write the normalized version of
+  it.
+
+We get most of the value by just writing the end-tags, and that's easy and cheap
+to do.  It's just that then there is no great interface.  Either we normalize
+everything after the fact at the cost of rewriting it all, or we do a half-assed
+version where we hope we don't have to normalize the internals and write the
+normalized end tags.  Maybe that's the compromise.  Look for unnormalized tags
+inside, and if any exist, then use the full second pass, otherwise just write
+the normalized end tags.
+
+We also need to decide what is unnormalized.  For crayon, all we really care
+about is that "close" tags be pulled out, and they don't even have to be really
+pulled out, they just need to be appended.
+
+There is also the R level functions which use `substr`, so those will have to be
+two-pass unless we rewrite substr internally.
+
+So maybe first thing to do is the normalize version?  Then we can think if we
+want to change writelines?
+
+Aside: if we truly want to insulate `fansi` output from external SGR, we really
+should be starting with `\033[0m` too.  Maybe another option is to "insulate",
+which would just start and end with the null SGR, optionally?
+
+The other thing we can do is accept an "state.initial" input, and output a
+"state.end".  This way we can merge with any other SGR strings.
+
+### Normalize
+
+Biggest issue is dealing with the concept of closing tags, which we're really
+not set up to deal with.  However, we can have a pre-state, and a post-state,
+and we can figure out what transformations need to be applied to go from one to
+the other.
+
+So maybe we can't get fully away from mapping all the open and close styles in
+some way.
+
+If pre had color, but post does not, close color.
+If pre had x, but post does not, issue closing tag.
+
+Generate a list of the styles that pre had but post doesn't, and only those.
+Then, generate a `close_active_sgr` on that style.
+
+How do we handle closing styles when there are not corresponding opening
+styles?  If there is a lone ESC[m in the string, what do we close?
+Nothing?  Everything?  Do we give the user the option of providing a
+vector of starting styles to consider active (and possibly to instruct us
+on which action to take)?  We could e.g. give the user the option to close
+everything.
+
+Do we warn about closing tags that don't close an active style?  Maybe we
+do that, and then point to docs about bleed.  But it does mean we should
+include the bleed argument.
+
+## Bleed
+
+Add a `bleed` param that is a single string (or TRUE) that causes the
+program to bleed from string to string, with the initial state specified
+by that argument (or TRUE for just no starting state).  But this
+precludes using the argument in a form that recycles to the beginning of
+each string; really, bleeding and starts with X should be distinct,
+possibly orthogonal.
+
+What cares about bleed?  `expand`, obviously.  Maybe `strwrap` as that
+adds a terminator.  What about `substr`?
+
+Do we really want a "starts with x" option?  Probably not worth it?  Is it
+sufficiently different and important relative to bleed?  Under what
+circumstances would we really want it?
+
+Is this the desired outcome:
+
+    > strwrap_ctl("hello world\033[31m", 12)
+    [1] "hello world"
+
+Yes, if "isolate" is true, but if not we should emit the ending style.
+
+## Overflow
+
+Set R_LEN_T_MAX to INT_MAX - N, and check that on expansion we get the correct
+error at write time.
 
 Tests:
 
 * State carrying over from one string element to the next?
 
-* 39/49, much of the code assumes it won't get there.
-* Overflows
-  * Caused by classes
-  * Caused otherwise
-* 8, 16, and 256 colors
-  * Boundaries
-  * Thing that should be covered and not (i.e. both basic and bright with
-    8, basic/bright and 8 bit with 16, true color with 256).
-  * Both background and color classes
-  * Background yes color no, and vice versa
-
-html_compute_size compute the size of each sequential escape collection.
+* Close all styles, half of the styles, the other half.
 
 ## To HTML
 

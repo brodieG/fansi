@@ -37,7 +37,7 @@ int FANSI_tab_width(struct FANSI_state state, SEXP tab_stops) {
     int stop_size = INTEGER(tab_stops)[stop_idx];
     if(stop_size < 1)
       error("Internal Error: stop size less than 1.");  // nocov
-    if(tab_width > FANSI_int_max - stop_size)
+    if(tab_width > FANSI_lim.lim_int.max - stop_size)
       error("Integer overflow when attempting to compute tab width."); // nocov
     tab_width += stop_size;
     if(stop_idx < stops - 1) stop_idx++;
@@ -69,8 +69,6 @@ SEXP FANSI_tabs_as_spaces(
 
     SEXP chr = STRING_ELT(vec, i);
     if(chr == NA_STRING) continue;
-    FANSI_check_chrsxp(chr, i);
-
     source = CHAR(chr);
 
     while(*source && (source = strchr(source, '\t'))) {
@@ -86,10 +84,6 @@ SEXP FANSI_tabs_as_spaces(
       ++source;
     }
     if(tab_count) {
-      // Need to convert to UTF8 so width calcs work
-
-      const char * string = CHAR(chr);
-
       // Figure out possible size of buffer, allowing max_tab_stop for every
       // tab, which should over-allocate
 
@@ -97,7 +91,7 @@ SEXP FANSI_tabs_as_spaces(
       int tab_extra = max_tab_stop - 1;
 
       for(int k = 0; k < tab_count; ++k) {
-        if(new_buff_size > (size_t) (FANSI_int_max - tab_extra))
+        if(new_buff_size > (size_t) (FANSI_lim.lim_int.max - tab_extra))
           error(
             "%s%s",
             "Converting tabs to spaces will cause string to be longer than ",
@@ -112,7 +106,7 @@ SEXP FANSI_tabs_as_spaces(
       SEXP R_true = PROTECT(ScalarLogical(1));
       SEXP R_one = PROTECT(ScalarInteger(1));
       struct FANSI_state state = FANSI_state_init_full(
-        string, warn, term_cap, R_true, R_true, R_one, ctl
+        vec, warn, term_cap, R_true, R_true, R_one, ctl, i
       );
       UNPROTECT(2);
 
@@ -143,10 +137,10 @@ SEXP FANSI_tabs_as_spaces(
           // consume tab and advance
 
           state.warn = 0;
-          state = FANSI_read_next(state);
+          state = FANSI_read_next(state, i);
           state.warn = warn_old;
           cur_chr = state.string[state.pos_byte];
-          state = FANSI_inc_width(state, extra_spaces);
+          state = FANSI_inc_width(state, extra_spaces, i);
           last_byte = state.pos_byte;
 
           // actually write the extra spaces
@@ -159,16 +153,13 @@ SEXP FANSI_tabs_as_spaces(
           if(!cur_chr) *buff_track = 0;
         }
         if(!cur_chr) break;
-        state = FANSI_read_next(state);
+        state = FANSI_read_next(state, i);
       }
       // Write the CHARSXP
 
       cetype_t chr_type = CE_NATIVE;
       if(state.has_utf8) chr_type = CE_UTF8;
-      FANSI_check_chr_size(buff_start, buff_track, i);
-      SEXP chr_sxp = PROTECT(
-        mkCharLenCE(buff_start, (int) (buff_track - buff_start), chr_type)
-      );
+      SEXP chr_sxp = PROTECT(FANSI_mkChar(buff_start, buff_track, chr_type, i));
       SET_STRING_ELT(res_sxp, i, chr_sxp);
       UNPROTECT(1);
     }

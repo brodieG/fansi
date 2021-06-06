@@ -23,7 +23,9 @@ specially:
 \itemize{
 \item "C0" control characters, such as tabs and carriage returns (we include
 delete in this set, even though technically it is not part of it).
-\item Sequences starting in "ESC[", also known as ANSI CSI sequences.
+\item Sequences starting in "ESC[", also known as ANSI Control Sequence
+Introducer (CSI) sequences, of which the Select Graphic Rendition (SGR)
+sequences used to format terminal output are a subset.
 \item Sequences starting in "ESC" and followed by something other than "[".
 }
 
@@ -36,8 +38,8 @@ long.
 
 In theory it is possible to encode \emph{Control Sequences} with a single
 byte introducing character in the 0x40-0x5F range instead of the traditional
-"ESC[".  Since this is rare and it conflicts with UTF-8 encoding, we do
-not support it.
+"ESC[".  Since this is rare and it conflicts with UTF-8 encoding, \code{fansi}
+does not support it.
 
 The special treatment of \emph{Control Sequences} is to compute their
 display/character width as zero.  For the SGR subset of the ANSI CSI
@@ -181,7 +183,7 @@ Behavior is undefined and probably bad if you somehow manage to provide to
 \code{fansi} strings that do not adhere to these assumptions.
 
 It is possible that during processing strings that are shorter than INT_MAX
-would become longer than that.  \code{fansi} checks for that overflow and will
+would become longer than that. \code{fansi} checks for that overflow and will
 stop with an error if that happens.  A work-around for this situation is to
 break up large strings into smaller ones.  The limit is on each element of a
 character vector, not on the vector as a whole.  \code{fansi} will also error on

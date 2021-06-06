@@ -87,6 +87,10 @@ unitizer_sect("Basic Ansi", {
   hello2.3 <- c(hello2.1, hello2.2)
   strwrap_ctl(hello2.3, 10, simplify=FALSE)
   strwrap2_ctl(hello2.3, 10, simplify=FALSE)
+
+  # closed at end
+  strwrap_ctl("aliquip \033[31mex ea commodo consequat\033[0m\n", 25)
+
 })
 unitizer_sect("Long Wrap", {
   # wrap.nrm <- strwrap(strip_ctl(lorem.r.thanks, "sgr"), 40)
@@ -321,6 +325,10 @@ unitizer_sect("corner cases", {
     ),
     error=conditionMessage
   )
+  ## Test mixing of SGR with non SGR escapes; non-SGR should not be
+  ## dropped, and _trailing_ SGR should be dropped.
+  strwrap_ctl("hello world\033[31m\033A", 12)
+  strwrap_ctl("hello world\033A\033[31m", 12)
 })
 unitizer_sect("bad inputs", {
   strwrap_ctl(1:3)

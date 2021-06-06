@@ -438,3 +438,6 @@ unitizer_sect("issue 54 ctd", {
   Encoding(string4) <- "UTF-8"
   sgr_to_html(string4)
 })
+unitizer_sect("html_esc", {
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "\U0001F600")
+})

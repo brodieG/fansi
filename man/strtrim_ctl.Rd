@@ -7,7 +7,13 @@
 \alias{strtrim2_sgr}
 \title{ANSI Control Sequence Aware Version of strtrim}
 \usage{
-strtrim_ctl(x, width, warn = getOption("fansi.warn"), ctl = "all")
+strtrim_ctl(
+  x,
+  width,
+  warn = getOption("fansi.warn"),
+  ctl = "all",
+  normalize = getOption("fansi.normalize", FALSE)
+)
 
 strtrim2_ctl(
   x,
@@ -15,17 +21,24 @@ strtrim2_ctl(
   warn = getOption("fansi.warn"),
   tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
   tab.stops = getOption("fansi.tab.stops"),
-  ctl = "all"
+  ctl = "all",
+  normalize = getOption("fansi.normalize", FALSE)
 )
 
-strtrim_sgr(x, width, warn = getOption("fansi.warn"))
+strtrim_sgr(
+  x,
+  width,
+  warn = getOption("fansi.warn"),
+  normalize = getOption("fansi.normalize", FALSE)
+)
 
 strtrim2_sgr(
   x,
   width,
   warn = getOption("fansi.warn"),
   tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
-  tab.stops = getOption("fansi.tab.stops")
+  tab.stops = getOption("fansi.tab.stops"),
+  normalize = getOption("fansi.normalize", FALSE)
 )
 }
 \arguments{
@@ -51,6 +64,12 @@ for newlines and the actual ESC (0x1B) character.
 \item "all": all of the above, except when used in combination with any of the
 above, in which case it means "all but".
 }}
+
+\item{normalize}{TRUE or FALSE (default) whether SGR sequence should be
+normalized out such that there is one distinct sequence for each SGR code.
+normalized strings will occupy more space (e.g. "\033[31;42m" becomes
+"\033[31m\033[42m"), but will work better with code that assumes each SGR
+code will be in its own escape as \code{crayon} does.}
 
 \item{tabs.as.spaces}{FALSE (default) or TRUE, whether to convert tabs to
 spaces.  This can only be set to TRUE if \code{strip.spaces} is FALSE.}
@@ -93,7 +112,7 @@ only treat ANSI CSI SGR sequences specially, and are equivalent to the
 strtrim_ctl("\033[42mHello world\033[m", 6)
 }
 \seealso{
-\link{fansi} for details on how \emph{Control Sequences} are
-interpreted, particularly if you are getting unexpected results.
-\link{strwrap_ctl} is used internally by this function.
+\code{\link{fansi}} for details on how \emph{Control Sequences} are
+interpreted, particularly if you are getting unexpected results,
+\code{\link{normalize_sgr}} for more details on what the \code{normalize} parameter does.
 }

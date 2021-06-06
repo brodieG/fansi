@@ -4,14 +4,18 @@
 \alias{html_esc}
 \title{Escape Characters With Special HTML Meaning}
 \usage{
-html_esc(x)
+html_esc(x, what = getOption("fansi.html.esc", "<>&'\\""))
 }
 \arguments{
 \item{x}{character vector}
-}
-\value{
-\code{x}, but with "<", ">", "&", "'", and "\"" characters replaced by
-their HTML entity codes, and Encoding set to UTF-8.
+
+\item{what}{character(1) containing any combination of ASCII characters
+"<", ">", "&", "'", or "\"".  These characters are special in HTML contexts
+and will be substituted by their HTML entity code.  By default, all
+special characters are escaped, but in many cases "<>&" or even "<>" might
+be sufficient.  @return \code{x}, but with the \code{what} characters replaced by
+their HTML entity codes, and Encoding set to UTF-8 if non-ASCII input are
+present in \code{x}.}
 }
 \description{
 Arbitrary text may contain characters with special meaning in HTML, which may

@@ -39,7 +39,7 @@ int FANSI_has_utf8(const char * x) {
   }
   return 0;
 }
-// nocov start
+// nocov start (not needed, use i10n_info!)
 int FANSI_is_utf8_loc() {
   error("Current not in use");
   SEXP sys_getlocale = PROTECT(install("Sys.getlocale"));
@@ -64,7 +64,7 @@ int FANSI_is_utf8_loc() {
 
   size_t loc_len = strlen(loc_string);
 
-  if(loc_len > (size_t) FANSI_int_max)
+  if(loc_len > (size_t) FANSI_lim.lim_int.max)
     // nocov start
     error(
       "%s%s",
@@ -149,7 +149,7 @@ void FANSI_check_chrsxp(SEXP x, R_xlen_t i) {
         FANSI_ind(i), "Contact maintainer"
       );
   }
-  if(LENGTH(x) > FANSI_int_max) {
+  if(LENGTH(x) > FANSI_lim.lim_int.max) {
     error(
       "Strings longer than INT_MAX not supported (length %jd at index %jd).",
       (intmax_t)(LENGTH(x)), FANSI_ind(i)

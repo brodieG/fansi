@@ -23,8 +23,8 @@ static const
 R_CallMethodDef callMethods[] = {
   {"has_csi", (DL_FUNC) &FANSI_has, 3},
   {"strip_csi", (DL_FUNC) &FANSI_strip, 3},
-  {"strwrap_csi", (DL_FUNC) &FANSI_strwrap_ext, 15},
-  {"state_at_pos_ext", (DL_FUNC) &FANSI_state_at_pos_ext, 8},
+  {"strwrap_csi", (DL_FUNC) &FANSI_strwrap_ext, 16},
+  {"state_at_pos_ext", (DL_FUNC) &FANSI_state_at_pos_ext, 9},
   {"process", (DL_FUNC) &FANSI_process_ext, 1},
   {"check_assumptions", (DL_FUNC) &FANSI_check_assumptions, 0},
   {"digits_in_int", (DL_FUNC) &FANSI_digits_in_int_ext, 1},
@@ -35,7 +35,6 @@ R_CallMethodDef callMethods[] = {
   {"unique_chr", (DL_FUNC) &FANSI_unique_chr, 1},
   {"nzchar_esc", (DL_FUNC) &FANSI_nzchar, 5},
   {"add_int", (DL_FUNC) &FANSI_add_int_ext, 2},
-  {"strsplit", (DL_FUNC) &FANSI_strsplit, 3},
   {"cleave", (DL_FUNC) &FANSI_cleave, 1},
   {"order", (DL_FUNC) &FANSI_order, 1},
   {"sort_int", (DL_FUNC) &FANSI_sort_int, 1},
@@ -44,7 +43,11 @@ R_CallMethodDef callMethods[] = {
   {"get_int_max", (DL_FUNC) &FANSI_get_int_max, 0},
   {"check_enc", (DL_FUNC) &FANSI_check_enc_ext, 2},
   {"ctl_as_int", (DL_FUNC) &FANSI_ctl_as_int_ext, 1},
-  {"esc_html", (DL_FUNC) &FANSI_esc_html, 1},
+  {"esc_html", (DL_FUNC) &FANSI_esc_html, 2},
+  {"reset_limits", (DL_FUNC) &FANSI_reset_limits, 0},
+  {"normalize_sgr", (DL_FUNC) &FANSI_normalize_sgr_ext, 3},
+  {"normalize_sgr_list", (DL_FUNC) &FANSI_normalize_sgr_list_ext, 3},
+  {"close_sgr", (DL_FUNC) &FANSI_sgr_close_ext, 2},
   {NULL, NULL, 0}
 };
 

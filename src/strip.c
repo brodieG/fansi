@@ -69,6 +69,8 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
 
   for(i = 0; i < len; ++i) {
     FANSI_interrupt(i);
+    SEXP x_chr = STRING_ELT(x, i);
+    FANSI_check_chrsxp(x_chr, i);
     R_len_t chr_len = LENGTH(STRING_ELT(x, i));
     if(chr_len > mem_req) mem_req = chr_len;
   }
@@ -110,7 +112,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
       }
       if(csi.len) {
         has_ansi = 1;
-        if(csi.start - chr > FANSI_int_max - csi.len)
+        if(csi.start - chr > FANSI_lim.lim_int.max - csi.len)
           // nocov start
           error(
             "%s%s",
@@ -130,21 +132,14 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
 
           REPROTECT(res_fin = duplicate(x), ipx);
 
-          // Note the is guaranteed to be an over-allocation
-
-          if(mem_req == R_LEN_T_MAX)
-            // nocov start
-            error(
-              "%s%s",
-              "Internal error, string should be shorter than R_LEN_T_MAX, ",
-              "contact maintainer."
-            );
-            // nocov end
+          // Note the is guaranteed to be an over-allocation, as it's the
+          // longest string in the vector.  It should be guaranteed to be no
+          // longer than R_LEN_T_MAX.
 
           // The character buffer is large enough for the largest element in the
           // vector, and is re-used for every element in the vector.
 
-          chr_buff = (char *) R_alloc(mem_req + 1, sizeof(char));
+          chr_buff = (char *) R_alloc(((size_t) mem_req) + 1, sizeof(char));
           res_start = res_track = chr_buff;
         }
         // Is memcpy going to cause problems again by reading past end of
@@ -179,9 +174,8 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
 
       FANSI_check_chr_size(res_start, res_track, i);
       SEXP chr_sexp = PROTECT(
-        mkCharLenCE(
-          res_start, res_track - res_start, getCharCE(x_chr)
-      ) );
+        FANSI_mkChar(res_start, res_track, getCharCE(x_chr), i)
+      );
       SET_STRING_ELT(res_fin, i, chr_sexp);
       UNPROTECT(1);
     }
@@ -385,11 +379,9 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
     }
     if(strip_this) {
       *(buff_track) = 0;
-      FANSI_check_chr_size(buff->buff, buff_track, i);
       SEXP chrsxp = PROTECT(
-        mkCharLenCE(
-          buff->buff, buff_track - buff->buff, getCharCE(STRING_ELT(input, i))
-      ) );
+        FANSI_mkChar(buff->buff, buff_track, getCharCE(STRING_ELT(input, i)), i)
+      );
       SET_STRING_ELT(res, i, chrsxp);
       UNPROTECT(1);
     }

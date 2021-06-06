@@ -25,7 +25,7 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
     error("Argument `term_cap` must be an integer vector.");  // nocov
 
   R_xlen_t x_len = XLENGTH(x);
-  if(x_len >= FANSI_int_max)
+  if(x_len >= FANSI_lim.lim_int.max)
     // nocov start
     error(
       "This function does not support vectors of length INT_MAX or longer."
@@ -53,14 +53,11 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
     SEXP chrsxp = STRING_ELT(x, i);
 
     if(chrsxp != NA_STRING && LENGTH(chrsxp)) {
-      FANSI_check_chrsxp(chrsxp, i);
-      const char * string, * string_start;
-
-      string = string_start = CHAR(chrsxp);
-
       struct FANSI_state state = FANSI_state_init_full(
-        string, no_warn, term_cap, R_true, R_true, R_one, ctl_all
+        x, no_warn, term_cap, R_true, R_true, R_one, ctl_all, i
       );
+      const char * string;
+      string = state.string;
       int has_errors = 0;
 
       while(state.string[state.pos_byte]) {
@@ -69,9 +66,9 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
 
         int esc_start = state.pos_ansi;
         int esc_start_byte = state.pos_byte;
-        state = FANSI_read_next(state);
+        state = FANSI_read_next(state, i);
         if(state.err_code) {
-          if(err_count == FANSI_int_max) {
+          if(err_count == FANSI_lim.lim_int.max) {
             warning(
               "%s%s",
               "There are more than INT_MAX unhandled sequences, returning ",
@@ -80,14 +77,6 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
             break_early = 1;
             break;
           }
-          if(esc_start == INT_MAX || state.pos_ansi == INT_MAX)
-            // nocov start
-            error(
-              "%s%s",
-              "Internal error: computed offset is INT_MAX, shouldn't happen; ",
-              "contact maintainer."
-            );
-            // nocov end
           if(!has_errors) has_errors = 1;
 
           SEXP err_vals = PROTECT(allocVector(INTSXP, 7));
@@ -130,7 +119,7 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
   res = res_start;
 
   for(int i = 0; i < err_count; ++i) {
-    FANSI_interrupt(i);
+    FANSI_interrupt((R_xlen_t) i);
     if(res == R_NilValue)
       // nocov start
       error(

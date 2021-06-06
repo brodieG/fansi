@@ -84,7 +84,8 @@ utility functions such as `strip_ctl` to remove *Control Sequences* and
 Most of `fansi` is written in C so you should find performance of the
 `fansi` functions to be comparable to the base functions. `strwrap_ctl`
 is much faster, and `strsplit_ctl` is somewhat slower than the
-corresponding base functions.
+corresponding base functions. We have prioritized convenience and safety
+over raw speed in the C code.
 
 HTML Translation
 ----------------

@@ -134,6 +134,23 @@ unitizer_sect("HTML helper", {
   html_code_block(1:10)
   html_code_block(txt, class=c('not-fansi', 'plain'))
   html_code_block(txt, class=NULL)
+
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "<>")
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "><")
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "<&>")
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "'<&>")
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "'<&>\"")
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "'&>\"<")
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "")
+  ## repeated chars okay
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "'<&>\"<")
+
+  ## Errors
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), character())
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), NA_character_)
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), 1:5)
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "'<&><")
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "'x><")
 })
 unitizer_sect("hooks", {
   h.1 <- list(

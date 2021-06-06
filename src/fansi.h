@@ -48,15 +48,33 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   extern SEXP FANSI_warn_sym;
 
-
   // macros
 
   #define FANSI_ADD_INT(x, y) FANSI_add_int((x), (y), __FILE__, __LINE__)
 
   // Global variables (see utils.c)
+  // These should probably not be uintmax, this was all done originally when we
+  // thought we could feed the struct to one function, but that is not to be.
+  // (well TBD).
 
-  extern int FANSI_int_max;
-  extern int FANSI_int_min;  // no way to change this externally
+  struct FANSI_ulimit {
+    const char * name;
+    uintmax_t min;
+    uintmax_t max;
+  };
+  struct FANSI_slimit {
+    const char * name;
+    intmax_t min;
+    intmax_t max;
+  };
+  // Update assumption checks if any of this changes
+  struct FANSI_limits {
+    struct FANSI_slimit lim_int;
+    struct FANSI_slimit lim_R_len_t;
+    struct FANSI_slimit lim_R_xlen_t;
+    struct FANSI_ulimit lim_size_t;
+  };
+  extern struct FANSI_limits FANSI_lim;
 
   // - Structs -----------------------------------------------------------------
   /*
@@ -88,17 +106,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     // what types of control sequences were found, seel also FANSI_state.ctl
     int ctl;
   };
-
   /*
-   * Captures the ANSI state at any particular position in a string.  Note this
-   * is only designed to capture SGR CSI codes (i.e. those of format
-   * "ESC[n;n;n;m") where "n" is a number.  This is a small subset of the
-   * possible ANSI escape codes.
-   *
-   * Note that the struct fields are ordered by size
+   * Encode Active SGR
    */
-
-  struct FANSI_state {
+  struct FANSI_sgr {
     /*
      * Encode the additional information required to render the 38 color code in
      * an array of 4 numbers:
@@ -117,22 +128,31 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int bg_color_extra[4];
 
     /*
+     * A number in 0-9, corrsponds to the ansi codes in the [3-4][0-9] range, if
+     * less than zero or 9 means no color is active.  If 8 (i.e. corresponding
+     * to the `38` code), then `color_extra` contains additional color info.
+     *
+     * If > 9 then for color in 90-97, the bright color, for bg_color, in
+     * 100-107 the bright bg color.
+     */
+
+    int color;           // the number following the 3 in 3[0-9]
+    int bg_color;        // the number following the 4 in 4[0-9]
+
+    /*
      * The original string the state corresponds to.  This should always be
      * a pointer to the beginning of the string, use the
      * `state.string[state.pos_byte]` to access the current position.
+     *
+     * Should be no longer than INT_MAX excluding terminating NULL.
      */
-    const char * string;
-    /*
-     * Any error associated with err_code
-     */
-    const char * err_msg;
 
     /*
      * should be interpreted as bit mask where with 2^n., 1-9 match to the
      * corresponding ANSI CSI SGR codes, 10 and greater are not necessarily
      * contiguous but were put here because they could co-exist with the style
      *
-     * - n ==  0: UNUSED, possibly an oversight?  Logic simpler though.
+     * - n ==  0: UNUSED, to simplify logic
      * - n ==  1: bold
      * - n ==  2: blur/faint
      * - n ==  3: italic
@@ -156,6 +176,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     /*
      * should be interpreted as bit mask where with 2^n.
      *
+     * - n == 0: UNUSED, to simplify logic
      * - n == 1: framed
      * - n == 2: encircled
      * - n == 3: overlined
@@ -183,23 +204,34 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     /* Alternative fonts, 10-19, where 0 is the primary font */
 
     int font;
+  };
+
+  /*
+   * Captures the ANSI state at any particular position in a string.  Note this
+   * is only designed to capture SGR CSI codes (i.e. those of format
+   * "ESC[n;n;n;m") where "n" is a number.  This is a small subset of the
+   * possible ANSI escape codes.
+   *
+   * Note that the struct fields are ordered by size
+   */
+
+  struct FANSI_state {
+    struct FANSI_sgr sgr;
+    struct FANSI_sgr sgr_prev;
+
+    const char * string;
     /*
-     * A number in 0-9, corrsponds to the ansi codes in the [3-4][0-9] range, if
-     * less than zero or 9 means no color is active.  If 8 (i.e. corresponding
-     * to the `38` code), then `color_extra` contains additional color info.
-     *
-     * If > 9 then for color in 90-97, the bright color, for bg_color, in
-     * 100-107 the bright bg color.
+     * Any error associated with err_code
      */
-
-    int color;           // the number following the 3 in 3[0-9]
-    int bg_color;        // the number following the 4 in 4[0-9]
-
+    const char * err_msg;
     /*
      * Position markers (all zero index), we use int because these numbers
      * need to make it back to R which doesn't have a `size_t` type.
      *
      * - pos_byte: the byte in the string
+     * - pos_byte_sgr_start: the starting position of the last sgr read, really
+     *     only intended to be use din conjuction with 'terminal' so that if we
+     *     decide not to write a terminal SGR we know where to stop instead.
      * - pos_ansi: actual character position, different from pos_byte due to
      *   multi-byte characters (i.e. UTF-8)
      * - pos_raw: the character position after we strip the handled ANSI tags,
@@ -221,6 +253,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int pos_width;
     int pos_width_target;
     int pos_byte;
+    int pos_byte_sgr_start;
 
     // Are there bytes outside of 0-127
 
@@ -264,19 +297,24 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      *
      */
     int term_cap;
-    // Whether at end of a CSI escape sequence
+    // Whether at end of a CSI escape sequence (i.e. found an 'm').
     int last;
     // Whether the last control sequence that was completely read is known to be
     // an SGR sequence.  This is used as part of the `read_esc` process and is
     // really intended to be internal.  It's really only meaningful when
     // `state.last` is true.
-    int sgr;
+    int is_sgr;
     // Whether to issue warnings if err_code is non-zero, if -1 means that the
     // warning was issued at least once so may not need to be re-issued
     int warn;
     // Whether to use R_nchar, really only needed when we're doing things in
     // width mode
     int use_nchar;
+    // Whether the most recently read escape sequence is adjacent a NULL, which
+    // allows us to decide not to write it back out as it would be redundant.
+    int terminal;
+    // Last sequence of SGRs contained non-normal escapes
+    int non_normalized;
 
     /*
      * These support the arguments of the same names for nchar
@@ -313,7 +351,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn);
   SEXP FANSI_state_at_pos_ext(
     SEXP text, SEXP pos, SEXP type, SEXP lag, SEXP ends,
-    SEXP warn, SEXP term_cap, SEXP ctl
+    SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm
   );
   SEXP FANSI_strwrap_ext(
     SEXP x, SEXP width,
@@ -322,7 +360,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP strip_spaces,
     SEXP tabs_as_spaces, SEXP tab_stops,
     SEXP warn, SEXP term_cap,
-    SEXP first_only, SEXP ctl
+    SEXP first_only, SEXP ctl, SEXP norm
   );
   SEXP FANSI_process(SEXP input, struct FANSI_buff * buff);
   SEXP FANSI_process_ext(SEXP input);
@@ -337,7 +375,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP x, SEXP type, SEXP allowNA, SEXP keepNA, SEXP warn, SEXP term_cap
   );
   SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap, SEXP ctl);
-  SEXP FANSI_strsplit(SEXP x, SEXP warn, SEXP term_cap);
   SEXP FANSI_tabs_as_spaces(
     SEXP vec, SEXP tab_stops, struct FANSI_buff * buff, SEXP warn,
     SEXP term_cap, SEXP ctl
@@ -357,12 +394,17 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   SEXP FANSI_set_int_max(SEXP x);
   SEXP FANSI_get_int_max();
-  SEXP FANSI_esc_html(SEXP x);
+  SEXP FANSI_esc_html(SEXP x, SEXP what);
+
+  SEXP FANSI_normalize_sgr_ext(SEXP x, SEXP warn, SEXP term_cap);
+  SEXP FANSI_normalize_sgr_list_ext(SEXP x, SEXP warn, SEXP term_cap);
 
   // - Internal funs -----------------------------------------------------------
 
   struct FANSI_csi_pos FANSI_find_esc(const char * x, int ctl);
-  struct FANSI_state FANSI_inc_width(struct FANSI_state state, int inc);
+  struct FANSI_state FANSI_inc_width(
+    struct FANSI_state state, int inc, R_xlen_t i
+  );
   struct FANSI_state FANSI_reset_pos(struct FANSI_state state);
   struct FANSI_state FANSI_reset_width(struct FANSI_state state);
 
@@ -383,36 +425,55 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_digits_in_int(int x);
   struct FANSI_string_as_utf8 FANSI_string_as_utf8(SEXP x);
   struct FANSI_state FANSI_state_init(
-    const char * string, SEXP warn, SEXP term_cap
+    SEXP strsxp, SEXP warn, SEXP term_cap, R_xlen_t i
   );
   struct FANSI_state FANSI_state_init_full(
-    const char * string, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
-    SEXP width, SEXP ctl
+    SEXP strsxp, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
+    SEXP width, SEXP ctl, R_xlen_t i
   );
-  int FANSI_state_comp(struct FANSI_state target, struct FANSI_state current);
-  int FANSI_state_comp_color(
-    struct FANSI_state target, struct FANSI_state current
+  int FANSI_sgr_active(struct FANSI_sgr sgr);
+  char * FANSI_sgr_as_chr(struct FANSI_sgr sgr, int normalize, R_xlen_t i);
+  int FANSI_sgr_write(
+    char * buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
   );
-  int FANSI_state_comp_basic(
-    struct FANSI_state target, struct FANSI_state current
+  int FANSI_sgr_close(
+    char * buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
   );
-  int FANSI_state_has_style(struct FANSI_state state);
-  struct FANSI_state FANSI_state_copy_style(
-    struct FANSI_state target, struct FANSI_state current
-  );
-  int FANSI_state_size(struct FANSI_state state);
-  int FANSI_csi_write(char * buff, struct FANSI_state state, int buff_len);
-
-  struct FANSI_state FANSI_read_next(struct FANSI_state state);
+  SEXP FANSI_sgr_close_ext(SEXP x, SEXP term_cap);
+  int FANSI_sgr_comp_color(struct FANSI_sgr target, struct FANSI_sgr current);
+  struct FANSI_sgr FANSI_sgr_setdiff(struct FANSI_sgr old, struct FANSI_sgr new);
+  struct FANSI_state FANSI_read_next(struct FANSI_state state, R_xlen_t i);
 
   int FANSI_add_int(int x, int y, const char * file, int line);
 
   // Utilities
-
+  void FANSI_print(char * x);
   int FANSI_has_utf8(const char * x);
-  void FANSI_interrupt(int i);
+  void FANSI_interrupt(R_xlen_t i);
   intmax_t FANSI_ind(R_xlen_t i);
   void FANSI_check_chr_size(char * start, char * end, R_xlen_t i);
+  SEXP FANSI_mkChar(
+    const char * start, const char * end, cetype_t enc, R_xlen_t i
+  );
+  SEXP FANSI_reset_limits();
+  void FANSI_check_limits();
+
+  int FANSI_check_append(int cur, int extra, const char * msg, R_xlen_t i);
+  void FANSI_check_append_err(const char * msg, R_xlen_t i);
+
+  int FANSI_copy_or_measure(
+    char ** buff, const char * tmp, int len, R_xlen_t i,
+    const char * err_msg
+  );
+  // Requires `len`, `i`, and `err_msg` defined in scope.
+  #define COPY_OR_MEASURE(A, B) FANSI_copy_or_measure((A), (B), len, i, err_msg)
+
+  int FANSI_mcopy_or_measure(
+    char ** buff, const char * tmp, int tmp_len, int len, R_xlen_t i,
+    const char * err_msg
+  );
+  #define MCOPY_OR_MEASURE(A, B, C) FANSI_mcopy_or_measure(\
+    (A), (B), (C), len, i, err_msg)
 
   // - Compatibility -----------------------------------------------------------
 

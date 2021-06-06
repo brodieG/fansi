@@ -35,8 +35,9 @@
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work correctly with R < 3.2.2.
-#' @seealso [fansi] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results.
+#' @seealso [`fansi`] for details on how _Control Sequences_ are
+#'   interpreted, particularly if you are getting unexpected results,
+#'   [`normalize_sgr`] for more details on what the `normalize` parameter does.
 #' @inheritParams base::strwrap
 #' @inheritParams tabs_as_spaces
 #' @inheritParams substr_ctl
@@ -99,7 +100,7 @@ strwrap_ctl <- function(
   x, width = 0.9 * getOption("width"), indent = 0,
   exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
-  ctl='all'
+  ctl='all', normalize=getOption('fansi.normalize', FALSE)
 ) {
   if(!is.character(x)) x <- as.character(x)
 
@@ -123,6 +124,10 @@ strwrap_ctl <- function(
   if(!is.logical(warn)) warn <- as.logical(warn)
   if(length(warn) != 1L || is.na(warn))
     stop("Argument `warn` must be TRUE or FALSE.")
+
+  if(!isTRUE(normalize %in% c(FALSE, TRUE)))
+    stop("Argument `normalize` must be TRUE or FALSE.")
+  normalize <- as.logical(normalize)
 
   if(!is.character(term.cap))
     stop("Argument `term.cap` must be character.")
@@ -157,9 +162,14 @@ strwrap_ctl <- function(
     FALSE, 8L,
     warn, term.cap.int,
     FALSE,   # first_only
-    ctl.int
+    ctl.int, normalize
   )
-  if(simplify) unlist(res) else res
+  if(simplify) {
+    if(normalize) normalize_sgr(unlist(res), warn, term.cap)
+    else unlist(res)
+  } else {
+    if(normalize) normalize_sgr_list(res, warn, term.cap.int) else res
+  }
 }
 #' @export
 #' @rdname strwrap_ctl
@@ -172,7 +182,7 @@ strwrap2_ctl <- function(
   tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
   tab.stops=getOption('fansi.tab.stops'),
   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
-  ctl='all'
+  ctl='all', normalize=getOption('fansi.normalize', FALSE)
 ) {
   # {{{ validation
 
@@ -198,6 +208,10 @@ strwrap2_ctl <- function(
   if(!is.logical(warn)) warn <- as.logical(warn)
   if(length(warn) != 1L || is.na(warn))
     stop("Argument `warn` must be TRUE or FALSE.")
+
+  if(!isTRUE(normalize %in% c(FALSE, TRUE)))
+    stop("Argument `normalize` must be TRUE or FALSE.")
+  normalize <- as.logical(normalize)
 
   if(!is.character(term.cap))
     stop("Argument `term.cap` must be character.")
@@ -259,9 +273,14 @@ strwrap2_ctl <- function(
     tabs.as.spaces, tab.stops,
     warn, term.cap.int,
     FALSE,   # first_only
-    ctl.int
+    ctl.int, normalize
   )
-  if(simplify) unlist(res) else res
+  if(simplify) {
+    if(normalize) normalize_sgr(unlist(res), warn, term.cap)
+    else unlist(res)
+  } else {
+    if(normalize) normalize_sgr_list(res, warn, term.cap.int) else res
+  }
 }
 #' @export
 #' @rdname strwrap_ctl
@@ -269,12 +288,13 @@ strwrap2_ctl <- function(
 strwrap_sgr <- function(
   x, width = 0.9 * getOption("width"), indent = 0,
   exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
-  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
+  normalize=getOption('fansi.normalize', FALSE)
 )
   strwrap_ctl(
     x=x, width=width, indent=indent,
     exdent=exdent, prefix=prefix, simplify=simplify, initial=initial,
-    warn=warn, term.cap=term.cap, ctl='sgr'
+    warn=warn, term.cap=term.cap, ctl='sgr', normalize=normalize
   )
 #' @export
 #' @rdname strwrap_ctl
@@ -286,7 +306,8 @@ strwrap2_sgr <- function(
   strip.spaces=!tabs.as.spaces,
   tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
   tab.stops=getOption('fansi.tab.stops'),
-  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
+  normalize=getOption('fansi.normalize', FALSE)
 )
   strwrap2_ctl(
     x=x, width=width, indent=indent,
@@ -295,6 +316,6 @@ strwrap2_sgr <- function(
     strip.spaces=strip.spaces,
     tabs.as.spaces=tabs.as.spaces,
     tab.stops=tab.stops,
-    warn=warn, term.cap=term.cap, ctl='sgr'
+    warn=warn, term.cap=term.cap, ctl='sgr', normalize=normalize
   )
 
