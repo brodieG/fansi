@@ -159,6 +159,7 @@ struct FANSI_state FANSI_reset_pos(struct FANSI_state state) {
   state.pos_width_target = 0;
   state.last_char_width = 0;
   state.terminal = 0;
+  state.non_normalized = 0;
   return state;
 }
 /*
