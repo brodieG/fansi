@@ -397,6 +397,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_esc_html(SEXP x, SEXP what);
 
   SEXP FANSI_normalize_sgr_ext(SEXP x, SEXP warn, SEXP term_cap);
+  SEXP FANSI_normalize_sgr_list_ext(SEXP x, SEXP warn, SEXP term_cap);
 
   // - Internal funs -----------------------------------------------------------
 

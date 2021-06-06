@@ -229,7 +229,6 @@ static SEXP writeline(
     buff_track +=
       FANSI_sgr_close(buff_track, state_bound.sgr, 0, normalize, index);
   }
-
   *buff_track = 0;
   if(buff_track - buff->buff != target_size) {
     // nocov start
@@ -239,7 +238,6 @@ static SEXP writeline(
     );
     // nocov end
   }
-
   // Now create the charsxp and append to the list, start by determining
   // what encoding to use.  If pos_byte is greater than pos_ansi it means
   // we must have hit a UTF8 encoded character

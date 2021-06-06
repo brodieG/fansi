@@ -90,7 +90,9 @@ static int normalize(
   return len;
 }
 
-SEXP FANSI_normalize_sgr_ext(SEXP x, SEXP warn, SEXP term_cap) {
+static SEXP normalize_sgr_int(
+  SEXP x, SEXP warn, SEXP term_cap, struct FANSI_buff *buff, R_xlen_t index0
+) {
   if(TYPEOF(x) != STRSXP)
     error("Internal Error: `x` must be a character vector");  // nocov
 
@@ -99,10 +101,9 @@ SEXP FANSI_normalize_sgr_ext(SEXP x, SEXP warn, SEXP term_cap) {
   // Reserve spot on protection stack
   PROTECT_INDEX ipx;
   PROTECT_WITH_INDEX(res, &ipx);
-  struct FANSI_buff buff = {.buff=NULL, .len=0};
 
   for(R_xlen_t i = 0; i < x_len; ++i) {
-    FANSI_interrupt(i);
+    FANSI_interrupt(i + index0);
     SEXP chrsxp = STRING_ELT(x, i);
     if(chrsxp == NA_STRING) continue;
     struct FANSI_state state = FANSI_state_init(x, warn, term_cap, i);
@@ -111,13 +112,50 @@ SEXP FANSI_normalize_sgr_ext(SEXP x, SEXP warn, SEXP term_cap) {
 
     // Write
     if(res == x) REPROTECT(res = duplicate(x), ipx);
-    FANSI_size_buff(&buff, (size_t)len + 1);
+    FANSI_size_buff(buff, (size_t)len + 1);
     state.warn = 0;  // avoid double warnings
-    normalize(buff.buff, state, i);
+    normalize(buff->buff, state, i);
     cetype_t chr_type = getCharCE(chrsxp);
     SEXP reschr =
-      PROTECT(FANSI_mkChar(buff.buff, buff.buff + len, chr_type, i));
+      PROTECT(FANSI_mkChar(buff->buff, buff->buff + len, chr_type, i));
     SET_STRING_ELT(res, i, reschr);
+    UNPROTECT(1);
+  }
+  UNPROTECT(1);
+  return res;
+}
+
+SEXP FANSI_normalize_sgr_ext(SEXP x, SEXP warn, SEXP term_cap) {
+  if(TYPEOF(x) != STRSXP)
+    error("Internal Error: `x` must be a character vector");  // nocov
+
+  struct FANSI_buff buff = {.buff=NULL, .len=0};
+  return normalize_sgr_int(x, warn, term_cap, &buff, 0);
+}
+// List version to use with result of `strwrap_ctl(..., unlist=FALSE)`
+// Just a lower overhead version.
+
+SEXP FANSI_normalize_sgr_list_ext(SEXP x, SEXP warn, SEXP term_cap) {
+  if(TYPEOF(x) != VECSXP)
+    error("Internal Error: `x` must be a list vector");  // nocov
+
+  SEXP res = x;
+  // Reserve spot on protection stack
+  PROTECT_INDEX ipx;
+  PROTECT_WITH_INDEX(res, &ipx);
+  struct FANSI_buff buff = {.buff=NULL, .len=0};
+
+  R_xlen_t i0 = 0;  // for interrupt across vector elements
+  R_xlen_t llen = XLENGTH(x);
+  for(R_xlen_t i = 0; i < llen; ++i) {
+    SEXP elt0 = VECTOR_ELT(x, i);
+    if(i0 > FANSI_lim.lim_R_xlen_t.max - XLENGTH(elt0)) i0 = 0;
+    SEXP elt1 = PROTECT(normalize_sgr_int(elt0, warn, term_cap, &buff, i0));
+    // If unequal, normalization occurred
+    if(elt0 != elt1) {
+      if(res == x) REPROTECT(res = duplicate(x), ipx);
+      SET_VECTOR_ELT(res, i, elt1);
+    }
     UNPROTECT(1);
   }
   UNPROTECT(1);
