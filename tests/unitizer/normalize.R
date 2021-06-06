@@ -70,5 +70,7 @@ unitizer_sect("in functions", {
   substr2_sgr("\033[33;44mhello\033[m world", 3, 8, normalize=TRUE)
 
   substr_ctl(string3, c(3, 3), c(8, 15), normalize=TRUE)
+
+  strsplit_ctl(string3, " ", normalize=TRUE)
 })
 
