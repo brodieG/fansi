@@ -4,6 +4,9 @@ These are internal developer notes.
 
 ## Todo
 
+* How to deal with wraps of `"hello \033[33;44m world"`.  Notice extra space.
+* Once we add isolate, make sure that trailing sequences are not omitted if the
+  end is not isolated.
 * Make sure we don't accidentally omit a non-SGR sequence because it's terminal.
 * Test combinations of escape sequences, including with errors (e.g. a correct
   SGR with an invalid code).
@@ -181,6 +184,13 @@ adds a terminator.  What about `substr`?
 Do we really want a "starts with x" option?  Probably not worth it?  Is it
 sufficiently different and important relative to bleed?  Under what
 circumstances would we really want it?
+
+Is this the desired outcome:
+
+    > strwrap_ctl("hello world\033[31m", 12)
+    [1] "hello world"
+
+Yes, if "isolate" is true, but if not we should emit the ending style.
 
 ## Overflow
 

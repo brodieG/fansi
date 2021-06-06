@@ -2,8 +2,15 @@
 
 ## v1.0.0
 
+* [#64](https://github.com/brodieG/fansi/issues/64) New function `normalize_sgr`
+  converts compound SGR sequences into normalized form (e.g. "ESC[44;31m"
+  becomes "ESC[31mESC[44m") for better compatibility with
+  [`crayon`](https://github.com/r-lib/crayon).  Additionally, most functions
+  gain a `normalize` parameter so that they may return their output in
+  normalized form.
 * `html_esc` gains a `what` parameter to indicate which HTML special characters
   should be escaped.
+* Reworked internals to simplify buffer computation and synchronization.
 
 ## v0.5.0
 
