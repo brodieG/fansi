@@ -430,7 +430,7 @@ static char * color_token(
     *(buff_track++) = '0';
     *(buff_track++) = '0' + color - 100;
   } else if(color >= 90 && color <= 97) {
-    *(buff_track++) = '0';
+    *(buff_track++) = '9';
     *(buff_track++) = '0' + color - 90;
   } else {
     error("Internal Error: unexpected color code.");  // nocov
