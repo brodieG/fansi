@@ -746,13 +746,8 @@ int FANSI_sgr_close(
           sgr.color, sgr.bg_color, sgr.style, sgr.border, sgr.ideogram
         );
     } else {
-      int clen = 4;
-      len += clen;
-      if(buff) {
-        memcpy(buff, "\033[0m", clen);
-        buff += clen;
-        *buff = 0;
-      }
+      // Full close
+      len += COPY_OR_MEASURE(&buff, "\033[0m");
     }
   }
   return len - len0;
