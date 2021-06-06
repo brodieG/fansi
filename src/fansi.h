@@ -433,18 +433,34 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   );
   int FANSI_sgr_active(struct FANSI_sgr sgr);
   char * FANSI_sgr_as_chr(struct FANSI_sgr sgr, int normalize, R_xlen_t i);
-  int FANSI_sgr_write(
-    char * buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
-  );
-  int FANSI_sgr_close(
-    char * buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
-  );
+
   SEXP FANSI_sgr_close_ext(SEXP x, SEXP term_cap);
   int FANSI_sgr_comp_color(struct FANSI_sgr target, struct FANSI_sgr current);
   struct FANSI_sgr FANSI_sgr_setdiff(struct FANSI_sgr old, struct FANSI_sgr new);
   struct FANSI_state FANSI_read_next(struct FANSI_state state, R_xlen_t i);
 
   int FANSI_add_int(int x, int y, const char * file, int line);
+
+  // "Writing" functions
+  int FANSI_W_sgr(
+    char ** buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
+  );
+  int FANSI_W_sgr_close(
+    char ** buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
+  );
+  int FANSI_W_copy(
+    char ** buff, const char * tmp, int len, R_xlen_t i,
+    const char * err_msg
+  );
+  // Requires `len`, `i`, and `err_msg` defined in scope.
+  #define FANSI_W_COPY(A, B) FANSI_W_copy((A), (B), len, i, err_msg)
+
+  int FANSI_W_mcopy(
+    char ** buff, const char * tmp, int tmp_len, int len, R_xlen_t i,
+    const char * err_msg
+  );
+  #define FANSI_W_MCOPY(A, B, C) FANSI_W_mcopy(\
+    (A), (B), (C), len, i, err_msg)
 
   // Utilities
   void FANSI_print(char * x);
@@ -461,19 +477,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_check_append(int cur, int extra, const char * msg, R_xlen_t i);
   void FANSI_check_append_err(const char * msg, R_xlen_t i);
 
-  int FANSI_copy_or_measure(
-    char ** buff, const char * tmp, int len, R_xlen_t i,
-    const char * err_msg
-  );
-  // Requires `len`, `i`, and `err_msg` defined in scope.
-  #define COPY_OR_MEASURE(A, B) FANSI_copy_or_measure((A), (B), len, i, err_msg)
-
-  int FANSI_mcopy_or_measure(
-    char ** buff, const char * tmp, int tmp_len, int len, R_xlen_t i,
-    const char * err_msg
-  );
-  #define MCOPY_OR_MEASURE(A, B, C) FANSI_mcopy_or_measure(\
-    (A), (B), (C), len, i, err_msg)
 
   // - Compatibility -----------------------------------------------------------
 

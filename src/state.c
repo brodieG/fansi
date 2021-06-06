@@ -344,198 +344,17 @@ int FANSI_color_size(int color, int * color_extra) {
   return size;
 }
 /*
- * Helper to make an SGR token, possibly full SGR if in normalize mode
- */
-static char * make_token(char * buff, const char * val, int normalize) {
-  if(strlen(val) > 2)
-    error("Internal error: token maker limited to 2 chars max."); // nocov
-  if(!normalize) {
-    strcpy(buff, val);
-    strcat(buff, ";");
-  } else {
-    char * buff_track = buff;
-    *(buff_track++) = '\033';
-    *(buff_track++) = '[';
-    strcpy(buff_track, val);
-    strcat(buff_track, "m");
-  }
-  return buff;
-}
-/*
- * Write extra color info to string
- *
- * buff should be at least 20 bytes.
- * largest: "\033[48;2;255;255;255m", 19 chars + NULL
- */
-static char * color_token(
-  char * buff, int color, int * color_extra, int mode, int normalize
-) {
-  if(mode != 3 && mode != 4)
-    error("Internal Error: color mode must be 3 or 4");  // nocov
-
-  char * buff_track = buff;
-
-  if(normalize) {
-    *(buff_track++) = '\033';
-    *(buff_track++) = '[';
-  }
-  if(color >= 0 && color < 10) {  // should this be < 9?
-    *(buff_track++) = '0' + mode;
-    *(buff_track++) = '0' + color;
-    if(color == 8) {
-      *(buff_track++) = ';';
-      int write_chrs = 0;
-      if(color_extra[0] == 2) {
-        write_chrs = sprintf(
-          buff_track, "2;%d;%d;%d",
-          color_extra[1], color_extra[2], color_extra[3]
-        );
-      } else if(color_extra[0] == 5) {
-        write_chrs = sprintf(buff_track, "5;%d", color_extra[1]);
-      } else error("Internal Error: unexpected color code.");  // nocov
-      if(write_chrs < 0)
-        error("Internal Error: failed writing color code.");   // nocov
-      buff_track += write_chrs;
-    }
-  } else if(color >= 100 && color <= 107) {
-    // bright colors, we don't actually need to worry about bg vs fg since the
-    // actual color values are different
-    *(buff_track++) = '1';
-    *(buff_track++) = '0';
-    *(buff_track++) = '0' + color - 100;
-  } else if(color >= 90 && color <= 97) {
-    *(buff_track++) = '9';
-    *(buff_track++) = '0' + color - 90;
-  } else {
-    error("Internal Error: unexpected color code.");  // nocov
-  }
-  if(normalize) *(buff_track++) = 'm';
-  else *(buff_track++) = ';';
-  *buff_track = 0;
-  if(buff_track - buff > 19)  // too late if this happened...
-    error("Internal Error: exceeded color buffer.");  // nocov
-  return buff;
-}
-/*
- * Output an SGR state as a string.
- *
- * Set buff to NULL to get size instead of writing.
- *
- * Return how many needed / written bytes.
- */
-int FANSI_sgr_write(
-  char * buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
-) {
-  /****************************************************\
-  | IMPORTANT:                                         |
-  | KEEP THIS ALIGNED WITH state_as_html               |
-  | although right now ignoring rare escapes in html   |
-  |                                                    |
-  | DO NOT CHANGE ORDER of writing.  Added tokens      |
-  | go at end.  We picked a bad order at the beginning |
-  | and now we're stuck.                               |
-  \****************************************************/
-
-  int len0 = len;
-  const char * err_msg = "Writing SGR tokens"; // for COPY_OR_MEASURE
-  // biggest would be "\033[XXm" + NULL, won't fit e.g bright color codes
-  // CAREFUL if we modify code to use `tmp` for other purposes.
-  char tmp[6] = {0};
-  char * buff_track = buff;
-
-  if(FANSI_sgr_active(sgr)) {
-    if(!normalize) len += COPY_OR_MEASURE(&buff_track, "\033[");
-    // styles
-    char tokval[2] = {0};
-    for(unsigned int i = 1; i < 10; i++) {
-      if((1U << i) & sgr.style) {
-        *tokval = '0' + (char) i;
-        len += COPY_OR_MEASURE(&buff_track, make_token(tmp, tokval, normalize));
-    } }
-    // styles outside 0-9
-
-    if(sgr.style & (1 << 10)) {
-      // fraktur
-      len += COPY_OR_MEASURE(&buff_track, make_token(tmp, "20", normalize));
-    }
-    if(sgr.style & (1 << 11)) {
-      // double underline
-      len += COPY_OR_MEASURE(&buff_track, make_token(tmp, "21", normalize));
-    }
-    if(sgr.style & (1 << 12)) {
-      // prop spacing
-      len += COPY_OR_MEASURE(&buff_track, make_token(tmp, "26", normalize));
-    }
-    // colors
-    if(sgr.color > -1) {
-      char tokval[17] = {0};  // largest: "38;2;255;255;255", 16 chars + NULL
-      len += COPY_OR_MEASURE(
-        &buff_track,
-        color_token(tokval, sgr.color, sgr.color_extra, 3, normalize)
-      );
-    }
-    if(sgr.bg_color > -1) {
-      char tokval[17] = {0};
-      len += COPY_OR_MEASURE(
-        &buff_track,
-        color_token(tokval, sgr.bg_color, sgr.bg_color_extra, 4, normalize)
-      );
-    }
-    // Borders
-    if(sgr.border) {
-      char tokval[3] = {'5', '0'};
-      for(int i = 1; i < 4; ++i) {
-        if((1 << i) & sgr.border) {
-          tokval[1] = '0' + i;
-          len +=
-            COPY_OR_MEASURE(&buff_track, make_token(tmp, tokval, normalize));
-    } } }
-    // Ideogram
-    if(sgr.ideogram) {
-      char tokval[3] = {'6', '0'};
-      for(int i = 0; i < 5; ++i){
-        if((1 << i) & sgr.ideogram) {
-          tokval[1] = '0' + i;
-          len +=
-            COPY_OR_MEASURE(&buff_track, make_token(tmp, tokval, normalize));
-    } } }
-    // font
-    if(sgr.font) {
-      char tokval[3] = {'1', '0'};
-      tokval[1] = '0' + (sgr.font % 10);
-      len += COPY_OR_MEASURE(&buff_track, make_token(tmp, tokval, normalize));
-    }
-    // Finalize
-
-    if(buff) {
-      buff[len - 1] = 'm';
-      // nocov start
-      if(buff_track - buff != len - len0)
-        // nocov start
-        error(
-          "Internal Error: %s (%td vs %d).",
-          "buffer length mismatch in writing SGR generation (2)",
-          buff_track - buff, len - len0
-        );
-      // nocov end
-    }
-  }
-  return len - len0;
-}
-/*
  * Generate the ANSI tag corresponding to the state and write it out as a NULL
  * terminated string.
  */
 char * FANSI_sgr_as_chr(struct FANSI_sgr sgr, int normalize, R_xlen_t i) {
   // First pass computes total size of tag
-  int tag_len = FANSI_sgr_write(NULL, sgr, 0, normalize, i);
-
-  // Now write
-  char * tag_tmp = R_alloc((size_t) tag_len + 1, sizeof(char));
-  FANSI_sgr_write(tag_tmp, sgr, 0, normalize, i);
-  tag_tmp[tag_len] = 0;
-
-  return tag_tmp;
+  char * buff_track, * buff;
+  buff_track = NULL;
+  int tag_len = FANSI_W_sgr(&buff_track, sgr, 0, normalize, i);
+  buff = buff_track = R_alloc((size_t) tag_len + 1, sizeof(char));
+  FANSI_W_sgr(&buff_track, sgr, 0, normalize, i);
+  return buff;
 }
 /*
  * Determine whether two state structs have same style
@@ -611,122 +430,6 @@ int FANSI_sgr_active(struct FANSI_sgr sgr) {
     sgr.font || sgr.border || sgr.ideogram;
 }
 /*
- * End Active Sequences
- *
- * Inspects a state object, and produces the set of escape sequences that will
- * close just the open sequences, to the extent possible.
- *
- * Intended for compatibility with crayon.
- *
- * If buff is NULL, then only the required size of the buffer is returned.
- *
- * Ideally we would store all the styles in e.g. 2 uint64_t, and then maybe each
- * style would have an associated 2 uint64_t of what they turn on and off, and
- * somehow we would have a system to determine what the minimal combination of
- * styles required to turn off all active styles.  This would guarantee we can
- * keep the on-off styles in sync, at the cost of quite a bit of complexity.
- *
- * So instead we hard-code everything and hope we keep it in sync.
- */
-
-int FANSI_sgr_close(
-  char * buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
-) {
-  // char * buff_track = buff;
-  int len0 = len;
-  const char * err_msg = "Generating closing SGR";
-
-  if(FANSI_sgr_active(sgr)) {
-    if(normalize) {
-      // We're deliberate in only closing things we know how to close in
-      // both the state and in the ouptut string, that way we can check
-      // state at the end to make sure we did actually close everything.
-
-      if(sgr.font) {
-        sgr.font = 0;
-        len += COPY_OR_MEASURE(&buff, "\033[10m");
-      }
-      unsigned int s_boldfaint = (1U << 1U | 1U << 2U);
-      unsigned int s_frakital = (1U << 3U | 1U << 10U);
-      unsigned int s_underline = (1U << 4U | 1U << 11U);
-      unsigned int s_blink = (1U << 5U | 1U << 6U);
-      unsigned int s_propspc = 1U << 12U;
-      unsigned int s_inverse = 1U << 7U;
-      unsigned int s_conceal = 1U << 8U;
-      unsigned int s_strikethrough = 1U << 9U;
-
-      if(sgr.style & s_boldfaint) {
-        sgr.style &= ~s_boldfaint;
-        len += COPY_OR_MEASURE(&buff, "\033[22m");
-      }
-      if(sgr.style & s_frakital) {
-        sgr.style &= ~s_frakital;
-        len += COPY_OR_MEASURE(&buff, "\033[23m");
-      }
-      if(sgr.style & s_underline) {
-        sgr.style &= ~s_underline;
-        len += COPY_OR_MEASURE(&buff, "\033[24m");
-      }
-      if(sgr.style & s_blink) {
-        sgr.style &= ~s_blink;
-        len += COPY_OR_MEASURE(&buff, "\033[25m");
-      }
-      // 26 is opening prop spacing (50 to close)
-      if(sgr.style & s_inverse) {
-        sgr.style &= ~s_inverse;
-        len += COPY_OR_MEASURE(&buff, "\033[27m");
-      }
-      if(sgr.style & s_conceal) {
-        sgr.style &= ~s_conceal;
-        len += COPY_OR_MEASURE(&buff, "\033[28m");
-      }
-      if(sgr.style & s_strikethrough) {
-        sgr.style &= ~s_strikethrough;
-        len += COPY_OR_MEASURE(&buff, "\033[29m");
-      }
-      // Colors
-      if(sgr.color >= 0) {
-        sgr.color = -1;
-        len += COPY_OR_MEASURE(&buff, "\033[39m");
-      }
-      if(sgr.bg_color >= 0) {
-        sgr.bg_color = -1;
-        len += COPY_OR_MEASURE(&buff, "\033[49m");
-      }
-      // Prop spacing
-      if(sgr.style & s_propspc) {
-        sgr.style &= ~s_propspc;
-        len += COPY_OR_MEASURE(&buff, "\033[50m");
-      }
-      // Border and ideogram
-      if(sgr.border & (1U << 1U | 1U << 2U)) {
-        sgr.border &= ~(1U << 1U | 1U << 2U);
-        len += COPY_OR_MEASURE(&buff, "\033[54m");
-      }
-      if(sgr.border & (1U << 3U)) {
-        sgr.border &= ~(1U << 3U);
-        len += COPY_OR_MEASURE(&buff, "\033[55m");
-      }
-      if(sgr.ideogram > 0U) {
-        for(unsigned int k = 0; k < 5; ++k) sgr.ideogram &= ~(1U << k);
-        len += COPY_OR_MEASURE(&buff, "\033[65m");
-      }
-
-      // Make sure we're not out of sync with has_style
-      if(FANSI_sgr_active(sgr))
-        error(
-          "Internal Error: %s (clr: %d bg: %d st: %u bd: %u id %u).",
-          "did not successfully close all styles",
-          sgr.color, sgr.bg_color, sgr.style, sgr.border, sgr.ideogram
-        );
-    } else {
-      // Full close
-      len += COPY_OR_MEASURE(&buff, "\033[0m");
-    }
-  }
-  return len - len0;
-}
-/*
  * For closing things for substr, so we don't need to automatically normalize
  * every string if we just close with ESC[0m.
  *
@@ -772,11 +475,13 @@ SEXP FANSI_sgr_close_ext(SEXP x, SEXP term_cap) {
       state = FANSI_read_next(state, i);
     }
     int len = 0;
-    len = FANSI_sgr_close(NULL, state.sgr, len, normalize, i);
+    char * buff_track = NULL;
+    len = FANSI_W_sgr_close(&buff_track, state.sgr, len, normalize, i);
     if(len) {
       if(res == x) REPROTECT(res = duplicate(x), ipx);
       FANSI_size_buff(&buff, (size_t)len + 1);
-      FANSI_sgr_close(buff.buff, state.sgr, len, normalize, i);
+      buff_track = buff.buff;
+      FANSI_W_sgr_close(&buff_track, state.sgr, len, normalize, i);
       cetype_t chr_type = getCharCE(x_chr);
       SEXP reschr =
         PROTECT(FANSI_mkChar(buff.buff, buff.buff + len, chr_type, i));

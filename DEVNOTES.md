@@ -4,18 +4,13 @@ These are internal developer notes.
 
 ## Todo
 
+* Make sure `FANSI_sgr_as_chr` does not allocate itself with R_alloc (and search
+  for other R_allocs and make sure they make sense).
+* Delete unused code (e.g. FANSI_color_size, digits_in_int, etc.).
 * How to deal with wraps of `"hello \033[33;44m world"`.  Notice extra space.
 * Once we add isolate, make sure that trailing sequences are not omitted if the
   end is not isolated.
-* Make sure we don't accidentally omit a non-SGR sequence because it's terminal.
-* Test combinations of escape sequences, including with errors (e.g. a correct
-  SGR with an invalid code).
 * Change `unhandled_ctl` to point out specific problem sequence.
-* Expand is also not quite the right name, e.g. with "\033[31m\033[mA" the
-  result is "A", so normalize is closer to being right.  The problem with
-  normalize is that we guarantee that two different strings will compare
-  equal once normalized, always.  So we lock ourselves into the order in
-  which things are done.  Why did we not think this was a normalization?
 * Check double warnings in all functions doing the two pass reading.
 * How do we currently handle styles across elements?
     * We don't.  `strwrap` carries the style within one single character
@@ -25,9 +20,7 @@ These are internal developer notes.
       implementation of normalize.
 
 * Write docs about behavior of bleeding.
-
 * Bunch of docs don't have @return tags, oddly.
-* add tests with sgr -> normalize -> html comparisons
 * All writing functions should advance for consistency, and have same sig.
 * Make sure we check we're not using `intmax_t` or `uintmax_t` in a tight loop
   anywhere.
