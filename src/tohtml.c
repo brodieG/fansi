@@ -685,26 +685,28 @@ SEXP FANSI_esc_html(SEXP x, SEXP what) {
       char * buff_track = buff.buff;
 
       while(*string) {
-        if(*string > '>') { // All specials are less than this
+        // Skip chars that can't be specials
+        if(*string > '>') {
           if(buff_track) *(buff_track++) = *string;
           ++string;
           continue;
         }
-        // COPY_OR_MEASURE requires variables len, i, and err_msg
-        // COPY_OR_MEASURE ADVANCES buff!
-        // - 1 because we're replacing 1 char by the escape
+        --len;    // we're replacing one char, so don't count it
         if(*string == '&' &&       what_val & 1U << 0U)
-          len += COPY_OR_MEASURE(&buff_track, "&amp;")  - 1;
+          len += COPY_OR_MEASURE(&buff_track, "&amp;");
         else if(*string == '"' &&  what_val & 1U << 1U)
-          len += COPY_OR_MEASURE(&buff_track, "&quot;") - 1;
+          len += COPY_OR_MEASURE(&buff_track, "&quot;");
         else if(*string == '\'' && what_val & 1U << 2U)
-          len += COPY_OR_MEASURE(&buff_track, "&#039;") - 1;
+          len += COPY_OR_MEASURE(&buff_track, "&#039;");
         else if(*string == '<' &&  what_val & 1U << 3U)
-          len += COPY_OR_MEASURE(&buff_track, "&lt;")   - 1;
+          len += COPY_OR_MEASURE(&buff_track, "&lt;");
         else if(*string == '>' &&  what_val & 1U << 4U)
-          len += COPY_OR_MEASURE(&buff_track, "&gt;")   - 1;
+          len += COPY_OR_MEASURE(&buff_track, "&gt;");
         // Just advance copy string otherwse
-        else if(buff_track) *(buff_track++) = *string;
+        else {
+          ++len;  // we didn't actually replace the char
+          if(buff_track) *(buff_track++) = *string;
+        }
         ++string;
       }
       // Only get here in second pass if we've written
