@@ -144,7 +144,7 @@ static SEXP writeline(
   // state.  No point writing a state that will be immediately closed.  But we
   // must write it if we're going to add padding.
 
-  if(state_bound.terminal && !target_pad) {
+  if(state_bound.terminal && !target_pad && FANSI_sgr_active(state_bound.sgr)) {
     state_bound.sgr = state_bound.sgr_prev;
     state_bound.pos_byte = state_bound.pos_byte_sgr_start;
     state_bound.terminal = 0;
