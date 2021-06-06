@@ -82,7 +82,7 @@ strtrim_ctl <- function(
     ctl.int,
     normalize
   )
-  res
+  if(normalize) normalize_sgr(res) else res
 }
 #' @export
 #' @rdname strtrim_ctl
@@ -145,7 +145,7 @@ strtrim2_ctl <- function(
     ctl.int,
     normalize
   )
-  res
+  if(normalize) normalize_sgr(res) else res
 }
 #' @export
 #' @rdname strtrim_ctl

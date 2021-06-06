@@ -163,7 +163,12 @@ strwrap_ctl <- function(
     FALSE,   # first_only
     ctl.int, normalize
   )
-  if(simplify) unlist(res) else res
+  if(simplify) {
+    if(normalize) normalize_sgr(unlist(res), warn, term.cap)
+    else unlist(res)
+  } else {
+    if(normalize) normalize_sgr_list(res, warn, term.cap.int) else unlist(res)
+  }
 }
 #' @export
 #' @rdname strwrap_ctl
@@ -269,7 +274,12 @@ strwrap2_ctl <- function(
     FALSE,   # first_only
     ctl.int, normalize
   )
-  if(simplify) unlist(res) else res
+  if(simplify) {
+    if(normalize) normalize_sgr(unlist(res), warn, term.cap)
+    else unlist(res)
+  } else {
+    if(normalize) normalize_sgr_list(res, warn, term.cap.int) else unlist(res)
+  }
 }
 #' @export
 #' @rdname strwrap_ctl

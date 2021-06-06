@@ -85,4 +85,10 @@ normalize_sgr <- function(
 
   .Call(FANSI_normalize_sgr, enc2utf8(x), warn, term.cap.int)
 }
+# To reduce overhead of applying this in `strwrap_ctl`
+
+normalize_sgr_list <- function(x, warn, term.cap.int)
+  .Call(FANSI_normalize_sgr_list, x, warn, term.cap.int)
+
+
 
