@@ -325,6 +325,10 @@ unitizer_sect("corner cases", {
     ),
     error=conditionMessage
   )
+  ## Test mixing of SGR with non SGR escapes; non-SGR should not be
+  ## dropped, and _trailing_ SGR should be dropped.
+  strwrap_ctl("hello world\033[31m\033A", 12)
+  strwrap_ctl("hello world\033A\033[31m", 12)
 })
 unitizer_sect("bad inputs", {
   strwrap_ctl(1:3)
