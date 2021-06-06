@@ -653,6 +653,10 @@ SEXP FANSI_mkChar(
  * This advances *buff so that it points to to the NULL terminator
  * the end of what is written to so string is ready to append to.
  *
+ * It is assumed that if buff is not NULL, it includes an extra byte at the end
+ * to safely append the NULL.  However, the check against INT_MAX excludes the
+ * NULL is we can have up to INT_MAX characters before the NULL.
+ *
  * @len bytes already accumulated in the buffer (i.e. before the pointer).
  * @param i index in overal character vector, needed to report overflow string.
  */
@@ -660,7 +664,7 @@ int FANSI_copy_or_measure(
   char ** buff, const char * tmp, int len, R_xlen_t i,
   const char * err_msg
 ) {
-  size_t tmp_len = strlen(tmp);
+  size_t tmp_len = strlen(tmp);  // tmp must be NULL terminated
   if(tmp_len > (size_t) FANSI_lim.lim_int.max)
     FANSI_check_append_err(err_msg, i);
 
@@ -668,7 +672,9 @@ int FANSI_copy_or_measure(
   if(*buff) {
     strcpy(*buff, tmp);
     *buff += tmp_len;
-    **buff = 0;  // not necessary, but helps to debug
+    // buffer should have an extra byte allocated, so safe to terminate.
+    // Not necessary, but makes debugging easier.
+    **buff = 0;
   }
   return tmp_len;
 }
