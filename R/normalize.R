@@ -19,7 +19,7 @@
 #' Re-encodes SGR sequences into a unique decomposed form.  Each compound
 #' sequence is broken up into individual tokens, superfluous tokens are
 #' removed, and the reset sequence "ESC&#91;0m" (or "ESC&#91;m") is
-#' replaced by the closing codes for whatever SGR styles active at the
+#' replaced by the closing codes for whatever SGR styles are active at the
 #' point in the string in which it appears.
 #'
 #' Only recognized SGR codes will remain in the output, with unrecognized
@@ -46,7 +46,7 @@
 #' @param x character vector to normalize the SGR control sequences of.
 #' @seealso [`fansi`] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
-#' @inheritParams strip_ctl
+#' @inheritParams substr_ctl
 #' @return `x`, with all SGRs normalized.
 #' @examples
 #' normalize_sgr("hello\033[42;33m world")

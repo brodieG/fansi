@@ -17,6 +17,13 @@ normalize_sgr(
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \link{fansi}).}
+
+\item{term.cap}{character a vector of the capabilities of the terminal, can
+be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
+starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
+"38;2" or "48;2"). Changing this parameter changes how \code{fansi}
+interprets escape sequences, so you should ensure that it matches your
+terminal capabilities. See \link{term_cap_test} for details.}
 }
 \value{
 \code{x}, with all SGRs normalized.
@@ -25,7 +32,7 @@ to be incorrect, for example by moving the cursor (see \link{fansi}).}
 Re-encodes SGR sequences into a unique decomposed form.  Each compound
 sequence is broken up into individual tokens, superfluous tokens are
 removed, and the reset sequence "ESC[0m" (or "ESC[m") is
-replaced by the closing codes for whatever SGR styles active at the
+replaced by the closing codes for whatever SGR styles are active at the
 point in the string in which it appears.
 }
 \details{
