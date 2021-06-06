@@ -77,17 +77,6 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
             break_early = 1;
             break;
           }
-          if(
-            esc_start == FANSI_lim.lim_int.max ||
-            state.pos_ansi == FANSI_lim.lim_int.max
-          )
-            // nocov start
-            error(
-              "%s%s",
-              "Internal error: computed offset is INT_MAX, shouldn't happen; ",
-              "contact maintainer."
-            );
-            // nocov end
           if(!has_errors) has_errors = 1;
 
           SEXP err_vals = PROTECT(allocVector(INTSXP, 7));
