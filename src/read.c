@@ -556,12 +556,19 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       state = state_prev;
       break;
     }
-    // If the ESC was recognized then record error and advance, otherwise reset
-    // the state and advance as if reading an ASCII character.
+    // If the ESC was recognized then record error (if any) and advance,
+    // otherwise reset the state and advance as if reading an ASCII character.
     if(esc_recognized) {
       if(state.err_code > err_code) err_code = state.err_code;
       int byte_offset = state.pos_byte - state_prev.pos_byte;
       state.pos_ansi += byte_offset;
+      // Record other ancillary info here, we don't do it outside of the loop
+      // as we want to be able reset to state_prev if things don't work out.
+      state.sgr_prev = sgr_prev;
+      state.non_normalized |= non_normalized;
+      if(esc_types & 2U) {
+        state.pos_byte_sgr_start = seq_start;
+      }
     } else {
       state = state_prev;
       state = read_ascii(state);
@@ -594,13 +601,6 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
     // Not 100% sure this is right...
     state.last_char_width = 1;
     state.err_msg = "";
-  }
-  // Useful to know what prior style was in case this series of escapes ends up
-  // being the last thing before terminal NULL.
-  state.sgr_prev = sgr_prev;
-  state.non_normalized = non_normalized;
-  if(esc_types & 2U) {
-    state.pos_byte_sgr_start = seq_start;
   }
   return state;
 }
