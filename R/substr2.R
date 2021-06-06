@@ -351,7 +351,7 @@ state_at_pos <- function(
     !is.start, # ends
     warn,
     seq_along(VALID.TERM.CAP),
-    seq_along(VALID.CTL),
+    1L,        # ctl="all"
     normalize
   )
 }
