@@ -31,8 +31,9 @@
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.  The
 #'   split positions are computed after both `x` and `split` are converted to
 #'   UTF-8.
-#' @seealso [fansi] for details on how _Control Sequences_ are
+#' @seealso [`fansi`] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results,
+#'   [`normalize_sgr`] for more details on what the `normalize` parameter does,
 #'   [base::strsplit] for details on the splitting.
 #' @export
 #' @param x a character vector, or, unlike [base::strsplit] an object that can

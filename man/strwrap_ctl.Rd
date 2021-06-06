@@ -231,6 +231,7 @@ W <- strwrap2_ctl(NEWS.C, 25, pad.end=" ", wrap.always=TRUE)
 writeLines(c("", paste(W[1:20], W[100:120], W[200:220]), ""))
 }
 \seealso{
-\link{fansi} for details on how \emph{Control Sequences} are
-interpreted, particularly if you are getting unexpected results.
+\code{\link{fansi}} for details on how \emph{Control Sequences} are
+interpreted, particularly if you are getting unexpected results,
+\code{\link{normalize_sgr}} for more details on what the \code{normalize} parameter does.
 }

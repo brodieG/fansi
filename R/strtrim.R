@@ -26,9 +26,9 @@
 #'   Width calculations will not work correctly with R < 3.2.2.
 #' @export
 #' @inheritSection substr_ctl _ctl vs. _sgr
-#' @seealso [fansi] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results.
-#'   [strwrap_ctl] is used internally by this function.
+#' @seealso [`fansi`] for details on how _Control Sequences_ are
+#'   interpreted, particularly if you are getting unexpected results,
+#'   [`normalize_sgr`] for more details on what the `normalize` parameter does.
 #' @inheritParams base::strtrim
 #' @inheritParams strwrap_ctl
 #' @examples

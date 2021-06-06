@@ -35,8 +35,9 @@
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work correctly with R < 3.2.2.
-#' @seealso [fansi] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results.
+#' @seealso [`fansi`] for details on how _Control Sequences_ are
+#'   interpreted, particularly if you are getting unexpected results,
+#'   [`normalize_sgr`] for more details on what the `normalize` parameter does.
 #' @inheritParams base::strwrap
 #' @inheritParams tabs_as_spaces
 #' @inheritParams substr_ctl

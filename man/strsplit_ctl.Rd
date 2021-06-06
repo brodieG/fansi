@@ -13,7 +13,8 @@ strsplit_ctl(
   useBytes = FALSE,
   warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"),
-  ctl = "all"
+  ctl = "all",
+  normalize = getOption("fansi.normalize", FALSE)
 )
 
 strsplit_sgr(
@@ -23,7 +24,8 @@ strsplit_sgr(
   perl = FALSE,
   useBytes = FALSE,
   warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap")
+  term.cap = getOption("fansi.term.cap"),
+  normalize = getOption("fansi.normalize", FALSE)
 )
 }
 \arguments{
@@ -76,6 +78,12 @@ for newlines and the actual ESC (0x1B) character.
 \item "all": all of the above, except when used in combination with any of the
 above, in which case it means "all but".
 }}
+
+\item{normalize}{TRUE or FALSE (default) whether SGR sequence should be
+normalized out such that there is one distinct sequence for each SGR code.
+normalized strings will occupy more space (e.g. "\033[31;42m" becomes
+"\033[31m\033[42m"), but will work better with code that assumes each SGR
+code will be in its own escape as \code{crayon} does.}
 }
 \value{
 list, see \link[base:strsplit]{base::strsplit}.
@@ -124,7 +132,8 @@ strsplit_sgr("\033[31mhello\033[42m\nworld!", "\n")
 strsplit_ctl("\033[31mhello\033[42m\nworld!", "\n", ctl=c("all", "nl"))
 }
 \seealso{
-\link{fansi} for details on how \emph{Control Sequences} are
+\code{\link{fansi}} for details on how \emph{Control Sequences} are
 interpreted, particularly if you are getting unexpected results,
+\code{\link{normalize_sgr}} for more details on what the \code{normalize} parameter does,
 \link[base:strsplit]{base::strsplit} for details on the splitting.
 }

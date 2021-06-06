@@ -112,7 +112,7 @@ only treat ANSI CSI SGR sequences specially, and are equivalent to the
 strtrim_ctl("\033[42mHello world\033[m", 6)
 }
 \seealso{
-\link{fansi} for details on how \emph{Control Sequences} are
-interpreted, particularly if you are getting unexpected results.
-\link{strwrap_ctl} is used internally by this function.
+\code{\link{fansi}} for details on how \emph{Control Sequences} are
+interpreted, particularly if you are getting unexpected results,
+\code{\link{normalize_sgr}} for more details on what the \code{normalize} parameter does.
 }
