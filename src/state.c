@@ -753,6 +753,67 @@ int FANSI_sgr_close(
   }
   return len - len0;
 }
+/*
+ * For closing things for substr, so we don't need to automatically normalize
+ * every string if we just close with ESC[0m.
+ *
+ * Pretty inefficient to do it this way...
+ *
+ * Any warnings this could emit should have been emitted earlier during reading
+ * of string the active state came from.
+ *
+ * @param x should be a vector of active states at end of strings.
+ */
+SEXP FANSI_sgr_close_ext(SEXP x, SEXP term_cap) {
+  if(TYPEOF(x) != STRSXP)
+    error("Argument `x` should be a character vector.");  // nocov
+  if(TYPEOF(term_cap) != INTSXP)
+    error("Argument `term.cap` should be an integer vector.");  // nocov
+
+  // Compress `ctl` into a single integer using bit flags
+
+  R_xlen_t len = xlength(x);
+  SEXP res = x;
+
+  PROTECT_INDEX ipx;
+  // reserve spot if we need to alloc later
+  PROTECT_WITH_INDEX(res, &ipx);
+
+  struct FANSI_buff buff = {.len = 0};
+  int normalize = 1;
+
+  SEXP R_true = PROTECT(ScalarLogical(1));
+  SEXP R_false = PROTECT(ScalarLogical(0));
+  SEXP R_one = PROTECT(ScalarInteger(1));
+  SEXP R_zero = PROTECT(ScalarInteger(0));
+
+  for(R_xlen_t i = 0; i < len; ++i) {
+    FANSI_interrupt(i);
+    SEXP x_chr = STRING_ELT(x, i);
+    if(x_chr == NA_STRING || !LENGTH(x_chr)) continue;
+
+    struct FANSI_state state = FANSI_state_init_full(
+      x, R_false, term_cap, R_true, R_true, R_zero, R_one, i
+    );
+    while(*(state.string + state.pos_byte)) {
+      state = FANSI_read_next(state, i);
+    }
+    int len = 0;
+    len = FANSI_sgr_close(NULL, state.sgr, len, normalize, i);
+    if(len) {
+      if(res == x) REPROTECT(res = duplicate(x), ipx);
+      FANSI_size_buff(&buff, (size_t)len + 1);
+      FANSI_sgr_close(buff.buff, state.sgr, len, normalize, i);
+      cetype_t chr_type = getCharCE(x_chr);
+      SEXP reschr =
+        PROTECT(FANSI_mkChar(buff.buff, buff.buff + len, chr_type, i));
+      SET_STRING_ELT(res, i, reschr);
+      UNPROTECT(1);
+    }
+  }
+  UNPROTECT(5);
+  return res;
+}
 
 /*
  * R interface for state_at_position

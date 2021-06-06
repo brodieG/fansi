@@ -47,6 +47,7 @@ R_CallMethodDef callMethods[] = {
   {"reset_limits", (DL_FUNC) &FANSI_reset_limits, 0},
   {"normalize_sgr", (DL_FUNC) &FANSI_normalize_sgr_ext, 3},
   {"normalize_sgr_list", (DL_FUNC) &FANSI_normalize_sgr_list_ext, 3},
+  {"close_sgr", (DL_FUNC) &FANSI_sgr_close_ext, 2},
   {NULL, NULL, 0}
 };
 

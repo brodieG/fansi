@@ -439,6 +439,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_sgr_close(
     char * buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
   );
+  SEXP FANSI_sgr_close_ext(SEXP x, SEXP term_cap);
   int FANSI_sgr_comp_color(struct FANSI_sgr target, struct FANSI_sgr current);
   struct FANSI_sgr FANSI_sgr_setdiff(struct FANSI_sgr old, struct FANSI_sgr new);
   struct FANSI_state FANSI_read_next(struct FANSI_state state, R_xlen_t i);
