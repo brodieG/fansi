@@ -62,6 +62,13 @@ unitizer_sect("in functions", {
   strwrap2_sgr(string3, 11, normalize=TRUE, pad.end=" ")
 
   strtrim_sgr(string3, 8, normalize=TRUE);
-  strtrim_ctl(string3, 8, normalize=TRUE);
+  strtrim_sgr(string3, 8, normalize=TRUE);
+
+  substr_ctl("\033[33;44mhello\033[m world", 3, 8, normalize=TRUE)
+  substr2_ctl("\033[33;44mhello\033[m world", 3, 8, normalize=TRUE)
+  substr_sgr("\033[33;44mhello\033[m world", 3, 8, normalize=TRUE)
+  substr2_sgr("\033[33;44mhello\033[m world", 3, 8, normalize=TRUE)
+
+  substr_ctl(string3, c(3, 3), c(8, 15), normalize=TRUE)
 })
 

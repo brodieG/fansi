@@ -264,8 +264,6 @@ substr2_sgr <- function(
     normalize=normalize
   )
 
-## Lower overhead version of the function for use by strwrap
-##
 ## @x must already have been converted to UTF8
 ## @param type.int is supposed to be the matched version of type, minus 1
 
@@ -286,6 +284,11 @@ substr_ctl_internal <- function(
   x.scalar <- length(x) == 1
   x.u <- if(x.scalar) x else unique_chr(x)
 
+  # We compute style at each start and stop position by getting all those
+  # positions into a vector and then ordering them by position, keeping track of
+  # original order and whether they are starting or ending positions (affects
+  # how multi-byte characters are trimmed/kept).
+
   for(u in x.u) {
     elems <- which(x == u & s.s.valid)
     elems.len <- length(elems)
@@ -305,7 +308,8 @@ substr_ctl_internal <- function(
     state <- .Call(
       FANSI_state_at_pos_ext,
       u, e.sort - 1L, type.int,
-      e.lag, e.ends,
+      e.lag,   # whether to include a partially covered multi-byte character
+      e.ends,  # whether it's a start or end position
       warn, term.cap.int,
       ctl.int, normalize
     )
@@ -325,11 +329,20 @@ substr_ctl_internal <- function(
 
     # if there is any ANSI CSI at end then add a terminating CSI
 
-    end.csi <- character(length(start.tag))
-    end.csi[nzchar(stop.tag)] <- '\033[0m'
-
+    if(normalize) {
+      end.csi <- close_sgr(stop.tag)
+    } else {
+      end.csi <- character(length(stop.tag))
+      end.csi[nzchar(stop.tag)] <- '\033[0m'
+    }
+    tmp <- paste0(
+      start.tag,
+      substr(x.elems, start.ansi, stop.ansi)
+    )
     res[elems] <- paste0(
-      start.tag, substr(x.elems, start.ansi, stop.ansi), end.csi
+      if(normalize)
+        normalize_sgr(tmp, warn=warn, term.cap=VALID.TERM.CAP[term.cap.int])
+      else tmp, end.csi
     )
   }
   res

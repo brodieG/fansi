@@ -206,7 +206,6 @@ static struct FANSI_state_pair state_at_position(
 
   // Need to reset pos_width_target since it could be distorted by a previous
   // middle of wide char event
-
   state.pos_width_target = state.pos_width;
 
   struct FANSI_state state_res, state_prev, state_prev_buff;
@@ -304,33 +303,7 @@ static struct FANSI_state_pair state_at_position(
     state_next_prev = FANSI_read_next(state_next_prev_prev, i);
     state_next = FANSI_read_next(state_next_prev, i);
 
-    /*
-    Rprintf(
-      "npp %d %d %d np %d %d %d n %d %d %d end %d\n",
-
-      state_next_prev_prev.pos_byte,
-      state_next_prev_prev.pos_width,
-      state_next_prev_prev.pos_ansi,
-
-      state_next_prev.pos_byte,
-      state_next_prev.pos_width,
-      state_next_prev.pos_ansi,
-
-      state_next.pos_byte,
-      state_next.pos_width,
-      state_next.pos_ansi,
-
-      state_next.string[state_next.pos_byte] == 0
-    );
-    */
-
     while(!state_next.last_char_width) {
-      /*
-      Rprintf(
-        "next: width %d ansi %d last %d\n", state_next.pos_width,
-        state_next.pos_ansi, state_next.last_char_width
-      );
-      */
       state_next_prev_prev = state_next_prev;
       state_next_prev = state_next;
       state_next = FANSI_read_next(state_next, i);
@@ -631,7 +604,7 @@ struct FANSI_sgr FANSI_sgr_setdiff(struct FANSI_sgr old, struct FANSI_sgr new) {
   return res;
 }
 
-// Keep synchronized with `close_active_sgr`
+// Keep synchronized with `sgr_close`
 int FANSI_sgr_active(struct FANSI_sgr sgr) {
   return
     sgr.style || sgr.color >= 0 || sgr.bg_color >= 0 ||

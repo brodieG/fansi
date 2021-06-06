@@ -574,6 +574,9 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       state = read_ascii(state);
     }
   }
+  // CAREFUL adding changing values to `state` after here.  State could
+  // be the unwound state `state_prev`.
+
   if(err_code) {
     // All errors are zero width; there should not be any errors if
     // !esc_recognized.
