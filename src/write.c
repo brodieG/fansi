@@ -18,7 +18,7 @@
 
 #include "fansi.h"
 
-/* GENERAL NOTES ON WRITING.
+/* GENERAL NOTES ON WRITING
  *
  * Writing functions starting with "FANSI_W_" in this file (or static ones
  * starting with "W_" in other files) operate in measure and write modes.  The
@@ -32,7 +32,10 @@
  * buffer (i.e. char ** buff).  If that points to NULL, then the function runs
  * in measure mode.  Otherwise, it runs in write mode.  The writing functions
  * should also accept an 'int len' parameter that measures how many bytes have
- * (or will be) written by other functions:
+ * (or will be) written by other functions.
+ *
+ * Here is an example implementation that uses a loop to iterate between measure
+ * and write mode.  Not all uses of write functions are in this form.
  *
  *     // Measure Mode
  *     struct FANSI_buff buff = {.buff=NULL, .len = 0};
@@ -56,16 +59,28 @@
  *   vvvvvvvv
  * !> DANGER <!
  *   ^^^^^^^^
+ *
  * Writing functions move the buffer pointer to point to the byte after the last
- * non-NULL byte they've written (generally this will be a NULL).  This makes it
- * simpler to code measure/write as a two iteration loop that uses the same code
- * for measuring and writing, except for allocating the buffer.
+ * non-NULL byte they've written (generally this will be a NULL).
+ *
+ *   vvvvvvvv
+ * !> DANGER <!
+ *   ^^^^^^^^
+ *
+ * This makes it simpler to code measure/write as a two iteration loop that uses
+ * the same code for measuring and writing, except for allocating the buffer.
  *
  * These functions return how many bytes are/will be written, and should also
  * check whether adding those bytes to the 'len' input would cause an 'int'
  * overflow.  Typically the functions will accept an error message and an
  * R-level input index so that they can provide a bit more guidnce as to what
  * happened during and overflow.
+ *
+ * There is a performance trade-off in using the exact same code to measure the
+ * buffer size and to write it.  Many of the measurments are knowable ahead of
+ * time, but here we'll generate the substrings to measure them, only to
+ * regenerate them again to write them.  The advantage is that it is easier to
+ * keep the code in sync between measure and write modes.
  */
 
 /*
