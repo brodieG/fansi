@@ -168,6 +168,21 @@ int FANSI_W_mcopy(
   }
   return tmp_len;
 }
+/*
+ * Fill an array by repeating a charater
+ */
+
+int FANSI_W_fill(
+  char ** buff, const char tmp, int times,
+  int len, R_xlen_t i, const char * err_msg
+) {
+  FANSI_check_append(len, times, err_msg, i);
+  if(*buff) {
+    for(int i = 0; i < times; ++i) *(*buff)++ = tmp;
+    **buff = 0;  // not necessary, but helps to debug
+  }
+  return times;
+}
 
 /*
  * End Active Sequences

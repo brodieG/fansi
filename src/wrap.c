@@ -180,7 +180,7 @@ static SEXP writeline(
   // Measure/Write loop (see src/write.c)
   char * buff_track = NULL;
   int len = 0;
-  const char * err_msg = "";
+  const char * err_msg = "Writing line";
 
   for(int k = 0; k < 2; ++k) {
     if(k) {
@@ -188,26 +188,25 @@ static SEXP writeline(
       buff_track = buff->buff;
       len = 0;  // reset len
     }
-    if(needs_start)
+    if(needs_start) {
+      err_msg = "Adding initial SGR";
       len += FANSI_W_sgr(&buff_track, state_start.sgr, len, normalize, i);
-
+    }
     // Apply indent/exdent prefix/initial
     if(pre_dat.bytes) {
       err_msg = "Adding prefix characters";
       len += FANSI_W_MCOPY(&buff_track, pre_dat.string, pre_dat.bytes);
     }
     // Actual string, remember state_bound.pos_byte is one past what we need
-    err_msg = "Writing main string";
     const char * string = state_start.string + state_start.pos_byte;
     int bytes = state_bound.pos_byte - state_start.pos_byte;
     len += FANSI_W_MCOPY(&buff_track, string, bytes);
 
     // Add padding if needed
+    err_msg = "Adding padding";
     int to_pad = target_pad;
-    while(to_pad--) {
-      if(buff_track) *(buff_track++) = *pad_chr;
-      ++len;
-    }
+    len += FANSI_W_FILL(&buff_track, *pad_chr, to_pad);
+
     // And turn off CSI styles if needed
     if(needs_close)
       len += FANSI_W_sgr_close(

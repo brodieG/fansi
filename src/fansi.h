@@ -452,14 +452,19 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     char ** buff, const char * tmp, int len, R_xlen_t i,
     const char * err_msg
   );
-  // Requires `len`, `i`, and `err_msg` defined in scope.
-  #define FANSI_W_COPY(A, B) FANSI_W_copy((A), (B), len, i, err_msg)
-
   int FANSI_W_mcopy(
     char ** buff, const char * tmp, int tmp_len, int len, R_xlen_t i,
     const char * err_msg
   );
+  int FANSI_W_fill(
+    char ** buff, const char tmp, int times,
+    int len, R_xlen_t i, const char * err_msg
+  );
+  // Macro versions require `len`, `i`, and `err_msg` defined in scope.
+  #define FANSI_W_COPY(A, B) FANSI_W_copy((A), (B), len, i, err_msg)
   #define FANSI_W_MCOPY(A, B, C) FANSI_W_mcopy(\
+    (A), (B), (C), len, i, err_msg)
+  #define FANSI_W_FILL(A, B, C) FANSI_W_fill(\
     (A), (B), (C), len, i, err_msg)
 
   // Utilities
