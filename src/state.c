@@ -479,7 +479,7 @@ SEXP FANSI_sgr_close_ext(SEXP x, SEXP term_cap) {
     len = FANSI_W_sgr_close(&buff_track, state.sgr, len, normalize, i);
     if(len) {
       if(res == x) REPROTECT(res = duplicate(x), ipx);
-      FANSI_size_buff(&buff, (size_t)len + 1);
+      FANSI_size_buff(&buff, len);
       buff_track = buff.buff;
       FANSI_W_sgr_close(&buff_track, state.sgr, len, normalize, i);
       cetype_t chr_type = getCharCE(x_chr);

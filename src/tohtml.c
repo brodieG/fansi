@@ -412,7 +412,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
           // Allocate target vector if it hasn't been yet
           if(res == x) REPROTECT(res = duplicate(x), ipx);
           // Allocate buffer and reset states for second pass
-          FANSI_size_buff(&buff, (size_t)len + 1);  // +1 for NULL
+          FANSI_size_buff(&buff, len);
           buff_track = buff.buff;
           len = 0;
           string = state.string;  // always points to first byte
@@ -499,7 +499,7 @@ SEXP FANSI_color_to_html_ext(SEXP x) {
     error("Argument length not a multipe of 5"); // nocov
 
   struct FANSI_buff buff = {.len = 0};
-  FANSI_size_buff(&buff, 8);
+  FANSI_size_buff(&buff, 7);
 
   int * x_int = INTEGER(x);
 
@@ -576,7 +576,7 @@ SEXP FANSI_esc_html(SEXP x, SEXP what) {
       string = CHAR(chrsxp);
 
       if(k && len > LENGTH(chrsxp)) {
-        FANSI_size_buff(&buff, (size_t)len + 1);
+        FANSI_size_buff(&buff, len);
         len = LENGTH(chrsxp); // reset so we don't unecessary overflow
         // Allocate result vector if it hasn't been yet
         if(res == x) REPROTECT(res = duplicate(x), ipx);

@@ -85,7 +85,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
    */
   struct FANSI_buff {
     char * buff; // Buffer
-    size_t len;     // How many bytes the buffer has been allocated to
+    size_t len;  // Bytes allocated, includes trailing NULL.
   };
   struct FANSI_string_as_utf8 {
     const char * string;  // buffer
@@ -414,7 +414,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_ctl_as_int(SEXP ctl);
   SEXP FANSI_ctl_as_int_ext(SEXP ctl);
 
-  void FANSI_size_buff(struct FANSI_buff * buff, size_t size);
+  void FANSI_size_buff(struct FANSI_buff * buff, int size);
 
   int FANSI_pmatch(
     SEXP x, const char ** choices, int choice_count, const char * arg_name

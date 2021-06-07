@@ -184,7 +184,7 @@ static SEXP writeline(
 
   for(int k = 0; k < 2; ++k) {
     if(k) {
-      FANSI_size_buff(buff, (size_t)len + 1);
+      FANSI_size_buff(buff, len);
       buff_track = buff->buff;
       len = 0;  // reset len
     }

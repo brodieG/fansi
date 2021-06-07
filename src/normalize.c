@@ -111,7 +111,7 @@ static SEXP normalize_sgr_int(
 
     // Write
     if(res == x) REPROTECT(res = duplicate(x), ipx);
-    FANSI_size_buff(buff, (size_t)len + 1);
+    FANSI_size_buff(buff, len);
     state.warn = 0;  // avoid double warnings
     normalize(buff->buff, state, i);
 

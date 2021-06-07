@@ -87,11 +87,12 @@ SEXP FANSI_tabs_as_spaces(
       // Figure out possible size of buffer, allowing max_tab_stop for every
       // tab, which should over-allocate
 
-      size_t new_buff_size = LENGTH(chr);
+      FANSI_check_chrsxp(chr, i);
+      int new_buff_size = (int)LENGTH(chr);
       int tab_extra = max_tab_stop - 1;
 
       for(int k = 0; k < tab_count; ++k) {
-        if(new_buff_size > (size_t) (FANSI_lim.lim_int.max - tab_extra))
+        if(new_buff_size > (FANSI_lim.lim_int.max - tab_extra))
           error(
             "%s%s",
             "Converting tabs to spaces will cause string to be longer than ",
@@ -99,8 +100,6 @@ SEXP FANSI_tabs_as_spaces(
           );
         new_buff_size += tab_extra;
       }
-      ++new_buff_size;   // Room for NULL
-
       FANSI_size_buff(buff, new_buff_size);
 
       SEXP R_true = PROTECT(ScalarLogical(1));

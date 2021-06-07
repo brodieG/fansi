@@ -45,7 +45,7 @@
  *     for(int k = 0; k < 2; ++k) {
  *       if(k) {
  *         // Write Mode
- *         FANSI_size_buff(&buff, (size_t)len + 1); # buff.buff is allocated
+ *         FANSI_size_buff(&buff, len); # buff.buff is allocated
  *         buff_track = buff.buff;
  *         len = 0;  // reset len
  *       }
@@ -90,56 +90,55 @@
  * allocation is needed the buffer will be either twice as large as it was
  * before, or size `size` if that is greater than twice the size.
  *
- * Only the requested `size` bytes are allocated, thus `size` should acccount
- * for the space for a trailing NULL
+ * Total buffer allocation will be size + 1 to allow for an additional NULL
+ * terminator.
  */
-void FANSI_size_buff(struct FANSI_buff * buff, size_t size) {
+void FANSI_size_buff(struct FANSI_buff * buff, int size) {
   // assumptions check that  SIZE_T fits INT_MAX + 1
-  size_t buff_max = (size_t) FANSI_lim.lim_int.max + 1;
-  if(!size)  // Otherwise could not reset string by starting with 0
-    error("Internal Error: cannot size buffer to 0.");
-  if(size > buff->len) {
-    // Special case for intial alloc
+  if(size < 0) error("Internal Error: negative buffer allocations disallowed.");
+  size_t buff_max = (size_t)FANSI_lim.lim_int.max + 1;
+  size_t size_req = (size_t)size + 1;
+  size_t size_alloc = 0;
+  if(size_req > buff_max)
+    // Difficult to test as everything already checking for overflows
+    // nocov start
+    error(
+      "%s  Requesting %zu",
+      "Internal Error: max allowed buffer size is INT_MAX + 1.",
+       size_req
+    );
+    // nocov end
 
+  if(size_req > buff->len) {
     if(!buff->len) {
-      if(size < 128 && FANSI_lim.lim_int.max > 128)
-        size = 128;  // in theory little penalty to ask this minimum
-      else if(size > buff_max) {
-        // nocov start
-        // too difficult to test, all the code pretty much checks for overflow
-        // before requesting memory
-        error(
-          "Internal Error: requested buff size %zu greater than INT_MAX + 1.",
-           size
-        );
-        // nocov end
-      }
-      else buff->len = size;
-    }
-    // More generic case
-
-    if(size > buff->len) {
-      size_t tmp_double_size = 0;
-      if(buff->len > buff_max - size) {
-        tmp_double_size = buff_max;
+      // in theory little penalty to ask this minimum
+      if(size_req < 128 && FANSI_lim.lim_int.max >= 127)
+        size_alloc = 128;
+      else
+        size_alloc = size_req;
+    } else {
+      // More generic case
+      if(buff->len > buff_max - buff->len) {
+        // can't double size
+        size_alloc = buff_max;
+      } else if (size_req > buff->len + buff->len) {
+        // doubling not enough
+        size_alloc = size_req;
       } else {
-        tmp_double_size = buff->len + buff->len;
+        // double size
+        size_alloc = buff->len + buff->len;
       }
-      if(size > tmp_double_size) tmp_double_size = size;
-
-      if(tmp_double_size > buff_max)
-        // nocov start
-        // this can't really happen unless size starts off bigger than
-        // INT_MAX + 1
-        error(
-          "%s  Requesting %zu",
-          "Internal Error: max allowed buffer size is INT_MAX + 1.",
-           tmp_double_size
-        );
-        // nocov end
-      buff->len = tmp_double_size;
     }
+    if(size_alloc < size_req)
+      // nocov start
+      error(
+        "Internal Error: buffer size computation error (%zu vs %zu).",
+        size_alloc, size_req
+      );
+      // nocov end
+
     // Maybe should be re-alloc to free the previous buffer?
+    buff->len = size_alloc;
     buff->buff = R_alloc(buff->len, sizeof(char));
   }
   if(!buff->buff)
@@ -151,7 +150,7 @@ void FANSI_size_buff(struct FANSI_buff * buff, size_t size) {
  *
  * @len bytes already accumulated in the buffer (i.e. before the pointer).
  * @i index in overal character vector, needed to report overflow string.
- * @err_msg overflow error message 
+ * @err_msg overflow error message
  */
 int FANSI_W_copy(
   char ** buff, const char * tmp, int len, R_xlen_t i,
