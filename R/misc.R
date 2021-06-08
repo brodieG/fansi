@@ -482,4 +482,12 @@ sgr_256 <- function() {
 # To test growable buffer.
 
 size_buff <- function(x) .Call(FANSI_size_buff, x)
+size_buff_prot_test <- function() {
+  raw <- .Call(FANSI_size_buff_prot_test)
+  res <- raw[-1L]
+  names(res) <- c('n', 'prev', 'self')
+  res <- as.data.frame(res)
+  rownames(res) <- raw[[1L]]
+  res
+}
 

@@ -49,6 +49,7 @@ R_CallMethodDef callMethods[] = {
   {"normalize_sgr_list", (DL_FUNC) &FANSI_normalize_sgr_list_ext, 3},
   {"close_sgr", (DL_FUNC) &FANSI_sgr_close_ext, 2},
   {"size_buff", (DL_FUNC) &FANSI_size_buff_ext, 1},
+  {"size_buff_prot_test", (DL_FUNC) &FANSI_size_buff_prot_test, 0},
   {NULL, NULL, 0}
 };
 

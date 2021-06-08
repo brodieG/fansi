@@ -94,8 +94,8 @@
  * terminator.
  */
 size_t FANSI_size_buff(struct FANSI_buff * buff, int size) {
-  // assumptions check that  SIZE_T fits INT_MAX + 1
   if(size < 0) error("Internal Error: negative buffer allocations disallowed.");
+  // assumptions check that  SIZE_T fits INT_MAX + 1
   size_t buff_max = (size_t)FANSI_lim.lim_int.max + 1;
   size_t size_req = (size_t)size + 1;
   size_t size_alloc = 0;
@@ -133,16 +133,134 @@ size_t FANSI_size_buff(struct FANSI_buff * buff, int size) {
       );
       // nocov end
 
+    // If our previous buffer is still at the top of the R_alloc protection
+    // chain, reset the chain to the link below so that it may be GCed.  This is
+    // only useful if the same buffer is grown repeatedly.
+    if(buff->vheap_self == vmaxget()) vmaxset(buff->vheap_prev);
+    buff->vheap_prev = vmaxget();
     buff->len = size_alloc;
     buff->buff = R_alloc(buff->len, sizeof(char));
+    buff->vheap_self = vmaxget();
   }
   if(!buff->buff) error("Internal Error: buffer not allocated.");// nocov
   *(buff->buff) = 0;  // Always reset the string, guaranteed one byte.
   return buff->len;
 }
 /*
+ * Purely for testing if the prev/self scheme used by size_buff works as
+ * intended.
+ */
+
+static void prot_test_help(
+  int size, const char * lbl, struct FANSI_buff * buff, SEXP res, R_xlen_t i
+) {
+  char tmp[256];
+  FANSI_size_buff(buff, size);
+  INTEGER(VECTOR_ELT(res, 1))[i] = buff->len;
+  SET_STRING_ELT(VECTOR_ELT(res, 0), i, mkChar(lbl));
+  sprintf(tmp, "%p", buff->vheap_self);
+  SET_STRING_ELT(VECTOR_ELT(res, 3), i, mkChar(tmp));
+  sprintf(tmp, "%p", buff->vheap_prev);
+  SET_STRING_ELT(VECTOR_ELT(res, 2), i, mkChar(tmp));
+}
+
+SEXP FANSI_size_buff_prot_test() {
+  struct FANSI_buff buff1 = {.len = 0};
+  struct FANSI_buff buff2 = {.len = 0};
+
+  R_xlen_t n = 9;
+  SEXP res = PROTECT(allocVector(VECSXP, 4));
+  SEXP res_n = PROTECT(allocVector(INTSXP, n));
+  SEXP res_lbl  = PROTECT(allocVector(STRSXP, n));
+  SEXP res_self = PROTECT(allocVector(STRSXP, n));
+  SEXP res_prev = PROTECT(allocVector(STRSXP, n));
+  SET_VECTOR_ELT(res, 0, res_lbl);
+  SET_VECTOR_ELT(res, 1, res_n);
+  SET_VECTOR_ELT(res, 2, res_prev);
+  SET_VECTOR_ELT(res, 3, res_self);
+  UNPROTECT(4);
+
+  // Big enough buffers so they are not in the small object heap so no confusion
+
+  R_xlen_t i = 0;
+  prot_test_help(4095, "first", &buff1, res, i++);
+  // // Valgrind testing (see end)
+  // save_ptr = buff1.buff;
+  prot_test_help(2047, "smaller 1.0", &buff1, res, i++);
+  // This should cause 'self' to change, while, leaving 'prev' unchanged
+  prot_test_help(8191, "grow 1.0", &buff1, res, i++);
+  // // Valgrind, here so it doesn't get overwritten
+  // strcpy(save_ptr, "hello world!");
+  // New buffer, this should cause both 'self' and 'prev' to change
+  prot_test_help(2047, "new buff", &buff2, res, i++);
+  // Back to old buffer, no grow, no changes
+  prot_test_help(2047, "smaller 1.1", &buff1, res, i++);
+  // New buffer, no grow, no changes
+  prot_test_help(1023, "smaller 2.0", &buff2, res, i++);
+  // New buffer, grow, prev should change to buffer2, self should change
+  prot_test_help(4095, "grow 2.0", &buff2, res, i++);
+  // Growing old buffer should change prev
+  prot_test_help(16383, "grow 1.1", &buff1, res, i++);
+  // Growing new buffer should also change prev
+  prot_test_help(8191, "grow 2.1", &buff2, res, i++);
+
+  if(i != n) error("Internal Error: wrong step count."); // nocov
+
+  /*
+  // For valgrind testing, we run a full gc at this point.  This should gc the
+  // allocation that `save_ptr` is pointing at.
+  SEXP s, t;
+  s = t = PROTECT(allocList(3));
+  SET_TYPEOF(t, LANGSXP);
+  SETCAR(t, install("gc"));
+  SETCADR(t, ScalarLogical(1));
+  SETCADDR(t, ScalarLogical(1));
+  t = CDR(CDR(t));
+  SET_TAG(t, install("full"));
+  PrintValue(s);  // did we generate the call correctly?  yes.
+  // No problem we haven not gc'ed yet (assuming no other gc happened in
+  // interim, should chec if it does blow up by turning on gcinfo)
+  Rprintf("okay '%s'\n", save_ptr);
+  SEXP res = PROTECT(eval(s, R_GlobalEnv));
+  PrintValue(res);
+  UNPROTECT(3)
+  // Confirm next error is not from the eval proper
+  Rprintf("done gc\n");
+  // With valgrind, this produces error messages (excerpting key piece):
+  //
+  // ==174== Invalid read of size 1
+  // ==174==    at 0x483EF46: strlen (in /usr/lib/x86_64-linux-gnu/valgrind/vgpreload_memcheck-amd64-linux.so)
+  // ... SNIP ...
+  // ==174==    by 0x4A31F0D: Rprintf (printutils.c:905)
+  // ==174==    by 0xB9B20CF: FANSI_size_buff_prot_test (write.c:207)
+  // ==174==  Address 0xb94d950 is 48 bytes inside a block of size 4,152 free'd
+  // ==174==    at 0x483CA3F: free (in /usr/lib/x86_64-linux-gnu/valgrind/vgpreload_memcheck-amd64-linux.so)
+  // ==174==    by 0x49E3925: ReleaseLargeFreeVectors (memory.c:1114)
+  // ==174==    by 0x49EEB15: RunGenCollect (memory.c:1896)
+  // ==174==    by 0x49F3910: R_gc_internal (memory.c:3129)
+  // ... SNIP ...
+  // ==174==  Block was alloc'd at
+  // ==174==    at 0x483B7F3: malloc (in /usr/lib/x86_64-linux-gnu/valgrind/vgpreload_memcheck-amd64-linux.so)
+  // ==174==    by 0x49F24BE: Rf_allocVector3 (memory.c:2806)
+  // ==174==    by 0x49D5EF8: Rf_allocVector (Rinlinedfuns.h:595)
+  // ==174==    by 0x49F06AD: R_alloc (memory.c:2257)
+  // ==174==    by 0xB9B1D7C: FANSI_size_buff (write.c:142)
+  // ==174==    by 0xB9B1E31: FANSI_size_buff_prot_test (write.c:158)
+  // ... SNIP ...
+  Rprintf("boom '%s'\n", save_ptr);
+
+  // This is what we expect to see (note code has changed since the valgrind
+  // test, so relative line numbers not the same.  The save_ptr buffer was
+  // released.  We don't actually segfault in test, so this only shows up in
+  // valgrind.
+  */
+
+  UNPROTECT(1);
+  return res;
+}
+/*
  * To test allocation logic is doing what is expected.  This will allocate
- * for each value in `x` so, don't do anything crazy.
+ * as many bytes as each value in `x` so, don't do anything crazy.
  */
 SEXP FANSI_size_buff_ext(SEXP x) {
   if(TYPEOF(x) != INTSXP)

@@ -84,8 +84,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
    * sufficiently large to write what we want.
    */
   struct FANSI_buff {
-    char * buff; // Buffer
-    size_t len;  // Bytes allocated, includes trailing NULL.
+    char * buff;       // Buffer
+    void * vheap_self; // Pointer to self on the heap protection stack
+    void * vheap_prev; // Pointer to what was previously on top of prot stack
+    size_t len;        // Bytes allocated, includes trailing NULL.
   };
   struct FANSI_string_as_utf8 {
     const char * string;  // buffer
@@ -400,6 +402,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_normalize_sgr_list_ext(SEXP x, SEXP warn, SEXP term_cap);
 
   SEXP FANSI_size_buff_ext(SEXP x);
+  SEXP FANSI_size_buff_prot_test();
 
   // - Internal funs -----------------------------------------------------------
 

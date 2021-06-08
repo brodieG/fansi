@@ -81,6 +81,19 @@ unitizer_sect('size buffer', {
   invisible(fansi:::set_int_max(64))
   fansi:::size_buff(c(0L, 32L, 63L, 64L))
   fansi:::size_buff(c(0L, 32L, 63L, 65L))
+
+  # see src/write.c for details on what these should be and why
+  invisible(fansi:::set_int_max(old_max))
+  dat <- fansi:::size_buff_prot_test()
+  dat['first', 'self']       == dat['smaller 1.0', 'self']
+  dat['new buff', 'prev']    == dat['grow 1.0', 'self']
+  dat['new buff', 'prev']    != dat['new buff', 'self']
+  dat['smaller 1.1', 'self'] == dat['grow 1.0', 'self']
+  dat['smaller 2.0', 'self'] == dat['new buff', 'self']
+  dat['smaller 2.0', 'prev'] == dat['new buff', 'prev']
+  dat['smaller 2.0', 'prev'] == dat['grow 2.0', 'prev']
+  dat['grow 1.1', 'prev']    == dat['grow 2.0', 'self']
+  dat['grow 2.1', 'prev']    == dat['grow 1.1', 'self']
 })
 
 new_max <- fansi:::set_int_max(old_max)
