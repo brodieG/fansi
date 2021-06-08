@@ -478,3 +478,8 @@ sgr_256 <- function() {
     gs1, gs2
   )
 }
+
+# To test growable buffer.
+
+size_buff <- function(x) .Call(FANSI_size_buff, x)
+

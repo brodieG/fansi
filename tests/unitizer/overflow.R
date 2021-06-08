@@ -71,5 +71,16 @@ unitizer_sect('unhandled', {
   tcw(unhandled_ctl(c('\a', string)))
   suppressWarnings(unhandled_ctl(c('\a', string)))
 })
+unitizer_sect('size buffer', {
+  invisible(fansi:::set_int_max(old_max))
+  fansi:::size_buff(c(0L, 127L, 128L, 64L, 200L, 1024L))
+  fansi:::size_buff(c(0L, 127L, -128L))
+
+  invisible(fansi:::set_int_max(130))
+  fansi:::size_buff(c(0L, 127L, 128L, 64L, 200L, 1024L))
+  invisible(fansi:::set_int_max(64))
+  fansi:::size_buff(c(0L, 32L, 63L, 64L))
+  fansi:::size_buff(c(0L, 32L, 63L, 65L))
+})
 
 new_max <- fansi:::set_int_max(old_max)

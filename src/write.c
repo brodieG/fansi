@@ -93,21 +93,17 @@
  * Total buffer allocation will be size + 1 to allow for an additional NULL
  * terminator.
  */
-void FANSI_size_buff(struct FANSI_buff * buff, int size) {
+size_t FANSI_size_buff(struct FANSI_buff * buff, int size) {
   // assumptions check that  SIZE_T fits INT_MAX + 1
   if(size < 0) error("Internal Error: negative buffer allocations disallowed.");
   size_t buff_max = (size_t)FANSI_lim.lim_int.max + 1;
   size_t size_req = (size_t)size + 1;
   size_t size_alloc = 0;
   if(size_req > buff_max)
-    // Difficult to test as everything already checking for overflows
-    // nocov start
     error(
-      "%s  Requesting %zu",
-      "Internal Error: max allowed buffer size is INT_MAX + 1.",
-       size_req
+      "%s  Requesting %zu.",
+      "Internal Error: max allowed buffer size is INT_MAX + 1.", size_req
     );
-    // nocov end
 
   if(size_req > buff->len) {
     if(!buff->len) {
@@ -141,10 +137,30 @@ void FANSI_size_buff(struct FANSI_buff * buff, int size) {
     buff->len = size_alloc;
     buff->buff = R_alloc(buff->len, sizeof(char));
   }
-  if(!buff->buff)
-    error("Internal Error: buffer not allocated.");
+  if(!buff->buff) error("Internal Error: buffer not allocated.");// nocov
   *(buff->buff) = 0;  // Always reset the string, guaranteed one byte.
+  return buff->len;
 }
+/*
+ * To test allocation logic is doing what is expected.  This will allocate
+ * for each value in `x` so, don't do anything crazy.
+ */
+SEXP FANSI_size_buff_ext(SEXP x) {
+  if(TYPEOF(x) != INTSXP)
+    error("Argument `x` must be integer.");
+
+  R_xlen_t i, len = XLENGTH(x);
+  SEXP res = PROTECT(allocVector(REALSXP, len));
+  struct FANSI_buff buff = {.len=0};
+
+  for(i = 0; i < len; ++i) {
+    size_t size = FANSI_size_buff(&buff, INTEGER(x)[i]);
+    REAL(res)[i] = (double) size;
+  }
+  UNPROTECT(1);
+  return res;
+}
+
 /*
  * Copy/Measure a NULL terminated string into the buffer.
  *

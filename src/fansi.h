@@ -379,7 +379,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP vec, SEXP tab_stops, struct FANSI_buff * buff, SEXP warn,
     SEXP term_cap, SEXP ctl
   );
-  // utility
+  // utility / testing
 
   SEXP FANSI_cleave(SEXP x);
   SEXP FANSI_order(SEXP x);
@@ -399,6 +399,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_normalize_sgr_ext(SEXP x, SEXP warn, SEXP term_cap);
   SEXP FANSI_normalize_sgr_list_ext(SEXP x, SEXP warn, SEXP term_cap);
 
+  SEXP FANSI_size_buff_ext(SEXP x);
+
   // - Internal funs -----------------------------------------------------------
 
   struct FANSI_csi_pos FANSI_find_esc(const char * x, int ctl);
@@ -414,7 +416,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_ctl_as_int(SEXP ctl);
   SEXP FANSI_ctl_as_int_ext(SEXP ctl);
 
-  void FANSI_size_buff(struct FANSI_buff * buff, int size);
+  size_t FANSI_size_buff(struct FANSI_buff * buff, int size);
 
   int FANSI_pmatch(
     SEXP x, const char ** choices, int choice_count, const char * arg_name
