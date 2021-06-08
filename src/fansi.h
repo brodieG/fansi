@@ -434,7 +434,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP width, SEXP ctl, R_xlen_t i
   );
   int FANSI_sgr_active(struct FANSI_sgr sgr);
-  char * FANSI_sgr_as_chr(struct FANSI_sgr sgr, int normalize, R_xlen_t i);
 
   SEXP FANSI_sgr_close_ext(SEXP x, SEXP term_cap);
   int FANSI_sgr_comp_color(struct FANSI_sgr target, struct FANSI_sgr current);

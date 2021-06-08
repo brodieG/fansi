@@ -347,14 +347,16 @@ int FANSI_color_size(int color, int * color_extra) {
  * Generate the ANSI tag corresponding to the state and write it out as a NULL
  * terminated string.
  */
-char * FANSI_sgr_as_chr(struct FANSI_sgr sgr, int normalize, R_xlen_t i) {
+static char * sgr_as_chr(
+  struct FANSI_buff *buff, struct FANSI_sgr sgr, int normalize, R_xlen_t i
+) {
   // First pass computes total size of tag
-  char * buff_track, * buff;
-  buff_track = NULL;
+  char * buff_track = NULL;
   int tag_len = FANSI_W_sgr(&buff_track, sgr, 0, normalize, i);
-  buff = buff_track = R_alloc((size_t) tag_len + 1, sizeof(char));
+  FANSI_size_buff(buff, tag_len);
+  buff_track = buff->buff;
   FANSI_W_sgr(&buff_track, sgr, 0, normalize, i);
-  return buff;
+  return buff->buff;
 }
 /*
  * Determine whether two state structs have same style
@@ -593,6 +595,7 @@ SEXP FANSI_state_at_pos_ext(
 
   int type_int = asInteger(type);
   int pos_i, pos_prev = -1;
+  struct FANSI_buff buff = {.len = 0};
 
   for(R_xlen_t i = 0; i < len; i++) {
     R_CheckUserInterrupt();
@@ -630,7 +633,7 @@ SEXP FANSI_state_at_pos_ext(
       if(FANSI_sgr_comp(state.sgr, state_prev.sgr)) {
         // this computes length twice..., we know state_char can be at most
         // INT_MAX excluding NULL (and certainly will be much less).
-        char * state_chr = FANSI_sgr_as_chr(state.sgr, normalize, i);
+        char * state_chr = sgr_as_chr(&buff, state.sgr, normalize, i);
         res_chr = PROTECT(
           FANSI_mkChar(
             state_chr, state_chr + strlen(state_chr), CE_NATIVE, i

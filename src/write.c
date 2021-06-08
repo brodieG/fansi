@@ -133,7 +133,6 @@ size_t FANSI_size_buff(struct FANSI_buff * buff, int size) {
       );
       // nocov end
 
-    // Maybe should be re-alloc to free the previous buffer?
     buff->len = size_alloc;
     buff->buff = R_alloc(buff->len, sizeof(char));
   }
