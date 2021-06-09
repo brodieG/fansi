@@ -119,6 +119,7 @@ SEXP FANSI_tabs_as_spaces(
 
       while(1) {
         cur_chr = state.string[state.pos_byte];
+
         int extra_spaces = 0;
 
         if(cur_chr == '\t') {
@@ -150,9 +151,10 @@ SEXP FANSI_tabs_as_spaces(
             ++buff_track;
           }
           if(!cur_chr) *buff_track = 0;
+        } else {
+          state = FANSI_read_next(state, i);
         }
         if(!cur_chr) break;
-        state = FANSI_read_next(state, i);
       }
       // Write the CHARSXP
 
