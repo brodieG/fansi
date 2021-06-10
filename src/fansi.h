@@ -364,7 +364,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP warn, SEXP term_cap,
     SEXP first_only, SEXP ctl, SEXP norm
   );
-  SEXP FANSI_process(SEXP input, struct FANSI_buff * buff);
   SEXP FANSI_process_ext(SEXP input);
   SEXP FANSI_tabs_as_spaces_ext(
     SEXP vec, SEXP tab_stops, SEXP warn, SEXP term_cap, SEXP ctl
@@ -377,10 +376,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP x, SEXP type, SEXP allowNA, SEXP keepNA, SEXP warn, SEXP term_cap
   );
   SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap, SEXP ctl);
-  SEXP FANSI_tabs_as_spaces(
-    SEXP vec, SEXP tab_stops, struct FANSI_buff * buff, SEXP warn,
-    SEXP term_cap, SEXP ctl
-  );
   // utility / testing
 
   SEXP FANSI_cleave(SEXP x);
@@ -404,7 +399,18 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_size_buff_ext(SEXP x);
   SEXP FANSI_size_buff_prot_test();
 
+  SEXP FANSI_check_enc_ext(SEXP x, SEXP i);
+  SEXP FANSI_ctl_as_int_ext(SEXP ctl);
+
+  SEXP FANSI_sgr_close_ext(SEXP x, SEXP term_cap);
+
   // - Internal funs -----------------------------------------------------------
+
+  SEXP FANSI_process(SEXP input, struct FANSI_buff * buff);
+  SEXP FANSI_tabs_as_spaces(
+    SEXP vec, SEXP tab_stops, struct FANSI_buff * buff, SEXP warn,
+    SEXP term_cap, SEXP ctl
+  );
 
   struct FANSI_csi_pos FANSI_find_esc(const char * x, int ctl);
   struct FANSI_state FANSI_inc_width(
@@ -414,12 +420,12 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   struct FANSI_state FANSI_reset_width(struct FANSI_state state);
 
   void FANSI_check_chrsxp(SEXP x, R_xlen_t i);
-  SEXP FANSI_check_enc_ext(SEXP x, SEXP i);
 
   int FANSI_ctl_as_int(SEXP ctl);
-  SEXP FANSI_ctl_as_int_ext(SEXP ctl);
 
+  void FANSI_init_buff(struct FANSI_buff * buff);
   size_t FANSI_size_buff(struct FANSI_buff * buff, int size);
+  int FANSI_release_buff(struct FANSI_buff * buff, int warn);
 
   int FANSI_pmatch(
     SEXP x, const char ** choices, int choice_count, const char * arg_name
@@ -438,7 +444,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   );
   int FANSI_sgr_active(struct FANSI_sgr sgr);
 
-  SEXP FANSI_sgr_close_ext(SEXP x, SEXP term_cap);
   int FANSI_sgr_comp_color(struct FANSI_sgr target, struct FANSI_sgr current);
   struct FANSI_sgr FANSI_sgr_setdiff(struct FANSI_sgr old, struct FANSI_sgr new);
   struct FANSI_state FANSI_read_next(struct FANSI_state state, R_xlen_t i);
@@ -485,7 +490,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   int FANSI_check_append(int cur, int extra, const char * msg, R_xlen_t i);
   void FANSI_check_append_err(const char * msg, R_xlen_t i);
-
 
   // - Compatibility -----------------------------------------------------------
 

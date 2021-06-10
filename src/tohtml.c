@@ -361,8 +361,10 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
   if(TYPEOF(color_classes) != STRSXP)
     error("Internal Error: `color_classes` must be a character vector");  // nocov
 
+  struct FANSI_buff buff;
+  FANSI_init_buff(&buff);
+
   R_xlen_t x_len = XLENGTH(x);
-  struct FANSI_buff buff = {.len=0};
   struct FANSI_state state, state_prev, state_init;
   SEXP empty = PROTECT(mkString(""));
   state = state_prev = state_init =
@@ -406,6 +408,8 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
 
     char * buff_track = NULL;
     const char * err_msg = oe_sgr_html_err;
+
+    // Measure / Write loop
     for(int k = 0; k < 2; ++k) {
       if(k) {
         if(has_esc || has_state) {
@@ -480,6 +484,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
       }
     }
   }
+  FANSI_release_buff(&buff, 1);
   UNPROTECT(1);
   return res;
 }
@@ -498,7 +503,8 @@ SEXP FANSI_color_to_html_ext(SEXP x) {
   if(len % 5)
     error("Argument length not a multipe of 5"); // nocov
 
-  struct FANSI_buff buff = {.len = 0};
+  struct FANSI_buff buff;
+  FANSI_init_buff(&buff);
   FANSI_size_buff(&buff, 7);
 
   int * x_int = INTEGER(x);
@@ -511,6 +517,7 @@ SEXP FANSI_color_to_html_ext(SEXP x) {
     SET_STRING_ELT(res, i / 5, chrsxp);
     UNPROTECT(1);
   }
+  FANSI_release_buff(&buff, 1);
   UNPROTECT(1);
   return res;
 }
@@ -557,6 +564,9 @@ SEXP FANSI_esc_html(SEXP x, SEXP what) {
   PROTECT_INDEX ipx;
   PROTECT_WITH_INDEX(res, &ipx);
 
+  struct FANSI_buff buff;
+  FANSI_init_buff(&buff);
+
   for(R_xlen_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
 
@@ -565,7 +575,6 @@ SEXP FANSI_esc_html(SEXP x, SEXP what) {
     FANSI_check_chrsxp(chrsxp, i);
     int len = (int) LENGTH(chrsxp);
     const char * string = CHAR(chrsxp);
-    struct FANSI_buff buff = {.buff=NULL, .len=0};
 
     const char * err_msg = "Escaping HTML special characters";
     len = LENGTH(chrsxp);
@@ -621,6 +630,7 @@ SEXP FANSI_esc_html(SEXP x, SEXP what) {
       }
     }
   }
+  FANSI_release_buff(&buff, 1);
   UNPROTECT(1);
   return res;
 }

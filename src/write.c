@@ -18,7 +18,9 @@
 
 #include "fansi.h"
 
-/* GENERAL NOTES ON WRITING
+/* GENERAL NOTES ON WRITING/ALLOCATING FUNCTONS
+ *
+ * - Measure / Write Pattern ---------------------------------------------------
  *
  * Writing functions starting with "FANSI_W_" in this file (or static ones
  * starting with "W_" in other files) operate in measure and write modes.  The
@@ -37,8 +39,9 @@
  * Here is an example implementation that uses a loop to iterate between measure
  * and write mode.  Not all uses of write functions are in this form.
  *
- *     // Measure Mode
- *     struct FANSI_buff buff = {.buff=NULL, .len = 0};
+ *     struct FANSI_buff buff;
+ *     FANSI_init_buff(&buff);
+ *
  *     char * buff_track = buff.buff;
  *     int len = 0;
  *
@@ -55,6 +58,8 @@
  *     // Check
  *     if(buff_track - buff.buff != len)
  *       error("Out of sync - something bad happened!.");
+ *
+ *     FANSI_release_buff(&buff, 1);
  *
  *   vvvvvvvv
  * !> DANGER <!
@@ -81,17 +86,96 @@
  * time, but here we'll generate the substrings to measure them, only to
  * regenerate them again to write them.  The advantage is that it is easier to
  * keep the code in sync between measure and write modes.
+ *
+ * - Buffer Allocation ---------------------------------------------------------
+ *
+ * Buffers should be initialized with `FANSI_init_buff`, and released with
+ * `FANSI_release_buff`, preferably in the same function.  `FANSI_size_buff`
+ * must be called at least one to actually allocate memory (init does not do
+ * this), and may be called repeatedly to resize the buffer.
+ *
+ * Each time the buffer is grown, we attempt to release the prior buffer to make
+ * it eligible for garbage collection.  If only one buffer is ever in use at a
+ * time, this will always work.  If multiple buffers are active (e.g. because a
+ * sub-function also uses a buffer), the release only works if the buffers are
+ * resized and released LIFO, e.g.:
+ *
+ *     // Bad
+ *     FANSI_size(&buff1);
+ *     FANSI_size(&buff2);
+ *     FANSI_size(&buff1);              // warning ...
+ *
+ *     // Okay
+ *     FANSI_size(&buff1);
+ *     FANSI_size(&buff2);
+ *     FANSI_release_buff(&buff2, 1);   // no warning
+ *     FANSI_size(&buff1);              // no warning
+ *
+ * - Testing -------------------------------------------------------------------
+ *
+ * See extra/notes/mem-alloc.md for how we tested the allocation/release
+ * business is working as expected.
  */
+
+void FANSI_init_buff(struct FANSI_buff * buff) {
+  *buff = (struct FANSI_buff) {
+    .buff=NULL,
+    .len=0,
+    .vheap_self=NULL,
+    .vheap_prev=NULL
+  };
+}
+/*
+ * Attempts to remove a buffer from the R_alloc protection stack.
+ *
+ * This only works if the current buffer is at the end of the stack.  Each
+ * `FANSI_init_buff` call should be paired with a release.  Some thought should
+ * go into the sequence of initializations and releases when multiple such
+ * buffers coexist.  They should be done on a LIFO basis as the release only
+ * works if the buffer was the last to be allocated.  Additionally, calls to
+ * size_buff should not be interleaved as that will preclude release of the
+ * buffers:
+ *
+ * The purpose of the release is to make the last allocation eligible for GC by
+ * removing it from the R_alloc stack.
+ *
+ * returns 0 if successfully releases buffer.  Zeroes the buffer in all cases.
+ * A failure is not critical as the entire R_alloc stack will be released on
+ * return to R, it just means peak memory usage will be higher than it might
+ * otherwise be.
+ */
+int FANSI_release_buff(struct FANSI_buff * buff, int warn) {
+  int failure = 0;
+  if(buff->buff) {
+    if(buff->vheap_self == vmaxget()) vmaxset(buff->vheap_prev);
+    else {
+      if(warn)
+        warning(
+          "%s%s"
+          "Unable to release temp C buffer from R_alloc stack. Buffer will be ",
+          "released on return to R."
+        );
+      failure = 1;
+    }
+    buff->vheap_prev = NULL;
+    buff->vheap_self = NULL;
+    buff->buff = NULL;
+    buff->len = 0;
+  }
+  return failure;
+}
 
 /*
  * Allocates a fresh chunk of memory if the existing one is not large enough.
  *
- * We never intend to re-use what's already in memory so we don't realloc.  If
- * allocation is needed the buffer will be either twice as large as it was
+ * If allocation is needed the buffer will be either twice as large as it was
  * before, or size `size` if that is greater than twice the size.
  *
- * Total buffer allocation will be size + 1 to allow for an additional NULL
+ * Total buffer allocation will be `size + 1` to allow for an additional NULL
  * terminator.
+ *
+ * Every call to FANSI_size_buff "zeroes" the buffer by setting the first byte
+ * to 0.
  */
 size_t FANSI_size_buff(struct FANSI_buff * buff, int size) {
   if(size < 0) error("Internal Error: negative buffer allocations disallowed.");
@@ -133,10 +217,8 @@ size_t FANSI_size_buff(struct FANSI_buff * buff, int size) {
       );
       // nocov end
 
-    // If our previous buffer is still at the top of the R_alloc protection
-    // chain, reset the chain to the link below so that it may be GCed.  This is
-    // only useful if the same buffer is grown repeatedly.
-    if(buff->vheap_self == vmaxget()) vmaxset(buff->vheap_prev);
+    FANSI_release_buff(buff, 1);
+    // Keep this in sync with FANSI_release_buff!
     buff->vheap_prev = vmaxget();
     buff->len = size_alloc;
     buff->buff = R_alloc(buff->len, sizeof(char));
@@ -146,6 +228,7 @@ size_t FANSI_size_buff(struct FANSI_buff * buff, int size) {
   *(buff->buff) = 0;  // Always reset the string, guaranteed one byte.
   return buff->len;
 }
+
 /*
  * Purely for testing if the prev/self scheme used by size_buff works as
  * intended.
@@ -165,8 +248,9 @@ static void prot_test_help(
 }
 
 SEXP FANSI_size_buff_prot_test() {
-  struct FANSI_buff buff1 = {.len = 0};
-  struct FANSI_buff buff2 = {.len = 0};
+  struct FANSI_buff buff1, buff2;
+  FANSI_init_buff(&buff1);
+  FANSI_init_buff(&buff2);
 
   R_xlen_t n = 9;
   SEXP res = PROTECT(allocVector(VECSXP, 4));
@@ -184,13 +268,9 @@ SEXP FANSI_size_buff_prot_test() {
 
   R_xlen_t i = 0;
   prot_test_help(4095, "first", &buff1, res, i++);
-  // // Valgrind testing (see end)
-  // save_ptr = buff1.buff;
   prot_test_help(2047, "smaller 1.0", &buff1, res, i++);
   // This should cause 'self' to change, while, leaving 'prev' unchanged
   prot_test_help(8191, "grow 1.0", &buff1, res, i++);
-  // // Valgrind, here so it doesn't get overwritten
-  // strcpy(save_ptr, "hello world!");
   // New buffer, this should cause both 'self' and 'prev' to change
   prot_test_help(2047, "new buff", &buff2, res, i++);
   // Back to old buffer, no grow, no changes
@@ -204,56 +284,12 @@ SEXP FANSI_size_buff_prot_test() {
   // Growing new buffer should also change prev
   prot_test_help(8191, "grow 2.1", &buff2, res, i++);
 
+  // Release LIFO, should be no warnings.  However, we don't release everything
+  // because we had sequential allocations.
+  FANSI_release_buff(&buff2, 1);
+  FANSI_release_buff(&buff1, 1);
+
   if(i != n) error("Internal Error: wrong step count."); // nocov
-
-  /*
-  // For valgrind testing, we run a full gc at this point.  This should gc the
-  // allocation that `save_ptr` is pointing at.
-  SEXP s, t;
-  s = t = PROTECT(allocList(3));
-  SET_TYPEOF(t, LANGSXP);
-  SETCAR(t, install("gc"));
-  SETCADR(t, ScalarLogical(1));
-  SETCADDR(t, ScalarLogical(1));
-  t = CDR(CDR(t));
-  SET_TAG(t, install("full"));
-  PrintValue(s);  // did we generate the call correctly?  yes.
-  // No problem we haven not gc'ed yet (assuming no other gc happened in
-  // interim, should chec if it does blow up by turning on gcinfo)
-  Rprintf("okay '%s'\n", save_ptr);
-  SEXP res = PROTECT(eval(s, R_GlobalEnv));
-  PrintValue(res);
-  UNPROTECT(3)
-  // Confirm next error is not from the eval proper
-  Rprintf("done gc\n");
-  // With valgrind, this produces error messages (excerpting key piece):
-  //
-  // ==174== Invalid read of size 1
-  // ==174==    at 0x483EF46: strlen (in /usr/lib/x86_64-linux-gnu/valgrind/vgpreload_memcheck-amd64-linux.so)
-  // ... SNIP ...
-  // ==174==    by 0x4A31F0D: Rprintf (printutils.c:905)
-  // ==174==    by 0xB9B20CF: FANSI_size_buff_prot_test (write.c:207)
-  // ==174==  Address 0xb94d950 is 48 bytes inside a block of size 4,152 free'd
-  // ==174==    at 0x483CA3F: free (in /usr/lib/x86_64-linux-gnu/valgrind/vgpreload_memcheck-amd64-linux.so)
-  // ==174==    by 0x49E3925: ReleaseLargeFreeVectors (memory.c:1114)
-  // ==174==    by 0x49EEB15: RunGenCollect (memory.c:1896)
-  // ==174==    by 0x49F3910: R_gc_internal (memory.c:3129)
-  // ... SNIP ...
-  // ==174==  Block was alloc'd at
-  // ==174==    at 0x483B7F3: malloc (in /usr/lib/x86_64-linux-gnu/valgrind/vgpreload_memcheck-amd64-linux.so)
-  // ==174==    by 0x49F24BE: Rf_allocVector3 (memory.c:2806)
-  // ==174==    by 0x49D5EF8: Rf_allocVector (Rinlinedfuns.h:595)
-  // ==174==    by 0x49F06AD: R_alloc (memory.c:2257)
-  // ==174==    by 0xB9B1D7C: FANSI_size_buff (write.c:142)
-  // ==174==    by 0xB9B1E31: FANSI_size_buff_prot_test (write.c:158)
-  // ... SNIP ...
-  Rprintf("boom '%s'\n", save_ptr);
-
-  // This is what we expect to see (note code has changed since the valgrind
-  // test, so relative line numbers not the same.  The save_ptr buffer was
-  // released.  We don't actually segfault in test, so this only shows up in
-  // valgrind.
-  */
 
   UNPROTECT(1);
   return res;

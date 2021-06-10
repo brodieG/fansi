@@ -457,7 +457,8 @@ SEXP FANSI_sgr_close_ext(SEXP x, SEXP term_cap) {
   // reserve spot if we need to alloc later
   PROTECT_WITH_INDEX(res, &ipx);
 
-  struct FANSI_buff buff = {.len = 0};
+  struct FANSI_buff buff;
+  FANSI_init_buff(&buff);
   int normalize = 1;
 
   SEXP R_true = PROTECT(ScalarLogical(1));
@@ -491,6 +492,7 @@ SEXP FANSI_sgr_close_ext(SEXP x, SEXP term_cap) {
       UNPROTECT(1);
     }
   }
+  FANSI_release_buff(&buff, 1);
   UNPROTECT(5);
   return res;
 }
@@ -595,7 +597,8 @@ SEXP FANSI_state_at_pos_ext(
 
   int type_int = asInteger(type);
   int pos_i, pos_prev = -1;
-  struct FANSI_buff buff = {.len = 0};
+  struct FANSI_buff buff;
+  FANSI_init_buff(&buff);
 
   for(R_xlen_t i = 0; i < len; i++) {
     R_CheckUserInterrupt();
@@ -648,6 +651,8 @@ SEXP FANSI_state_at_pos_ext(
     }
     state_prev = state;
   }
+  FANSI_release_buff(&buff, 1);
+
   SEXP res_list = PROTECT(allocVector(VECSXP, 2));
   SET_VECTOR_ELT(res_list, 0, res_str);
   SET_VECTOR_ELT(res_list, 1, res_mx);

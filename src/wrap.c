@@ -507,7 +507,8 @@ SEXP FANSI_strwrap_ext(
   // Set up the buffer, this will be created in FANSI_strwrap, but we want a
   // handle for it here so we can re-use
 
-  struct FANSI_buff buff = {.len = 0};
+  struct FANSI_buff buff;
+  FANSI_init_buff(&buff); 
 
   // Strip whitespaces as needed; `strwrap` doesn't seem to do this with prefix
   // and initial, so we don't either
@@ -624,6 +625,7 @@ SEXP FANSI_strwrap_ext(
     }
     UNPROTECT(1);
   }
+  FANSI_release_buff(&buff, 1);
   UNPROTECT(5);
   return res;
 }
