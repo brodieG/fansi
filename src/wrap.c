@@ -504,33 +504,6 @@ SEXP FANSI_strwrap_ext(
       "printable ASCII character."
     );
 
-  // Set up the buffer, this will be created in FANSI_strwrap, but we want a
-  // handle for it here so we can re-use
-
-  struct FANSI_buff buff;
-  FANSI_init_buff(&buff); 
-
-  // Strip whitespaces as needed; `strwrap` doesn't seem to do this with prefix
-  // and initial, so we don't either
-
-  int strip_spaces_int = asInteger(strip_spaces);
-
-  if(strip_spaces_int) x = PROTECT(FANSI_process(x, &buff));
-  else PROTECT(x);
-
-  // and tabs
-
-  if(asInteger(tabs_as_spaces)) {
-    x = PROTECT(FANSI_tabs_as_spaces(x, tab_stops, &buff, warn, term_cap, ctl));
-    prefix = PROTECT(
-      FANSI_tabs_as_spaces(prefix, tab_stops, &buff, warn, term_cap, ctl)
-    );
-    initial = PROTECT(
-      FANSI_tabs_as_spaces(initial, tab_stops, &buff, warn, term_cap, ctl)
-    );
-  }
-  else x = PROTECT(PROTECT(PROTECT(x)));  // PROTECT stack balance
-
   // Prepare the leading strings; could turn out to be wasteful if we don't
   // need them all; there are three possible combinations: 1) first line of the
   // entire input with indent, 2) first line of paragraph with prefix and
@@ -566,6 +539,35 @@ SEXP FANSI_strwrap_ext(
   if(indent_int != exdent_int) {
     pre_next_dat = pad_pre(pre_dat_raw, exdent_int);
   } else pre_next_dat = pre_first_dat;
+
+  // Set up the buffer, this will be created in FANSI_strwrap, but we want a
+  // handle for it here so we can re-use.
+  // WARNING: must be after pad_pre as pad_pre uses R_alloc.
+
+  struct FANSI_buff buff;
+  FANSI_INIT_BUFF(&buff);
+
+  // Strip whitespaces as needed; `strwrap` doesn't seem to do this with prefix
+  // and initial, so we don't either
+
+  int strip_spaces_int = asInteger(strip_spaces);
+
+  if(strip_spaces_int) x = PROTECT(FANSI_process(x, &buff));
+  else PROTECT(x);
+
+  // and tabs
+
+  if(asInteger(tabs_as_spaces)) {
+    x = PROTECT(FANSI_tabs_as_spaces(x, tab_stops, &buff, warn, term_cap, ctl));
+    prefix = PROTECT(
+      FANSI_tabs_as_spaces(prefix, tab_stops, &buff, warn, term_cap, ctl)
+    );
+    initial = PROTECT(
+      FANSI_tabs_as_spaces(initial, tab_stops, &buff, warn, term_cap, ctl)
+    );
+  }
+  else x = PROTECT(PROTECT(PROTECT(x)));  // PROTECT stack balance
+
 
   // Check that widths are feasible, although really only relevant if in strict
   // mode
