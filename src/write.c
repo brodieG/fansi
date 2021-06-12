@@ -151,7 +151,7 @@ int FANSI_release_buff(struct FANSI_buff * buff, int warn) {
     else {
       if(warn)
         warning(
-          "%s%s"
+          "%s%s",
           "Unable to release temp C buffer from R_alloc stack. Buffer will be ",
           "released on return to R."
         );
@@ -246,7 +246,6 @@ static void prot_test_help(
   sprintf(tmp, "%p", buff->vheap_prev);
   SET_STRING_ELT(VECTOR_ELT(res, 2), i, mkChar(tmp));
 }
-
 SEXP FANSI_size_buff_prot_test() {
   struct FANSI_buff buff1, buff2;
   FANSI_init_buff(&buff1);
