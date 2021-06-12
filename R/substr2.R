@@ -137,7 +137,9 @@ substr_ctl <- function(
   x, start, stop,
   warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap'),
-  ctl='all', normalize=getOption('fansi.normalize', FALSE)
+  ctl='all', normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
 )
   substr2_ctl(
     x=x, start=start, stop=stop, warn=warn, term.cap=term.cap, ctl=ctl,
@@ -153,45 +155,15 @@ substr2_ctl <- function(
   tab.stops=getOption('fansi.tab.stops'),
   warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap'),
-  ctl='all', normalize=getOption('fansi.normalize', FALSE)
+  ctl='all', normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
 ) {
-  if(!is.character(x)) x <- as.character(x)
-  x <- enc2utf8(x)
-  if(any(Encoding(x) == "bytes"))
-    stop("BYTE encoded strings are not supported.")
-
-  if(!is.logical(tabs.as.spaces)) tabs.as.spaces <- as.logical(tabs.as.spaces)
-  if(length(tabs.as.spaces) != 1L || is.na(tabs.as.spaces))
-    stop("Argument `tabs.as.spaces` must be TRUE or FALSE.")
-  if(!is.numeric(tab.stops) || !length(tab.stops) || any(tab.stops < 1))
-    stop("Argument `tab.stops` must be numeric and strictly positive")
-
-  if(!is.logical(warn)) warn <- as.logical(warn)
-  if(length(warn) != 1L || is.na(warn))
-    stop("Argument `warn` must be TRUE or FALSE.")
-  if(!isTRUE(normalize %in% c(FALSE, TRUE)))
-    stop("Argument `normalize` must be TRUE or FALSE.")
-  normalize <- as.logical(normalize)
-
-  if(!is.character(term.cap))
-    stop("Argument `term.cap` must be character.")
-  if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
-    stop(
-      "Argument `term.cap` may only contain values in ",
-      deparse(VALID.TERM.CAP)
-    )
-  if(!is.character(ctl))
-    stop("Argument `ctl` must be character.")
-  ctl.int <- integer()
-  if(length(ctl)) {
-    # duplicate values in `ctl` are okay, so save a call to `unique` here
-    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
-      stop(
-        "Argument `ctl` may contain only values in `",
-        deparse(VALID.CTL), "`"
-      )
-  }
-
+  args <- validate(
+    x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
+    carry=carry, terminate=terminate, tab.stops=tab.stops,
+    tabs.as.spaces=tabs.as.spaces
+  )
   valid.round <- c('start', 'stop', 'both', 'neither')
   if(
     !is.character(round) || length(round) != 1 ||
@@ -220,15 +192,18 @@ substr2_ctl <- function(
   res <- x
   no.na <- !(is.na(x) | is.na(start & stop))
 
-  res[no.na] <- substr_ctl_internal(
-    x[no.na], start=start[no.na], stop=stop[no.na],
-    type.int=type.m,
-    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
-    term.cap.int=term.cap.int,
-    round.start=round == 'start' || round == 'both',
-    round.stop=round == 'stop' || round == 'both',
-    x.len=length(x),
-    ctl.int=ctl.int, normalize=normalize
+  with(
+    args,
+    res[no.na] <- substr_ctl_internal(
+      x[no.na], start=start[no.na], stop=stop[no.na],
+      type.int=type.m,
+      tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
+      term.cap.int=term.cap.int,
+      round.start=round == 'start' || round == 'both',
+      round.stop=round == 'stop' || round == 'both',
+      x.len=length(x),
+      ctl.int=ctl.int, normalize=normalize
+    )
   )
   res[!no.na] <- NA_character_
   res
@@ -240,11 +215,13 @@ substr_sgr <- function(
   x, start, stop,
   warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap'),
-  normalize=getOption('fansi.normalize', FALSE)
+  normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
 )
   substr2_ctl(
     x=x, start=start, stop=stop, warn=warn, term.cap=term.cap, ctl='sgr',
-    normalize=normalize
+    normalize=normalize, carry=carry, terminate=terminate
   )
 
 #' @rdname substr_ctl
@@ -256,13 +233,16 @@ substr2_sgr <- function(
   tab.stops=getOption('fansi.tab.stops'),
   warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap'),
-  normalize=getOption('fansi.normalize', FALSE)
+  normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
 )
   substr2_ctl(
     x=x, start=start, stop=stop, type=type, round=round,
     tabs.as.spaces=tabs.as.spaces,
     tab.stops=tab.stops, warn=warn, term.cap=term.cap, ctl='sgr',
-    normalize=normalize
+    normalize=normalize,
+    carry=carry, terminate=terminate
   )
 
 ## @x must already have been converted to UTF8
@@ -271,7 +251,7 @@ substr2_sgr <- function(
 substr_ctl_internal <- function(
   x, start, stop, type.int, round, tabs.as.spaces,
   tab.stops, warn, term.cap.int, round.start, round.stop,
-  x.len, ctl.int, normalize
+  x.len, ctl.int, normalize, carry, terminate
 ) {
   # For each unique string, compute the state at each start and stop position
   # and re-map the positions to "ansi" space
@@ -282,6 +262,11 @@ substr_ctl_internal <- function(
   res <- character(x.len)
   s.s.valid <- stop >= start & stop
 
+  # If we want to carry, we'll do this manually as too much work to try to do it
+  # in C given the current structure using ordered indices into each string.
+
+  stop("Implement carry.")
+
   x.scalar <- length(x) == 1
   x.u <- if(x.scalar) x else unique_chr(x)
 
@@ -289,6 +274,9 @@ substr_ctl_internal <- function(
   # positions into a vector and then ordering them by position, keeping track of
   # original order and whether they are starting or ending positions (affects
   # how multi-byte characters are trimmed/kept).
+
+  # We do this for each unique string in `x` as the indices must be incrementing
+  # for each of them.
 
   for(u in x.u) {
     elems <- which(x == u & s.s.valid)
@@ -312,7 +300,7 @@ substr_ctl_internal <- function(
       e.lag,   # whether to include a partially covered multi-byte character
       e.ends,  # whether it's a start or end position
       warn, term.cap.int,
-      ctl.int, normalize
+      ctl.int, normalize, carry
     )
     # Recover the matching values for e.sort
 
@@ -354,7 +342,8 @@ substr_ctl_internal <- function(
 
 state_at_pos <- function(
   x, starts, ends, warn=getOption('fansi.warn'),
-  normalize=getOption('fansi.normalize', FALSE)
+  normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE)
 ) {
   is.start <- c(rep(TRUE, length(starts)), rep(FALSE, length(ends)))
   .Call(
@@ -366,6 +355,7 @@ state_at_pos <- function(
     warn,
     seq_along(VALID.TERM.CAP),
     1L,        # ctl="all"
-    normalize
+    normalize,
+    carry
   )
 }

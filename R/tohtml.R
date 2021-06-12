@@ -143,20 +143,10 @@
 sgr_to_html <- function(
   x, warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap'),
-  classes=FALSE
+  classes=FALSE,
+  carry=getOption('fansi.carry', FALSE)
 ) {
-  if(!is.character(x)) x <- as.character(x)
-  if(!is.logical(warn)) warn <- as.logical(warn)
-  if(length(warn) != 1L || is.na(warn))
-    stop("Argument `warn` must be TRUE or FALSE.")
-
-  if(!is.character(term.cap))
-    stop("Argument `term.cap` must be character.")
-  if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
-    stop(
-      "Argument `term.cap` may only contain values in ",
-      deparse(VALID.TERM.CAP)
-    )
+  args <- validate(x=x, warn=warn, term.cap=term.cap, carry=carry)
 
   classes <- if(isTRUE(classes)) {
     FANSI.CLASSES
@@ -167,7 +157,7 @@ sgr_to_html <- function(
   } else
     stop("Argument `classes` must be TRUE, FALSE, or a character vector.")
 
-  .Call(FANSI_esc_to_html, enc2utf8(x), warn, term.cap.int, classes)
+  with(args, .Call(FANSI_esc_to_html, x, warn, term.cap.int, classes, carry))
 }
 #' Generate CSS Mapping Classes to Colors
 #'

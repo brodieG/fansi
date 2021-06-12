@@ -66,38 +66,19 @@ strip_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), strip) {
     message("Parameter `strip` has been deprecated; use `ctl` instead.")
     ctl <- strip
   }
-  if(!is.character(x)) x <- as.character(x)
+  args <- validate(x=x, ctl=ctl, warn=warn)
 
-  if(!is.logical(warn)) warn <- as.logical(warn)
-  if(length(warn) != 1L || is.na(warn))
-    stop("Argument `warn` must be TRUE or FALSE.")
-
-  if(!is.character(ctl))
-    stop("Argument `ctl` must be character.")
   if(length(ctl)) {
-    # duplicate values in `ctl` are okay, so save a call to `unique` here
-    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
-      stop(
-        "Argument `ctl` may contain only values in `",
-        deparse(VALID.CTL), "`"
-      )
-    .Call(FANSI_strip_csi, enc2utf8(x), ctl.int, warn)
+    with(args, .Call(FANSI_strip_csi, enc2utf8(x), ctl.int, warn))
   } else x
 }
 #' @export
 #' @rdname strip_ctl
 
 strip_sgr <- function(x, warn=getOption('fansi.warn')) {
-  if(!is.character(x)) x <- as.character(x)
-  if(!is.logical(warn)) warn <- as.logical(warn)
-  if(length(warn) != 1L || is.na(warn))
-    stop("Argument `warn` must be TRUE or FALSE.")
-
+  args <- validate(x=x, warn=warn)
   ctl.int <- match("sgr", VALID.CTL)
-  if(anyNA(ctl.int))
-    stop("Internal Error: invalid ctl type; contact maintainer.") # nocov
-
-  .Call(FANSI_strip_csi, enc2utf8(x), ctl.int, warn)
+  with(args, .Call(FANSI_strip_csi, x, ctl.int, warn))
 }
 
 ## Process String by Removing Unwanted Characters

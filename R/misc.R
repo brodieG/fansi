@@ -58,6 +58,7 @@ tabs_as_spaces <- function(
   x, tab.stops=getOption('fansi.tab.stops'), warn=getOption('fansi.warn'),
   ctl='all'
 ) {
+
   if(!is.character(x)) x <- as.character(x)
   if(!is.logical(warn)) warn <- as.logical(warn)
   if(length(warn) != 1L || is.na(warn))

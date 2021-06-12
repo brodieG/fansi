@@ -38,22 +38,13 @@
 #' has_sgr("hello\nworld")
 
 has_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), which) {
-  if(!is.logical(warn)) warn <- as.logical(warn)
   if(!missing(which)) {
     message("Parameter `which` has been deprecated; use `ctl` instead.")
     ctl <- which
   }
-  if(length(warn) != 1L || is.na(warn))
-    stop("Argument `warn` must be TRUE or FALSE.")
-  if(!is.character(ctl)) stop("Argument `ctl` must be character.")
-
-  if(length(ctl)) {
-    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
-      stop(
-        "Argument `ctl` may contain only values in `",
-        deparse(VALID.CTL), "`"
-      )
-    .Call(FANSI_has_csi, enc2utf8(as.character(x)), ctl.int, warn)
+  args <- validate(x=x, ctl=ctl, warn=warn)
+  if(length(ctl.int)) {
+    with(args, .Call(FANSI_has_csi, x, ctl.int, warn))
   } else rep(FALSE, length(x))
 }
 #' @export

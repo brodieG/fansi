@@ -73,17 +73,8 @@
 normalize_sgr <- function(
   x, warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
 ) {
-  if(!is.logical(warn)) warn <- as.logical(warn)
-  if(!is.character(x)) stop("Argument `x` should be a character vector.")
-  if(!is.character(term.cap))
-    stop("Argument `term.cap` must be character.")
-  if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
-    stop(
-      "Argument `term.cap` may only contain values in ",
-      deparse(VALID.TERM.CAP)
-    )
-
-  .Call(FANSI_normalize_sgr, enc2utf8(x), warn, term.cap.int)
+  args <- validate(x=x, warn=warn, term.cap=term.cap)
+  with(args, .Call(FANSI_normalize_sgr, enc2utf8(x), warn, term.cap.int))
 }
 # To reduce overhead of applying this in `strwrap_ctl`
 
