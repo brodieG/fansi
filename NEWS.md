@@ -10,6 +10,8 @@
   [`crayon`](https://github.com/r-lib/crayon).  Additionally, most functions
   gain a `normalize` parameter so that they may return their output in
   normalized form.
+* [#71](https://github.com/brodieG/fansi/issues/71) Functions that write SGR are
+  now more parsimonious.
 * `html_esc` gains a `what` parameter to indicate which HTML special characters
   should be escaped.
 
