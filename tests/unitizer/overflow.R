@@ -71,5 +71,31 @@ unitizer_sect('unhandled', {
   tcw(unhandled_ctl(c('\a', string)))
   suppressWarnings(unhandled_ctl(c('\a', string)))
 })
+unitizer_sect('size buffer', {
+  invisible(fansi:::set_int_max(old_max))
+  fansi:::size_buff(c(0L, 127L, 128L, 64L, 200L, 1024L))
+  fansi:::size_buff(c(0L, 127L, -128L))
+
+  invisible(fansi:::set_int_max(130))
+  fansi:::size_buff(c(0L, 127L, 128L, 64L, 200L, 1024L))
+  invisible(fansi:::set_int_max(64))
+  fansi:::size_buff(c(0L, 32L, 63L, 64L))
+  fansi:::size_buff(c(0L, 32L, 63L, 65L))
+
+  # see src/write.c for details on what these should be and why
+  invisible(fansi:::set_int_max(old_max))
+  dat <- fansi:::size_buff_prot_test()
+  dat['first', 'self']       == dat['smaller 1.0', 'self']
+  dat['new buff', 'prev']    == dat['grow 1.0', 'self']
+  dat['new buff', 'prev']    != dat['new buff', 'self']
+  dat['smaller 1.1', 'self'] == dat['grow 1.0', 'self']
+  dat['smaller 2.0', 'self'] == dat['new buff', 'self']
+  dat['smaller 2.0', 'prev'] == dat['new buff', 'prev']
+  dat['smaller 2.0', 'prev'] == dat['grow 2.0', 'prev']
+  dat['grow 1.1', 'prev']    == dat['grow 2.0', 'self']
+  dat['grow 2.1', 'prev']    == dat['grow 1.1', 'self']
+
+
+})
 
 new_max <- fansi:::set_int_max(old_max)

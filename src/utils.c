@@ -236,68 +236,6 @@ struct FANSI_csi_pos FANSI_find_esc(const char * x, int ctl) {
   return res;
 }
 /*
- * Allocates a fresh chunk of memory if the existing one is not large enough.
- *
- * We never intend to re-use what's already in memory so we don't realloc.  If
- * allocation is needed the buffer will be either twice as large as it was
- * before, or size `size` if that is greater than twice the size.
- *
- * Only the requested `size` bytes are allocated, thus `size` should acccount
- * for the space for a trailing NULL
- */
-void FANSI_size_buff(struct FANSI_buff * buff, size_t size) {
-  // assumptions check that  SIZE_T fits INT_MAX + 1
-  size_t buff_max = (size_t) FANSI_lim.lim_int.max + 1;
-  if(!size)  // Otherwise could not reset string by starting with 0
-    error("Internal Error: cannot size buffer to 0.");
-  if(size > buff->len) {
-    // Special case for intial alloc
-
-    if(!buff->len) {
-      if(size < 128 && FANSI_lim.lim_int.max > 128)
-        size = 128;  // in theory little penalty to ask this minimum
-      else if(size > buff_max) {
-        // nocov start
-        // too difficult to test, all the code pretty much checks for overflow
-        // before requesting memory
-        error(
-          "Internal Error: requested buff size %zu greater than INT_MAX + 1.",
-           size
-        );
-        // nocov end
-      }
-      else buff->len = size;
-    }
-    // More generic case
-
-    if(size > buff->len) {
-      size_t tmp_double_size = 0;
-      if(buff->len > buff_max - size) {
-        tmp_double_size = buff_max;
-      } else {
-        tmp_double_size = buff->len + buff->len;
-      }
-      if(size > tmp_double_size) tmp_double_size = size;
-
-      if(tmp_double_size > buff_max)
-        // nocov start
-        // this can't really happen unless size starts off bigger than
-        // INT_MAX + 1
-        error(
-          "%s  Requesting %zu",
-          "Internal Error: max allowed buffer size is INT_MAX + 1.",
-           tmp_double_size
-        );
-        // nocov end
-      buff->len = tmp_double_size;
-    }
-    buff->buff = R_alloc(buff->len, sizeof(char));
-  }
-  if(!buff->buff)
-    error("Internal Error: buffer not allocated.");
-  *(buff->buff) = 0;  // Always reset the string, guaranteed one byte.
-}
-/*
  * Compute how many digits are in a number
  *
  * Add an extra character for negative integers.
@@ -641,64 +579,6 @@ SEXP FANSI_mkChar(
     );
 
   return mkCharLenCE(start, len, enc);
-}
-/*
- * If *buff is not NULL, copy tmp into it and advance, else measure tmp
- * and advance length
- *
- *   vvvvvvvv
- * !> DANGER <!
- *   ^^^^^^^^
- *
- * This advances *buff so that it points to to the NULL terminator
- * the end of what is written to so string is ready to append to.
- *
- * It is assumed that if buff is not NULL, it includes an extra byte at the end
- * to safely append the NULL.  However, the check against INT_MAX excludes the
- * NULL is we can have up to INT_MAX characters before the NULL.
- *
- * @len bytes already accumulated in the buffer (i.e. before the pointer).
- * @param i index in overal character vector, needed to report overflow string.
- */
-int FANSI_copy_or_measure(
-  char ** buff, const char * tmp, int len, R_xlen_t i,
-  const char * err_msg
-) {
-  size_t tmp_len = strlen(tmp);  // tmp must be NULL terminated
-  if(tmp_len > (size_t) FANSI_lim.lim_int.max)
-    FANSI_check_append_err(err_msg, i);
-
-  FANSI_check_append(len, tmp_len, err_msg, i);
-  if(*buff) {
-    strcpy(*buff, tmp);
-    *buff += tmp_len;
-    // buffer should have an extra byte allocated, so safe to terminate.
-    // Not necessary, but makes debugging easier.
-    **buff = 0;
-  }
-  return tmp_len;
-}
-/*
- * Like copy_or_measure, but uses memcpy and a known length to copy.
- *
- *   vvvvvvvv
- * !> DANGER <!
- *   ^^^^^^^^
- *
- * This advances *buff so that it points to to the NULL terminator
- * the end of what is written to so string is ready to append to.
- */
-int FANSI_mcopy_or_measure(
-  char ** buff, const char * tmp, int tmp_len, int len, R_xlen_t i,
-  const char * err_msg
-) {
-  FANSI_check_append(len, tmp_len, err_msg, i);
-  if(*buff) {
-    memcpy(*buff, tmp, (size_t) tmp_len);
-    *buff += tmp_len;
-    **buff = 0;  // not necessary, but helps to debug
-  }
-  return tmp_len;
 }
 
 

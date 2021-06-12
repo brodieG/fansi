@@ -64,8 +64,9 @@
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @inheritParams base::substr
 #' @export
-#' @seealso [fansi] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results.
+#' @seealso [`fansi`] for details on how _Control Sequences_ are
+#'   interpreted, particularly if you are getting unexpected results,
+#'   [`normalize_sgr`] for more details on what the `normalize` parameter does.
 #' @param x a character vector or object that can be coerced to character.
 #' @param type character(1L) partial matching `c("chars", "width")`, although
 #'   `type="width"` only works correctly with R >= 3.2.2.  With "width", whether

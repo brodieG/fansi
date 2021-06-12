@@ -21,7 +21,7 @@ if(getRversion() < "3.2.2") {
   )
   on.exit(old.opt)
   pattern <- "^[^.].*\\.[Rr]$"
-  # pattern <- "norm"
+  # pattern <- "over"
   unitize_dir(
     'unitizer',
     pattern=pattern,
@@ -30,7 +30,10 @@ if(getRversion() < "3.2.2") {
   # we skip utf8 tests on solaris due to the problems with deparse (and maybe
   # others, don't have a solaris system handy for testing)
 
-  if(!grepl("solaris|sun", Sys.info()[['sysname']], ignore.case=TRUE)) {
+  if(
+    !grepl("solaris|sun", Sys.info()[['sysname']], ignore.case=TRUE) &&
+    identical(pattern, "^[^.].*\\.[Rr]$")
+  ) {
     unitize_dir('special', state='suggested')
   }
 }

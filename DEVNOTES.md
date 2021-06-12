@@ -4,18 +4,14 @@ These are internal developer notes.
 
 ## Todo
 
+* Look into hiding global functions / structures, and split off fansi.h into the
+  internal and external functions.  Maybe also split off the write functions
+  from general utilities.
+* Delete unused code (e.g. FANSI_color_size, digits_in_int, etc.).
 * How to deal with wraps of `"hello \033[33;44m world"`.  Notice extra space.
 * Once we add isolate, make sure that trailing sequences are not omitted if the
   end is not isolated.
-* Make sure we don't accidentally omit a non-SGR sequence because it's terminal.
-* Test combinations of escape sequences, including with errors (e.g. a correct
-  SGR with an invalid code).
 * Change `unhandled_ctl` to point out specific problem sequence.
-* Expand is also not quite the right name, e.g. with "\033[31m\033[mA" the
-  result is "A", so normalize is closer to being right.  The problem with
-  normalize is that we guarantee that two different strings will compare
-  equal once normalized, always.  So we lock ourselves into the order in
-  which things are done.  Why did we not think this was a normalization?
 * Check double warnings in all functions doing the two pass reading.
 * How do we currently handle styles across elements?
     * We don't.  `strwrap` carries the style within one single character
@@ -25,22 +21,38 @@ These are internal developer notes.
       implementation of normalize.
 
 * Write docs about behavior of bleeding.
-
 * Bunch of docs don't have @return tags, oddly.
-* add tests with sgr -> normalize -> html comparisons
-* All writing functions should advance for consistency, and have same sig.
 * Make sure we check we're not using `intmax_t` or `uintmax_t` in a tight loop
   anywhere.
-* Review all overflow checks.
 * Cleanup limits structure, is it really needed now we have a better view of
   what we're dealing with?
-* Can we manage the stack better with the growing buffer so we don't keep all
-  the prior half sized ones around until we exit so they are eligible for gc?
 * Do sgr_to_HTML (sgr_to_html2?), add check to sgr_to_html if any of the bad
   characters are found to escape or use `sgr_to_html2`.  Or do we just
   check for unescaped '<', '>', and '&'?
 
 ## Done
+
+* Can we manage the stack better with the growing buffer so we don't keep all
+  the prior half sized ones around until we exit so they are eligible for gc?
+
+Yes!
+
+* Review all overflow checks.
+
+* All writing functions should advance for consistency, and have same sig.
+
+Well, same sig maybe not, but they all advance now and have a consistent naming
+scheme.
+
+* Add `warned` to buffer so we don't warn over and over about failed release.
+
+* Add __func__ to buffer init.
+
+* Confirm that we do actually reduce peak memory usage by testing with a large
+  pathological vector.
+
+* Make sure `FANSI_sgr_as_chr` does not allocate itself with R_alloc (and search
+  for other R_allocs and make sure they make sense).
 
 * Add prop spacing to HTML?
 

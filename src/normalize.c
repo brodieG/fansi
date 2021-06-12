@@ -39,8 +39,6 @@ static int normalize(
 
   const char * err_msg = "Normalizing SGR";
 
-  // - Pass 1: Measure -------------------------------------------------------
-
   // Logic based on FANSI_esc_to_html
 
   // Find other ESCs
@@ -56,18 +54,17 @@ static int normalize(
       if(state.is_sgr && state.non_normalized) {
         any_to_exp = 1;
         // stuff prior to SGR
-        len += MCOPY_OR_MEASURE(&buff_track, string_last, string - string_last);
+        len += FANSI_W_MCOPY(&buff_track, string_last, string - string_last);
 
         // Any prior open styles not overriden by new one need to be closed
         struct FANSI_sgr to_close =
           FANSI_sgr_setdiff(state.sgr_prev, state.sgr);
-        len += FANSI_sgr_close(buff_track, to_close, len, 1, i);
-        if(buff_track) buff_track = buff + len;
+
+        len += FANSI_W_sgr_close(&buff_track, to_close, len, 1, i);
 
         // Any newly open styles will need to be opened
         struct FANSI_sgr to_open = FANSI_sgr_setdiff(state.sgr, state.sgr_prev);
-        len += FANSI_sgr_write(buff_track, to_open, len, 1, i);
-        if(buff_track) buff_track = buff + len;
+        len += FANSI_W_sgr(&buff_track, to_open, len, 1, i);
 
         // Keep track of the last point we copied
         string_last = state.string + state.pos_byte;
@@ -76,7 +73,7 @@ static int normalize(
     }
     else if (*string == 0) {
       if(any_to_exp) {
-        len += MCOPY_OR_MEASURE(&buff_track, string_last, string - string_last);
+        len += FANSI_W_MCOPY(&buff_track, string_last, string - string_last);
       } else {
         len = -1;  // No need to write out.
       }
@@ -106,15 +103,18 @@ static SEXP normalize_sgr_int(
     FANSI_interrupt(i + index0);
     SEXP chrsxp = STRING_ELT(x, i);
     if(chrsxp == NA_STRING) continue;
+
+    // Measure
     struct FANSI_state state = FANSI_state_init(x, warn, term_cap, i);
     int len = normalize(NULL, state, i);
     if(len < 0) continue;
 
     // Write
     if(res == x) REPROTECT(res = duplicate(x), ipx);
-    FANSI_size_buff(buff, (size_t)len + 1);
+    FANSI_size_buff(buff, len);
     state.warn = 0;  // avoid double warnings
     normalize(buff->buff, state, i);
+
     cetype_t chr_type = getCharCE(chrsxp);
     SEXP reschr =
       PROTECT(FANSI_mkChar(buff->buff, buff->buff + len, chr_type, i));

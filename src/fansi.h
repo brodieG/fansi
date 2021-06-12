@@ -84,8 +84,12 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
    * sufficiently large to write what we want.
    */
   struct FANSI_buff {
-    char * buff; // Buffer
-    size_t len;     // How many bytes the buffer has been allocated to
+    char * buff;       // Buffer
+    void * vheap_self; // Pointer to self on the heap protection stack
+    void * vheap_prev; // Pointer to what was previously on top of prot stack
+    size_t len;        // Bytes allocated, includes trailing NULL.
+    const char * fun;  // Function that initialized the buffer.
+    int warned;        // Whether a warning was issued already.
   };
   struct FANSI_string_as_utf8 {
     const char * string;  // buffer
@@ -362,7 +366,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP warn, SEXP term_cap,
     SEXP first_only, SEXP ctl, SEXP norm
   );
-  SEXP FANSI_process(SEXP input, struct FANSI_buff * buff);
   SEXP FANSI_process_ext(SEXP input);
   SEXP FANSI_tabs_as_spaces_ext(
     SEXP vec, SEXP tab_stops, SEXP warn, SEXP term_cap, SEXP ctl
@@ -375,11 +378,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP x, SEXP type, SEXP allowNA, SEXP keepNA, SEXP warn, SEXP term_cap
   );
   SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap, SEXP ctl);
-  SEXP FANSI_tabs_as_spaces(
-    SEXP vec, SEXP tab_stops, struct FANSI_buff * buff, SEXP warn,
-    SEXP term_cap, SEXP ctl
-  );
-  // utility
+  // utility / testing
 
   SEXP FANSI_cleave(SEXP x);
   SEXP FANSI_order(SEXP x);
@@ -399,7 +398,21 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_normalize_sgr_ext(SEXP x, SEXP warn, SEXP term_cap);
   SEXP FANSI_normalize_sgr_list_ext(SEXP x, SEXP warn, SEXP term_cap);
 
+  SEXP FANSI_size_buff_ext(SEXP x);
+  SEXP FANSI_size_buff_prot_test();
+
+  SEXP FANSI_check_enc_ext(SEXP x, SEXP i);
+  SEXP FANSI_ctl_as_int_ext(SEXP ctl);
+
+  SEXP FANSI_sgr_close_ext(SEXP x, SEXP term_cap);
+
   // - Internal funs -----------------------------------------------------------
+
+  SEXP FANSI_process(SEXP input, struct FANSI_buff * buff);
+  SEXP FANSI_tabs_as_spaces(
+    SEXP vec, SEXP tab_stops, struct FANSI_buff * buff, SEXP warn,
+    SEXP term_cap, SEXP ctl
+  );
 
   struct FANSI_csi_pos FANSI_find_esc(const char * x, int ctl);
   struct FANSI_state FANSI_inc_width(
@@ -409,12 +422,13 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   struct FANSI_state FANSI_reset_width(struct FANSI_state state);
 
   void FANSI_check_chrsxp(SEXP x, R_xlen_t i);
-  SEXP FANSI_check_enc_ext(SEXP x, SEXP i);
 
   int FANSI_ctl_as_int(SEXP ctl);
-  SEXP FANSI_ctl_as_int_ext(SEXP ctl);
 
-  void FANSI_size_buff(struct FANSI_buff * buff, size_t size);
+  void FANSI_init_buff(struct FANSI_buff * buff, const char * fun);
+  #define FANSI_INIT_BUFF(A) FANSI_init_buff((A), __func__)
+  size_t FANSI_size_buff(struct FANSI_buff * buff, int size);
+  int FANSI_release_buff(struct FANSI_buff * buff, int warn);
 
   int FANSI_pmatch(
     SEXP x, const char ** choices, int choice_count, const char * arg_name
@@ -432,19 +446,38 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP width, SEXP ctl, R_xlen_t i
   );
   int FANSI_sgr_active(struct FANSI_sgr sgr);
-  char * FANSI_sgr_as_chr(struct FANSI_sgr sgr, int normalize, R_xlen_t i);
-  int FANSI_sgr_write(
-    char * buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
-  );
-  int FANSI_sgr_close(
-    char * buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
-  );
-  SEXP FANSI_sgr_close_ext(SEXP x, SEXP term_cap);
+
   int FANSI_sgr_comp_color(struct FANSI_sgr target, struct FANSI_sgr current);
   struct FANSI_sgr FANSI_sgr_setdiff(struct FANSI_sgr old, struct FANSI_sgr new);
   struct FANSI_state FANSI_read_next(struct FANSI_state state, R_xlen_t i);
 
   int FANSI_add_int(int x, int y, const char * file, int line);
+
+  // "Writing" functions
+  int FANSI_W_sgr(
+    char ** buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
+  );
+  int FANSI_W_sgr_close(
+    char ** buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
+  );
+  int FANSI_W_copy(
+    char ** buff, const char * tmp, int len, R_xlen_t i,
+    const char * err_msg
+  );
+  int FANSI_W_mcopy(
+    char ** buff, const char * tmp, int tmp_len, int len, R_xlen_t i,
+    const char * err_msg
+  );
+  int FANSI_W_fill(
+    char ** buff, const char tmp, int times,
+    int len, R_xlen_t i, const char * err_msg
+  );
+  // Macro versions require `len`, `i`, and `err_msg` defined in scope.
+  #define FANSI_W_COPY(A, B) FANSI_W_copy((A), (B), len, i, err_msg)
+  #define FANSI_W_MCOPY(A, B, C) FANSI_W_mcopy(\
+    (A), (B), (C), len, i, err_msg)
+  #define FANSI_W_FILL(A, B, C) FANSI_W_fill(\
+    (A), (B), (C), len, i, err_msg)
 
   // Utilities
   void FANSI_print(char * x);
@@ -460,20 +493,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   int FANSI_check_append(int cur, int extra, const char * msg, R_xlen_t i);
   void FANSI_check_append_err(const char * msg, R_xlen_t i);
-
-  int FANSI_copy_or_measure(
-    char ** buff, const char * tmp, int len, R_xlen_t i,
-    const char * err_msg
-  );
-  // Requires `len`, `i`, and `err_msg` defined in scope.
-  #define COPY_OR_MEASURE(A, B) FANSI_copy_or_measure((A), (B), len, i, err_msg)
-
-  int FANSI_mcopy_or_measure(
-    char ** buff, const char * tmp, int tmp_len, int len, R_xlen_t i,
-    const char * err_msg
-  );
-  #define MCOPY_OR_MEASURE(A, B, C) FANSI_mcopy_or_measure(\
-    (A), (B), (C), len, i, err_msg)
 
   // - Compatibility -----------------------------------------------------------
 

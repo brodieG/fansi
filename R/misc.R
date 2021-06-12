@@ -478,3 +478,21 @@ sgr_256 <- function() {
     gs1, gs2
   )
 }
+
+# To test growable buffer.
+
+size_buff <- function(x) .Call(FANSI_size_buff, x)
+size_buff_prot_test <- function() {
+  raw <- .Call(FANSI_size_buff_prot_test)
+  res <- raw[-1L]
+  names(res) <- c('n', 'prev', 'self')
+  res <- as.data.frame(res)
+  rownames(res) <- raw[[1L]]
+  # remap the addresses so they are consistent across different runs
+
+  addresses <- do.call(rbind, res[c('prev', 'self')])
+  res[['prev']] <- match(res[['prev']], addresses)
+  res[['self']] <- match(res[['self']], addresses)
+  res
+}
+

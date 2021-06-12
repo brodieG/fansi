@@ -22,6 +22,7 @@ unitizer_sect('corner cases', {
   tabs_as_spaces('\t')
   tabs_as_spaces('\n')
   tabs_as_spaces(c(string, string, string))
+  tabs_as_spaces('\t\t')
 })
 unitizer_sect('bad inputs', {
   tabs_as_spaces(string, warn=1:3)

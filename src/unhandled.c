@@ -56,8 +56,6 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
       struct FANSI_state state = FANSI_state_init_full(
         x, no_warn, term_cap, R_true, R_true, R_one, ctl_all, i
       );
-      const char * string;
-      string = state.string;
       int has_errors = 0;
 
       while(state.string[state.pos_byte]) {

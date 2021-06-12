@@ -309,7 +309,7 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
         }
         // Make sure buffer is big enough
         if(!strip_this) {
-          FANSI_size_buff(buff, (size_t) len_j + 1);
+          FANSI_size_buff(buff, len_j);
           buff_track = buff->buff;
           strip_this = 1;
         }
@@ -391,6 +391,10 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
 }
 
 SEXP FANSI_process_ext(SEXP input) {
-  struct FANSI_buff buff = {.len=0};
-  return FANSI_process(input, &buff);
+  struct FANSI_buff buff;
+  FANSI_INIT_BUFF(&buff);
+  SEXP res = PROTECT(FANSI_process(input, &buff));
+  FANSI_release_buff(&buff, 1);
+  UNPROTECT(1);
+  return res;
 }
