@@ -2,6 +2,8 @@
 
 ## v1.0.0
 
+### Features
+
 * [#64](https://github.com/brodieG/fansi/issues/64) New function `normalize_sgr`
   converts compound SGR sequences into normalized form (e.g. "ESC[44;31m"
   becomes "ESC[31mESC[44m") for better compatibility with
@@ -10,6 +12,16 @@
   normalized form.
 * `html_esc` gains a `what` parameter to indicate which HTML special characters
   should be escaped.
+
+### Bug Fixes
+
+* Fix `tabs_as_spaces` to handle sequential tabs, and to perform better on very
+  wide strings.
+
+### Internal Changes
+
+* Reduce peak memory usage by making some intermediate buffers eligible for
+  garbage collection prior to native code returning to R.
 * Reworked internals to simplify buffer computation and synchronization.
 
 ## v0.5.0

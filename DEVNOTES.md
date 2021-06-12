@@ -4,8 +4,9 @@ These are internal developer notes.
 
 ## Todo
 
-* Make sure `FANSI_sgr_as_chr` does not allocate itself with R_alloc (and search
-  for other R_allocs and make sure they make sense).
+* Look into hiding global functions / structures, and split off fansi.h into the
+  internal and external functions.  Maybe also split off the write functions
+  from general utilities.
 * Delete unused code (e.g. FANSI_color_size, digits_in_int, etc.).
 * How to deal with wraps of `"hello \033[33;44m world"`.  Notice extra space.
 * Once we add isolate, make sure that trailing sequences are not omitted if the
@@ -34,6 +35,16 @@ These are internal developer notes.
   check for unescaped '<', '>', and '&'?
 
 ## Done
+
+* Add `warned` to buffer so we don't warn over and over about failed release.
+
+* Add __func__ to buffer init.
+
+* Confirm that we do actually reduce peak memory usage by testing with a large
+  pathological vector.
+
+* Make sure `FANSI_sgr_as_chr` does not allocate itself with R_alloc (and search
+  for other R_allocs and make sure they make sense).
 
 * Add prop spacing to HTML?
 
