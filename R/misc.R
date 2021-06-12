@@ -183,6 +183,7 @@ fansi_lines <- function(txt, step=1) {
 #'   be sufficient.  @return `x`, but with the `what` characters replaced by
 #'   their HTML entity codes, and Encoding set to UTF-8 if non-ASCII input are
 #'   present in `x`.
+#' @return x possibly re-encoded to UTF8, with `what` characters escaped.
 #' @examples
 #' html_esc("day > night")
 #' html_esc("<SPAN>hello world</SPAN>")

@@ -116,6 +116,41 @@
 #' the effect is the same as replacement (e.g. if you have a color active and
 #' pick another one).
 #'
+#' @section SGR Interactions
+#'
+#' The cumulative nature of SGR means that SGR in strings that are spliced will
+#' interact with each other, and that a substring does not contain all the
+#' formatting information that will affect its display.  Since context affects
+#' how SGR should be interpreted and output, `fansi` provides mechanisms by
+#' which to communicate the context.
+#'
+#' One form of interaction is how a character vector provided to `fansi`
+#' functions interact with itself.  By default, `fansi` assumes that each
+#' element in an input character vector is independent, but if the input
+#' represents a single document with each element a line in it, this is an
+#' incorrect interpretation.  In that situation SGR from a prior line should
+#' bleed into a subsequent line.  Setting `carry = TRUE` enables the "single
+#' document" interpretation.
+#'
+#' Another form of interaction is when `fansi` processed substrings are spliced
+#' with or into other substrings.  By default `fansi` automatically terminates
+#' strings it processes if they contain active SGR.  This prevents the SGR
+#' therein from affecting display of external strings, which is useful e.g. when
+#' arranging text in columns.  We can allow the SGR to bleed into appended
+#' strings by setting `terminate = FALSE`.  `carry` is unaffected by `terminate`
+#' as `fansi` records the ending SGR state prior to termination internally.
+#'
+#' Finally, `fansi` strings will be affected by any active SGR in strings they
+#' are appended to.  There are no parameters to control what happens
+#' automatically, but `fansi` provides several functions that can help the user
+#' get their desired outcome.  `sgr_at_end` computes the active SGR at the end
+#' of a string, this can then be prepended onto the _input_ of `fansi` functions
+#' so that they are aware of what the active style at the beginning of the
+#' string.  Alternatively, one could use `close_sgr(sgr_at_end(...))` and
+#' pre-pend that to the _output_ of `fansi` functions so they are unaffected by
+#' preceding SGR (one could also just prepend "ESC[0m", see `?normalize_sgr` for
+#' why that may not make sense).
+#'
 #' @section Encodings / UTF-8:
 #'
 #' `fansi` will convert any non-ASCII strings to UTF-8 before processing them,
