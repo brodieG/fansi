@@ -488,6 +488,11 @@ size_buff_prot_test <- function() {
   names(res) <- c('n', 'prev', 'self')
   res <- as.data.frame(res)
   rownames(res) <- raw[[1L]]
+  # remap the addresses so they are consistent across different runs
+
+  addresses <- do.call(rbind, res[c('prev', 'self')])
+  res[['prev']] <- match(res[['prev']], addresses)
+  res[['self']] <- match(res[['self']], addresses)
   res
 }
 
