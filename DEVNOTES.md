@@ -22,19 +22,27 @@ These are internal developer notes.
 
 * Write docs about behavior of bleeding.
 * Bunch of docs don't have @return tags, oddly.
-* All writing functions should advance for consistency, and have same sig.
 * Make sure we check we're not using `intmax_t` or `uintmax_t` in a tight loop
   anywhere.
-* Review all overflow checks.
 * Cleanup limits structure, is it really needed now we have a better view of
   what we're dealing with?
-* Can we manage the stack better with the growing buffer so we don't keep all
-  the prior half sized ones around until we exit so they are eligible for gc?
 * Do sgr_to_HTML (sgr_to_html2?), add check to sgr_to_html if any of the bad
   characters are found to escape or use `sgr_to_html2`.  Or do we just
   check for unescaped '<', '>', and '&'?
 
 ## Done
+
+* Can we manage the stack better with the growing buffer so we don't keep all
+  the prior half sized ones around until we exit so they are eligible for gc?
+
+Yes!
+
+* Review all overflow checks.
+
+* All writing functions should advance for consistency, and have same sig.
+
+Well, same sig maybe not, but they all advance now and have a consistent naming
+scheme.
 
 * Add `warned` to buffer so we don't warn over and over about failed release.
 

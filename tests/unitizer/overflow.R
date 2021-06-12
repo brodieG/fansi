@@ -94,6 +94,8 @@ unitizer_sect('size buffer', {
   dat['smaller 2.0', 'prev'] == dat['grow 2.0', 'prev']
   dat['grow 1.1', 'prev']    == dat['grow 2.0', 'self']
   dat['grow 2.1', 'prev']    == dat['grow 1.1', 'self']
+
+
 })
 
 new_max <- fansi:::set_int_max(old_max)
