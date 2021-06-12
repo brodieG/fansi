@@ -88,6 +88,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     void * vheap_self; // Pointer to self on the heap protection stack
     void * vheap_prev; // Pointer to what was previously on top of prot stack
     size_t len;        // Bytes allocated, includes trailing NULL.
+    const char * fun;  // Function that initialized the buffer.
+    int warned;        // Whether a warning was issued already.
   };
   struct FANSI_string_as_utf8 {
     const char * string;  // buffer
@@ -423,7 +425,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   int FANSI_ctl_as_int(SEXP ctl);
 
-  void FANSI_init_buff(struct FANSI_buff * buff);
+  void FANSI_init_buff(struct FANSI_buff * buff, const char * fun);
+  #define FANSI_INIT_BUFF(A) FANSI_init_buff((A), __func__)
   size_t FANSI_size_buff(struct FANSI_buff * buff, int size);
   int FANSI_release_buff(struct FANSI_buff * buff, int warn);
 

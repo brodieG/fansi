@@ -40,7 +40,7 @@
  * and write mode.  Not all uses of write functions are in this form.
  *
  *     struct FANSI_buff buff;
- *     FANSI_init_buff(&buff);
+ *     FANSI_INIT_BUFF(&buff);
  *
  *     char * buff_track = buff.buff;
  *     int len = 0;
@@ -117,12 +117,14 @@
  * business is working as expected.
  */
 
-void FANSI_init_buff(struct FANSI_buff * buff) {
+void FANSI_init_buff(struct FANSI_buff * buff, const char * fun) {
   *buff = (struct FANSI_buff) {
     .buff=NULL,
     .len=0,
     .vheap_self=NULL,
-    .vheap_prev=NULL
+    .vheap_prev=NULL,
+    .fun=fun,
+    .warned=0
   };
 }
 /*
@@ -149,13 +151,15 @@ int FANSI_release_buff(struct FANSI_buff * buff, int warn) {
   if(buff->buff) {
     if(buff->vheap_self == vmaxget()) vmaxset(buff->vheap_prev);
     else {
-      if(warn)
+      if(warn && !buff->warned)
         warning(
-          "%s%s",
-          "Unable to release temp C buffer from R_alloc stack. Buffer will be ",
-          "released on return to R."
+          "%s %s %s",
+          "Unable to release buffer allocated by",
+          buff->fun,
+          "while in native code. Buffer will be released on return to R."
         );
       failure = 1;
+      buff->warned = 1;
     }
     buff->vheap_prev = NULL;
     buff->vheap_self = NULL;
@@ -179,7 +183,7 @@ int FANSI_release_buff(struct FANSI_buff * buff, int warn) {
  */
 size_t FANSI_size_buff(struct FANSI_buff * buff, int size) {
   if(size < 0) error("Internal Error: negative buffer allocations disallowed.");
-  // assumptions check that  SIZE_T fits INT_MAX + 1
+  // assumptions check that SIZE_T fits INT_MAX + 1
   size_t buff_max = (size_t)FANSI_lim.lim_int.max + 1;
   size_t size_req = (size_t)size + 1;
   size_t size_alloc = 0;
@@ -248,8 +252,8 @@ static void prot_test_help(
 }
 SEXP FANSI_size_buff_prot_test() {
   struct FANSI_buff buff1, buff2;
-  FANSI_init_buff(&buff1);
-  FANSI_init_buff(&buff2);
+  FANSI_INIT_BUFF(&buff1);
+  FANSI_INIT_BUFF(&buff2);
 
   R_xlen_t n = 9;
   SEXP res = PROTECT(allocVector(VECSXP, 4));

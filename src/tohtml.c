@@ -362,7 +362,7 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
     error("Internal Error: `color_classes` must be a character vector");  // nocov
 
   struct FANSI_buff buff;
-  FANSI_init_buff(&buff);
+  FANSI_INIT_BUFF(&buff);
 
   R_xlen_t x_len = XLENGTH(x);
   struct FANSI_state state, state_prev, state_init;
@@ -504,7 +504,7 @@ SEXP FANSI_color_to_html_ext(SEXP x) {
     error("Argument length not a multipe of 5"); // nocov
 
   struct FANSI_buff buff;
-  FANSI_init_buff(&buff);
+  FANSI_INIT_BUFF(&buff);
   FANSI_size_buff(&buff, 7);
 
   int * x_int = INTEGER(x);
@@ -565,7 +565,7 @@ SEXP FANSI_esc_html(SEXP x, SEXP what) {
   PROTECT_WITH_INDEX(res, &ipx);
 
   struct FANSI_buff buff;
-  FANSI_init_buff(&buff);
+  FANSI_INIT_BUFF(&buff);
 
   for(R_xlen_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);

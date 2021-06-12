@@ -183,7 +183,7 @@ SEXP FANSI_tabs_as_spaces_ext(
   SEXP vec, SEXP tab_stops, SEXP warn, SEXP term_cap, SEXP ctl
 ) {
   struct FANSI_buff buff;
-  FANSI_init_buff(&buff);
+  FANSI_INIT_BUFF(&buff);
   SEXP res =
     PROTECT(FANSI_tabs_as_spaces(vec, tab_stops, &buff, warn, term_cap, ctl));
   FANSI_release_buff(&buff, 1);

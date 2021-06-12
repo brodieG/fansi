@@ -458,7 +458,7 @@ SEXP FANSI_sgr_close_ext(SEXP x, SEXP term_cap) {
   PROTECT_WITH_INDEX(res, &ipx);
 
   struct FANSI_buff buff;
-  FANSI_init_buff(&buff);
+  FANSI_INIT_BUFF(&buff);
   int normalize = 1;
 
   SEXP R_true = PROTECT(ScalarLogical(1));
@@ -598,7 +598,7 @@ SEXP FANSI_state_at_pos_ext(
   int type_int = asInteger(type);
   int pos_i, pos_prev = -1;
   struct FANSI_buff buff;
-  FANSI_init_buff(&buff);
+  FANSI_INIT_BUFF(&buff);
 
   for(R_xlen_t i = 0; i < len; i++) {
     R_CheckUserInterrupt();
