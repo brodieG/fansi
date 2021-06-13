@@ -85,9 +85,15 @@
 #'   * character(512): Like character(16), except the basic, bright, and all
 #'     other 8-bit colors are mapped.
 #'
+#' @note Up to version 0.5.0, `html_esc` implicitly operated as if
+#'   `carry = TRUE`.  This was different from other functions and was
+#'   changed to be consistent with them after that version.
 #' @return A character vector of the same length as `x` with all escape
 #'   sequences removed and any basic ANSI CSI SGR escape sequences applied via
 #'   SPAN HTML tags.
+#' @note `sgr_to_html` always terminates as not doing so produces
+#'   invalid HTML.  If you wish for the last active SPAN to bleed into
+#'   subsequent text you may do so with e.g. `sub("</span>$", "", x)`.
 #' @examples
 #' sgr_to_html("hello\033[31;42;1mworld\033[m")
 #' sgr_to_html("hello\033[31;42;1mworld\033[m", classes=TRUE)

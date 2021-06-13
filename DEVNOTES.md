@@ -4,7 +4,11 @@ These are internal developer notes.
 
 ## Todo
 
-* Are we checking byte encoding on e.g. pre/pad, etc.?
+* It's possible we messed up and `sgr_to_html` had carry semantics whereas other
+  stuff did not.
+
+* Check whether anything other than `substr_ctl` uses `state_at_pos` and thus
+  the assumptions about carry being handled externally might be incorrect.
 * Rationalize type checking on entry into C code given that state init already
   checks many of them.
 * Move the interrupt to be `_read_next` based with an unsigned counter?  With
@@ -39,6 +43,8 @@ These are internal developer notes.
   check for unescaped '<', '>', and '&'?
 
 ## Done
+
+* Are we checking byte encoding on e.g. pre/pad, etc.?
 
 * Write docs about behavior of bleeding.
 

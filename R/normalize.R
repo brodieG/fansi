@@ -81,6 +81,8 @@ normalize_sgr <- function(
 normalize_sgr_list <- function(x, warn, term.cap.int)
   .Call(FANSI_normalize_sgr_list, x, warn, term.cap.int)
 
+# Given an SGR, compute the sequence that closes it
+
 close_sgr <- function(x) {
   .Call(FANSI_close_sgr, x, seq_along(VALID.TERM.CAP))
 }
