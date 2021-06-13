@@ -59,37 +59,41 @@ ctl_as_int <- function(x) .Call(FANSI_ctl_as_int, as.integer(x))
 ## Common argument validation and conversion.  Missing args okay.
 
 validate <- function(...) {
-  call <- sys.cal(-1)
+  call <- sys.call(-1)
   stop2 <- function(x) stop(simpleError(x, call))
   args <- list(...)
   if(
-    !all(names(args)) %in%
-    c(
-      'x', 'warn', 'term.cap', 'ctl', 'normalize', 'carry', 'terminate',
-      'tab.stops', 'tabs.as.spaces', 'strip.spaces'
-    )
-  )
+    !all(
+      names(args) %in%
+      c(
+        'x', 'warn', 'term.cap', 'ctl', 'normalize', 'carry', 'terminate',
+        'tab.stops', 'tabs.as.spaces', 'strip.spaces'
+  ) ) )
     stop("Internal Error: some arguments to validate unknown")
 
   if('x' %in% names(args)) {
-    if(!is.character(x)) x <- as.character(x)
+    x <- args[['x']]
+    if(!is.character(x)) x <- as.character(args[['x']])
     x <- enc2utf8(x)
     if(any(Encoding(x) == "bytes"))
       stop2("BYTE encoded strings are not supported.")
     args[['x']] <- x
   }
   if('warn' %in% names(args)) {
-    if(!is.logical(warn)) warn <- as.logical(warn)
+    warn <- args[['warn']]
+    if(!is.logical(warn)) warn <- as.logical(args[['warn']])
     if(length(warn) != 1L || is.na(warn))
       stop2("Argument `warn` must be TRUE or FALSE.")
     args[['warn']] <- warn
   }
   if('normalize' %in% names(args)) {
+    normalize <- args[['normalize']]
     if(!isTRUE(normalize %in% c(FALSE, TRUE)))
       stop2("Argument `normalize` must be TRUE or FALSE.")
     args[['normalize']] <- as.logical(normalize)
   }
   if('term.cap' %in% names(args)) {
+    term.cap <- args[['term.cap']]
     if(!is.character(term.cap))
       stop2("Argument `term.cap` must be character.")
     if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
@@ -100,6 +104,7 @@ validate <- function(...) {
     args[['term.cap.int']] <- term.cap.int
   }
   if('ctl' %in% names(args)) {
+    ctl <- args[['ctl']]
     if(!is.character(ctl))
       stop2("Argument `ctl` must be character.")
     ctl.int <- integer()
@@ -114,6 +119,7 @@ validate <- function(...) {
     args[['ctl.int']] <- ctl.int
   }
   if('carry' %in% names(args)) {
+    carry <- args[['carry']]
     if(length(carry) != 1L)
       stop2("Argument `carry` must be scalar.")
     if(!is.logical(carry) && !is.character(carry))
@@ -125,11 +131,13 @@ validate <- function(...) {
     args[['carry']] <- carry
   }
   if('terminate' %in% names(args)) {
+    terminate <- args[['terminate']]
     if(!isTRUE(terminate %in% c(TRUE, FALSE)))
       stop2("Argument `terminate` must be TRUE or FALSE")
     terminate <- as.logical(terminate)
   }
   if('tab.stops' %in% names(args)) {
+    tab.stops <- args[['tab.stops']]
     if(
       !is.numeric(tab.stops) || !length(tab.stops) || any(tab.stops < 1) ||
       anyNA(tab.stops)
@@ -138,9 +146,10 @@ validate <- function(...) {
         "Argument `tab.stops` must be numeric, strictly positive, and ",
         "representable as an integer."
       )
-    ags[['tab.stops']] <- as.integer(tab.stops)
+    args[['tab.stops']] <- as.integer(tab.stops)
   }
   if('tabs.as.spaces' %in% names(args)) {
+    tabs.as.spaces <- args[['tabs.as.spaces']]
     if(!is.logical(tabs.as.spaces)) tabs.as.spaces <- as.logical(tabs.as.spaces)
     if(length(tabs.as.spaces) != 1L || is.na(tabs.as.spaces))
       stop("Argument `tabs.as.spaces` must be TRUE or FALSE.")
