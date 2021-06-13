@@ -202,7 +202,8 @@ substr2_ctl <- function(
       round.start=round == 'start' || round == 'both',
       round.stop=round == 'stop' || round == 'both',
       x.len=length(x),
-      ctl.int=ctl.int, normalize=normalize
+      ctl.int=ctl.int, normalize=normalize,
+      carry=carry, terminate=terminate
     )
   )
   res[!no.na] <- NA_character_
@@ -325,7 +326,7 @@ substr_ctl_internal <- function(
     # should have been issued on first read
 
     end.csi <-
-      if(terminate) close_sgr(stop.tag, warn=FALSE, term.cap.int, normalize)
+      if(terminate) close_sgr(stop.tag, warn=FALSE, normalize)
       else ""
     tmp <- paste0(
       start.tag,

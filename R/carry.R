@@ -26,6 +26,8 @@ sgr_at_end <- function(
   )
   with(
     args,
-    .Call(FANSI_sgr_at_end, x, warn, term.cap.int, ctl.int, normalize, carry)
+    .Call(
+      FANSI_sgr_at_end, x, warn, term.cap.int, ctl.int, normalize, carry
+    )
   )
 }
