@@ -88,7 +88,7 @@ strtrim2_ctl <- function(
 ) {
   args <- validate(
     x=x, warn=warn, ctl=ctl,
-    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops
+    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops,
     normalize=normalize, carry=carry,
     terminate=terminate
   )

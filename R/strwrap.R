@@ -241,7 +241,7 @@ strwrap2_sgr <- function(
 validate_wrap_basic <- function(
   width, indent, exdent, prefix, initial, pad.end
 ) {
-  call <- sys.cal(-1)
+  call <- sys.call(-1)
   stop2 <- function(x) stop(simpleError(x, call))
   is_scl_int_pos <- function(x, name, strict=FALSE) {
     x <- as.integer(x)
