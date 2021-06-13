@@ -355,7 +355,9 @@ static int W_sgr_as_html(
 /*
  * Convert SGR Encoded Strings to their HTML equivalents
  */
-SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
+SEXP FANSI_esc_to_html(
+  SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes, SEXP carry
+) {
   if(TYPEOF(x) != STRSXP)
     error("Internal Error: `x` must be a character vector");  // nocov
   if(TYPEOF(color_classes) != STRSXP)
@@ -364,12 +366,19 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
   struct FANSI_buff buff;
   FANSI_INIT_BUFF(&buff);
 
+  SEXP ctl = PROTECT(ScalarInteger(1));  // "all"
+  int do_carry = STRING_ELT(carry, 1) != NA_STRING;
+  struct FANSI_sgr sgr_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
+  UNPROTECT(1);
+
   R_xlen_t x_len = XLENGTH(x);
   struct FANSI_state state, state_prev, state_init;
   SEXP empty = PROTECT(mkString(""));
-  state = state_prev = state_init =
-    FANSI_state_init(empty, warn, term_cap, (R_xlen_t) 0);
+  state = FANSI_state_init(empty, warn, term_cap, (R_xlen_t) 0);
+  state.sgr = sgr_carry;
+  state_prev = state_init = state;
   UNPROTECT(1);
+
   const char * span_end = "</span>";
   int span_end_len = (int) strlen(span_end);
 
@@ -388,7 +397,10 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
 
     // Reset position info and string; rest of state info is preserved from
     // prior line so that the state can be continued on new line.
-    state = FANSI_reset_pos(state_prev);
+
+    if(do_carry) state = FANSI_reset_pos(state_prev);
+    else state = state_init;
+
     state.string = string;
     struct FANSI_state state_start = FANSI_reset_pos(state);
     state_prev = state_init;  // but there are no styles in the string yet

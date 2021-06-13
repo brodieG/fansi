@@ -35,7 +35,7 @@ struct FANSI_state FANSI_state_init_full(
   if(TYPEOF(strsxp) != STRSXP) {
     error(
       "Internal error: state_init with bad type for strsxp (%s)",
-      type2char(TYPEOF(warn))
+      type2char(TYPEOF(strsxp))
     );
   }
   if(i < 0 || i > XLENGTH(strsxp))
@@ -47,6 +47,8 @@ struct FANSI_state FANSI_state_init_full(
   FANSI_check_chrsxp(chrsxp, i);
   const char * string = CHAR(chrsxp);
 
+  // Validation not complete here, many of these should be scalar, rely on R
+  // level checks.
   if(TYPEOF(warn) != LGLSXP)
     error(
       "Internal error: state_init with bad type for warn (%s)",
@@ -107,23 +109,28 @@ struct FANSI_state FANSI_state_init_full(
     .ctl = FANSI_ctl_as_int(ctl)
   };
 }
+// When we don't care about R_nchar width, but do care about CSI / SGR (which
+// means, we only really care about SGR since all CSI does is affect width calc).
+
 struct FANSI_state FANSI_state_init(
   SEXP strsxp, SEXP warn, SEXP term_cap, R_xlen_t i
 ) {
   SEXP R_false = PROTECT(ScalarLogical(0));
   SEXP R_true = PROTECT(ScalarLogical(1));
   SEXP R_zero = PROTECT(ScalarInteger(0));
+  SEXP R_one = PROTECT(ScalarInteger(1));
   struct FANSI_state res = FANSI_state_init_full(
     strsxp, warn, term_cap,
     R_true,  // allowNA for invalid multibyte
-    R_false,
+    R_false, // keepNA
     R_zero,  // Don't use width by default
-    R_zero,  // Don't treat any escapes as special by default
+    R_one,   // Treat all escapes as special by default (wrong prior to v1.0)
     i
   );
   UNPROTECT(3);
   return res;
 }
+
 struct FANSI_state FANSI_reset_width(struct FANSI_state state) {
   state.pos_width = 0;
   state.pos_width_target = 0;
@@ -347,7 +354,7 @@ int FANSI_color_size(int color, int * color_extra) {
  * Generate the ANSI tag corresponding to the state and write it out as a NULL
  * terminated string.
  */
-static char * sgr_as_chr(
+char * FANSI_sgr_as_chr(
   struct FANSI_buff *buff, struct FANSI_sgr sgr, int normalize, R_xlen_t i
 ) {
   // First pass computes total size of tag
@@ -437,21 +444,16 @@ int FANSI_sgr_active(struct FANSI_sgr sgr) {
  *
  * Pretty inefficient to do it this way...
  *
- * Any warnings this could emit should have been emitted earlier during reading
- * of string the active state came from.
- *
  * @param x should be a vector of active states at end of strings.
  */
-SEXP FANSI_sgr_close_ext(SEXP x, SEXP term_cap) {
+SEXP FANSI_sgr_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm) {
   if(TYPEOF(x) != STRSXP)
     error("Argument `x` should be a character vector.");  // nocov
-  if(TYPEOF(term_cap) != INTSXP)
-    error("Argument `term.cap` should be an integer vector.");  // nocov
-
-  // Compress `ctl` into a single integer using bit flags
+  if(TYPEOF(norm) != INTSXP || XLENGTH(norm) != 1)
+    error("Argument `normalize` should be an integer vector.");  // nocov
 
   R_xlen_t len = xlength(x);
-  SEXP res = x;
+  SEXP res = PROTECT(allocVector(STRSXP, len));
 
   PROTECT_INDEX ipx;
   // reserve spot if we need to alloc later
@@ -462,7 +464,6 @@ SEXP FANSI_sgr_close_ext(SEXP x, SEXP term_cap) {
   int normalize = 1;
 
   SEXP R_true = PROTECT(ScalarLogical(1));
-  SEXP R_false = PROTECT(ScalarLogical(0));
   SEXP R_one = PROTECT(ScalarInteger(1));
   SEXP R_zero = PROTECT(ScalarInteger(0));
 
@@ -472,7 +473,7 @@ SEXP FANSI_sgr_close_ext(SEXP x, SEXP term_cap) {
     if(x_chr == NA_STRING || !LENGTH(x_chr)) continue;
 
     struct FANSI_state state = FANSI_state_init_full(
-      x, R_false, term_cap, R_true, R_true, R_zero, R_one, i
+      x, warn, term_cap, R_true, R_true, R_zero, R_one, i
     );
     while(*(state.string + state.pos_byte)) {
       state = FANSI_read_next(state, i);
@@ -493,7 +494,7 @@ SEXP FANSI_sgr_close_ext(SEXP x, SEXP term_cap) {
     }
   }
   FANSI_release_buff(&buff, 1);
-  UNPROTECT(5);
+  UNPROTECT(4);
   return res;
 }
 
@@ -504,20 +505,19 @@ SEXP FANSI_sgr_close_ext(SEXP x, SEXP term_cap) {
  */
 
 SEXP FANSI_state_at_pos_ext(
-  SEXP text, SEXP pos, SEXP type,
+  SEXP x, SEXP pos, SEXP type,
   SEXP lag, SEXP ends,
   SEXP warn, SEXP term_cap, SEXP ctl,
-  SEXP norm
+  SEXP norm, SEXP carry
 ) {
   /*******************************************\
   * IMPORTANT: INPUT MUST ALREADY BE IN UTF8! *
   \*******************************************/
 
-  // no errors should make it here, it should be handled R side
-  if(TYPEOF(text) != STRSXP && XLENGTH(text) != 1)
-    error("Argument `text` must be character(1L).");   // nocov
-  if(STRING_ELT(text, 0) == NA_STRING)
-    error("Argument `text` may not be NA.");   // nocov
+  // errors shoudl be handled R side, but just in case
+  FANSI_val_args(x, norm, carry);
+  if(XLENGTH(x) != 1 || STRING_ELT(x, 0) == NA_STRING)
+    error("Argument `x` must be scalar character and not be NA.");   // nocov
   if(TYPEOF(pos) != INTSXP)
     error("Argument `pos` must be integer.");          // nocov
   if(TYPEOF(lag) != LGLSXP)
@@ -526,17 +526,14 @@ SEXP FANSI_state_at_pos_ext(
     error("Argument `lag` must be the same length as `pos`.");  // nocov
   if(XLENGTH(pos) != XLENGTH(ends))
     error("Argument `ends` must be the same length as `pos`."); // nocov
-  if(TYPEOF(warn) != LGLSXP)
-    error("Argument `warn` must be integer.");         // nocov
-  if(TYPEOF(term_cap) != INTSXP)
-    error("Argument `term.cap` must be integer.");     // nocov
-  if(TYPEOF(ctl) != INTSXP)
-    error("Argument `ctl` must be integer.");         // nocov
-  if(TYPEOF(norm) != LGLSXP)
-    error("Argument `norm` must be logical.");         // nocov
 
+  SEXP R_true = PROTECT(ScalarLogical(1));
   R_xlen_t len = XLENGTH(pos);
   int normalize = asInteger(norm);
+
+  // Read-in any pre-existing state to carry; we don't need to worry about
+  // explicitly handling carrying across positions as that
+  struct FANSI_sgr sgr_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
 
   const int res_cols = 4;  // if change this, need to change rownames init
   if(len > R_XLEN_T_MAX / res_cols) {
@@ -582,12 +579,10 @@ SEXP FANSI_state_at_pos_ext(
   const char * empty = "";
   SEXP res_chr, res_chr_prev =
     PROTECT(FANSI_mkChar(empty, empty, CE_NATIVE, (R_xlen_t) 0));
-  // PROTECT should not be needed here, but rchk complaining
-  SEXP R_true = PROTECT(ScalarLogical(1));
   struct FANSI_state state = FANSI_state_init_full(
-    text, warn, term_cap, R_true, R_true, type, ctl, (R_xlen_t) 0
+    x, warn, term_cap, R_true, R_true, type, ctl, (R_xlen_t) 0
   );
-  UNPROTECT(1);
+  state.sgr = sgr_carry;
 
   struct FANSI_state state_prev = state;
   state_pair.cur = state;
@@ -636,7 +631,7 @@ SEXP FANSI_state_at_pos_ext(
       if(FANSI_sgr_comp(state.sgr, state_prev.sgr)) {
         // this computes length twice..., we know state_char can be at most
         // INT_MAX excluding NULL (and certainly will be much less).
-        char * state_chr = sgr_as_chr(&buff, state.sgr, normalize, i);
+        char * state_chr = FANSI_sgr_as_chr(&buff, state.sgr, normalize, i);
         res_chr = PROTECT(
           FANSI_mkChar(
             state_chr, state_chr + strlen(state_chr), CE_NATIVE, i
@@ -657,6 +652,6 @@ SEXP FANSI_state_at_pos_ext(
   SET_VECTOR_ELT(res_list, 0, res_str);
   SET_VECTOR_ELT(res_list, 1, res_mx);
 
-  UNPROTECT(7);
+  UNPROTECT(9);
   return(res_list);
 }
