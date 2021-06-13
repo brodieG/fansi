@@ -67,7 +67,7 @@
 #' @seealso [`fansi`] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results,
 #'   [`normalize_sgr`] for more details on what the `normalize` parameter does.
-#' @param x a character vector or object that can be coerced to character.
+#' @param x a character vector or object that can be coerced to such.
 #' @param type character(1L) partial matching `c("chars", "width")`, although
 #'   `type="width"` only works correctly with R >= 3.2.2.  With "width", whether
 #'   C0 and C1 are treated as zero width may depend on R version and locale in
@@ -264,12 +264,14 @@ substr_ctl_internal <- function(
 
   # If we want to carry, we'll do this manually as too much work to try to do it
   # in C given the current structure using ordered indices into each string.
+  # Do before `unique` as this to equal strings may become different.
 
-  stop("Implement carry.")
-
-  x.scalar <- length(x) == 1
-  x.u <- if(x.scalar) x else unique_chr(x)
-
+  if(!is.na(carry)) {
+    ends <- .Call(
+      FANSI_sgr_at_end, x, warn, term.cap.int, ctl.int, normalize, carry
+    )
+    x <- paste0(c(carry, ends[-length(ends)]), x)
+  }
   # We compute style at each start and stop position by getting all those
   # positions into a vector and then ordering them by position, keeping track of
   # original order and whether they are starting or ending positions (affects
@@ -277,6 +279,9 @@ substr_ctl_internal <- function(
 
   # We do this for each unique string in `x` as the indices must be incrementing
   # for each of them.
+
+  x.scalar <- length(x) == 1
+  x.u <- if(x.scalar) x else unique_chr(x)
 
   for(u in x.u) {
     elems <- which(x == u & s.s.valid)
@@ -316,14 +321,12 @@ substr_ctl_internal <- function(
     start.tag <- state[[1]][start.ansi.idx]
     stop.tag <- state[[1]][stop.ansi.idx]
 
-    # if there is any ANSI CSI at end then add a terminating CSI
+    # if there is any ANSI CSI at end then add a terminating CSI, warnings
+    # should have been issued on first read
 
-    if(normalize) {
-      end.csi <- close_sgr(stop.tag)
-    } else {
-      end.csi <- character(length(stop.tag))
-      end.csi[nzchar(stop.tag)] <- '\033[0m'
-    }
+    end.csi <-
+      if(terminate) close_sgr(stop.tag, warn=FALSE, term.cap.int, normalize)
+      else ""
     tmp <- paste0(
       start.tag,
       substr(x.elems, start.ansi, stop.ansi)
