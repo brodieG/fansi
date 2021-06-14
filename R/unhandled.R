@@ -75,7 +75,7 @@
 
 unhandled_ctl <- function(x, term.cap=getOption('fansi.term.cap')) {
   args <- validate(x=x, term.cap=term.cap)
-  with(args, res <- .Call(FANSI_unhandled_esc, x, term.cap.int))
+  res <- with(args, .Call(FANSI_unhandled_esc, x, term.cap.int))
   names(res) <- c("index", "start", "stop", "error", "translated", "esc")
   errors <- c(
     'unknown', 'special', 'exceed-term-cap', 'non-SGR', 'malformed-CSI',

@@ -85,7 +85,7 @@ nchar_ctl <- function(
       "Argument `type` must partial match one of 'chars', 'width', or 'bytes'."
     )
   type <- valid.types[type.int]
-  with(args, stripped <- strip_ctl(x, ctl=ctl, warn=warn))
+  stripped <- with(args, strip_ctl(x, ctl=ctl, warn=warn))
 
   R.ver.gte.3.2.2 <- R.ver.gte.3.2.2 # "import" symbol from namespace
   if(R.ver.gte.3.2.2) nchar(stripped, type=type, allowNA=allowNA, keepNA=keepNA)

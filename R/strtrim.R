@@ -56,9 +56,9 @@ strtrim_ctl <- function(
 
   # a bit inefficient to rely on strwrap, but oh well
 
-  with(
+  res <- with(
     args,
-    res <- .Call(
+    .Call(
       FANSI_strwrap_csi,
       enc2utf8(x), width,
       0L, 0L,    # indent, exdent
@@ -106,9 +106,9 @@ strtrim2_ctl <- function(
 
   # a bit inefficient to rely on strwrap, but oh well
 
-  with(
+  res <- with(
     args,
-    res <- .Call(
+    .Call(
       FANSI_strwrap_csi,
       enc2utf8(x), width,
       0L, 0L,    # indent, exdent

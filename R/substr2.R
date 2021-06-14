@@ -192,9 +192,9 @@ substr2_ctl <- function(
   res <- x
   no.na <- !(is.na(x) | is.na(start & stop))
 
-  with(
+  res[no.na] <- with(
     args,
-    res[no.na] <- substr_ctl_internal(
+    substr_ctl_internal(
       x[no.na], start=start[no.na], stop=stop[no.na],
       type.int=type.m,
       tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,

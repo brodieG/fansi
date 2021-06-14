@@ -125,8 +125,8 @@ strsplit_ctl <- function(
         starts <- starts[!sub.invalid]
         ends <- ends[!sub.invalid]
       }
-      with(args,
-        res[[i]] <- substr_ctl_internal(
+      res[[i]] <- with(args,
+        substr_ctl_internal(
           x=x[[i]],
           start=starts, stop=ends, type.int=0L,
           round.start=TRUE, round.stop=FALSE,
