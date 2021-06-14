@@ -115,10 +115,11 @@ struct FANSI_state FANSI_state_init_full(
 struct FANSI_state FANSI_state_init(
   SEXP strsxp, SEXP warn, SEXP term_cap, R_xlen_t i
 ) {
-  SEXP R_false = PROTECT(ScalarLogical(0));
-  SEXP R_true = PROTECT(ScalarLogical(1));
-  SEXP R_zero = PROTECT(ScalarInteger(0));
-  SEXP R_one = PROTECT(ScalarInteger(1));
+  int prt = 0;
+  SEXP R_false = PROTECT(ScalarLogical(0)); ++prt;
+  SEXP R_true = PROTECT(ScalarLogical(1)); ++prt;
+  SEXP R_zero = PROTECT(ScalarInteger(0)); ++prt;
+  SEXP R_one = PROTECT(ScalarInteger(1)); ++prt;
   struct FANSI_state res = FANSI_state_init_full(
     strsxp, warn, term_cap,
     R_true,  // allowNA for invalid multibyte
@@ -127,7 +128,7 @@ struct FANSI_state FANSI_state_init(
     R_one,   // Treat all escapes as special by default (wrong prior to v1.0)
     i
   );
-  UNPROTECT(3);
+  UNPROTECT(prt);
   return res;
 }
 
@@ -463,7 +464,7 @@ SEXP FANSI_sgr_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm) {
 
   struct FANSI_buff buff;
   FANSI_INIT_BUFF(&buff);
-  int normalize = 1;
+  int normalize = asInteger(norm);
 
   SEXP R_true = PROTECT(ScalarLogical(1)); ++prt;
   SEXP R_one = PROTECT(ScalarInteger(1)); ++prt;

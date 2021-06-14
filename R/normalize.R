@@ -71,13 +71,14 @@
 #' ) )
 
 normalize_sgr <- function(
-  x, warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+  x, warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
+  carry=getOption('fansi.carry', FALSE)
 ) {
-  args <- validate(x=x, warn=warn, term.cap=term.cap)
-  with(args, .Call(FANSI_normalize_sgr, enc2utf8(x), warn, term.cap.int))
+  args <- validate(x=x, warn=warn, term.cap=term.cap, carry=carry)
+  with(args, .Call(FANSI_normalize_sgr, x, warn, term.cap.int, carry))
 }
 # To reduce overhead of applying this in `strwrap_ctl`
 
-normalize_sgr_list <- function(x, warn, term.cap.int)
-  .Call(FANSI_normalize_sgr_list, x, warn, term.cap.int)
+normalize_sgr_list <- function(x, warn, term.cap.int, carry)
+  .Call(FANSI_normalize_sgr_list, x, warn, term.cap.int, carry)
 

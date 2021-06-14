@@ -97,16 +97,16 @@ static SEXP normalize_sgr_int(
   if(TYPEOF(x) != STRSXP)
     error("Internal Error: `x` must be a character vector");  // nocov
 
+  int prt = 0;
   R_xlen_t x_len = XLENGTH(x);
   SEXP res = x;
   // Reserve spot on protection stack
   PROTECT_INDEX ipx;
-  PROTECT_WITH_INDEX(res, &ipx);
+  PROTECT_WITH_INDEX(res, &ipx); ++prt;
 
-  SEXP ctl = PROTECT(ScalarInteger(1));  // "all"
+  SEXP ctl = PROTECT(ScalarInteger(1)); ++prt;  // "all"
   int do_carry = STRING_ELT(carry, 1) != NA_STRING;
   struct FANSI_sgr sgr_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
-  UNPROTECT(1);
 
   struct FANSI_state state_prev =
     FANSI_state_init(x, warn, term_cap, (R_xlen_t)0);
@@ -140,7 +140,7 @@ static SEXP normalize_sgr_int(
     UNPROTECT(1);
     state_prev = state;
   }
-  UNPROTECT(2);
+  UNPROTECT(prt);
   return res;
 }
 
