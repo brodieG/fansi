@@ -83,13 +83,16 @@ SEXP FANSI_sgr_at_end_ext(
 struct FANSI_sgr FANSI_carry_init(
   SEXP carry, SEXP warn, SEXP term_cap, SEXP ctl
 ) {
+  int prt = 0;
   int do_carry = STRING_ELT(carry, 1) != NA_STRING;
   SEXP carry_string;
-  if(do_carry) carry_string = PROTECT(carry);
-  else carry_string = PROTECT(mkString(""));
-
-  SEXP R_true = PROTECT(ScalarLogical(1));
-  SEXP R_zero = PROTECT(ScalarInteger(0));
+  if(do_carry) {
+    carry_string = PROTECT(carry); ++prt;
+  } else {
+    carry_string = PROTECT(mkString("")); ++prt;
+  }
+  SEXP R_true = PROTECT(ScalarLogical(1)); ++prt;
+  SEXP R_zero = PROTECT(ScalarInteger(0)); ++prt;
 
   // Read-in any pre-existing state to carry
   struct FANSI_state state_carry = FANSI_state_init_full(
@@ -98,7 +101,7 @@ struct FANSI_sgr FANSI_carry_init(
     ctl, (R_xlen_t) 0
   );
   state_carry = state_at_end(state_carry, (R_xlen_t) 0);
-  UNPROTECT(3);
+  UNPROTECT(prt);
   return state_carry.sgr;
 }
 

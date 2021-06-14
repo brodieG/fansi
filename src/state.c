@@ -447,25 +447,27 @@ int FANSI_sgr_active(struct FANSI_sgr sgr) {
  * @param x should be a vector of active states at end of strings.
  */
 SEXP FANSI_sgr_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm) {
+
   if(TYPEOF(x) != STRSXP)
     error("Argument `x` should be a character vector.");  // nocov
-  if(TYPEOF(norm) != INTSXP || XLENGTH(norm) != 1)
-    error("Argument `normalize` should be an integer vector.");  // nocov
+  if(TYPEOF(norm) != LGLSXP || XLENGTH(norm) != 1)
+    error("Argument `normalize` should be TRUE or FALSE.");  // nocov
 
+  int prt = 0;
   R_xlen_t len = xlength(x);
-  SEXP res = PROTECT(allocVector(STRSXP, len));
+  SEXP res = PROTECT(allocVector(STRSXP, len)); ++prt;
 
   PROTECT_INDEX ipx;
   // reserve spot if we need to alloc later
-  PROTECT_WITH_INDEX(res, &ipx);
+  PROTECT_WITH_INDEX(res, &ipx); ++prt;
 
   struct FANSI_buff buff;
   FANSI_INIT_BUFF(&buff);
   int normalize = 1;
 
-  SEXP R_true = PROTECT(ScalarLogical(1));
-  SEXP R_one = PROTECT(ScalarInteger(1));
-  SEXP R_zero = PROTECT(ScalarInteger(0));
+  SEXP R_true = PROTECT(ScalarLogical(1)); ++prt;
+  SEXP R_one = PROTECT(ScalarInteger(1)); ++prt;
+  SEXP R_zero = PROTECT(ScalarInteger(0)); ++prt;
 
   for(R_xlen_t i = 0; i < len; ++i) {
     FANSI_interrupt(i);
@@ -494,7 +496,7 @@ SEXP FANSI_sgr_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm) {
     }
   }
   FANSI_release_buff(&buff, 1);
-  UNPROTECT(4);
+  UNPROTECT(prt);
   return res;
 }
 
@@ -527,7 +529,8 @@ SEXP FANSI_state_at_pos_ext(
   if(XLENGTH(pos) != XLENGTH(ends))
     error("Argument `ends` must be the same length as `pos`."); // nocov
 
-  SEXP R_true = PROTECT(ScalarLogical(1));
+  int prt = 0;
+  SEXP R_true = PROTECT(ScalarLogical(1)); ++prt;
   R_xlen_t len = XLENGTH(pos);
   int normalize = asInteger(norm);
 
@@ -551,7 +554,7 @@ SEXP FANSI_state_at_pos_ext(
   const char * rownames[4] = { // make sure lines up with res_cols
     "pos.byte", "pos.raw", "pos.ansi", "pos.width"
   };
-  SEXP res_rn = PROTECT(allocVector(STRSXP, res_cols));
+  SEXP res_rn = PROTECT(allocVector(STRSXP, res_cols)); ++prt;
   for(int i = 0; i < res_cols; i++)
     SET_STRING_ELT(
       res_rn, i,
@@ -564,9 +567,9 @@ SEXP FANSI_state_at_pos_ext(
   // position as well as the various position translations in a matrix with as
   // many *columns* as the character vector has elements
 
-  SEXP res_mx = PROTECT(allocVector(REALSXP, res_cols * len));
-  SEXP dim = PROTECT(allocVector(INTSXP, 2));
-  SEXP dim_names = PROTECT(allocVector(VECSXP, 2));
+  SEXP res_mx = PROTECT(allocVector(REALSXP, res_cols * len)); ++prt;
+  SEXP dim = PROTECT(allocVector(INTSXP, 2)); ++prt;
+  SEXP dim_names = PROTECT(allocVector(VECSXP, 2)); ++prt;
 
   INTEGER(dim)[0] = res_cols;
   INTEGER(dim)[1] = len;
@@ -575,10 +578,10 @@ SEXP FANSI_state_at_pos_ext(
   SET_VECTOR_ELT(dim_names, 1, R_NilValue);
   setAttrib(res_mx, R_DimNamesSymbol, dim_names);
 
-  SEXP res_str = PROTECT(allocVector(STRSXP, len));
+  SEXP res_str = PROTECT(allocVector(STRSXP, len)); ++prt;
   const char * empty = "";
   SEXP res_chr, res_chr_prev =
-    PROTECT(FANSI_mkChar(empty, empty, CE_NATIVE, (R_xlen_t) 0));
+    PROTECT(FANSI_mkChar(empty, empty, CE_NATIVE, (R_xlen_t) 0)); ++prt;
   struct FANSI_state state = FANSI_state_init_full(
     x, warn, term_cap, R_true, R_true, type, ctl, (R_xlen_t) 0
   );
@@ -648,10 +651,10 @@ SEXP FANSI_state_at_pos_ext(
   }
   FANSI_release_buff(&buff, 1);
 
-  SEXP res_list = PROTECT(allocVector(VECSXP, 2));
+  SEXP res_list = PROTECT(allocVector(VECSXP, 2)); ++prt;
   SET_VECTOR_ELT(res_list, 0, res_str);
   SET_VECTOR_ELT(res_list, 1, res_mx);
 
-  UNPROTECT(9);
+  UNPROTECT(prt);
   return(res_list);
 }
