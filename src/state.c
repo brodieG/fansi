@@ -536,7 +536,7 @@ SEXP FANSI_state_at_pos_ext(
   int normalize = asInteger(norm);
 
   // Read-in any pre-existing state to carry; we don't need to worry about
-  // explicitly handling carrying across positions as that
+  // explicitly handling carrying across positions as that is done at R level
   struct FANSI_sgr sgr_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
 
   const int res_cols = 4;  // if change this, need to change rownames init

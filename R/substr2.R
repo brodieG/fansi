@@ -143,7 +143,7 @@ substr_ctl <- function(
 )
   substr2_ctl(
     x=x, start=start, stop=stop, warn=warn, term.cap=term.cap, ctl=ctl,
-    normalize=normalize
+    normalize=normalize, carry=carry, terminate=terminate
   )
 
 #' @rdname substr_ctl
