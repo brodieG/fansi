@@ -33,7 +33,7 @@
 #' The underlying assumption is that each element in the vector is
 #' unaffected by any styles in any other element or elsewhere.  This may
 #' lead to surprising outcomes if these assumptions are untrue (see
-#' examples).
+#' examples).  You may adjust this assumption with the `carry` parameter.
 #'
 #' Normalization was implemented primarily for better compatibility with
 #' [`crayon`][1] which emits SGR codes individually and assumes that
@@ -43,7 +43,6 @@
 #' [1]: https://cran.r-project.org/package=crayon
 #'
 #' @export
-#' @param x character vector to normalize the SGR control sequences of.
 #' @seealso [`fansi`] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
 #' @inheritParams substr_ctl
@@ -63,19 +62,21 @@
 #'   normalize_sgr("\033[31;32mhello\033[m"),
 #'   normalize_sgr("\033[31mhe\033[49mllo\033[m")
 #' )
-#' ## External SGR will defeat normalization
+#' ## External SGR will defeat normalization, unless we `carry` it
+#' red <- "\033[41m"
 #' writeLines(
 #'   c(
-#'     paste("\033[31m", "he\033[0mllo", "\033[0m"),
-#'     paste("\033[31m", normalize_sgr("he\033[0mllo"), "\033[0m")
+#'     paste(red, "he\033[0mllo", "\033[0m"),
+#'     paste(red, normalize_sgr("he\033[0mllo"), "\033[0m")
+#'     paste(red, normalize_sgr("he\033[0mllo", carry=red), "\033[0m")
 #' ) )
 
 normalize_sgr <- function(
   x, warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
   carry=getOption('fansi.carry', FALSE)
 ) {
-  args <- validate(x=x, warn=warn, term.cap=term.cap, carry=carry)
-  with(args, .Call(FANSI_normalize_sgr, x, warn, term.cap.int, carry))
+  VAL_IN_ENV(x=x, warn=warn, term.cap=term.cap, carry=carry)
+  .Call(FANSI_normalize_sgr, x, warn, term.cap.int, carry)
 }
 # To reduce overhead of applying this in `strwrap_ctl`
 

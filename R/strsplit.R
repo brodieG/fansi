@@ -58,16 +58,16 @@ strsplit_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
-  args <- validate(
+  VAL_IN_ENV(
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
-    carry=carry, terminate=terminate,
+    carry=carry, terminate=terminate
   )
-
   if(is.null(split)) split <- ""
   split <- enc2utf8(as.character(split))
   if(!length(split)) split <- ""
   if(anyNA(split)) stop("Argument `split` may not contain NAs.")
-
+  if(any(Encoding(split) == "bytes"))
+    stop("Argument `bytes` may not be \"bytes\" encoded.")
   if(!is.logical(fixed)) fixed <- as.logical(fixed)
   if(length(fixed) != 1L || is.na(fixed))
     stop("Argument `fixed` must be TRUE or FALSE.")
@@ -125,16 +125,15 @@ strsplit_ctl <- function(
         starts <- starts[!sub.invalid]
         ends <- ends[!sub.invalid]
       }
-      res[[i]] <- with(args,
-        substr_ctl_internal(
-          x=x[[i]],
-          start=starts, stop=ends, type.int=0L,
-          round.start=TRUE, round.stop=FALSE,
-          tabs.as.spaces=FALSE, tab.stops=8L, warn=warn,
-          term.cap.int=term.cap.int, x.len=length(starts),
-          ctl.int=ctl.int, normalize=normalize,
-          carry=carry, terminate=terminate
-      ) )
+      res[[i]] <- substr_ctl_internal(
+        x=x[[i]],
+        start=starts, stop=ends, type.int=0L,
+        round.start=TRUE, round.stop=FALSE,
+        tabs.as.spaces=FALSE, tab.stops=8L, warn=warn,
+        term.cap.int=term.cap.int, x.len=length(starts),
+        ctl.int=ctl.int, normalize=normalize,
+        carry=carry, terminate=terminate
+      )
     } else {
       res[[i]] <- x[[i]]
     }

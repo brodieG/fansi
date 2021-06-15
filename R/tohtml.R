@@ -94,6 +94,8 @@
 #' @note `sgr_to_html` always terminates as not doing so produces
 #'   invalid HTML.  If you wish for the last active SPAN to bleed into
 #'   subsequent text you may do so with e.g. `sub("</span>$", "", x)`.
+#'   Additionally, `sgr_to_html` uses `carry = TRUE` by default, unlike other
+#'   `fansi` functions that share that parameter.
 #' @examples
 #' sgr_to_html("hello\033[31;42;1mworld\033[m")
 #' sgr_to_html("hello\033[31;42;1mworld\033[m", classes=TRUE)
@@ -150,10 +152,9 @@ sgr_to_html <- function(
   x, warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap'),
   classes=FALSE,
-  carry=getOption('fansi.carry', FALSE)
+  carry=getOption('fansi.carry', TRUE)  # different from other functions
 ) {
-  args <- validate(x=x, warn=warn, term.cap=term.cap, carry=carry)
-
+  VAL_IN_ENV(x=x, warn=warn, term.cap=term.cap, carry=carry)
   classes <- if(isTRUE(classes)) {
     FANSI.CLASSES
   } else if (identical(classes, FALSE)) {
@@ -163,7 +164,7 @@ sgr_to_html <- function(
   } else
     stop("Argument `classes` must be TRUE, FALSE, or a character vector.")
 
-  with(args, .Call(FANSI_esc_to_html, x, warn, term.cap.int, classes, carry))
+  .Call(FANSI_esc_to_html, x, warn, term.cap.int, classes, carry)
 }
 #' Generate CSS Mapping Classes to Colors
 #'

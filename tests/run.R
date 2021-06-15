@@ -21,7 +21,7 @@ if(getRversion() < "3.2.2") {
   )
   on.exit(old.opt)
   pattern <- "^[^.].*\\.[Rr]$"
-  pattern <- "interact"
+  # pattern <- "interact"
   unitize_dir(
     'unitizer',
     pattern=pattern,

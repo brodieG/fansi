@@ -20,14 +20,9 @@ sgr_at_end <- function(
   normalize=getOption('fansi.normalize', FALSE),
   carry=getOption('fansi.carry', FALSE)
 ) {
-  args <- validate(
+  VAL_IN_ENV(
     x=x, warn=warn, term.cap=term.cap, normalize=normalize, carry=carry,
     ctl='sgr'
   )
-  with(
-    args,
-    .Call(
-      FANSI_sgr_at_end, x, warn, term.cap.int, ctl.int, normalize, carry
-    )
-  )
+  .Call(FANSI_sgr_at_end, x, warn, term.cap.int, ctl.int, normalize, carry)
 }

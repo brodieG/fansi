@@ -297,6 +297,9 @@ unitizer_sect("term cap and bright", {
 unitizer_sect("corner cases", {
   strwrap_ctl("a", -1)
   strwrap2_ctl("a", -1)
+  strwrap2_ctl("a", Inf)
+  strwrap2_ctl("a", NA_real_)
+  strwrap2_ctl("a", NA_integer_)
   strwrap2_ctl("a", -1, wrap.always=TRUE)
   strwrap2_ctl("a", 0, wrap.always=TRUE)
   strwrap2_ctl("a", 1, wrap.always=TRUE)

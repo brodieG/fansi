@@ -66,19 +66,18 @@ strip_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), strip) {
     message("Parameter `strip` has been deprecated; use `ctl` instead.")
     ctl <- strip
   }
-  args <- validate(x=x, ctl=ctl, warn=warn)
+  VAL_IN_ENV(x=x, ctl=ctl, warn=warn)
 
-  if(length(ctl)) {
-    with(args, .Call(FANSI_strip_csi, enc2utf8(x), ctl.int, warn))
-  } else x
+  if(length(ctl)) .Call(FANSI_strip_csi, enc2utf8(x), ctl.int, warn)
+  else x
 }
 #' @export
 #' @rdname strip_ctl
 
 strip_sgr <- function(x, warn=getOption('fansi.warn')) {
-  args <- validate(x=x, warn=warn)
+  VAL_IN_ENV(x=x, warn=warn)
   ctl.int <- match("sgr", VALID.CTL)
-  with(args, .Call(FANSI_strip_csi, x, ctl.int, warn))
+  .Call(FANSI_strip_csi, x, ctl.int, warn)
 }
 
 #' Checks for Presence of Control Sequences
@@ -109,9 +108,9 @@ has_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), which) {
     message("Parameter `which` has been deprecated; use `ctl` instead.")
     ctl <- which
   }
-  args <- validate(x=x, ctl=ctl, warn=warn)
+  VAL_IN_ENV(x=x, ctl=ctl, warn=warn)
   if(length(ctl.int)) {
-    with(args, .Call(FANSI_has_csi, x, ctl.int, warn))
+    .Call(FANSI_has_csi, x, ctl.int, warn)
   } else rep(FALSE, length(x))
 }
 #' @export
@@ -149,19 +148,17 @@ sgr_at_end <- function(
   normalize=getOption('fansi.normalize', FALSE),
   carry=getOption('fansi.carry', FALSE)
 ) {
-  args <- validate(x=x, ctl='sgr', warn=warn, term.cap=term.cap, carry=carry)
-  with(
-    args,
-    .Call(
-      FANSI_sgr_at_end,
-      x,
-      0L,             # character type
-      warn,
-      term.cap.int,
-      ctl.int,
-      normalize,
-      carry
-  ) )
+  VAL_IN_ENV(x=x, ctl='sgr', warn=warn, term.cap=term.cap, carry=carry)
+  .Call(
+    FANSI_sgr_at_end,
+    x,
+    0L,             # character type
+    warn,
+    term.cap.int,
+    ctl.int,
+    normalize,
+    carry
+  )
 }
 
 # Given an SGR, compute the sequence that closes it
@@ -174,13 +171,8 @@ close_sgr <- function(
   warn=getOption('fansi.warn'),
   normalize=getOption('fansi.normalize', FALSE)
 ) {
-  args <- validate(
-    x=x, warn=warn, normalize=normalize
-  )
-  with(
-    args,
-    .Call(FANSI_close_sgr, x, warn, seq_along(VALID.TERM.CAP), normalize)
-  )
+  VAL_IN_ENV(x=x, warn=warn, normalize=normalize)
+  .Call(FANSI_close_sgr, x, warn, seq_along(VALID.TERM.CAP), normalize)
 }
 
 

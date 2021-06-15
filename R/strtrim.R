@@ -40,25 +40,23 @@ strtrim_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
-  args <- validate(
+  VAL_IN_ENV(
     x=x, warn=warn, ctl=ctl, normalize=normalize, carry=carry,
     terminate=terminate
   )
-  width <- as.integer(width)
   if(!is.numeric(width) || length(width) != 1L || is.na(width) || width < 0)
     stop(
       "Argument `width` must be a positive scalar numeric representable ",
       "as an integer."
     )
+  width <- as.integer(width)
   # can assume all term cap available for these purposes
 
   term.cap.int <- seq_along(VALID.TERM.CAP)
 
   # a bit inefficient to rely on strwrap, but oh well
 
-  res <- with(
-    args,
-    .Call(
+  res <- .Call(
       FANSI_strwrap_csi,
       enc2utf8(x), width,
       0L, 0L,    # indent, exdent
@@ -72,7 +70,7 @@ strtrim_ctl <- function(
       normalize,
       carry,
       terminate
-  ) )
+  )
   if(normalize) normalize_sgr(res) else res
 }
 #' @export
@@ -86,29 +84,26 @@ strtrim2_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
-  args <- validate(
+  VAL_IN_ENV(
     x=x, warn=warn, ctl=ctl,
     tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops,
     normalize=normalize, carry=carry,
     terminate=terminate
   )
-  width <- as.integer(width)
   if(!is.numeric(width) || length(width) != 1L || is.na(width) || width < 0)
     stop(
       "Argument `width` must be a positive scalar numeric representable ",
       "as an integer."
     )
-  # can assume all term cap available for these purposes
+  width <- as.integer(width)
 
+  # can assume all term cap available for these purposes
   term.cap.int <- seq_along(VALID.TERM.CAP)
   width <- as.integer(width)
   tab.stops <- as.integer(tab.stops)
 
   # a bit inefficient to rely on strwrap, but oh well
-
-  res <- with(
-    args,
-    .Call(
+  res <- .Call(
       FANSI_strwrap_csi,
       enc2utf8(x), width,
       0L, 0L,    # indent, exdent
@@ -120,7 +115,7 @@ strtrim2_ctl <- function(
       TRUE,      # first only
       ctl.int,
       normalize, carry, terminate
-  ) )
+  )
   if(normalize) normalize_sgr(res) else res
 }
 #' @export

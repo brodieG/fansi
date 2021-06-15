@@ -159,7 +159,7 @@ substr2_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
-  args <- validate(
+  VAL_IN_ENV(
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
     carry=carry, terminate=terminate, tab.stops=tab.stops,
     tabs.as.spaces=tabs.as.spaces
@@ -192,19 +192,16 @@ substr2_ctl <- function(
   res <- x
   no.na <- !(is.na(x) | is.na(start & stop))
 
-  res[no.na] <- with(
-    args,
-    substr_ctl_internal(
-      x[no.na], start=start[no.na], stop=stop[no.na],
-      type.int=type.m,
-      tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
-      term.cap.int=term.cap.int,
-      round.start=round == 'start' || round == 'both',
-      round.stop=round == 'stop' || round == 'both',
-      x.len=length(x),
-      ctl.int=ctl.int, normalize=normalize,
-      carry=carry, terminate=terminate
-    )
+  res[no.na] <- substr_ctl_internal(
+    x[no.na], start=start[no.na], stop=stop[no.na],
+    type.int=type.m,
+    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
+    term.cap.int=term.cap.int,
+    round.start=round == 'start' || round == 'both',
+    round.stop=round == 'stop' || round == 'both',
+    x.len=length(x),
+    ctl.int=ctl.int, normalize=normalize,
+    carry=carry, terminate=terminate
   )
   res[!no.na] <- NA_character_
   res

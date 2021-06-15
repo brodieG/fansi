@@ -109,31 +109,29 @@ strwrap_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
-  args <- validate(
+  VAL_IN_ENV(
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
     carry=carry, terminate=terminate
   )
-  args.basic <- validate_wrap_basic(width, indent, exdent, prefix, initial)
-  with(
-    c(args.basic, args), {
-      res <- .Call(
-        FANSI_strwrap_csi,
-        x, width, indent, exdent,
-        enc2utf8(prefix), enc2utf8(initial),
-        FALSE, "",
-        TRUE,
-        FALSE, 8L,
-        warn, term.cap.int,
-        FALSE,   # first_only
-        ctl.int, normalize,
-        carry, terminate
-      )
-      if(simplify) {
-        if(normalize) normalize_sgr(unlist(res), warn, term.cap)
-        else unlist(res)
-      } else {
-        if(normalize) normalize_sgr_list(res, warn, term.cap.int) else res
-  } } )
+  VAL_WRAP_IN_ENV(width, indent, exdent, prefix, initial, pad.end="")
+  res <- .Call(
+    FANSI_strwrap_csi,
+    x, width, indent, exdent,
+    prefix, initial,
+    FALSE, "",
+    TRUE,
+    FALSE, 8L,
+    warn, term.cap.int,
+    FALSE,   # first_only
+    ctl.int, normalize,
+    carry, terminate
+  )
+  if(simplify) {
+    if(normalize) normalize_sgr(unlist(res), warn, term.cap)
+    else unlist(res)
+  } else {
+    if(normalize) normalize_sgr_list(res, warn, term.cap.int) else res
+  }
 }
 #' @export
 #' @rdname strwrap_ctl
@@ -150,57 +148,43 @@ strwrap2_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
-  args.basic <-
-    validate_wrap_basic(width, indent, exdent, prefix, initial, pad.end)
-  args <- validate(
-    x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
-    carry=carry, terminate=terminate, tab.stops=tab.stops,
-    tabs.as.spaces=tabs.as.spaces, strip.spaces=strip.spaces
-  )
-  if(!is.character(pad.end) || length(pad.end) != 1 || nchar(pad.end) > 1)
-    stop("Argument `pad.end` must be a one character or empty string.")
   if(!is.logical(wrap.always)) wrap.always <- as.logical(wrap.always)
   if(length(wrap.always) != 1L || is.na(wrap.always))
     stop("Argument `wrap.always` must be TRUE or FALSE.")
   if(!is.logical(tabs.as.spaces)) tabs.as.spaces <- as.logical(tabs.as.spaces)
   if(wrap.always && width < 2L)
     stop("Width must be at least 2 in `wrap.always` mode.")
-  if(!is.character(prefix)) prefix <- as.character(prefix)
-  if(length(prefix) != 1L)
-    stop("Argument `prefix` must be a scalar character.")
-  if(!is.character(initial)) initial <- as.character(initial)
-  if(length(initial) != 1L)
-    stop("Argument `initial` must be a scalar character.")
-  prefix <- enc2utf8(prefix)
-  if(Encoding(prefix) == "bytes")
-    stop("Argument `prefix` cannot be \"bytes\" encoded.")
-  initial <- enc2utf8(initial)
-  if(Encoding(initial) == "bytes")
-    stop("Argument `initial` cannot be \"bytes\" encoded.")
+  VAL_IN_ENV (
+    x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
+    carry=carry, terminate=terminate, tab.stops=tab.stops,
+    tabs.as.spaces=tabs.as.spaces, strip.spaces=strip.spaces
+  )
+  if(tabs.as.spaces && strip.spaces)
+    stop("`tabs.as.spaces` and `strip.spaces` should not both be TRUE.")
+  # This changes `width`, so needs to happen after the first width validation
+  VAL_WRAP_IN_ENV(width, indent, exdent, prefix, initial, pad.end)
 
   tab.stops <- as.integer(tab.stops)
 
-  with(
-    c(args.basic, args), {
-      res <- .Call(
-        FANSI_strwrap_csi,
-        x, width,
-        indent, exdent,
-        prefix, initial,
-        wrap.always, pad.end,
-        strip.spaces,
-        tabs.as.spaces, tab.stops,
-        warn, term.cap.int,
-        FALSE,   # first_only
-        ctl.int, normalize,
-        carry, terminate
-      )
-      if(simplify) {
-        if(normalize) normalize_sgr(unlist(res), warn, term.cap)
-        else unlist(res)
-      } else {
-        if(normalize) normalize_sgr_list(res, warn, term.cap.int) else res
-  } } )
+  res <- .Call(
+    FANSI_strwrap_csi,
+    x, width,
+    indent, exdent,
+    prefix, initial,
+    wrap.always, pad.end,
+    strip.spaces,
+    tabs.as.spaces, tab.stops,
+    warn, term.cap.int,
+    FALSE,   # first_only
+    ctl.int, normalize,
+    carry, terminate
+  )
+  if(simplify) {
+    if(normalize) normalize_sgr(unlist(res), warn, term.cap)
+    else unlist(res)
+  } else {
+    if(normalize) normalize_sgr_list(res, warn, term.cap.int) else res
+  }
 }
 #' @export
 #' @rdname strwrap_ctl
@@ -245,10 +229,11 @@ strwrap2_sgr <- function(
     carry=carry, terminate=terminate
   )
 
-validate_wrap_basic <- function(
+VAL_WRAP_IN_ENV <- function(
   width, indent, exdent, prefix, initial, pad.end
 ) {
   call <- sys.call(-1)
+  env <- parent.frame()
   stop2 <- function(x) stop(simpleError(x, call))
   is_scl_int_pos <- function(x, name, strict=FALSE) {
     x <- as.integer(x)
@@ -259,17 +244,48 @@ validate_wrap_basic <- function(
       stop2(
         sprintf(
           "Argument `%s` %s.", name,
-          "must be a positive scalar numeric representable as integer."
+          "must be a positive scalar numeric representable as integer"
       ) )
     x
   }
-  width <- is_scl_int_pos(width, 'width', strict=TRUE)
   exdent <- is_scl_int_pos(exdent, 'exdent', strict=FALSE)
   indent <- is_scl_int_pos(indent, 'indent', strict=FALSE)
-  width <- max(c(as.integer(width) - 1L, 1L))
+  if(is.numeric(width))
+    width <- as.integer(min(c(max(c(min(width), 2L)), .Machine$integer.max)))
+  else stop2("Argument `width` must be numeric.")
+  # technically
+  width <- is_scl_int_pos(width, 'width', strict=TRUE)
+  width <- width - 1L
 
-  list(
-    width=width, indent=indent, exdent=exdent, prefix=prefix, initial=initial
+  if(!is.character(prefix)) prefix <- as.character(prefix)
+  if(length(prefix) != 1L)
+    stop2("Argument `prefix` must be a scalar character.")
+  prefix <- enc2utf8(prefix)
+  if(Encoding(prefix) == "bytes")
+    stop2("Argument `prefix` cannot be \"bytes\" encoded.")
+
+  if(!is.character(initial)) initial <- as.character(initial)
+  if(length(initial) != 1L)
+    stop2("Argument `initial` must be a scalar character.")
+  initial <- enc2utf8(initial)
+  if(Encoding(initial) == "bytes")
+    stop2("Argument `initial` cannot be \"bytes\" encoded.")
+
+  if(!is.character(pad.end)) pad.end <- as.character(pad.end)
+  if(length(pad.end) != 1L)
+    stop2("Argument `pad.end` must be a scalar character.")
+  pad.end <- enc2utf8(pad.end)
+  if(Encoding(pad.end) == "bytes")
+    stop2("Argument `pad.end` cannot be \"bytes\" encoded.")
+  if(nchar(pad.end, type='bytes') > 1L)
+    stop2("Argument `pad.end` must be at most one byte long.")
+
+  list2env(
+    list(
+      width=width, indent=indent, exdent=exdent, prefix=prefix, initial=initial,
+      pad.end=pad.end
+    ),
+    env
   )
 }
 
