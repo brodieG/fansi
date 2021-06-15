@@ -505,22 +505,28 @@ SEXP FANSI_sgr_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm) {
  * R interface for state_at_position
  * @param string we're interested in state of
  * @param pos integer positions along the string, one index, sorted
+ *
+ * No carry param, that should be R-level.
  */
 
 SEXP FANSI_state_at_pos_ext(
   SEXP x, SEXP pos, SEXP type,
   SEXP lag, SEXP ends,
   SEXP warn, SEXP term_cap, SEXP ctl,
-  SEXP norm, SEXP carry
+  SEXP norm
 ) {
   /*******************************************\
   * IMPORTANT: INPUT MUST ALREADY BE IN UTF8! *
   \*******************************************/
 
   // errors shoudl be handled R side, but just in case
-  FANSI_val_args(x, norm, carry);
   if(XLENGTH(x) != 1 || STRING_ELT(x, 0) == NA_STRING)
     error("Argument `x` must be scalar character and not be NA.");   // nocov
+  if(
+      TYPEOF(norm) != LGLSXP || XLENGTH(norm) != 1 || 
+      asLogical(norm) == NA_LOGICAL
+    )
+    error("Argument `normalize` must be TRUE or FALSE.");      // nocov
   if(TYPEOF(pos) != INTSXP)
     error("Argument `pos` must be integer.");          // nocov
   if(TYPEOF(lag) != LGLSXP)
@@ -534,10 +540,6 @@ SEXP FANSI_state_at_pos_ext(
   SEXP R_true = PROTECT(ScalarLogical(1)); ++prt;
   R_xlen_t len = XLENGTH(pos);
   int normalize = asInteger(norm);
-
-  // Read-in any pre-existing state to carry; we don't need to worry about
-  // explicitly handling carrying across positions as that is done at R level
-  struct FANSI_sgr sgr_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
 
   const int res_cols = 4;  // if change this, need to change rownames init
   if(len > R_XLEN_T_MAX / res_cols) {
@@ -586,8 +588,6 @@ SEXP FANSI_state_at_pos_ext(
   struct FANSI_state state = FANSI_state_init_full(
     x, warn, term_cap, R_true, R_true, type, ctl, (R_xlen_t) 0
   );
-  state.sgr = sgr_carry;
-
   struct FANSI_state state_prev = state;
   state_pair.cur = state;
   state_pair.prev = state_prev;

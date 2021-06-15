@@ -105,12 +105,8 @@ static SEXP normalize_sgr_int(
   PROTECT_WITH_INDEX(res, &ipx); ++prt;
 
   SEXP ctl = PROTECT(ScalarInteger(1)); ++prt;  // "all"
-  int do_carry = STRING_ELT(carry, 1) != NA_STRING;
+  int do_carry = STRING_ELT(carry, 0) != NA_STRING;
   struct FANSI_sgr sgr_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
-
-  struct FANSI_state state_prev =
-    FANSI_state_init(x, warn, term_cap, (R_xlen_t)0);
-  state_prev.sgr = sgr_carry;
 
   for(R_xlen_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i + index0);
@@ -120,10 +116,12 @@ static SEXP normalize_sgr_int(
     // Measure
     struct FANSI_state state_start, state;
     state = FANSI_state_init(x, warn, term_cap, i);
-    if(do_carry) state.sgr = state_prev.sgr;
+    if(do_carry) state.sgr = sgr_carry;
     state_start = state;
 
     int len = normalize(NULL, &state, i);
+    sgr_carry = state.sgr;
+
     if(len < 0) continue;
 
     // Write
@@ -138,7 +136,6 @@ static SEXP normalize_sgr_int(
       PROTECT(FANSI_mkChar(buff->buff, buff->buff + len, chr_type, i));
     SET_STRING_ELT(res, i, reschr);
     UNPROTECT(1);
-    state_prev = state;
   }
   UNPROTECT(prt);
   return res;
@@ -148,8 +145,12 @@ SEXP FANSI_normalize_sgr_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP carry) {
   if(TYPEOF(x) != STRSXP)
     error("Internal Error: `x` must be a character vector");  // nocov
 
-  struct FANSI_buff buff = {.buff=NULL, .len=0};
-  return normalize_sgr_int(x, warn, term_cap, carry, &buff, 0);
+  struct FANSI_buff buff;
+  FANSI_INIT_BUFF(&buff);
+  SEXP res = PROTECT(normalize_sgr_int(x, warn, term_cap, carry, &buff, 0));
+  FANSI_release_buff(&buff, 1);
+  UNPROTECT(1);
+  return res;
 }
 // List version to use with result of `strwrap_ctl(..., unlist=FALSE)`
 // Just a lower overhead version.
@@ -162,7 +163,8 @@ SEXP FANSI_normalize_sgr_list_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP carry) 
   // Reserve spot on protection stack
   PROTECT_INDEX ipx;
   PROTECT_WITH_INDEX(res, &ipx);
-  struct FANSI_buff buff = {.buff=NULL, .len=0};
+  struct FANSI_buff buff;
+  FANSI_INIT_BUFF(&buff);
 
   R_xlen_t i0 = 0;  // for interrupt across vector elements
   R_xlen_t llen = XLENGTH(x);
@@ -179,6 +181,7 @@ SEXP FANSI_normalize_sgr_list_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP carry) 
     }
     UNPROTECT(1);
   }
+  FANSI_release_buff(&buff, 1);
   UNPROTECT(1);
   return res;
 }

@@ -355,7 +355,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn);
   SEXP FANSI_state_at_pos_ext(
     SEXP x, SEXP pos, SEXP type, SEXP lag, SEXP ends,
-    SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry
+    SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm
   );
   SEXP FANSI_strwrap_ext(
     SEXP x, SEXP width,

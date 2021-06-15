@@ -4,6 +4,11 @@ These are internal developer notes.
 
 ## Todo
 
+* This is definitely not parsimonious...  Maybe fix when we move substr to C?
+
+    > substr_ctl("", 2, 4, carry = "\033[33m")
+    [1] "\033[33m\033[0m"
+
 * It's possible we messed up and `sgr_to_html` had carry semantics whereas other
   stuff did not.
 

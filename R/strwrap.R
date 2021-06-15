@@ -55,6 +55,11 @@
 #'   are implicit in boundaries between vector elements.
 #' @param tabs.as.spaces FALSE (default) or TRUE, whether to convert tabs to
 #'   spaces.  This can only be set to TRUE if `strip.spaces` is FALSE.
+#' @note For the `strwrap*` functions the `carry` parameter affects whether
+#'   styles are carried across _input_ vector elements.  Styles always carry
+#'   within a single wrapped vector element (e.g. if one of the input elements
+#'   gets wrapped into three lines, the styles will carry through those three
+#'   lines even if `carry=FALSE`, but not across input vector elements).
 #' @export
 #' @examples
 #' hello.1 <- "hello \033[41mred\033[49m world"
@@ -120,7 +125,8 @@ strwrap_ctl <- function(
         FALSE, 8L,
         warn, term.cap.int,
         FALSE,   # first_only
-        ctl.int, normalize
+        ctl.int, normalize,
+        carry, terminate
       )
       if(simplify) {
         if(normalize) normalize_sgr(unlist(res), warn, term.cap)
@@ -180,13 +186,14 @@ strwrap2_ctl <- function(
         FANSI_strwrap_csi,
         x, width,
         indent, exdent,
-        enc2utf8(prefix), enc2utf8(initial),
+        prefix, initial,
         wrap.always, pad.end,
         strip.spaces,
         tabs.as.spaces, tab.stops,
         warn, term.cap.int,
         FALSE,   # first_only
-        ctl.int, normalize
+        ctl.int, normalize,
+        carry, terminate
       )
       if(simplify) {
         if(normalize) normalize_sgr(unlist(res), warn, term.cap)
@@ -256,13 +263,13 @@ validate_wrap_basic <- function(
       ) )
     x
   }
-  width <- is_scl_int_pos(x, 'width', strict=TRUE)
-  exdent <- is_scl_int_pos(x, 'exdent', strict=FALSE)
-  indent <- is_scl_int_pos(x, 'indent', strict=FALSE)
+  width <- is_scl_int_pos(width, 'width', strict=TRUE)
+  exdent <- is_scl_int_pos(exdent, 'exdent', strict=FALSE)
+  indent <- is_scl_int_pos(indent, 'indent', strict=FALSE)
   width <- max(c(as.integer(width) - 1L, 1L))
 
   list(
-    width=width, indent=indent, exdent=extent, prefix=prefix, initial=initial
+    width=width, indent=indent, exdent=exdent, prefix=prefix, initial=initial
   )
 }
 

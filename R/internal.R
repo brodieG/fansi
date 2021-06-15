@@ -124,10 +124,10 @@ validate <- function(...) {
       stop2("Argument `carry` must be scalar.")
     if(!is.logical(carry) && !is.character(carry))
       stop2("Argument `carry` must be logical or character.")
-    if(is.na(carry)) carry <- as.character(carry)
-    else {
-      if(is.logical(carry)) if(carry) carry <- "" else carry = NA_character_
-    }
+    if(is.na(carry))
+      stop2("Argument `carry` may not be NA.")
+
+    if(is.logical(carry)) if(carry) carry <- "" else carry = NA_character_
     args[['carry']] <- carry
   }
   if('terminate' %in% names(args)) {
@@ -156,6 +156,7 @@ validate <- function(...) {
     args[['tabs.as.spaces']] <- tabs.as.spaces
   }
   if('strip.spaces' %in% names(args)) {
+    strip.spaces <- args[['strip.spaces']]
     if(!is.logical(strip.spaces)) strip.spaces <- as.logical(strip.spaces)
     if(length(strip.spaces) != 1L || is.na(strip.spaces))
       stop("Argument `strip.spaces` must be TRUE or FALSE.")

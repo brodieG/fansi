@@ -85,7 +85,7 @@ struct FANSI_sgr FANSI_carry_init(
   SEXP carry, SEXP warn, SEXP term_cap, SEXP ctl
 ) {
   int prt = 0;
-  int do_carry = STRING_ELT(carry, 1) != NA_STRING;
+  int do_carry = STRING_ELT(carry, 0) != NA_STRING;
   SEXP carry_string;
   if(do_carry) {
     carry_string = PROTECT(carry); ++prt;

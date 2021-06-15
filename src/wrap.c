@@ -504,6 +504,7 @@ SEXP FANSI_strwrap_ext(
     error("Internal Error: arg type error 1; contact maintainer.");  // nocov
 
   int normalize = asLogical(norm);
+  int prt = 0;
 
   const char * pad = CHAR(asChar(pad_end));
   if(*pad != 0 && (*pad < 0x20 || *pad > 0x7e))
@@ -559,20 +560,19 @@ SEXP FANSI_strwrap_ext(
   // and initial, so we don't either
   int strip_spaces_int = asInteger(strip_spaces);
 
-  if(strip_spaces_int) x = PROTECT(FANSI_process(x, &buff));
-  else PROTECT(x);
+  if(strip_spaces_int) {x = PROTECT(FANSI_process(x, &buff)); ++prt;}
 
   // and tabs
   if(asInteger(tabs_as_spaces)) {
     x = PROTECT(FANSI_tabs_as_spaces(x, tab_stops, &buff, warn, term_cap, ctl));
+    ++prt;
     prefix = PROTECT(
       FANSI_tabs_as_spaces(prefix, tab_stops, &buff, warn, term_cap, ctl)
-    );
+    ); ++prt;
     initial = PROTECT(
       FANSI_tabs_as_spaces(initial, tab_stops, &buff, warn, term_cap, ctl)
-    );
+    ); ++prt;
   }
-  else x = PROTECT(PROTECT(PROTECT(x)));  // PROTECT stack balance
 
   // Check that widths are feasible, although really only relevant if in strict
   // mode
@@ -593,9 +593,8 @@ SEXP FANSI_strwrap_ext(
     );
 
   // Prep for carry
-  int do_carry = STRING_ELT(carry, 1) != NA_STRING;
+  int do_carry = STRING_ELT(carry, 0) != NA_STRING;
   struct FANSI_sgr sgr_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
-  UNPROTECT(1);
 
   // Could be a little faster avoiding this allocation if it turns out nothing
   // needs to be wrapped and we're in simplify=TRUE, but that seems like a lot
@@ -605,9 +604,9 @@ SEXP FANSI_strwrap_ext(
 
   if(first_only_int) {
     // this is to support trim mode
-    res = PROTECT(allocVector(STRSXP, x_len));
+    res = PROTECT(allocVector(STRSXP, x_len)); ++prt;
   } else {
-    res = PROTECT(allocVector(VECSXP, x_len));
+    res = PROTECT(allocVector(VECSXP, x_len)); ++prt;
   }
 
   // Wrap each element
@@ -639,6 +638,6 @@ SEXP FANSI_strwrap_ext(
     UNPROTECT(1);
   }
   FANSI_release_buff(&buff, 1);
-  UNPROTECT(5);
+  UNPROTECT(prt);
   return res;
 }

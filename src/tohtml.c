@@ -367,7 +367,7 @@ SEXP FANSI_esc_to_html(
   FANSI_INIT_BUFF(&buff);
 
   SEXP ctl = PROTECT(ScalarInteger(1));  // "all"
-  int do_carry = STRING_ELT(carry, 1) != NA_STRING;
+  int do_carry = STRING_ELT(carry, 0) != NA_STRING;
   struct FANSI_sgr sgr_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
   UNPROTECT(1);
 
