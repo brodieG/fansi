@@ -25,7 +25,7 @@
 #' `substr2_ctl` and `substr2_sgr` add the ability to retrieve substrings based
 #' on display width, and byte width in addition to the normal character width.
 #' `substr2_ctl` also provides the option to convert tabs to spaces with
-#' [tabs_as_spaces] prior to taking substrings.
+#' [`tabs_as_spaces`] prior to taking substrings.
 #'
 #' Because exact substrings on anything other than character width cannot be
 #' guaranteed (e.g. as a result of multi-byte encodings, or double display-width
@@ -62,11 +62,14 @@
 #' `*_ctl` versions with the `ctl` parameter set to "sgr".
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
+#'   Width calculations will not work properly in R < 3.2.2.
 #' @inheritParams base::substr
 #' @export
-#' @seealso [`fansi`] for details on how _Control Sequences_ are
+#' @seealso [`?fansi`][fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results,
-#'   [`normalize_sgr`] for more details on what the `normalize` parameter does.
+#'   [`normalize_sgr`] for more details on what the `normalize` parameter does,
+#'   [`sgr_at_end`] to compute active SGR at the end of strings, [`close_sgr`]
+#'   to compute the SGR required to close active SGR.
 #' @param x a character vector or object that can be coerced to such.
 #' @param type character(1L) partial matching `c("chars", "width")`, although
 #'   `type="width"` only works correctly with R >= 3.2.2.  With "width", whether
@@ -99,18 +102,32 @@
 #' @param warn TRUE (default) or FALSE, whether to warn when potentially
 #'   problematic _Control Sequences_ are encountered.  These could cause the
 #'   assumptions `fansi` makes about how strings are rendered on your display
-#'   to be incorrect, for example by moving the cursor (see [fansi]).
+#'   to be incorrect, for example by moving the cursor (see [`?fansi`][fansi]).
 #' @param term.cap character a vector of the capabilities of the terminal, can
 #'   be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
 #'   starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
 #'   "38;2" or "48;2"). Changing this parameter changes how `fansi`
 #'   interprets escape sequences, so you should ensure that it matches your
-#'   terminal capabilities. See [term_cap_test] for details.
+#'   terminal capabilities. See [`term_cap_test`] for details.
 #' @param normalize TRUE or FALSE (default) whether SGR sequence should be
 #'   normalized out such that there is one distinct sequence for each SGR code.
 #'   normalized strings will occupy more space (e.g. "\033[31;42m" becomes
 #'   "\033[31m\033[42m"), but will work better with code that assumes each SGR
 #'   code will be in its own escape as `crayon` does.
+#' @param carry TRUE, FALSE, or a scalar string, controls whether active SGR
+#'   present at the end of an input vector element is carried into the next
+#'   vector element.  If FALSE each vector element is interpreted as if there
+#'   were no active SGR present when they begin.  If character, then the active
+#'   SGR at the end of the `carry` string is carried into the first element of
+#'   `x`.  For every function except [`sgr_to_html`] this argument defaults to
+#'   FALSE.  See the "SGR Interactions" section of [`?fansi`][fansi] for
+#'   details.
+#' @param terminate TRUE (default) or FALSE whether substrings should have
+#'   active SGR closed to avoid it bleeding into other strings they may be
+#'   prepended onto.  See the "SGR Interactions" section of [`?fansi`][fansi] for
+#'   details.
+#' @return a character vector of the same length and with the same attributes as
+#'   x (after possible coercion and re-encoding to UTF-8).
 #' @examples
 #' substr_ctl("\033[42mhello\033[m world", 1, 9)
 #' substr_ctl("\033[42mhello\033[m world", 3, 9)
@@ -118,9 +135,7 @@
 #' ## Width 2 and 3 are in the middle of an ideogram as
 #' ## start and stop positions respectively, so we control
 #' ## what we get with `round`
-#'
 #' cn.string <- paste0("\033[42m", "\u4E00\u4E01\u4E03", "\033[m")
-#'
 #' substr2_ctl(cn.string, 2, 3, type='width')
 #' substr2_ctl(cn.string, 2, 3, type='width', round='both')
 #' substr2_ctl(cn.string, 2, 3, type='width', round='start')
@@ -128,10 +143,19 @@
 #'
 #' ## the _sgr variety only treat as special CSI SGR,
 #' ## compare the following:
-#'
 #' substr_sgr("\033[31mhello\tworld", 1, 6)
 #' substr_ctl("\033[31mhello\tworld", 1, 6)
 #' substr_ctl("\033[31mhello\tworld", 1, 6, ctl=c('all', 'c0'))
+#'
+#' ## `carry` allows SGR to carry from one element to the next
+#' substr_sgr(c("\033[33mhello", "world"), 1, 3)
+#' substr_sgr(c("\033[33mhello", "world"), 1, 3, carry=TRUE)
+#' substr_sgr(c("\033[33mhello", "world"), 1, 3, carry="\033[44m")
+#'
+#' ## We can omit the termination
+#' bleed <- substr_sgr(c("\033[41hello", "world"), 1, 3, terminate=FALSE)
+#' \dontrun{writeLines(bleed)} # Style will bleed out of string
+#' writeLines("\033[m")        # Stop bleeding if needed
 
 substr_ctl <- function(
   x, start, stop,

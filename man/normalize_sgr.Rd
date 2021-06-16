@@ -7,23 +7,33 @@
 normalize_sgr(
   x,
   warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap")
+  term.cap = getOption("fansi.term.cap"),
+  carry = getOption("fansi.carry", FALSE)
 )
 }
 \arguments{
-\item{x}{character vector to normalize the SGR control sequences of.}
+\item{x}{a character vector or object that can be coerced to such.}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
-to be incorrect, for example by moving the cursor (see \link{fansi}).}
+to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
 starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
 "38;2" or "48;2"). Changing this parameter changes how \code{fansi}
 interprets escape sequences, so you should ensure that it matches your
-terminal capabilities. See \link{term_cap_test} for details.}
+terminal capabilities. See \code{\link{term_cap_test}} for details.}
+
+\item{carry}{TRUE, FALSE, or a scalar string, controls whether active SGR
+present at the end of an input vector element is carried into the next
+vector element.  If FALSE each vector element is interpreted as if there
+were no active SGR present when they begin.  If character, then the active
+SGR at the end of the \code{carry} string is carried into the first element of
+\code{x}.  For every function except \code{\link{sgr_to_html}} this argument defaults to
+FALSE.  See the "SGR Interactions" section of \code{\link[=fansi]{?fansi}} for
+details.}
 }
 \value{
 \code{x}, with all SGRs normalized.
@@ -47,12 +57,11 @@ other than it should be consistent for any given SGR state.
 The underlying assumption is that each element in the vector is
 unaffected by any styles in any other element or elsewhere.  This may
 lead to surprising outcomes if these assumptions are untrue (see
-examples).
+examples).  You may adjust this assumption with the \code{carry} parameter.
 
 Normalization was implemented primarily for better compatibility with
 \href{https://cran.r-project.org/package=crayon}{\code{crayon}} which emits SGR codes individually and assumes that
-individual each opening code is paired up with its specific closing
-code.
+each opening code is paired up with its specific closing code.
 }
 \examples{
 normalize_sgr("hello\033[42;33m world")
@@ -69,14 +78,16 @@ identical(
   normalize_sgr("\033[31;32mhello\033[m"),
   normalize_sgr("\033[31mhe\033[49mllo\033[m")
 )
-## External SGR will defeat normalization
+## External SGR will defeat normalization, unless we `carry` it
+red <- "\033[41m"
 writeLines(
   c(
-    paste("\033[31m", "he\033[0mllo", "\033[0m"),
-    paste("\033[31m", normalize_sgr("he\033[0mllo"), "\033[0m")
+    paste(red, "he\033[0mllo", "\033[0m"),
+    paste(red, normalize_sgr("he\033[0mllo"), "\033[0m")
+    paste(red, normalize_sgr("he\033[0mllo", carry=red), "\033[0m")
 ) )
 }
 \seealso{
-\code{\link{fansi}} for details on how \emph{Control Sequences} are
+\code{\link[=fansi]{?fansi}} for details on how \emph{Control Sequences} are
 interpreted, particularly if you are getting unexpected results.
 }

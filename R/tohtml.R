@@ -50,10 +50,7 @@
 #' @export
 #' @family HTML functions
 #' @inheritParams substr_ctl
-#' @seealso [`fansi`] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results,
-#'   [`set_knit_hooks`] for how to use ANSI CSI styled text with knitr and HTML
-#'   output, [`sgr_256`] to generate a demo string with all 256 8 bit colors.
+#' @inherit substr_ctl seealso
 #' @param classes FALSE (default), TRUE, or character vector of either 16,
 #'   32, or 512 class names.  Character strings may only contain ASCII
 #'   characters corresponding to letters, numbers, the hyphen, or the

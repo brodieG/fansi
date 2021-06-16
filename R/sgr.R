@@ -29,10 +29,9 @@
 #' **but** that option will be stripped.
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
-#' @seealso [fansi] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results.
 #' @inheritParams substr_ctl
 #' @inheritSection substr_ctl _ctl vs. _sgr
+#' @inherit has_ctl seealso
 #' @export
 #' @param ctl character, any combination of the following values (see details):
 #'   * "nl": strip newlines.
@@ -87,7 +86,7 @@ strip_sgr <- function(x, warn=getOption('fansi.warn')) {
 #' with the `ctl` parameter.
 #'
 #' @export
-#' @seealso [fansi] for details on how _Control Sequences_ are
+#' @seealso [`?fansi`][fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results.
 #' @inheritParams substr_ctl
 #' @inheritParams strip_ctl
@@ -123,16 +122,16 @@ has_sgr <- function(x, warn=getOption('fansi.warn'))
 #'
 #' `sgr_at_end` read input strings computing the accumulated SGR codes until the
 #' end of the string and outputs the active SGR code at the end of it.
-#'
 #' `close_sgr` produces the ANSI CSI SGR sequence that closes active SGR codes
 #' at the end of the input string.  If `normalize = FALSE` (default), it will
 #' issue the global closing SGR "ESC[0m", so it is only interesting if
 #' `normalize = TRUE`.  Unlike `sgr_at_end` and other functions `close_sgr` has
-#' no concept of `carry`: it will only close SGR codes activated within each
-#' element.
+#' no concept of `carry`: it will only close SGR codes activated within an
+#' element that are still active at the end of that element.
 #'
 #' @export
 #' @inheritParams substr_ctl
+#' @inherit has_ctl seealso
 #' @return character vector same length as `x`.
 #' @examples
 #' x <- c("\033[44mhello", "\033[33mworld")

@@ -111,6 +111,45 @@ the effect is the same as replacement (e.g. if you have a color active and
 pick another one).
 }
 
+\section{SGR Interactions}{
+
+
+The cumulative nature of SGR means that SGR in strings that are spliced will
+interact with each other.  Additionally, a substring does not inherently
+contain all the information required to recreate its formatting as it
+appeared in its source string.
+
+One form of possible interaction to consider is how a character vector
+provided to \code{fansi} functions interacts with itself.  By default, \code{fansi}
+assumes that each element in an input character vector is independent, but
+this is incorrect if the input is a single document with each element a line
+in it.  In that situation unterminated SGR from each line should bleed into
+subsequent ones.  Setting \code{carry = TRUE} enables the "single document"
+interpretation. \code{\link{sgr_to_html}} is the exception as for legacy reasons it
+defaults to \code{carry = TRUE}.
+
+Another form of interaction is when substrings produced by \code{fansi} are
+spliced with or into other substrings.  By default \code{fansi} automatically
+terminates substrings it produces if they contain active SGR.  This prevents
+the SGR therein from affecting display of external strings, which is useful
+e.g. when arranging text in columns.  We can allow the SGR to bleed into
+appended strings by setting \code{terminate = FALSE}.  \code{carry} is unaffected by
+\code{terminate} as \code{fansi} records the ending SGR state prior to termination
+internally.
+
+Finally, \code{fansi} strings will be affected by any active SGR in strings they
+are appended to.  There are no parameters to control what happens
+automatically in this case, but \code{fansi} provides several functions that can
+help the user get their desired outcome.  \code{sgr_at_end} computes the active
+SGR at the end of a string, this can then be prepended onto the \emph{input} of
+\code{fansi} functions so that they are aware of what the active style at the
+beginning of the string.  Alternatively, one could use
+\code{close_sgr(sgr_at_end(...))} and pre-pend that to the \emph{output} of \code{fansi}
+functions so they are unaffected by preceding SGR.  One could also just
+prepend "ESC[0m", but in some cases as described in
+\code{\link[=normalize_sgr]{?normalize_sgr}} that is sub-optimal.
+}
+
 \section{Encodings / UTF-8}{
 
 
@@ -160,6 +199,23 @@ computations, but for simplicity and also because R and our terminal do not
 do it properly either we are deferring the issue for now.
 }
 
+\section{Overflow}{
+
+
+The maximum length of input character vector elements allowed by \code{fansi} is
+the 32 bit INT_MAX, excluding the terminating NULL.  This appears to be the
+limit for R character vector elements generally, but is enforced at the C
+level nonetheless.
+
+It is possible that during processing strings that are shorter than INT_MAX
+would become longer than that. \code{fansi} checks for that overflow and will
+stop with an error if that happens.  A work-around for this situation is to
+break up large strings into smaller ones.  The limit is on each element of a
+character vector, not on the vector as a whole.  \code{fansi} will also error on
+your system if \code{R_len_t}, the R type used to measure string lengths, is less
+than the processed length of the string.
+}
+
 \section{R < 3.2.2 support}{
 
 
@@ -171,23 +227,5 @@ assume every character is 1 display width.  Additionally, \code{fansi} may not
 always report malformed UTF-8 sequences as it usually does.  One
 exception to this is \code{\link{nchar_ctl}} as that is just a thin wrapper around
 \code{\link[base:nchar]{base::nchar}}.
-}
-
-\section{Overflow}{
-
-
-The native code in this package assumes that all strings are NULL terminated
-and no longer than (32 bit) INT_MAX (excluding the NULL).  This should be a
-safe assumption since the code is designed to work with STRSXPs and CHRSXPs.
-Behavior is undefined and probably bad if you somehow manage to provide to
-\code{fansi} strings that do not adhere to these assumptions.
-
-It is possible that during processing strings that are shorter than INT_MAX
-would become longer than that. \code{fansi} checks for that overflow and will
-stop with an error if that happens.  A work-around for this situation is to
-break up large strings into smaller ones.  The limit is on each element of a
-character vector, not on the vector as a whole.  \code{fansi} will also error on
-your system if \code{R_len_t}, the R type used to measure string lengths, is less
-than the processed length of the string.
 }
 

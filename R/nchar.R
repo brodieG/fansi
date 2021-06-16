@@ -34,9 +34,7 @@
 #' @inheritSection substr_ctl _ctl vs. _sgr
 #' @note the `keepNA` parameter is ignored for R < 3.2.2.
 #' @export
-#' @seealso [fansi] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results,
-#'   [`strip_ctl`] for removing _Control Sequences_.
+#' @inherit has_ctl seealso
 #' @examples
 #' nchar_ctl("\033[31m123\a\r")
 #' ## with some wide characters

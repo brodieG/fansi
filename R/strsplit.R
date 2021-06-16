@@ -16,7 +16,7 @@
 
 #' ANSI Control Sequence Aware Version of strsplit
 #'
-#' A drop-in replacement for [base::strsplit].  It will be noticeably slower,
+#' A drop-in replacement for [`base::strsplit`].  It will be noticeably slower,
 #' but should otherwise behave the same way except for _Control Sequence_
 #' awareness.
 #'
@@ -28,20 +28,18 @@
 #' You can however limit which control sequences are treated specially via the
 #' `ctl` parameters (see examples).
 #'
-#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.  The
-#'   split positions are computed after both `x` and `split` are converted to
-#'   UTF-8.
-#' @seealso [`fansi`] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results,
-#'   [`normalize_sgr`] for more details on what the `normalize` parameter does,
-#'   [base::strsplit] for details on the splitting.
+#' @note The split positions are computed after both `x` and `split` are
+#'   converted to UTF-8.
 #' @export
-#' @param x a character vector, or, unlike [base::strsplit] an object that can
+#' @param x a character vector, or, unlike [`base::strsplit`] an object that can
 #'   be coerced to character.
 #' @inheritParams base::strsplit
 #' @inheritParams strwrap_ctl
+#' @inherit substr_ctl seealso
+#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
+#'   Width calculations will not work properly in R < 3.2.2.
 #' @inheritSection substr_ctl _ctl vs. _sgr
-#' @return list, see [base::strsplit].
+#' @inherit base::strsplit return
 #' @examples
 #' strsplit_sgr("\033[31mhello\033[42m world!", " ")
 #'
@@ -49,7 +47,6 @@
 #' ## normally doesn't work as newlines are _Control Sequences_
 #' strsplit_sgr("\033[31mhello\033[42m\nworld!", "\n")
 #' strsplit_ctl("\033[31mhello\033[42m\nworld!", "\n", ctl=c("all", "nl"))
-
 
 strsplit_ctl <- function(
   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,

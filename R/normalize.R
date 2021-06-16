@@ -37,15 +37,13 @@
 #'
 #' Normalization was implemented primarily for better compatibility with
 #' [`crayon`][1] which emits SGR codes individually and assumes that
-#' individual each opening code is paired up with its specific closing
-#' code.
+#' each opening code is paired up with its specific closing code.
 #'
 #' [1]: https://cran.r-project.org/package=crayon
 #'
 #' @export
-#' @seealso [`fansi`] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results.
 #' @inheritParams substr_ctl
+#' @inherit has_ctl seealso
 #' @return `x`, with all SGRs normalized.
 #' @examples
 #' normalize_sgr("hello\033[42;33m world")

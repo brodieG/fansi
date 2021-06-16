@@ -116,40 +116,42 @@
 #' the effect is the same as replacement (e.g. if you have a color active and
 #' pick another one).
 #'
-#' @section SGR Interactions
+#' @section SGR Interactions:
 #'
 #' The cumulative nature of SGR means that SGR in strings that are spliced will
-#' interact with each other, and that a substring does not contain all the
-#' formatting information that will affect its display.  Since context affects
-#' how SGR should be interpreted and output, `fansi` provides mechanisms by
-#' which to communicate the context.
+#' interact with each other.  Additionally, a substring does not inherently
+#' contain all the information required to recreate its formatting as it
+#' appeared in its source string.
 #'
-#' One form of interaction is how a character vector provided to `fansi`
-#' functions interact with itself.  By default, `fansi` assumes that each
-#' element in an input character vector is independent, but if the input
-#' represents a single document with each element a line in it, this is an
-#' incorrect interpretation.  In that situation SGR from a prior line should
-#' bleed into a subsequent line.  Setting `carry = TRUE` enables the "single
-#' document" interpretation.
+#' One form of possible interaction to consider is how a character vector
+#' provided to `fansi` functions interacts with itself.  By default, `fansi`
+#' assumes that each element in an input character vector is independent, but
+#' this is incorrect if the input is a single document with each element a line
+#' in it.  In that situation unterminated SGR from each line should bleed into
+#' subsequent ones.  Setting `carry = TRUE` enables the "single document"
+#' interpretation. [`sgr_to_html`] is the exception as for legacy reasons it
+#' defaults to `carry = TRUE`.
 #'
-#' Another form of interaction is when `fansi` processed substrings are spliced
-#' with or into other substrings.  By default `fansi` automatically terminates
-#' strings it processes if they contain active SGR.  This prevents the SGR
-#' therein from affecting display of external strings, which is useful e.g. when
-#' arranging text in columns.  We can allow the SGR to bleed into appended
-#' strings by setting `terminate = FALSE`.  `carry` is unaffected by `terminate`
-#' as `fansi` records the ending SGR state prior to termination internally.
+#' Another form of interaction is when substrings produced by `fansi` are
+#' spliced with or into other substrings.  By default `fansi` automatically
+#' terminates substrings it produces if they contain active SGR.  This prevents
+#' the SGR therein from affecting display of external strings, which is useful
+#' e.g. when arranging text in columns.  We can allow the SGR to bleed into
+#' appended strings by setting `terminate = FALSE`.  `carry` is unaffected by
+#' `terminate` as `fansi` records the ending SGR state prior to termination
+#' internally.
 #'
 #' Finally, `fansi` strings will be affected by any active SGR in strings they
 #' are appended to.  There are no parameters to control what happens
-#' automatically, but `fansi` provides several functions that can help the user
-#' get their desired outcome.  `sgr_at_end` computes the active SGR at the end
-#' of a string, this can then be prepended onto the _input_ of `fansi` functions
-#' so that they are aware of what the active style at the beginning of the
-#' string.  Alternatively, one could use `close_sgr(sgr_at_end(...))` and
-#' pre-pend that to the _output_ of `fansi` functions so they are unaffected by
-#' preceding SGR (one could also just prepend "ESC[0m", see `?normalize_sgr` for
-#' why that may not make sense).
+#' automatically in this case, but `fansi` provides several functions that can
+#' help the user get their desired outcome.  `sgr_at_end` computes the active
+#' SGR at the end of a string, this can then be prepended onto the _input_ of
+#' `fansi` functions so that they are aware of what the active style at the
+#' beginning of the string.  Alternatively, one could use
+#' `close_sgr(sgr_at_end(...))` and pre-pend that to the _output_ of `fansi`
+#' functions so they are unaffected by preceding SGR.  One could also just
+#' prepend "ESC[0m", but in some cases as described in
+#' [`?normalize_sgr`][normalize_sgr] that is sub-optimal.
 #'
 #' @section Encodings / UTF-8:
 #'
@@ -197,6 +199,21 @@
 #' computations, but for simplicity and also because R and our terminal do not
 #' do it properly either we are deferring the issue for now.
 #'
+#' @section Overflow:
+#'
+#' The maximum length of input character vector elements allowed by `fansi` is
+#' the 32 bit INT_MAX, excluding the terminating NULL.  This appears to be the
+#' limit for R character vector elements generally, but is enforced at the C
+#' level nonetheless.
+#'
+#' It is possible that during processing strings that are shorter than INT_MAX
+#' would become longer than that. `fansi` checks for that overflow and will
+#' stop with an error if that happens.  A work-around for this situation is to
+#' break up large strings into smaller ones.  The limit is on each element of a
+#' character vector, not on the vector as a whole.  `fansi` will also error on
+#' your system if `R_len_t`, the R type used to measure string lengths, is less
+#' than the processed length of the string.
+#'
 #' @section R < 3.2.2 support:
 #'
 #' Nominally you can build and run this package in R versions between 3.1.0 and
@@ -207,22 +224,6 @@
 #' always report malformed UTF-8 sequences as it usually does.  One
 #' exception to this is [`nchar_ctl`] as that is just a thin wrapper around
 #' [`base::nchar`].
-#'
-#' @section Overflow:
-#'
-#' The native code in this package assumes that all strings are NULL terminated
-#' and no longer than (32 bit) INT_MAX (excluding the NULL).  This should be a
-#' safe assumption since the code is designed to work with STRSXPs and CHRSXPs.
-#' Behavior is undefined and probably bad if you somehow manage to provide to
-#' `fansi` strings that do not adhere to these assumptions.
-#'
-#' It is possible that during processing strings that are shorter than INT_MAX
-#' would become longer than that. `fansi` checks for that overflow and will
-#' stop with an error if that happens.  A work-around for this situation is to
-#' break up large strings into smaller ones.  The limit is on each element of a
-#' character vector, not on the vector as a whole.  `fansi` will also error on
-#' your system if `R_len_t`, the R type used to measure string lengths, is less
-#' than the processed length of the string.
 #'
 #' @useDynLib fansi, .registration=TRUE, .fixes="FANSI_"
 #' @docType package

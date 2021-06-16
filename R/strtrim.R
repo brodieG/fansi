@@ -16,21 +16,20 @@
 
 #' ANSI Control Sequence Aware Version of strtrim
 #'
-#' One difference with [base::strtrim] is that all C0 control characters such as
-#' newlines, carriage returns, etc., are treated as zero width.
+#' One difference with [`base::strtrim`] is that all C0 control characters such
+#' as newlines, carriage returns, etc., are always treated as zero width,
+#' whereas in base it may vary with platform / R version.
 #'
 #' `strtrim2_ctl` adds the option of converting tabs to spaces before trimming.
 #' This is the only difference between `strtrim_ctl` and `strtrim2_ctl`.
 #'
-#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
-#'   Width calculations will not work correctly with R < 3.2.2.
 #' @export
+#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
+#'   Width calculations will not work properly in R < 3.2.2.
 #' @inheritSection substr_ctl _ctl vs. _sgr
-#' @seealso [`fansi`] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results,
-#'   [`normalize_sgr`] for more details on what the `normalize` parameter does.
 #' @inheritParams base::strtrim
 #' @inheritParams strwrap_ctl
+#' @inherit substr_ctl seealso
 #' @examples
 #' strtrim_ctl("\033[42mHello world\033[m", 6)
 

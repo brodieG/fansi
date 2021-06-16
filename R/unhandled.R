@@ -58,8 +58,7 @@
 #'
 #' @note Non-ASCII strings are converted to UTF-8 encoding.
 #' @export
-#' @seealso [fansi] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results.
+#' @inherit has_ctl seealso
 #' @param x character vector
 #' @inheritParams substr_ctl
 #' @return data frame with as many rows as there are unhandled escape

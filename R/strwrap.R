@@ -33,15 +33,13 @@
 #' Additionally,`indent`, `exdent`, `initial`, and `prefix` will be ignored when
 #' computing tab positions.
 #'
-#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
-#'   Width calculations will not work correctly with R < 3.2.2.
-#' @seealso [`fansi`] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results,
-#'   [`normalize_sgr`] for more details on what the `normalize` parameter does.
 #' @inheritParams base::strwrap
 #' @inheritParams tabs_as_spaces
 #' @inheritParams substr_ctl
 #' @inheritSection substr_ctl _ctl vs. _sgr
+#' @inherit substr_ctl seealso
+#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
+#'   Width calculations will not work properly in R < 3.2.2.
 #' @param wrap.always TRUE or FALSE (default), whether to hard wrap at requested
 #'   width if no word breaks are detected within a line.  If set to TRUE then
 #'   `width` must be at least 2.

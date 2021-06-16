@@ -27,8 +27,7 @@
 #'   `ctl` parameter only affects which _Control Sequences_ are considered zero
 #'   width.  Tabs will always be converted to spaces, irrespective of the `ctl`
 #'   setting.
-#' @seealso [fansi] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results.
+#' @inherit has_ctl seealso
 #' @export
 #' @inheritParams substr_ctl
 #' @param x character vector or object coercible to character; any tabs therein
@@ -112,8 +111,7 @@ tabs_as_spaces <- function(
 #' codes in terminals that do not support them are more likely to be silently
 #' ignored, so `fansi` functions do not warn about those.
 #'
-#' @seealso [fansi] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results.
+#' @inherit has_ctl seealso
 #' @export
 #' @return character the test vector, invisibly
 #' @examples

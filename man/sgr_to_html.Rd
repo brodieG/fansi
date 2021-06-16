@@ -8,23 +8,24 @@ sgr_to_html(
   x,
   warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"),
-  classes = FALSE
+  classes = FALSE,
+  carry = getOption("fansi.carry", TRUE)
 )
 }
 \arguments{
-\item{x}{a character vector or object that can be coerced to character.}
+\item{x}{a character vector or object that can be coerced to such.}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
-to be incorrect, for example by moving the cursor (see \link{fansi}).}
+to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
 starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
 "38;2" or "48;2"). Changing this parameter changes how \code{fansi}
 interprets escape sequences, so you should ensure that it matches your
-terminal capabilities. See \link{term_cap_test} for details.}
+terminal capabilities. See \code{\link{term_cap_test}} for details.}
 
 \item{classes}{FALSE (default), TRUE, or character vector of either 16,
 32, or 512 class names.  Character strings may only contain ASCII
@@ -57,6 +58,15 @@ mapped.
 \item character(512): Like character(16), except the basic, bright, and all
 other 8-bit colors are mapped.
 }}
+
+\item{carry}{TRUE, FALSE, or a scalar string, controls whether active SGR
+present at the end of an input vector element is carried into the next
+vector element.  If FALSE each vector element is interpreted as if there
+were no active SGR present when they begin.  If character, then the active
+SGR at the end of the \code{carry} string is carried into the first element of
+\code{x}.  For every function except \code{\link{sgr_to_html}} this argument defaults to
+FALSE.  See the "SGR Interactions" section of \code{\link[=fansi]{?fansi}} for
+details.}
 }
 \value{
 A character vector of the same length as \code{x} with all escape
@@ -97,6 +107,16 @@ cannot reproduce all inputs anyway does not seem worthwhile.
 }
 \note{
 Non-ASCII strings are converted to and returned in UTF-8 encoding.
+
+Up to version 0.5.0, \code{html_esc} implicitly operated as if
+\code{carry = TRUE}.  This was different from other functions and was
+changed to be consistent with them after that version.
+
+\code{sgr_to_html} always terminates as not doing so produces
+invalid HTML.  If you wish for the last active SPAN to bleed into
+subsequent text you may do so with e.g. \code{sub("</span>$", "", x)}.
+Additionally, \code{sgr_to_html} uses \code{carry = TRUE} by default, unlike other
+\code{fansi} functions that share that parameter.
 }
 \examples{
 sgr_to_html("hello\033[31;42;1mworld\033[m")
@@ -151,11 +171,6 @@ in_html(html.256, css=desaturated) # desaturated CSS
 }
 }
 \seealso{
-\code{\link{fansi}} for details on how \emph{Control Sequences} are
-interpreted, particularly if you are getting unexpected results,
-\code{\link{set_knit_hooks}} for how to use ANSI CSI styled text with knitr and HTML
-output, \code{\link{sgr_256}} to generate a demo string with all 256 8 bit colors.
-
 Other HTML functions: 
 \code{\link{html_esc}()},
 \code{\link{in_html}()},

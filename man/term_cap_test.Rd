@@ -43,6 +43,6 @@ ignored, so \code{fansi} functions do not warn about those.
 term_cap_test()
 }
 \seealso{
-\link{fansi} for details on how \emph{Control Sequences} are
+\code{\link[=fansi]{?fansi}} for details on how \emph{Control Sequences} are
 interpreted, particularly if you are getting unexpected results.
 }

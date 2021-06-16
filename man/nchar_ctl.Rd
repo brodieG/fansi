@@ -30,7 +30,7 @@ nzchar_ctl(x, keepNA = NA, ctl = "all", warn = getOption("fansi.warn"))
 nzchar_sgr(x, keepNA = NA, warn = getOption("fansi.warn"))
 }
 \arguments{
-\item{x}{a character vector or object that can be coerced to character.}
+\item{x}{a character vector or object that can be coerced to such.}
 
 \item{type}{character(1L) partial matching \code{c("chars", "width")}, although
 \code{type="width"} only works correctly with R >= 3.2.2.  With "width", whether
@@ -66,7 +66,7 @@ above, in which case it means "all but".
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
-to be incorrect, for example by moving the cursor (see \link{fansi}).}
+to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).}
 
 \item{strip}{character, deprecated in favor of \code{ctl}.}
 }
@@ -126,7 +126,6 @@ nchar_sgr("\t\n\n123")
 nzchar_ctl("\n\033[42;31m\033[123P\a")
 }
 \seealso{
-\link{fansi} for details on how \emph{Control Sequences} are
-interpreted, particularly if you are getting unexpected results,
-\code{\link{strip_ctl}} for removing \emph{Control Sequences}.
+\code{\link[=fansi]{?fansi}} for details on how \emph{Control Sequences} are
+interpreted, particularly if you are getting unexpected results.
 }
