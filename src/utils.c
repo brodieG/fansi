@@ -580,6 +580,22 @@ SEXP FANSI_mkChar(
 
   return mkCharLenCE(start, len, enc);
 }
+static int is_tf(SEXP x) {
+  return TYPEOF(x) != LGLSXP || XLENGTH(x) != 1 ||
+    LOGICAL(x)[0] != NA_LOGICAL;
+}
+/*
+ * Basic validation on common arguments
+ *
+ * Note FANSI_state_init_full also validates many of the common args
+ */
+void FANSI_val_args(SEXP x, SEXP norm, SEXP carry) {
+  if(TYPEOF(x) != STRSXP)
+    error("Argument `x` must be character.");     // nocov
+  if(TYPEOF(carry) != STRSXP || XLENGTH(carry) != 1L)
+    error("Argument `carry` must be scalar character.");         // nocov
+  if(!is_tf(norm)) error("Argument `norm` must be TRUE or FALSE.");  // nocov
+}
 
 
 void FANSI_print(char * x) {

@@ -18,7 +18,9 @@ strwrap_ctl(
   warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"),
   ctl = "all",
-  normalize = getOption("fansi.normalize", FALSE)
+  normalize = getOption("fansi.normalize", FALSE),
+  carry = getOption("fansi.carry", FALSE),
+  terminate = getOption("fansi.terminate", TRUE)
 )
 
 strwrap2_ctl(
@@ -37,7 +39,9 @@ strwrap2_ctl(
   warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"),
   ctl = "all",
-  normalize = getOption("fansi.normalize", FALSE)
+  normalize = getOption("fansi.normalize", FALSE),
+  carry = getOption("fansi.carry", FALSE),
+  terminate = getOption("fansi.terminate", TRUE)
 )
 
 strwrap_sgr(
@@ -50,7 +54,9 @@ strwrap_sgr(
   initial = prefix,
   warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"),
-  normalize = getOption("fansi.normalize", FALSE)
+  normalize = getOption("fansi.normalize", FALSE),
+  carry = getOption("fansi.carry", FALSE),
+  terminate = getOption("fansi.terminate", TRUE)
 )
 
 strwrap2_sgr(
@@ -68,7 +74,9 @@ strwrap2_sgr(
   tab.stops = getOption("fansi.tab.stops"),
   warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"),
-  normalize = getOption("fansi.normalize", FALSE)
+  normalize = getOption("fansi.normalize", FALSE),
+  carry = getOption("fansi.carry", FALSE),
+  terminate = getOption("fansi.terminate", TRUE)
 )
 }
 \arguments{
@@ -100,14 +108,14 @@ strwrap2_sgr(
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
-to be incorrect, for example by moving the cursor (see \link{fansi}).}
+to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
 starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
 "38;2" or "48;2"). Changing this parameter changes how \code{fansi}
 interprets escape sequences, so you should ensure that it matches your
-terminal capabilities. See \link{term_cap_test} for details.}
+terminal capabilities. See \code{\link{term_cap_test}} for details.}
 
 \item{ctl}{character, which \emph{Control Sequences} should be treated
 specially. See the "_ctl vs. _sgr" section for details.
@@ -127,6 +135,20 @@ normalized out such that there is one distinct sequence for each SGR code.
 normalized strings will occupy more space (e.g. "\033[31;42m" becomes
 "\033[31m\033[42m"), but will work better with code that assumes each SGR
 code will be in its own escape as \code{crayon} does.}
+
+\item{carry}{TRUE, FALSE, or a scalar string, controls whether active SGR
+present at the end of an input vector element is carried into the next
+vector element.  If FALSE each vector element is interpreted as if there
+were no active SGR present when they begin.  If character, then the active
+SGR at the end of the \code{carry} string is carried into the first element of
+\code{x}.  For every function except \code{\link{sgr_to_html}} this argument defaults to
+FALSE.  See the "SGR Interactions" section of \code{\link[=fansi]{?fansi}} for
+details.}
+
+\item{terminate}{TRUE (default) or FALSE whether substrings should have
+active SGR closed to avoid it bleeding into other strings they may be
+prepended onto.  See the "SGR Interactions" section of \code{\link[=fansi]{?fansi}} for
+details.}
 
 \item{wrap.always}{TRUE or FALSE (default), whether to hard wrap at requested
 width if no word breaks are detected within a line.  If set to TRUE then
@@ -172,7 +194,13 @@ computing tab positions.
 }
 \note{
 Non-ASCII strings are converted to and returned in UTF-8 encoding.
-Width calculations will not work correctly with R < 3.2.2.
+Width calculations will not work properly in R < 3.2.2.
+
+For the \verb{strwrap*} functions the \code{carry} parameter affects whether
+styles are carried across \emph{input} vector elements.  Styles always carry
+within a single wrapped vector element (e.g. if one of the input elements
+gets wrapped into three lines, the styles will carry through those three
+lines even if \code{carry=FALSE}, but not across input vector elements).
 }
 \section{_ctl vs. _sgr}{
 
@@ -231,7 +259,9 @@ W <- strwrap2_ctl(NEWS.C, 25, pad.end=" ", wrap.always=TRUE)
 writeLines(c("", paste(W[1:20], W[100:120], W[200:220]), ""))
 }
 \seealso{
-\code{\link{fansi}} for details on how \emph{Control Sequences} are
+\code{\link[=fansi]{?fansi}} for details on how \emph{Control Sequences} are
 interpreted, particularly if you are getting unexpected results,
-\code{\link{normalize_sgr}} for more details on what the \code{normalize} parameter does.
+\code{\link{normalize_sgr}} for more details on what the \code{normalize} parameter does,
+\code{\link{sgr_at_end}} to compute active SGR at the end of strings, \code{\link{close_sgr}}
+to compute the SGR required to close active SGR.
 }

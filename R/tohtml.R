@@ -50,10 +50,7 @@
 #' @export
 #' @family HTML functions
 #' @inheritParams substr_ctl
-#' @seealso [`fansi`] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results,
-#'   [`set_knit_hooks`] for how to use ANSI CSI styled text with knitr and HTML
-#'   output, [`sgr_256`] to generate a demo string with all 256 8 bit colors.
+#' @inherit substr_ctl seealso
 #' @param classes FALSE (default), TRUE, or character vector of either 16,
 #'   32, or 512 class names.  Character strings may only contain ASCII
 #'   characters corresponding to letters, numbers, the hyphen, or the
@@ -85,9 +82,17 @@
 #'   * character(512): Like character(16), except the basic, bright, and all
 #'     other 8-bit colors are mapped.
 #'
+#' @note Up to version 0.5.0, `html_esc` implicitly operated as if
+#'   `carry = TRUE`.  This was different from other functions and was
+#'   changed to be consistent with them after that version.
 #' @return A character vector of the same length as `x` with all escape
 #'   sequences removed and any basic ANSI CSI SGR escape sequences applied via
 #'   SPAN HTML tags.
+#' @note `sgr_to_html` always terminates as not doing so produces
+#'   invalid HTML.  If you wish for the last active SPAN to bleed into
+#'   subsequent text you may do so with e.g. `sub("</span>$", "", x)`.
+#'   Additionally, `sgr_to_html` uses `carry = TRUE` by default, unlike other
+#'   `fansi` functions that share that parameter.
 #' @examples
 #' sgr_to_html("hello\033[31;42;1mworld\033[m")
 #' sgr_to_html("hello\033[31;42;1mworld\033[m", classes=TRUE)
@@ -143,21 +148,10 @@
 sgr_to_html <- function(
   x, warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap'),
-  classes=FALSE
+  classes=FALSE,
+  carry=getOption('fansi.carry', TRUE)  # different from other functions
 ) {
-  if(!is.character(x)) x <- as.character(x)
-  if(!is.logical(warn)) warn <- as.logical(warn)
-  if(length(warn) != 1L || is.na(warn))
-    stop("Argument `warn` must be TRUE or FALSE.")
-
-  if(!is.character(term.cap))
-    stop("Argument `term.cap` must be character.")
-  if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
-    stop(
-      "Argument `term.cap` may only contain values in ",
-      deparse(VALID.TERM.CAP)
-    )
-
+  VAL_IN_ENV(x=x, warn=warn, term.cap=term.cap, carry=carry)
   classes <- if(isTRUE(classes)) {
     FANSI.CLASSES
   } else if (identical(classes, FALSE)) {
@@ -167,7 +161,7 @@ sgr_to_html <- function(
   } else
     stop("Argument `classes` must be TRUE, FALSE, or a character vector.")
 
-  .Call(FANSI_esc_to_html, enc2utf8(x), warn, term.cap.int, classes)
+  .Call(FANSI_esc_to_html, x, warn, term.cap.int, classes, carry)
 }
 #' Generate CSS Mapping Classes to Colors
 #'

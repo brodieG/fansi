@@ -34,9 +34,7 @@
 #' @inheritSection substr_ctl _ctl vs. _sgr
 #' @note the `keepNA` parameter is ignored for R < 3.2.2.
 #' @export
-#' @seealso [fansi] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results,
-#'   [`strip_ctl`] for removing _Control Sequences_.
+#' @inherit has_ctl seealso
 #' @examples
 #' nchar_ctl("\033[31m123\a\r")
 #' ## with some wide characters
@@ -63,11 +61,6 @@ nchar_ctl <- function(
   x, type='chars', allowNA=FALSE, keepNA=NA, ctl='all',
   warn=getOption('fansi.warn'), strip
 ) {
-  if(!is.character(x)) x <- as.character(x)
-  if(!is.logical(warn)) warn <- as.logical(warn)
-  if(length(warn) != 1L || is.na(warn))
-    stop("Argument `warn` must be TRUE or FALSE.")
-
   if(!is.logical(allowNA)) allowNA <- as.logical(allowNA)
   if(length(allowNA) != 1L)
     stop("Argument `allowNA` must be a scalar logical.")
@@ -80,12 +73,6 @@ nchar_ctl <- function(
     message("Parameter `strip` has been deprecated; use `ctl` instead.")
     ctl <- strip
   }
-  if(!is.character(ctl))
-    stop("Argument `ctl` must be character.")
-  if(!all(ctl %in% VALID.CTL))
-    stop(
-      "Argument `ctl` may contain only values in `", deparse(VALID.CTL), "`"
-    )
   if(!is.character(type) || length(type) != 1 || is.na(type))
     stop("Argument `type` must be scalar character and not NA.")
   valid.types <- c('chars', 'width', 'bytes')
@@ -93,6 +80,8 @@ nchar_ctl <- function(
     stop(
       "Argument `type` must partial match one of 'chars', 'width', or 'bytes'."
     )
+
+  VAL_IN_ENV(x=x, ctl=ctl, warn=warn)
   type <- valid.types[type.int]
   stripped <- strip_ctl(x, ctl=ctl, warn=warn)
 
@@ -114,32 +103,17 @@ nchar_sgr <- function(
 #' @rdname nchar_ctl
 
 nzchar_ctl <- function(x, keepNA=NA, ctl='all', warn=getOption('fansi.warn')) {
-  if(!is.character(x)) x <- as.character(x)
-
-  if(length(warn) != 1L || is.na(warn))
-    stop("Argument `warn` must be TRUE or FALSE.")
-
+  VAL_IN_ENV(x=x, ctl=ctl, warn=warn)
   if(!is.logical(keepNA)) keepNA <- as.logical(keepNA)
   if(length(keepNA) != 1L)
     stop("Argument `keepNA` must be a scalar logical.")
 
-  if(!is.character(ctl))
-    stop("Argument `ctl` must be character.")
-  ctl.int <- integer()
-  if(length(ctl)) {
-    # duplicate values in `ctl` are okay, so save a call to `unique` here
-    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
-      stop(
-        "Argument `ctl` may contain only values in `",
-        deparse(VALID.CTL), "`"
-      )
-  }
   term.cap.int <- seq_along(VALID.TERM.CAP)
-  .Call(FANSI_nzchar_esc, enc2utf8(x), keepNA, warn, term.cap.int, ctl.int)
+  .Call(FANSI_nzchar_esc, x, keepNA, warn, term.cap.int, ctl.int)
 }
 #' @export
 #' @rdname nchar_ctl
 
 nzchar_sgr <- function(x, keepNA=NA, warn=getOption('fansi.warn'))
- nzchar_ctl(x=x, keepNA=keepNA, warn=warn, ctl='sgr')
+  nzchar_ctl(x=x, keepNA=keepNA, warn=warn, ctl='sgr')
 

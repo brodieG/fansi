@@ -33,15 +33,13 @@
 #' Additionally,`indent`, `exdent`, `initial`, and `prefix` will be ignored when
 #' computing tab positions.
 #'
-#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
-#'   Width calculations will not work correctly with R < 3.2.2.
-#' @seealso [`fansi`] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results,
-#'   [`normalize_sgr`] for more details on what the `normalize` parameter does.
 #' @inheritParams base::strwrap
 #' @inheritParams tabs_as_spaces
 #' @inheritParams substr_ctl
 #' @inheritSection substr_ctl _ctl vs. _sgr
+#' @inherit substr_ctl seealso
+#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
+#'   Width calculations will not work properly in R < 3.2.2.
 #' @param wrap.always TRUE or FALSE (default), whether to hard wrap at requested
 #'   width if no word breaks are detected within a line.  If set to TRUE then
 #'   `width` must be at least 2.
@@ -55,6 +53,11 @@
 #'   are implicit in boundaries between vector elements.
 #' @param tabs.as.spaces FALSE (default) or TRUE, whether to convert tabs to
 #'   spaces.  This can only be set to TRUE if `strip.spaces` is FALSE.
+#' @note For the `strwrap*` functions the `carry` parameter affects whether
+#'   styles are carried across _input_ vector elements.  Styles always carry
+#'   within a single wrapped vector element (e.g. if one of the input elements
+#'   gets wrapped into three lines, the styles will carry through those three
+#'   lines even if `carry=FALSE`, but not across input vector elements).
 #' @export
 #' @examples
 #' hello.1 <- "hello \033[41mred\033[49m world"
@@ -100,69 +103,26 @@ strwrap_ctl <- function(
   x, width = 0.9 * getOption("width"), indent = 0,
   exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
-  ctl='all', normalize=getOption('fansi.normalize', FALSE)
+  ctl='all', normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
 ) {
-  if(!is.character(x)) x <- as.character(x)
-
-  if(!is.numeric(width) || length(width) != 1L || is.na(width))
-    stop("Argument `width` must be a scalar numeric.")
-
-  if(!is.numeric(indent) || length(indent) != 1L || is.na(indent) || indent < 0)
-    stop("Argument `indent` must be a positive scalar numeric.")
-
-  if(!is.numeric(exdent) || length(exdent) != 1L || is.na(exdent) || exdent < 0)
-    stop("Argument `exdent` must be a positive scalar numeric.")
-
-  if(!is.character(prefix)) prefix <- as.character(prefix)
-  if(length(prefix) != 1L)
-    stop("Argument `prefix` must be a scalar character.")
-
-  if(!is.character(initial)) initial <- as.character(initial)
-  if(length(initial) != 1L)
-    stop("Argument `initial` must be a scalar character.")
-
-  if(!is.logical(warn)) warn <- as.logical(warn)
-  if(length(warn) != 1L || is.na(warn))
-    stop("Argument `warn` must be TRUE or FALSE.")
-
-  if(!isTRUE(normalize %in% c(FALSE, TRUE)))
-    stop("Argument `normalize` must be TRUE or FALSE.")
-  normalize <- as.logical(normalize)
-
-  if(!is.character(term.cap))
-    stop("Argument `term.cap` must be character.")
-
-  if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
-    stop(
-      "Argument `term.cap` may only contain values in ",
-      deparse(VALID.TERM.CAP)
-    )
-  if(!is.character(ctl))
-    stop("Argument `ctl` must be character.")
-  ctl.int <- integer()
-  if(length(ctl)) {
-    # duplicate values in `ctl` are okay, so save a call to `unique` here
-    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
-      stop(
-        "Argument `ctl` may contain only values in `",
-        deparse(VALID.CTL), "`"
-      )
-  }
-
-  width <- max(c(as.integer(width) - 1L, 1L))
-  indent <- as.integer(indent)
-  exdent <- as.integer(exdent)
-
+  VAL_IN_ENV(
+    x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
+    carry=carry, terminate=terminate
+  )
+  VAL_WRAP_IN_ENV(width, indent, exdent, prefix, initial, pad.end="")
   res <- .Call(
     FANSI_strwrap_csi,
-    enc2utf8(x), width, indent, exdent,
-    enc2utf8(prefix), enc2utf8(initial),
+    x, width, indent, exdent,
+    prefix, initial,
     FALSE, "",
     TRUE,
     FALSE, 8L,
     warn, term.cap.int,
     FALSE,   # first_only
-    ctl.int, normalize
+    ctl.int, normalize,
+    carry, terminate
   )
   if(simplify) {
     if(normalize) normalize_sgr(unlist(res), warn, term.cap)
@@ -182,98 +142,40 @@ strwrap2_ctl <- function(
   tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
   tab.stops=getOption('fansi.tab.stops'),
   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
-  ctl='all', normalize=getOption('fansi.normalize', FALSE)
+  ctl='all', normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
 ) {
-  # {{{ validation
-
-  if(!is.character(x)) x <- as.character(x)
-
-  if(!is.numeric(width) || length(width) != 1L || is.na(width))
-    stop("Argument `width` must be a scalar numeric.")
-
-  if(!is.numeric(indent) || length(indent) != 1L || is.na(indent) || indent < 0)
-    stop("Argument `indent` must be a positive scalar numeric.")
-
-  if(!is.numeric(exdent) || length(exdent) != 1L || is.na(exdent) || exdent < 0)
-    stop("Argument `exdent` must be a positive scalar numeric.")
-
-  if(!is.character(prefix)) prefix <- as.character(prefix)
-  if(length(prefix) != 1L)
-    stop("Argument `prefix` must be a scalar character.")
-
-  if(!is.character(initial)) initial <- as.character(initial)
-  if(length(initial) != 1L)
-    stop("Argument `initial` must be a scalar character.")
-
-  if(!is.logical(warn)) warn <- as.logical(warn)
-  if(length(warn) != 1L || is.na(warn))
-    stop("Argument `warn` must be TRUE or FALSE.")
-
-  if(!isTRUE(normalize %in% c(FALSE, TRUE)))
-    stop("Argument `normalize` must be TRUE or FALSE.")
-  normalize <- as.logical(normalize)
-
-  if(!is.character(term.cap))
-    stop("Argument `term.cap` must be character.")
-  if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
-    stop(
-      "Argument `term.cap` may only contain values in ",
-      deparse(VALID.TERM.CAP)
-    )
-
-  if(!is.character(pad.end) || length(pad.end) != 1 || nchar(pad.end) > 1)
-    stop("Argument `pad.end` must be a one character or empty string.")
-
   if(!is.logical(wrap.always)) wrap.always <- as.logical(wrap.always)
   if(length(wrap.always) != 1L || is.na(wrap.always))
     stop("Argument `wrap.always` must be TRUE or FALSE.")
-
   if(!is.logical(tabs.as.spaces)) tabs.as.spaces <- as.logical(tabs.as.spaces)
-  if(length(tabs.as.spaces) != 1L || is.na(tabs.as.spaces))
-    stop("Argument `tabs.as.spaces` must be TRUE or FALSE.")
-  if(!is.numeric(tab.stops) || !length(tab.stops) || any(tab.stops < 1))
-    stop("Argument `tab.stops` must be numeric and strictly positive")
-
-  if(!is.logical(strip.spaces)) strip.spaces <- as.logical(strip.spaces)
-  if(length(strip.spaces) != 1L || is.na(strip.spaces))
-    stop("Argument `strip.spaces` must be TRUE or FALSE.")
-
   if(wrap.always && width < 2L)
     stop("Width must be at least 2 in `wrap.always` mode.")
-
+  VAL_IN_ENV (
+    x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
+    carry=carry, terminate=terminate, tab.stops=tab.stops,
+    tabs.as.spaces=tabs.as.spaces, strip.spaces=strip.spaces
+  )
   if(tabs.as.spaces && strip.spaces)
     stop("`tabs.as.spaces` and `strip.spaces` should not both be TRUE.")
+  # This changes `width`, so needs to happen after the first width validation
+  VAL_WRAP_IN_ENV(width, indent, exdent, prefix, initial, pad.end)
 
-  if(!is.character(ctl))
-    stop("Argument `ctl` must be character.")
-  ctl.int <- integer()
-
-  if(length(ctl)) {
-    # duplicate values in `ctl` are okay, so save a call to `unique` here
-    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
-      stop(
-        "Argument `ctl` may contain only values in `",
-        deparse(VALID.CTL), "`"
-      )
-  }
-  # }}} end validation
-
-  width <- max(c(as.integer(width) - 1L, 1L))
-  indent <- as.integer(indent)
-  exdent <- as.integer(exdent)
   tab.stops <- as.integer(tab.stops)
 
   res <- .Call(
     FANSI_strwrap_csi,
-    enc2utf8(x), width,
+    x, width,
     indent, exdent,
-    enc2utf8(prefix), enc2utf8(initial),
+    prefix, initial,
     wrap.always, pad.end,
     strip.spaces,
     tabs.as.spaces, tab.stops,
     warn, term.cap.int,
     FALSE,   # first_only
-    ctl.int, normalize
+    ctl.int, normalize,
+    carry, terminate
   )
   if(simplify) {
     if(normalize) normalize_sgr(unlist(res), warn, term.cap)
@@ -289,12 +191,15 @@ strwrap_sgr <- function(
   x, width = 0.9 * getOption("width"), indent = 0,
   exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
-  normalize=getOption('fansi.normalize', FALSE)
+  normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
 )
   strwrap_ctl(
     x=x, width=width, indent=indent,
     exdent=exdent, prefix=prefix, simplify=simplify, initial=initial,
-    warn=warn, term.cap=term.cap, ctl='sgr', normalize=normalize
+    warn=warn, term.cap=term.cap, ctl='sgr', normalize=normalize,
+    carry=carry, terminate=terminate
   )
 #' @export
 #' @rdname strwrap_ctl
@@ -307,7 +212,9 @@ strwrap2_sgr <- function(
   tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
   tab.stops=getOption('fansi.tab.stops'),
   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
-  normalize=getOption('fansi.normalize', FALSE)
+  normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
 )
   strwrap2_ctl(
     x=x, width=width, indent=indent,
@@ -316,6 +223,68 @@ strwrap2_sgr <- function(
     strip.spaces=strip.spaces,
     tabs.as.spaces=tabs.as.spaces,
     tab.stops=tab.stops,
-    warn=warn, term.cap=term.cap, ctl='sgr', normalize=normalize
+    warn=warn, term.cap=term.cap, ctl='sgr', normalize=normalize,
+    carry=carry, terminate=terminate
   )
+
+VAL_WRAP_IN_ENV <- function(
+  width, indent, exdent, prefix, initial, pad.end
+) {
+  call <- sys.call(-1)
+  env <- parent.frame()
+  stop2 <- function(x) stop(simpleError(x, call))
+  is_scl_int_pos <- function(x, name, strict=FALSE) {
+    x <- as.integer(x)
+    if(
+      !is.numeric(x) || length(x) != 1L || is.na(x) ||
+      if(strict) x <= 0 else x < 0
+    )
+      stop2(
+        sprintf(
+          "Argument `%s` %s.", name,
+          "must be a positive scalar numeric representable as integer"
+      ) )
+    x
+  }
+  exdent <- is_scl_int_pos(exdent, 'exdent', strict=FALSE)
+  indent <- is_scl_int_pos(indent, 'indent', strict=FALSE)
+  if(is.numeric(width))
+    width <- as.integer(min(c(max(c(min(width), 2L)), .Machine$integer.max)))
+  else stop2("Argument `width` must be numeric.")
+  # technically
+  width <- is_scl_int_pos(width, 'width', strict=TRUE)
+  width <- width - 1L
+
+  if(!is.character(prefix)) prefix <- as.character(prefix)
+  if(length(prefix) != 1L)
+    stop2("Argument `prefix` must be a scalar character.")
+  prefix <- enc2utf8(prefix)
+  if(Encoding(prefix) == "bytes")
+    stop2("Argument `prefix` cannot be \"bytes\" encoded.")
+
+  if(!is.character(initial)) initial <- as.character(initial)
+  if(length(initial) != 1L)
+    stop2("Argument `initial` must be a scalar character.")
+  initial <- enc2utf8(initial)
+  if(Encoding(initial) == "bytes")
+    stop2("Argument `initial` cannot be \"bytes\" encoded.")
+
+  if(!is.character(pad.end)) pad.end <- as.character(pad.end)
+  if(length(pad.end) != 1L)
+    stop2("Argument `pad.end` must be a scalar character.")
+  pad.end <- enc2utf8(pad.end)
+  if(Encoding(pad.end) == "bytes")
+    stop2("Argument `pad.end` cannot be \"bytes\" encoded.")
+  if(nchar(pad.end, type='bytes') > 1L)
+    stop2("Argument `pad.end` must be at most one byte long.")
+
+  list2env(
+    list(
+      width=width, indent=indent, exdent=exdent, prefix=prefix, initial=initial,
+      pad.end=pad.end
+    ),
+    env
+  )
+}
+
 

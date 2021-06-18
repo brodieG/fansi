@@ -16,71 +16,59 @@
 
 #' ANSI Control Sequence Aware Version of strtrim
 #'
-#' One difference with [base::strtrim] is that all C0 control characters such as
-#' newlines, carriage returns, etc., are treated as zero width.
+#' One difference with [`base::strtrim`] is that all C0 control characters such
+#' as newlines, carriage returns, etc., are always treated as zero width,
+#' whereas in base it may vary with platform / R version.
 #'
 #' `strtrim2_ctl` adds the option of converting tabs to spaces before trimming.
 #' This is the only difference between `strtrim_ctl` and `strtrim2_ctl`.
 #'
-#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
-#'   Width calculations will not work correctly with R < 3.2.2.
 #' @export
+#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
+#'   Width calculations will not work properly in R < 3.2.2.
 #' @inheritSection substr_ctl _ctl vs. _sgr
-#' @seealso [`fansi`] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results,
-#'   [`normalize_sgr`] for more details on what the `normalize` parameter does.
 #' @inheritParams base::strtrim
 #' @inheritParams strwrap_ctl
+#' @inherit substr_ctl seealso
 #' @examples
 #' strtrim_ctl("\033[42mHello world\033[m", 6)
 
 strtrim_ctl <- function(
   x, width, warn=getOption('fansi.warn'), ctl='all',
-  normalize=getOption('fansi.normalize', FALSE)
+  normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
 ) {
-  if(!is.character(x)) x <- as.character(x)
-
+  VAL_IN_ENV(
+    x=x, warn=warn, ctl=ctl, normalize=normalize, carry=carry,
+    terminate=terminate
+  )
   if(!is.numeric(width) || length(width) != 1L || is.na(width) || width < 0)
-    stop("Argument `width` must be a positive scalar numeric.")
-
-  if(!is.logical(warn)) warn <- as.logical(warn)
-  if(length(warn) != 1L || is.na(warn))
-    stop("Argument `warn` must be TRUE or FALSE.")
-
-  if(!isTRUE(normalize %in% c(FALSE, TRUE)))
-    stop("Argument `normalize` must be TRUE or FALSE.")
-  normalize <- as.logical(normalize)
-
-  if(!is.character(ctl))
-    stop("Argument `ctl` must be character.")
-  ctl.int <- integer()
-  if(length(ctl)) {
-    # duplicate values in `ctl` are okay, so save a call to `unique` here
-    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
-      stop(
-        "Argument `ctl` may contain only values in `",
-        deparse(VALID.CTL), "`"
-      )
-  }
+    stop(
+      "Argument `width` must be a positive scalar numeric representable ",
+      "as an integer."
+    )
+  width <- as.integer(width)
   # can assume all term cap available for these purposes
 
   term.cap.int <- seq_along(VALID.TERM.CAP)
-  width <- as.integer(width)
 
   # a bit inefficient to rely on strwrap, but oh well
 
   res <- .Call(
-    FANSI_strwrap_csi,
-    enc2utf8(x), width,
-    0L, 0L,    # indent, exdent
-    "", "",    # prefix, initial
-    TRUE, "",  # wrap always
-    FALSE,     # strip spaces
-    FALSE, 8L,
-    warn, term.cap.int,
-    TRUE,      # first only
-    ctl.int,
-    normalize
+      FANSI_strwrap_csi,
+      enc2utf8(x), width,
+      0L, 0L,    # indent, exdent
+      "", "",    # prefix, initial
+      TRUE, "",  # wrap always
+      FALSE,     # strip spaces
+      FALSE, 8L,
+      warn, term.cap.int,
+      TRUE,      # first only
+      ctl.int,
+      normalize,
+      carry,
+      terminate
   )
   if(normalize) normalize_sgr(res) else res
 }
@@ -91,59 +79,41 @@ strtrim2_ctl <- function(
   x, width, warn=getOption('fansi.warn'),
   tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
   tab.stops=getOption('fansi.tab.stops'),
-  ctl='all', normalize=getOption('fansi.normalize', FALSE)
+  ctl='all', normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
 ) {
-  if(!is.character(x)) x <- as.character(x)
-
+  VAL_IN_ENV(
+    x=x, warn=warn, ctl=ctl,
+    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops,
+    normalize=normalize, carry=carry,
+    terminate=terminate
+  )
   if(!is.numeric(width) || length(width) != 1L || is.na(width) || width < 0)
-    stop("Argument `width` must be a positive scalar numeric.")
+    stop(
+      "Argument `width` must be a positive scalar numeric representable ",
+      "as an integer."
+    )
+  width <- as.integer(width)
 
-  if(!is.logical(warn)) warn <- as.logical(warn)
-  if(length(warn) != 1L || is.na(warn))
-    stop("Argument `warn` must be TRUE or FALSE.")
-
-  if(!isTRUE(normalize %in% c(FALSE, TRUE)))
-    stop("Argument `normalize` must be TRUE or FALSE.")
-  normalize <- as.logical(normalize)
-
-  if(!is.logical(tabs.as.spaces)) tabs.as.spaces <- as.logical(tabs.as.spaces)
-  if(length(tabs.as.spaces) != 1L || is.na(tabs.as.spaces))
-    stop("Argument `tabs.as.spaces` must be TRUE or FALSE.")
-
-  if(!is.numeric(tab.stops) || !length(tab.stops) || any(tab.stops < 1))
-    stop("Argument `tab.stops` must be numeric and strictly positive")
-
-  if(!is.character(ctl))
-    stop("Argument `ctl` must be character.")
-  ctl.int <- integer()
-  if(length(ctl)) {
-    # duplicate values in `ctl` are okay, so save a call to `unique` here
-    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
-      stop(
-        "Argument `ctl` may contain only values in `",
-        deparse(VALID.CTL), "`"
-      )
-  }
   # can assume all term cap available for these purposes
-
   term.cap.int <- seq_along(VALID.TERM.CAP)
   width <- as.integer(width)
   tab.stops <- as.integer(tab.stops)
 
   # a bit inefficient to rely on strwrap, but oh well
-
   res <- .Call(
-    FANSI_strwrap_csi,
-    enc2utf8(x), width,
-    0L, 0L,    # indent, exdent
-    "", "",    # prefix, initial
-    TRUE, "",  # wrap always
-    FALSE,     # strip spaces
-    tabs.as.spaces, tab.stops,
-    warn, term.cap.int,
-    TRUE,      # first only
-    ctl.int,
-    normalize
+      FANSI_strwrap_csi,
+      enc2utf8(x), width,
+      0L, 0L,    # indent, exdent
+      "", "",    # prefix, initial
+      TRUE, "",  # wrap always
+      FALSE,     # strip spaces
+      tabs.as.spaces, tab.stops,
+      warn, term.cap.int,
+      TRUE,      # first only
+      ctl.int,
+      normalize, carry, terminate
   )
   if(normalize) normalize_sgr(res) else res
 }
@@ -152,9 +122,14 @@ strtrim2_ctl <- function(
 
 strtrim_sgr <- function(
   x, width, warn=getOption('fansi.warn'),
-  normalize=getOption('fansi.normalize', FALSE)
+  normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
 )
-  strtrim_ctl(x=x, width=width, warn=warn, ctl='sgr', normalize=normalize)
+  strtrim_ctl(
+    x=x, width=width, warn=warn, ctl='sgr', normalize=normalize,
+    carry=carry, terminate=terminate
+  )
 
 #' @export
 #' @rdname strtrim_ctl
@@ -162,9 +137,12 @@ strtrim_sgr <- function(
 strtrim2_sgr <- function(x, width, warn=getOption('fansi.warn'),
   tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
   tab.stops=getOption('fansi.tab.stops'),
-  normalize=getOption('fansi.normalize', FALSE)
+  normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
 )
   strtrim2_ctl(
     x=x, width=width, warn=warn, tabs.as.spaces=tabs.as.spaces,
-    tab.stops=tab.stops, ctl='sgr', normalize=normalize
+    tab.stops=tab.stops, ctl='sgr', normalize=normalize,
+    carry=carry, terminate=terminate
   )

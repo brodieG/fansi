@@ -16,7 +16,7 @@
 
 #' ANSI Control Sequence Aware Version of strsplit
 #'
-#' A drop-in replacement for [base::strsplit].  It will be noticeably slower,
+#' A drop-in replacement for [`base::strsplit`].  It will be noticeably slower,
 #' but should otherwise behave the same way except for _Control Sequence_
 #' awareness.
 #'
@@ -28,20 +28,18 @@
 #' You can however limit which control sequences are treated specially via the
 #' `ctl` parameters (see examples).
 #'
-#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.  The
-#'   split positions are computed after both `x` and `split` are converted to
-#'   UTF-8.
-#' @seealso [`fansi`] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results,
-#'   [`normalize_sgr`] for more details on what the `normalize` parameter does,
-#'   [base::strsplit] for details on the splitting.
+#' @note The split positions are computed after both `x` and `split` are
+#'   converted to UTF-8.
 #' @export
-#' @param x a character vector, or, unlike [base::strsplit] an object that can
+#' @param x a character vector, or, unlike [`base::strsplit`] an object that can
 #'   be coerced to character.
 #' @inheritParams base::strsplit
 #' @inheritParams strwrap_ctl
+#' @inherit substr_ctl seealso
+#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
+#'   Width calculations will not work properly in R < 3.2.2.
 #' @inheritSection substr_ctl _ctl vs. _sgr
-#' @return list, see [base::strsplit].
+#' @inherit base::strsplit return
 #' @examples
 #' strsplit_sgr("\033[31mhello\033[42m world!", " ")
 #'
@@ -50,25 +48,23 @@
 #' strsplit_sgr("\033[31mhello\033[42m\nworld!", "\n")
 #' strsplit_ctl("\033[31mhello\033[42m\nworld!", "\n", ctl=c("all", "nl"))
 
-
 strsplit_ctl <- function(
   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
-  ctl='all', normalize=getOption('fansi.normalize', FALSE)
+  ctl='all', normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
 ) {
-  x <- as.character(x)
-  if(any(Encoding(x) == "bytes"))
-    stop("BYTE encoded strings are not supported.")
-
+  VAL_IN_ENV(
+    x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
+    carry=carry, terminate=terminate
+  )
   if(is.null(split)) split <- ""
   split <- enc2utf8(as.character(split))
   if(!length(split)) split <- ""
   if(anyNA(split)) stop("Argument `split` may not contain NAs.")
-
-  if(!is.logical(warn)) warn <- as.logical(warn)
-  if(length(warn) != 1L || is.na(warn))
-    stop("Argument `warn` must be TRUE or FALSE.")
-
+  if(any(Encoding(split) == "bytes"))
+    stop("Argument `bytes` may not be \"bytes\" encoded.")
   if(!is.logical(fixed)) fixed <- as.logical(fixed)
   if(length(fixed) != 1L || is.na(fixed))
     stop("Argument `fixed` must be TRUE or FALSE.")
@@ -81,28 +77,6 @@ strsplit_ctl <- function(
   if(length(useBytes) != 1L || is.na(useBytes))
     stop("Argument `useBytes` must be TRUE or FALSE.")
 
-  if(!isTRUE(normalize %in% c(FALSE, TRUE)))
-    stop("Argument `normalize` must be TRUE or FALSE.")
-  normalize <- as.logical(normalize)
-
-  if(!is.character(term.cap))
-    stop("Argument `term.cap` must be character.")
-  if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
-    stop(
-      "Argument `term.cap` may only contain values in ",
-      deparse(VALID.TERM.CAP)
-    )
-  if(!is.character(ctl))
-    stop("Argument `ctl` must be character.")
-  ctl.int <- integer()
-  if(length(ctl)) {
-    # duplicate values in `ctl` are okay, so save a call to `unique` here
-    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
-      stop(
-        "Argument `ctl` may contain only values in `",
-        deparse(VALID.CTL), "`"
-      )
-  }
   # Need to handle recycling, complicated by the ability of strsplit to accept
   # multiple different split arguments
 
@@ -154,7 +128,8 @@ strsplit_ctl <- function(
         round.start=TRUE, round.stop=FALSE,
         tabs.as.spaces=FALSE, tab.stops=8L, warn=warn,
         term.cap.int=term.cap.int, x.len=length(starts),
-        ctl.int=ctl.int, normalize=normalize
+        ctl.int=ctl.int, normalize=normalize,
+        carry=carry, terminate=terminate
       )
     } else {
       res[[i]] <- x[[i]]
@@ -173,11 +148,14 @@ strsplit_ctl <- function(
 strsplit_sgr <- function(
   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
-  normalize=getOption('fansi.normalize', FALSE)
+  normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
 )
   strsplit_ctl(
     x=x, split=split, fixed=fixed, perl=perl, useBytes=useBytes,
-    warn=warn, term.cap=term.cap, ctl='sgr', normalize=normalize
+    warn=warn, term.cap=term.cap, ctl='sgr', normalize=normalize,
+    carry=carry, terminate=terminate
   )
 
 # # old interface to split happening directly in C code

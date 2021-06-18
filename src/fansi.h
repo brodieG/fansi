@@ -354,24 +354,29 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn);
   SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn);
   SEXP FANSI_state_at_pos_ext(
-    SEXP text, SEXP pos, SEXP type, SEXP lag, SEXP ends,
+    SEXP x, SEXP pos, SEXP type, SEXP lag, SEXP ends,
     SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm
   );
   SEXP FANSI_strwrap_ext(
     SEXP x, SEXP width,
-    SEXP indent, SEXP exdent, SEXP prefix, SEXP initial,
+    SEXP indent, SEXP exdent,
+    SEXP prefix, SEXP initial,
     SEXP wrap_always, SEXP pad_end,
     SEXP strip_spaces,
     SEXP tabs_as_spaces, SEXP tab_stops,
     SEXP warn, SEXP term_cap,
-    SEXP first_only, SEXP ctl, SEXP norm
+    SEXP first_only,
+    SEXP ctl, SEXP norm, SEXP carry,
+    SEXP terminate
   );
   SEXP FANSI_process_ext(SEXP input);
   SEXP FANSI_tabs_as_spaces_ext(
     SEXP vec, SEXP tab_stops, SEXP warn, SEXP term_cap, SEXP ctl
   );
   SEXP FANSI_color_to_html_ext(SEXP x);
-  SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP class_pre);
+  SEXP FANSI_esc_to_html(
+    SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes, SEXP carry
+  );
   SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap);
 
   SEXP FANSI_nchar(
@@ -395,8 +400,12 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_get_int_max();
   SEXP FANSI_esc_html(SEXP x, SEXP what);
 
-  SEXP FANSI_normalize_sgr_ext(SEXP x, SEXP warn, SEXP term_cap);
-  SEXP FANSI_normalize_sgr_list_ext(SEXP x, SEXP warn, SEXP term_cap);
+  SEXP FANSI_normalize_sgr_ext(
+    SEXP x, SEXP warn, SEXP term_cap, SEXP carry
+  );
+  SEXP FANSI_normalize_sgr_list_ext(
+    SEXP x, SEXP warn, SEXP term_cap, SEXP carry
+  );
 
   SEXP FANSI_size_buff_ext(SEXP x);
   SEXP FANSI_size_buff_prot_test();
@@ -404,7 +413,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_check_enc_ext(SEXP x, SEXP i);
   SEXP FANSI_ctl_as_int_ext(SEXP ctl);
 
-  SEXP FANSI_sgr_close_ext(SEXP x, SEXP term_cap);
+  SEXP FANSI_sgr_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm);
+  SEXP FANSI_sgr_at_end_ext(
+    SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry
+  );
 
   // - Internal funs -----------------------------------------------------------
 
@@ -493,6 +505,14 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   int FANSI_check_append(int cur, int extra, const char * msg, R_xlen_t i);
   void FANSI_check_append_err(const char * msg, R_xlen_t i);
+
+  void FANSI_val_args(SEXP x, SEXP norm, SEXP carry);
+  char * FANSI_sgr_as_chr(
+    struct FANSI_buff *buff, struct FANSI_sgr sgr, int normalize, R_xlen_t i
+  );
+  struct FANSI_sgr FANSI_carry_init(
+    SEXP carry, SEXP warn, SEXP term_cap, SEXP ctl
+  );
 
   // - Compatibility -----------------------------------------------------------
 

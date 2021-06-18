@@ -4,24 +4,26 @@ These are internal developer notes.
 
 ## Todo
 
+* This is definitely not parsimonious...  Maybe fix when we move substr to C?
+
+    > substr_ctl("", 2, 4, carry = "\033[33m")
+    [1] "\033[33m\033[0m"
+
+* Move the interrupt to be `_read_next` based with an unsigned counter?  With
+  maybe the SGR reads contributing more to the counter?  What about writes?  Is
+  there a more universal way to check for interrupts?  Main issue is that it's
+  possible (though perhaps unlikely) that there will be some very slow
+  individual loop iterations as we saw with `tabs_as_spaces`.
+* Write a section on performance in the fansi section.
 * Look into hiding global functions / structures, and split off fansi.h into the
   internal and external functions.  Maybe also split off the write functions
   from general utilities.
 * Delete unused code (e.g. FANSI_color_size, digits_in_int, etc.).
 * How to deal with wraps of `"hello \033[33;44m world"`.  Notice extra space.
-* Once we add isolate, make sure that trailing sequences are not omitted if the
-  end is not isolated.
 * Change `unhandled_ctl` to point out specific problem sequence.
 * Check double warnings in all functions doing the two pass reading.
-* How do we currently handle styles across elements?
-    * We don't.  `strwrap` carries the style within one single character
-      vector, it's just that in the output the result might span a few
-      elements.
-    * This needs to be properly documented.  Will also simplify
-      implementation of normalize.
 
-* Write docs about behavior of bleeding.
-* Bunch of docs don't have @return tags, oddly.
+* Bunch of docs don't have @return tags, oddly (fixed some).
 * Make sure we check we're not using `intmax_t` or `uintmax_t` in a tight loop
   anywhere.
 * Cleanup limits structure, is it really needed now we have a better view of
@@ -31,6 +33,36 @@ These are internal developer notes.
   check for unescaped '<', '>', and '&'?
 
 ## Done
+
+* How do we currently handle styles across elements?
+    * We don't.  `strwrap` carries the style within one single character
+      vector, it's just that in the output the result might span a few
+      elements.
+    * This needs to be properly documented.  Will also simplify
+      implementation of normalize.
+
+* Rationalize type checking on entry into C code given that state init already
+  checks many of them.
+
+Kinda, still a bit of a mess because functions all have slightly different
+signatures.
+
+* Check whether anything other than `substr_ctl` uses `state_at_pos` and thus
+  the assumptions about carry being handled externally might be incorrect.
+
+* Once we add isolate, make sure that trailing sequences are not omitted if the
+  end is not isolated?
+
+This doesn't make sense now to me.  Maybe if the beginning is not isolated?
+
+* It's possible we messed up and `sgr_to_html` had carry semantics whereas other
+  stuff did not.
+
+Yes, we did.  We're now using a different default value for `carry` for it.
+
+* Are we checking byte encoding on e.g. pre/pad, etc.?
+
+* Write docs about behavior of bleeding.
 
 * Can we manage the stack better with the growing buffer so we don't keep all
   the prior half sized ones around until we exit so they are eligible for gc?
@@ -181,7 +213,7 @@ Do we warn about closing tags that don't close an active style?  Maybe we
 do that, and then point to docs about bleed.  But it does mean we should
 include the bleed argument.
 
-## Bleed
+## Bleed / Carry
 
 Add a `bleed` param that is a single string (or TRUE) that causes the
 program to bleed from string to string, with the initial state specified
@@ -203,6 +235,37 @@ Is this the desired outcome:
     [1] "hello world"
 
 Yes, if "isolate" is true, but if not we should emit the ending style.
+
+What was the issue with recycling carry?  That you have to pick whether to wrap
+your own carry, or whether take the external one?  Indeed, what's the right
+answer there?  Ah, that's the ambiguity, carry and inherit are really distinct
+but potentially mutually exclusive (where inherit means take a previously known
+state).  Inherit matters also beyond normalized mode as e.g. when we take
+substrings we start the string with all the known states.
+
+Inherit doesn't really make sense for `strwrap`? I guess it does to begin, and
+then carry does the rest (although `strwrap` always auto-carries per element, so
+that's a different type of carry).
+
+So:
+
+* Inherit, a recycled vector of starting styles.
+* Carry, TRUE or FALSE, or a single style string to start with.
+    * Mutually exclusive with inherit.
+* Isolate, "start", "end", "both", "none/neither".
+    * Orthogonal to all the others.
+    * Both Carry and Inherit will be emitted?  Or is inherit just so we know
+      what to close with isolate in normalized mode?
+
+Leaning more and more on it being user responsibility to handle interactions
+with external strings by pre-pasting either the style-at-end of other strings,
+or the required closing tags.
+
+Does `isolate` then just become `terminate`?  What if we change our mind in the
+future about wanting to terminate the beginning?
+
+So we're left with just `carry` and terminate, and instructions on how to do
+things manually.
 
 ## Overflow
 

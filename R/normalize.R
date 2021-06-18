@@ -33,20 +33,17 @@
 #' The underlying assumption is that each element in the vector is
 #' unaffected by any styles in any other element or elsewhere.  This may
 #' lead to surprising outcomes if these assumptions are untrue (see
-#' examples).
+#' examples).  You may adjust this assumption with the `carry` parameter.
 #'
 #' Normalization was implemented primarily for better compatibility with
 #' [`crayon`][1] which emits SGR codes individually and assumes that
-#' individual each opening code is paired up with its specific closing
-#' code.
+#' each opening code is paired up with its specific closing code.
 #'
 #' [1]: https://cran.r-project.org/package=crayon
 #'
 #' @export
-#' @param x character vector to normalize the SGR control sequences of.
-#' @seealso [`fansi`] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results.
 #' @inheritParams substr_ctl
+#' @inherit has_ctl seealso
 #' @return `x`, with all SGRs normalized.
 #' @examples
 #' normalize_sgr("hello\033[42;33m world")
@@ -63,34 +60,24 @@
 #'   normalize_sgr("\033[31;32mhello\033[m"),
 #'   normalize_sgr("\033[31mhe\033[49mllo\033[m")
 #' )
-#' ## External SGR will defeat normalization
+#' ## External SGR will defeat normalization, unless we `carry` it
+#' red <- "\033[41m"
 #' writeLines(
 #'   c(
-#'     paste("\033[31m", "he\033[0mllo", "\033[0m"),
-#'     paste("\033[31m", normalize_sgr("he\033[0mllo"), "\033[0m")
+#'     paste(red, "he\033[0mllo", "\033[0m"),
+#'     paste(red, normalize_sgr("he\033[0mllo"), "\033[0m")
+#'     paste(red, normalize_sgr("he\033[0mllo", carry=red), "\033[0m")
 #' ) )
 
 normalize_sgr <- function(
-  x, warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+  x, warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
+  carry=getOption('fansi.carry', FALSE)
 ) {
-  if(!is.logical(warn)) warn <- as.logical(warn)
-  if(!is.character(x)) stop("Argument `x` should be a character vector.")
-  if(!is.character(term.cap))
-    stop("Argument `term.cap` must be character.")
-  if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
-    stop(
-      "Argument `term.cap` may only contain values in ",
-      deparse(VALID.TERM.CAP)
-    )
-
-  .Call(FANSI_normalize_sgr, enc2utf8(x), warn, term.cap.int)
+  VAL_IN_ENV(x=x, warn=warn, term.cap=term.cap, carry=carry)
+  .Call(FANSI_normalize_sgr, x, warn, term.cap.int, carry)
 }
 # To reduce overhead of applying this in `strwrap_ctl`
 
-normalize_sgr_list <- function(x, warn, term.cap.int)
-  .Call(FANSI_normalize_sgr_list, x, warn, term.cap.int)
-
-close_sgr <- function(x) {
-  .Call(FANSI_close_sgr, x, seq_along(VALID.TERM.CAP))
-}
+normalize_sgr_list <- function(x, warn, term.cap.int, carry)
+  .Call(FANSI_normalize_sgr_list, x, warn, term.cap.int, carry)
 

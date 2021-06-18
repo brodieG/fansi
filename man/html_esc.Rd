@@ -17,6 +17,9 @@ be sufficient.  @return \code{x}, but with the \code{what} characters replaced b
 their HTML entity codes, and Encoding set to UTF-8 if non-ASCII input are
 present in \code{x}.}
 }
+\value{
+x possibly re-encoded to UTF8, with \code{what} characters escaped.
+}
 \description{
 Arbitrary text may contain characters with special meaning in HTML, which may
 cause HTML display to be corrupted if they are included unescaped in a web

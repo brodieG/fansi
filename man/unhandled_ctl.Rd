@@ -14,7 +14,7 @@ be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
 starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
 "38;2" or "48;2"). Changing this parameter changes how \code{fansi}
 interprets escape sequences, so you should ensure that it matches your
-terminal capabilities. See \link{term_cap_test} for details.}
+terminal capabilities. See \code{\link{term_cap_test}} for details.}
 }
 \value{
 data frame with as many rows as there are unhandled escape
@@ -77,6 +77,6 @@ string <- c(
 unhandled_ctl(string)
 }
 \seealso{
-\link{fansi} for details on how \emph{Control Sequences} are
+\code{\link[=fansi]{?fansi}} for details on how \emph{Control Sequences} are
 interpreted, particularly if you are getting unexpected results.
 }

@@ -30,12 +30,10 @@ Encoding: UTF-8
 Collate:
     'constants.R'
     'fansi-package.R'
-    'has.R'
     'internal.R'
     'load.R'
     'misc.R'
     'nchar.R'
-    'strip.R'
     'strwrap.R'
     'strtrim.R'
     'strsplit.R'
@@ -43,3 +41,5 @@ Collate:
     'tohtml.R'
     'unhandled.R'
     'normalize.R'
+    'carry.R'
+    'sgr.R'

@@ -25,7 +25,7 @@
 #' `substr2_ctl` and `substr2_sgr` add the ability to retrieve substrings based
 #' on display width, and byte width in addition to the normal character width.
 #' `substr2_ctl` also provides the option to convert tabs to spaces with
-#' [tabs_as_spaces] prior to taking substrings.
+#' [`tabs_as_spaces`] prior to taking substrings.
 #'
 #' Because exact substrings on anything other than character width cannot be
 #' guaranteed (e.g. as a result of multi-byte encodings, or double display-width
@@ -62,12 +62,15 @@
 #' `*_ctl` versions with the `ctl` parameter set to "sgr".
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
+#'   Width calculations will not work properly in R < 3.2.2.
 #' @inheritParams base::substr
 #' @export
-#' @seealso [`fansi`] for details on how _Control Sequences_ are
+#' @seealso [`?fansi`][fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results,
-#'   [`normalize_sgr`] for more details on what the `normalize` parameter does.
-#' @param x a character vector or object that can be coerced to character.
+#'   [`normalize_sgr`] for more details on what the `normalize` parameter does,
+#'   [`sgr_at_end`] to compute active SGR at the end of strings, [`close_sgr`]
+#'   to compute the SGR required to close active SGR.
+#' @param x a character vector or object that can be coerced to such.
 #' @param type character(1L) partial matching `c("chars", "width")`, although
 #'   `type="width"` only works correctly with R >= 3.2.2.  With "width", whether
 #'   C0 and C1 are treated as zero width may depend on R version and locale in
@@ -99,18 +102,32 @@
 #' @param warn TRUE (default) or FALSE, whether to warn when potentially
 #'   problematic _Control Sequences_ are encountered.  These could cause the
 #'   assumptions `fansi` makes about how strings are rendered on your display
-#'   to be incorrect, for example by moving the cursor (see [fansi]).
+#'   to be incorrect, for example by moving the cursor (see [`?fansi`][fansi]).
 #' @param term.cap character a vector of the capabilities of the terminal, can
 #'   be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
 #'   starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
 #'   "38;2" or "48;2"). Changing this parameter changes how `fansi`
 #'   interprets escape sequences, so you should ensure that it matches your
-#'   terminal capabilities. See [term_cap_test] for details.
+#'   terminal capabilities. See [`term_cap_test`] for details.
 #' @param normalize TRUE or FALSE (default) whether SGR sequence should be
 #'   normalized out such that there is one distinct sequence for each SGR code.
 #'   normalized strings will occupy more space (e.g. "\033[31;42m" becomes
 #'   "\033[31m\033[42m"), but will work better with code that assumes each SGR
 #'   code will be in its own escape as `crayon` does.
+#' @param carry TRUE, FALSE, or a scalar string, controls whether active SGR
+#'   present at the end of an input vector element is carried into the next
+#'   vector element.  If FALSE each vector element is interpreted as if there
+#'   were no active SGR present when they begin.  If character, then the active
+#'   SGR at the end of the `carry` string is carried into the first element of
+#'   `x`.  For every function except [`sgr_to_html`] this argument defaults to
+#'   FALSE.  See the "SGR Interactions" section of [`?fansi`][fansi] for
+#'   details.
+#' @param terminate TRUE (default) or FALSE whether substrings should have
+#'   active SGR closed to avoid it bleeding into other strings they may be
+#'   prepended onto.  See the "SGR Interactions" section of [`?fansi`][fansi] for
+#'   details.
+#' @return a character vector of the same length and with the same attributes as
+#'   x (after possible coercion and re-encoding to UTF-8).
 #' @examples
 #' substr_ctl("\033[42mhello\033[m world", 1, 9)
 #' substr_ctl("\033[42mhello\033[m world", 3, 9)
@@ -118,9 +135,7 @@
 #' ## Width 2 and 3 are in the middle of an ideogram as
 #' ## start and stop positions respectively, so we control
 #' ## what we get with `round`
-#'
 #' cn.string <- paste0("\033[42m", "\u4E00\u4E01\u4E03", "\033[m")
-#'
 #' substr2_ctl(cn.string, 2, 3, type='width')
 #' substr2_ctl(cn.string, 2, 3, type='width', round='both')
 #' substr2_ctl(cn.string, 2, 3, type='width', round='start')
@@ -128,20 +143,31 @@
 #'
 #' ## the _sgr variety only treat as special CSI SGR,
 #' ## compare the following:
-#'
 #' substr_sgr("\033[31mhello\tworld", 1, 6)
 #' substr_ctl("\033[31mhello\tworld", 1, 6)
 #' substr_ctl("\033[31mhello\tworld", 1, 6, ctl=c('all', 'c0'))
+#'
+#' ## `carry` allows SGR to carry from one element to the next
+#' substr_sgr(c("\033[33mhello", "world"), 1, 3)
+#' substr_sgr(c("\033[33mhello", "world"), 1, 3, carry=TRUE)
+#' substr_sgr(c("\033[33mhello", "world"), 1, 3, carry="\033[44m")
+#'
+#' ## We can omit the termination
+#' bleed <- substr_sgr(c("\033[41hello", "world"), 1, 3, terminate=FALSE)
+#' \dontrun{writeLines(bleed)} # Style will bleed out of string
+#' writeLines("\033[m")        # Stop bleeding if needed
 
 substr_ctl <- function(
   x, start, stop,
   warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap'),
-  ctl='all', normalize=getOption('fansi.normalize', FALSE)
+  ctl='all', normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
 )
   substr2_ctl(
     x=x, start=start, stop=stop, warn=warn, term.cap=term.cap, ctl=ctl,
-    normalize=normalize
+    normalize=normalize, carry=carry, terminate=terminate
   )
 
 #' @rdname substr_ctl
@@ -153,45 +179,15 @@ substr2_ctl <- function(
   tab.stops=getOption('fansi.tab.stops'),
   warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap'),
-  ctl='all', normalize=getOption('fansi.normalize', FALSE)
+  ctl='all', normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
 ) {
-  if(!is.character(x)) x <- as.character(x)
-  x <- enc2utf8(x)
-  if(any(Encoding(x) == "bytes"))
-    stop("BYTE encoded strings are not supported.")
-
-  if(!is.logical(tabs.as.spaces)) tabs.as.spaces <- as.logical(tabs.as.spaces)
-  if(length(tabs.as.spaces) != 1L || is.na(tabs.as.spaces))
-    stop("Argument `tabs.as.spaces` must be TRUE or FALSE.")
-  if(!is.numeric(tab.stops) || !length(tab.stops) || any(tab.stops < 1))
-    stop("Argument `tab.stops` must be numeric and strictly positive")
-
-  if(!is.logical(warn)) warn <- as.logical(warn)
-  if(length(warn) != 1L || is.na(warn))
-    stop("Argument `warn` must be TRUE or FALSE.")
-  if(!isTRUE(normalize %in% c(FALSE, TRUE)))
-    stop("Argument `normalize` must be TRUE or FALSE.")
-  normalize <- as.logical(normalize)
-
-  if(!is.character(term.cap))
-    stop("Argument `term.cap` must be character.")
-  if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
-    stop(
-      "Argument `term.cap` may only contain values in ",
-      deparse(VALID.TERM.CAP)
-    )
-  if(!is.character(ctl))
-    stop("Argument `ctl` must be character.")
-  ctl.int <- integer()
-  if(length(ctl)) {
-    # duplicate values in `ctl` are okay, so save a call to `unique` here
-    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
-      stop(
-        "Argument `ctl` may contain only values in `",
-        deparse(VALID.CTL), "`"
-      )
-  }
-
+  VAL_IN_ENV(
+    x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
+    carry=carry, terminate=terminate, tab.stops=tab.stops,
+    tabs.as.spaces=tabs.as.spaces
+  )
   valid.round <- c('start', 'stop', 'both', 'neither')
   if(
     !is.character(round) || length(round) != 1 ||
@@ -228,7 +224,8 @@ substr2_ctl <- function(
     round.start=round == 'start' || round == 'both',
     round.stop=round == 'stop' || round == 'both',
     x.len=length(x),
-    ctl.int=ctl.int, normalize=normalize
+    ctl.int=ctl.int, normalize=normalize,
+    carry=carry, terminate=terminate
   )
   res[!no.na] <- NA_character_
   res
@@ -240,11 +237,13 @@ substr_sgr <- function(
   x, start, stop,
   warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap'),
-  normalize=getOption('fansi.normalize', FALSE)
+  normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
 )
   substr2_ctl(
     x=x, start=start, stop=stop, warn=warn, term.cap=term.cap, ctl='sgr',
-    normalize=normalize
+    normalize=normalize, carry=carry, terminate=terminate
   )
 
 #' @rdname substr_ctl
@@ -256,13 +255,16 @@ substr2_sgr <- function(
   tab.stops=getOption('fansi.tab.stops'),
   warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap'),
-  normalize=getOption('fansi.normalize', FALSE)
+  normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
 )
   substr2_ctl(
     x=x, start=start, stop=stop, type=type, round=round,
     tabs.as.spaces=tabs.as.spaces,
     tab.stops=tab.stops, warn=warn, term.cap=term.cap, ctl='sgr',
-    normalize=normalize
+    normalize=normalize,
+    carry=carry, terminate=terminate
   )
 
 ## @x must already have been converted to UTF8
@@ -271,7 +273,7 @@ substr2_sgr <- function(
 substr_ctl_internal <- function(
   x, start, stop, type.int, round, tabs.as.spaces,
   tab.stops, warn, term.cap.int, round.start, round.stop,
-  x.len, ctl.int, normalize
+  x.len, ctl.int, normalize, carry, terminate
 ) {
   # For each unique string, compute the state at each start and stop position
   # and re-map the positions to "ansi" space
@@ -282,13 +284,26 @@ substr_ctl_internal <- function(
   res <- character(x.len)
   s.s.valid <- stop >= start & stop
 
-  x.scalar <- length(x) == 1
-  x.u <- if(x.scalar) x else unique_chr(x)
+  # If we want to carry, we'll do this manually as too much work to try to do it
+  # in C given the current structure using ordered indices into each string.
+  # Do before `unique` as this to equal strings may become different.
 
+  if(!is.na(carry)) {
+    ends <- .Call(
+      FANSI_sgr_at_end, x, warn, term.cap.int, ctl.int, normalize, carry
+    )
+    x <- paste0(c(carry, ends[-length(ends)]), x)
+  }
   # We compute style at each start and stop position by getting all those
   # positions into a vector and then ordering them by position, keeping track of
   # original order and whether they are starting or ending positions (affects
   # how multi-byte characters are trimmed/kept).
+
+  # We do this for each unique string in `x` as the indices must be incrementing
+  # for each of them.
+
+  x.scalar <- length(x) == 1
+  x.u <- if(x.scalar) x else unique_chr(x)
 
   for(u in x.u) {
     elems <- which(x == u & s.s.valid)
@@ -312,7 +327,7 @@ substr_ctl_internal <- function(
       e.lag,   # whether to include a partially covered multi-byte character
       e.ends,  # whether it's a start or end position
       warn, term.cap.int,
-      ctl.int, normalize
+      ctl.int, normalize, carry
     )
     # Recover the matching values for e.sort
 
@@ -328,14 +343,12 @@ substr_ctl_internal <- function(
     start.tag <- state[[1]][start.ansi.idx]
     stop.tag <- state[[1]][stop.ansi.idx]
 
-    # if there is any ANSI CSI at end then add a terminating CSI
+    # if there is any ANSI CSI at end then add a terminating CSI, warnings
+    # should have been issued on first read
 
-    if(normalize) {
-      end.csi <- close_sgr(stop.tag)
-    } else {
-      end.csi <- character(length(stop.tag))
-      end.csi[nzchar(stop.tag)] <- '\033[0m'
-    }
+    end.csi <-
+      if(terminate) close_sgr(stop.tag, warn=FALSE, normalize)
+      else ""
     tmp <- paste0(
       start.tag,
       substr(x.elems, start.ansi, stop.ansi)
@@ -354,7 +367,8 @@ substr_ctl_internal <- function(
 
 state_at_pos <- function(
   x, starts, ends, warn=getOption('fansi.warn'),
-  normalize=getOption('fansi.normalize', FALSE)
+  normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE)
 ) {
   is.start <- c(rep(TRUE, length(starts)), rep(FALSE, length(ends)))
   .Call(
@@ -366,6 +380,7 @@ state_at_pos <- function(
     warn,
     seq_along(VALID.TERM.CAP),
     1L,        # ctl="all"
-    normalize
+    normalize,
+    carry
   )
 }

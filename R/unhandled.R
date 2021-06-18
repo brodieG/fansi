@@ -58,8 +58,7 @@
 #'
 #' @note Non-ASCII strings are converted to UTF-8 encoding.
 #' @export
-#' @seealso [fansi] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results.
+#' @inherit has_ctl seealso
 #' @param x character vector
 #' @inheritParams substr_ctl
 #' @return data frame with as many rows as there are unhandled escape
@@ -74,14 +73,8 @@
 #' unhandled_ctl(string)
 
 unhandled_ctl <- function(x, term.cap=getOption('fansi.term.cap')) {
-  if(!is.character(term.cap))
-    stop("Argument `term.cap` must be character.")
-  if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
-    stop(
-      "Argument `term.cap` may only contain values in ",
-      deparse(VALID.TERM.CAP)
-    )
-  res <- .Call(FANSI_unhandled_esc, enc2utf8(x), term.cap.int)
+  VAL_IN_ENV(x=x, term.cap=term.cap)
+  res <- .Call(FANSI_unhandled_esc, x, term.cap.int)
   names(res) <- c("index", "start", "stop", "error", "translated", "esc")
   errors <- c(
     'unknown', 'special', 'exceed-term-cap', 'non-SGR', 'malformed-CSI',

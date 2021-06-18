@@ -23,14 +23,14 @@ static const
 R_CallMethodDef callMethods[] = {
   {"has_csi", (DL_FUNC) &FANSI_has, 3},
   {"strip_csi", (DL_FUNC) &FANSI_strip, 3},
-  {"strwrap_csi", (DL_FUNC) &FANSI_strwrap_ext, 16},
+  {"strwrap_csi", (DL_FUNC) &FANSI_strwrap_ext, 18},
   {"state_at_pos_ext", (DL_FUNC) &FANSI_state_at_pos_ext, 9},
   {"process", (DL_FUNC) &FANSI_process_ext, 1},
   {"check_assumptions", (DL_FUNC) &FANSI_check_assumptions, 0},
   {"digits_in_int", (DL_FUNC) &FANSI_digits_in_int_ext, 1},
   {"tabs_as_spaces", (DL_FUNC) &FANSI_tabs_as_spaces_ext, 5},
   {"color_to_html", (DL_FUNC) &FANSI_color_to_html_ext, 1},
-  {"esc_to_html", (DL_FUNC) &FANSI_esc_to_html, 4},
+  {"esc_to_html", (DL_FUNC) &FANSI_esc_to_html, 5},
   {"unhandled_esc", (DL_FUNC) &FANSI_unhandled_esc, 2},
   {"unique_chr", (DL_FUNC) &FANSI_unique_chr, 1},
   {"nzchar_esc", (DL_FUNC) &FANSI_nzchar, 5},
@@ -45,11 +45,12 @@ R_CallMethodDef callMethods[] = {
   {"ctl_as_int", (DL_FUNC) &FANSI_ctl_as_int_ext, 1},
   {"esc_html", (DL_FUNC) &FANSI_esc_html, 2},
   {"reset_limits", (DL_FUNC) &FANSI_reset_limits, 0},
-  {"normalize_sgr", (DL_FUNC) &FANSI_normalize_sgr_ext, 3},
-  {"normalize_sgr_list", (DL_FUNC) &FANSI_normalize_sgr_list_ext, 3},
-  {"close_sgr", (DL_FUNC) &FANSI_sgr_close_ext, 2},
+  {"normalize_sgr", (DL_FUNC) &FANSI_normalize_sgr_ext, 4},
+  {"normalize_sgr_list", (DL_FUNC) &FANSI_normalize_sgr_list_ext, 4},
+  {"close_sgr", (DL_FUNC) &FANSI_sgr_close_ext, 4},
   {"size_buff", (DL_FUNC) &FANSI_size_buff_ext, 1},
   {"size_buff_prot_test", (DL_FUNC) &FANSI_size_buff_prot_test, 0},
+  {"sgr_at_end", (DL_FUNC) &FANSI_sgr_at_end_ext, 6},
   {NULL, NULL, 0}
 };
 

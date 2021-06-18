@@ -27,8 +27,7 @@
 #'   `ctl` parameter only affects which _Control Sequences_ are considered zero
 #'   width.  Tabs will always be converted to spaces, irrespective of the `ctl`
 #'   setting.
-#' @seealso [fansi] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results.
+#' @inherit has_ctl seealso
 #' @export
 #' @inheritParams substr_ctl
 #' @param x character vector or object coercible to character; any tabs therein
@@ -58,6 +57,7 @@ tabs_as_spaces <- function(
   x, tab.stops=getOption('fansi.tab.stops'), warn=getOption('fansi.warn'),
   ctl='all'
 ) {
+
   if(!is.character(x)) x <- as.character(x)
   if(!is.logical(warn)) warn <- as.logical(warn)
   if(length(warn) != 1L || is.na(warn))
@@ -111,8 +111,7 @@ tabs_as_spaces <- function(
 #' codes in terminals that do not support them are more likely to be silently
 #' ignored, so `fansi` functions do not warn about those.
 #'
-#' @seealso [fansi] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results.
+#' @inherit has_ctl seealso
 #' @export
 #' @return character the test vector, invisibly
 #' @examples
@@ -182,6 +181,7 @@ fansi_lines <- function(txt, step=1) {
 #'   be sufficient.  @return `x`, but with the `what` characters replaced by
 #'   their HTML entity codes, and Encoding set to UTF-8 if non-ASCII input are
 #'   present in `x`.
+#' @return x possibly re-encoded to UTF8, with `what` characters escaped.
 #' @examples
 #' html_esc("day > night")
 #' html_esc("<SPAN>hello world</SPAN>")

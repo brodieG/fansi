@@ -14,7 +14,9 @@ strsplit_ctl(
   warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"),
   ctl = "all",
-  normalize = getOption("fansi.normalize", FALSE)
+  normalize = getOption("fansi.normalize", FALSE),
+  carry = getOption("fansi.carry", FALSE),
+  terminate = getOption("fansi.terminate", TRUE)
 )
 
 strsplit_sgr(
@@ -25,11 +27,13 @@ strsplit_sgr(
   useBytes = FALSE,
   warn = getOption("fansi.warn"),
   term.cap = getOption("fansi.term.cap"),
-  normalize = getOption("fansi.normalize", FALSE)
+  normalize = getOption("fansi.normalize", FALSE),
+  carry = getOption("fansi.carry", FALSE),
+  terminate = getOption("fansi.terminate", TRUE)
 )
 }
 \arguments{
-\item{x}{a character vector, or, unlike \link[base:strsplit]{base::strsplit} an object that can
+\item{x}{a character vector, or, unlike \code{\link[base:strsplit]{base::strsplit}} an object that can
 be coerced to character.}
 
 \item{split}{
@@ -57,14 +61,14 @@ be coerced to character.}
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
-to be incorrect, for example by moving the cursor (see \link{fansi}).}
+to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
 starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
 "38;2" or "48;2"). Changing this parameter changes how \code{fansi}
 interprets escape sequences, so you should ensure that it matches your
-terminal capabilities. See \link{term_cap_test} for details.}
+terminal capabilities. See \code{\link{term_cap_test}} for details.}
 
 \item{ctl}{character, which \emph{Control Sequences} should be treated
 specially. See the "_ctl vs. _sgr" section for details.
@@ -84,12 +88,35 @@ normalized out such that there is one distinct sequence for each SGR code.
 normalized strings will occupy more space (e.g. "\033[31;42m" becomes
 "\033[31m\033[42m"), but will work better with code that assumes each SGR
 code will be in its own escape as \code{crayon} does.}
+
+\item{carry}{TRUE, FALSE, or a scalar string, controls whether active SGR
+present at the end of an input vector element is carried into the next
+vector element.  If FALSE each vector element is interpreted as if there
+were no active SGR present when they begin.  If character, then the active
+SGR at the end of the \code{carry} string is carried into the first element of
+\code{x}.  For every function except \code{\link{sgr_to_html}} this argument defaults to
+FALSE.  See the "SGR Interactions" section of \code{\link[=fansi]{?fansi}} for
+details.}
+
+\item{terminate}{TRUE (default) or FALSE whether substrings should have
+active SGR closed to avoid it bleeding into other strings they may be
+prepended onto.  See the "SGR Interactions" section of \code{\link[=fansi]{?fansi}} for
+details.}
 }
 \value{
-list, see \link[base:strsplit]{base::strsplit}.
+A list of the same length as \code{x}, the \code{i}-th element of which
+  contains the vector of splits of \code{x[i]}.
+
+  If any element of \code{x} or \code{split} is declared to be in UTF-8
+  (see \code{\link[base]{Encoding}}), all non-ASCII character strings in the
+  result will be in UTF-8 and have their encoding declared as UTF-8.
+  (This also holds if any element is declared to be Latin-1 except in a
+  Latin-1 locale.)
+  For \code{perl = TRUE, useBytes = FALSE} all non-ASCII strings in a
+  multibyte locale are translated to UTF-8.
 }
 \description{
-A drop-in replacement for \link[base:strsplit]{base::strsplit}.  It will be noticeably slower,
+A drop-in replacement for \code{\link[base:strsplit]{base::strsplit}}.  It will be noticeably slower,
 but should otherwise behave the same way except for \emph{Control Sequence}
 awareness.
 }
@@ -103,9 +130,11 @@ You can however limit which control sequences are treated specially via the
 \code{ctl} parameters (see examples).
 }
 \note{
-Non-ASCII strings are converted to and returned in UTF-8 encoding.  The
-split positions are computed after both \code{x} and \code{split} are converted to
-UTF-8.
+The split positions are computed after both \code{x} and \code{split} are
+converted to UTF-8.
+
+Non-ASCII strings are converted to and returned in UTF-8 encoding.
+Width calculations will not work properly in R < 3.2.2.
 }
 \section{_ctl vs. _sgr}{
 
@@ -132,8 +161,9 @@ strsplit_sgr("\033[31mhello\033[42m\nworld!", "\n")
 strsplit_ctl("\033[31mhello\033[42m\nworld!", "\n", ctl=c("all", "nl"))
 }
 \seealso{
-\code{\link{fansi}} for details on how \emph{Control Sequences} are
+\code{\link[=fansi]{?fansi}} for details on how \emph{Control Sequences} are
 interpreted, particularly if you are getting unexpected results,
 \code{\link{normalize_sgr}} for more details on what the \code{normalize} parameter does,
-\link[base:strsplit]{base::strsplit} for details on the splitting.
+\code{\link{sgr_at_end}} to compute active SGR at the end of strings, \code{\link{close_sgr}}
+to compute the SGR required to close active SGR.
 }

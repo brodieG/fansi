@@ -127,7 +127,7 @@ static SEXP writeline(
   struct FANSI_prefix_dat pre_dat,
   int tar_width, const char * pad_chr,
   R_xlen_t i,
-  int normalize
+  int normalize, int terminate
 ) {
   // First thing we need to do is check whether we need to pad as that affects
   // how we treat the boundary.
@@ -175,7 +175,7 @@ static SEXP writeline(
   // Check if we are in a CSI state b/c if we need extra room for
   // the closing state tag
   int needs_start = FANSI_sgr_active(state_start.sgr);
-  int needs_close = FANSI_sgr_active(state_bound.sgr);
+  int needs_close = terminate && FANSI_sgr_active(state_bound.sgr);
 
   // Measure/Write loop (see src/write.c)
   char * buff_track = NULL;
@@ -254,7 +254,10 @@ static SEXP strwrap(
   SEXP warn, SEXP term_cap,
   int first_only, SEXP ctl,
   R_xlen_t index,
-  int normalize
+  int normalize,
+  int carry,
+  struct FANSI_sgr * sgr_carry,
+  int terminate
 ) {
   SEXP R_true = PROTECT(ScalarLogical(1));
   SEXP R_one = PROTECT(ScalarInteger(1));
@@ -294,6 +297,7 @@ static SEXP strwrap(
   // Need to keep track of where word boundaries start and end due to
   // possibility for multiple elements between words
 
+  if(carry) state.sgr = *sgr_carry;
   struct FANSI_state state_start, state_bound, state_prev;
   state_start = state_bound = state_prev = state;
   R_xlen_t size = 0;
@@ -382,7 +386,7 @@ static SEXP strwrap(
         writeline(
           state_bound, state_start, buff,
           para_start ? pre_first : pre_next,
-          width_tar, pad_chr, index, normalize
+          width_tar, pad_chr, index, normalize, terminate
         )
       );
       first_line = 0;
@@ -393,7 +397,13 @@ static SEXP strwrap(
         SETCDR(char_list, list1(res_sxp));
         char_list = CDR(char_list);
         UNPROTECT(1);
-      } else break;
+      } else {
+        // Need end state if in trim mode and we wish to carry
+        if(carry)
+          while(state.string[state.pos_byte])
+            state = FANSI_read_next(state, index);
+        break;
+      }
       // overflow should be impossible here since string is at most int long
 
       ++size;
@@ -450,6 +460,7 @@ static SEXP strwrap(
     res = res_sxp;
   }
   UNPROTECT(2);
+  *sgr_carry = state.sgr;
   return res;
 }
 
@@ -473,28 +484,27 @@ SEXP FANSI_strwrap_ext(
   SEXP tabs_as_spaces, SEXP tab_stops,
   SEXP warn, SEXP term_cap,
   SEXP first_only,
-  SEXP ctl, SEXP norm
+  SEXP ctl, SEXP norm, SEXP carry,
+  SEXP terminate
 ) {
+  FANSI_val_args(x, norm, carry);
+  // FANSI_state_init does validations too
   if(
-    TYPEOF(x) != STRSXP || TYPEOF(width) != INTSXP ||
+    TYPEOF(width) != INTSXP ||
     TYPEOF(indent) != INTSXP || TYPEOF(exdent) != INTSXP ||
     TYPEOF(prefix) != STRSXP || TYPEOF(initial) != STRSXP ||
     TYPEOF(wrap_always) != LGLSXP ||
     TYPEOF(pad_end) != STRSXP ||
-    TYPEOF(warn) != LGLSXP || TYPEOF(term_cap) != INTSXP ||
     TYPEOF(strip_spaces) != LGLSXP ||
     TYPEOF(tabs_as_spaces) != LGLSXP ||
     TYPEOF(tab_stops) != INTSXP ||
     TYPEOF(first_only) != LGLSXP ||
-    TYPEOF(ctl) != INTSXP ||
-    TYPEOF(norm) != LGLSXP
+    TYPEOF(terminate) != LGLSXP
   )
     error("Internal Error: arg type error 1; contact maintainer.");  // nocov
 
-  if(XLENGTH(norm) != 1)
-    error("Internal Error: arg norm should be scalar.");  // nocov
-
   int normalize = asLogical(norm);
+  int prt = 0;
 
   const char * pad = CHAR(asChar(pad_end));
   if(*pad != 0 && (*pad < 0x20 || *pad > 0x7e))
@@ -543,35 +553,29 @@ SEXP FANSI_strwrap_ext(
   // Set up the buffer, this will be created in FANSI_strwrap, but we want a
   // handle for it here so we can re-use.
   // WARNING: must be after pad_pre as pad_pre uses R_alloc.
-
   struct FANSI_buff buff;
   FANSI_INIT_BUFF(&buff);
 
   // Strip whitespaces as needed; `strwrap` doesn't seem to do this with prefix
   // and initial, so we don't either
-
   int strip_spaces_int = asInteger(strip_spaces);
 
-  if(strip_spaces_int) x = PROTECT(FANSI_process(x, &buff));
-  else PROTECT(x);
+  if(strip_spaces_int) {x = PROTECT(FANSI_process(x, &buff)); ++prt;}
 
   // and tabs
-
   if(asInteger(tabs_as_spaces)) {
     x = PROTECT(FANSI_tabs_as_spaces(x, tab_stops, &buff, warn, term_cap, ctl));
+    ++prt;
     prefix = PROTECT(
       FANSI_tabs_as_spaces(prefix, tab_stops, &buff, warn, term_cap, ctl)
-    );
+    ); ++prt;
     initial = PROTECT(
       FANSI_tabs_as_spaces(initial, tab_stops, &buff, warn, term_cap, ctl)
-    );
+    ); ++prt;
   }
-  else x = PROTECT(PROTECT(PROTECT(x)));  // PROTECT stack balance
-
 
   // Check that widths are feasible, although really only relevant if in strict
   // mode
-
   int width_int = asInteger(width);
   int wrap_always_int = asInteger(wrap_always);
 
@@ -588,21 +592,24 @@ SEXP FANSI_strwrap_ext(
       "and `prefix` width must be less than `width - 1` when in `wrap.always`."
     );
 
+  // Prep for carry
+  int do_carry = STRING_ELT(carry, 0) != NA_STRING;
+  struct FANSI_sgr sgr_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
+
   // Could be a little faster avoiding this allocation if it turns out nothing
   // needs to be wrapped and we're in simplify=TRUE, but that seems like a lot
   // of work for a rare event
-
   R_xlen_t i, x_len = XLENGTH(x);
   SEXP res;
 
   if(first_only_int) {
     // this is to support trim mode
-    res = PROTECT(allocVector(STRSXP, x_len));
+    res = PROTECT(allocVector(STRSXP, x_len)); ++prt;
   } else {
-    res = PROTECT(allocVector(VECSXP, x_len));
+    res = PROTECT(allocVector(VECSXP, x_len)); ++prt;
   }
-  // Wrap each element
 
+  // Wrap each element
   for(i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
     SEXP chr = STRING_ELT(x, i);
@@ -618,7 +625,10 @@ SEXP FANSI_strwrap_ext(
         strip_spaces_int,
         warn, term_cap,
         first_only_int,
-        ctl, i, normalize
+        ctl, i, normalize,
+        do_carry,
+        &sgr_carry,
+        asLogical(terminate)
     ) );
     if(first_only_int) {
       SET_STRING_ELT(res, i, str_i);
@@ -628,6 +638,6 @@ SEXP FANSI_strwrap_ext(
     UNPROTECT(1);
   }
   FANSI_release_buff(&buff, 1);
-  UNPROTECT(5);
+  UNPROTECT(prt);
   return res;
 }

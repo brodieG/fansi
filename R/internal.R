@@ -52,7 +52,128 @@ reset_limits <- function(x) .Call(FANSI_reset_limits)
 
 check_enc <- function(x, i) .Call(FANSI_check_enc, x, as.integer(i)[1])
 
-## make sure what compression working
+## make sure `ctl` compression working
 
 ctl_as_int <- function(x) .Call(FANSI_ctl_as_int, as.integer(x))
+
+## Common argument validation and conversion.  Missing args okay.
+##
+## DANGER: will modify values in calling environment!  Also may add `ctl.int`
+## and `term.cap.int` to them.
+
+VAL_IN_ENV <- function(...) {
+  call <- sys.call(-1)
+  par.env <- parent.frame()
+  stop2 <- function(...) stop(simpleError(paste0(..., collapse=""), call))
+  args <- list(...)
+  if(
+    !all(
+      names(args) %in%
+      c(
+        'x', 'warn', 'term.cap', 'ctl', 'normalize', 'carry', 'terminate',
+        'tab.stops', 'tabs.as.spaces', 'strip.spaces'
+  ) ) )
+    stop("Internal Error: some arguments to validate unknown")
+
+  if('x' %in% names(args)) {
+    x <- args[['x']]
+    if(!is.character(x)) x <- as.character(args[['x']])
+    x <- enc2utf8(x)
+    if(length(which.byte <- which(Encoding(x) == "bytes")))
+      stop2(
+        "Argument `x` contains a \"bytes\" encoded string at index [",
+        which.byte[1],"] ",
+        if(length(which.byte) > 1) {
+          sprintf(
+            "and %d other%s ", which.byte - 1, if(which.byte > 2) "s" else ""
+        ) },
+        "which is not supported."
+      )
+    args[['x']] <- x
+  }
+  if('warn' %in% names(args)) {
+    warn <- args[['warn']]
+    if(!is.logical(warn)) warn <- as.logical(args[['warn']])
+    if(length(warn) != 1L || is.na(warn))
+      stop2("Argument `warn` must be TRUE or FALSE.")
+    args[['warn']] <- warn
+  }
+  if('normalize' %in% names(args)) {
+    normalize <- args[['normalize']]
+    if(!isTRUE(normalize %in% c(FALSE, TRUE)))
+      stop2("Argument `normalize` must be TRUE or FALSE.")
+    args[['normalize']] <- as.logical(normalize)
+  }
+  if('term.cap' %in% names(args)) {
+    term.cap <- args[['term.cap']]
+    if(!is.character(term.cap))
+      stop2("Argument `term.cap` must be character.")
+    if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
+      stop2(
+        "Argument `term.cap` may only contain values in ",
+        deparse(VALID.TERM.CAP)
+      )
+    args[['term.cap.int']] <- term.cap.int
+  }
+  if('ctl' %in% names(args)) {
+    ctl <- args[['ctl']]
+    if(!is.character(ctl))
+      stop2("Argument `ctl` must be character.")
+    ctl.int <- integer()
+    if(length(ctl)) {
+      # duplicate values in `ctl` are okay, so save a call to `unique` here
+      if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
+        stop2(
+          "Argument `ctl` may contain only values in `", deparse(VALID.CTL), "`"
+        )
+    }
+    args[['ctl.int']] <- ctl.int
+  }
+  if('carry' %in% names(args)) {
+    carry <- args[['carry']]
+    if(length(carry) != 1L)
+      stop2("Argument `carry` must be scalar.")
+    if(!is.logical(carry) && !is.character(carry))
+      stop2("Argument `carry` must be logical or character.")
+    if(is.na(carry))
+      stop2("Argument `carry` may not be NA.")
+
+    if(is.logical(carry)) if(carry) carry <- "" else carry = NA_character_
+    args[['carry']] <- carry
+  }
+  if('terminate' %in% names(args)) {
+    terminate <- args[['terminate']]
+    if(!isTRUE(terminate %in% c(TRUE, FALSE)))
+      stop2("Argument `terminate` must be TRUE or FALSE")
+    terminate <- as.logical(terminate)
+  }
+  if('tab.stops' %in% names(args)) {
+    tab.stops <- args[['tab.stops']]
+    if(
+      !is.numeric(tab.stops) || !length(tab.stops) || any(tab.stops < 1) ||
+      anyNA(tab.stops)
+    )
+      stop2(
+        "Argument `tab.stops` must be numeric, strictly positive, and ",
+        "representable as an integer."
+      )
+    args[['tab.stops']] <- as.integer(tab.stops)
+  }
+  if('tabs.as.spaces' %in% names(args)) {
+    tabs.as.spaces <- args[['tabs.as.spaces']]
+    if(!is.logical(tabs.as.spaces)) tabs.as.spaces <- as.logical(tabs.as.spaces)
+    if(length(tabs.as.spaces) != 1L || is.na(tabs.as.spaces))
+      stop2("Argument `tabs.as.spaces` must be TRUE or FALSE.")
+    args[['tabs.as.spaces']] <- tabs.as.spaces
+  }
+  if('strip.spaces' %in% names(args)) {
+    strip.spaces <- args[['strip.spaces']]
+    if(!is.logical(strip.spaces)) strip.spaces <- as.logical(strip.spaces)
+    if(length(strip.spaces) != 1L || is.na(strip.spaces))
+      stop2("Argument `strip.spaces` must be TRUE or FALSE.")
+    args[['strip.spaces']] <- strip.spaces
+  }
+  # we might not have validated all, so we should be careful
+  list2env(args, par.env)
+}
 
