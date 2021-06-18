@@ -9,13 +9,6 @@ These are internal developer notes.
     > substr_ctl("", 2, 4, carry = "\033[33m")
     [1] "\033[33m\033[0m"
 
-* It's possible we messed up and `sgr_to_html` had carry semantics whereas other
-  stuff did not.
-
-* Check whether anything other than `substr_ctl` uses `state_at_pos` and thus
-  the assumptions about carry being handled externally might be incorrect.
-* Rationalize type checking on entry into C code given that state init already
-  checks many of them.
 * Move the interrupt to be `_read_next` based with an unsigned counter?  With
   maybe the SGR reads contributing more to the counter?  What about writes?  Is
   there a more universal way to check for interrupts?  Main issue is that it's
@@ -27,18 +20,10 @@ These are internal developer notes.
   from general utilities.
 * Delete unused code (e.g. FANSI_color_size, digits_in_int, etc.).
 * How to deal with wraps of `"hello \033[33;44m world"`.  Notice extra space.
-* Once we add isolate, make sure that trailing sequences are not omitted if the
-  end is not isolated.
 * Change `unhandled_ctl` to point out specific problem sequence.
 * Check double warnings in all functions doing the two pass reading.
-* How do we currently handle styles across elements?
-    * We don't.  `strwrap` carries the style within one single character
-      vector, it's just that in the output the result might span a few
-      elements.
-    * This needs to be properly documented.  Will also simplify
-      implementation of normalize.
 
-* Bunch of docs don't have @return tags, oddly.
+* Bunch of docs don't have @return tags, oddly (fixed some).
 * Make sure we check we're not using `intmax_t` or `uintmax_t` in a tight loop
   anywhere.
 * Cleanup limits structure, is it really needed now we have a better view of
@@ -48,6 +33,32 @@ These are internal developer notes.
   check for unescaped '<', '>', and '&'?
 
 ## Done
+
+* How do we currently handle styles across elements?
+    * We don't.  `strwrap` carries the style within one single character
+      vector, it's just that in the output the result might span a few
+      elements.
+    * This needs to be properly documented.  Will also simplify
+      implementation of normalize.
+
+* Rationalize type checking on entry into C code given that state init already
+  checks many of them.
+
+Kinda, still a bit of a mess because functions all have slightly different
+signatures.
+
+* Check whether anything other than `substr_ctl` uses `state_at_pos` and thus
+  the assumptions about carry being handled externally might be incorrect.
+
+* Once we add isolate, make sure that trailing sequences are not omitted if the
+  end is not isolated?
+
+This doesn't make sense now to me.  Maybe if the beginning is not isolated?
+
+* It's possible we messed up and `sgr_to_html` had carry semantics whereas other
+  stuff did not.
+
+Yes, we did.  We're now using a different default value for `carry` for it.
 
 * Are we checking byte encoding on e.g. pre/pad, etc.?
 
