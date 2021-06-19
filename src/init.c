@@ -51,6 +51,7 @@ R_CallMethodDef callMethods[] = {
   {"size_buff", (DL_FUNC) &FANSI_size_buff_ext, 1},
   {"size_buff_prot_test", (DL_FUNC) &FANSI_size_buff_prot_test, 0},
   {"sgr_at_end", (DL_FUNC) &FANSI_sgr_at_end_ext, 6},
+  {"utf8_to_cp", (DL_FUNC) &FANSI_utf8_to_cp_ext, 1},
   {NULL, NULL, 0}
 };
 

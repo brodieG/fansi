@@ -417,6 +417,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_sgr_at_end_ext(
     SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry
   );
+  SEXP FANSI_utf8_to_cp_ext(SEXP x);
 
   // - Internal funs -----------------------------------------------------------
 
@@ -448,6 +449,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   int FANSI_is_utf8_loc();
   int FANSI_utf8clen(char c);
+int FANSI_utf8_to_cp(const char * chr, int bytes);
   int FANSI_digits_in_int(int x);
   struct FANSI_string_as_utf8 FANSI_string_as_utf8(SEXP x);
   struct FANSI_state FANSI_state_init(

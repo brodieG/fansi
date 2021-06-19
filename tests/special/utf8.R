@@ -441,3 +441,11 @@ unitizer_sect("issue 54 ctd", {
 unitizer_sect("html_esc", {
   html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "\U0001F600")
 })
+
+unitizer_sect("utf8 to unicode", {
+  cps <- c(
+    "a", "A", "\u0079", "\u0080", "\u07ff", "\u0800", "\uFFFF", "\U00010000",
+    "\U0010FFFF"
+  )
+  as.hexmode(.Call(fansi:::FANSI_utf8_to_cp, cps))
+})

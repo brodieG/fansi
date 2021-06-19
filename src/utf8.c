@@ -191,4 +191,38 @@ int FANSI_utf8clen(char c)
   return 1 + utf8_table4[c & 0x3f];
 }
 
+// Compute a unicode code point from a _valid_ UTF8 encoding
+// Assumes 0 < bytes < 7 (or else bad stuff will happen)
+
+int FANSI_utf8_to_cp(const char * chr, int bytes) {
+  int cp = 0;
+  // Lead byte (trailing bytes only contribute 6 bits each)
+  cp |=
+    (*chr & (0xff >> (bytes + (bytes > 1)))) // keep  7, 5, 4, or 3 bits
+    << (bytes - 1) * 6;                      // shift by byte count
+
+  // Trailing bytes keep trailing 6 bits
+  for(int i = bytes - 1; i > 0; --i)
+    cp |= (*(chr + bytes - i) & 0x3f) << (i - 1) * 6;
+
+  return cp;
+}
+SEXP FANSI_utf8_to_cp_ext(SEXP x) {
+  if(TYPEOF(x) != STRSXP)
+    error("Argument `x` must be a character vector.");
+
+  R_xlen_t len = XLENGTH(x);
+  SEXP res = PROTECT(allocVector(INTSXP, len));
+  int * resi = INTEGER(res);
+
+  for(R_xlen_t i = 0; i < len; ++i) {
+    const char * chr = CHAR(STRING_ELT(x, i));
+    int len = FANSI_utf8clen(*chr);
+    if(LENGTH(STRING_ELT(x, i)) != len)
+      error("`x` may only contain single valid UTF-8 encoded code points.");
+    resi[i] = FANSI_utf8_to_cp(chr, len);
+  }
+  UNPROTECT(1);
+  return res;
+}
 
