@@ -31,16 +31,6 @@
  *   and no single byte characters are more than 1 wide.
  */
 
-/*
-static uint_64t emj_hair_start = 0;
-static uint_64t emj_hair_end = 0;
-static uint_64t emj_fitz_start = 0;
-static uint_64t emj_fitz_end = 0;
-static uint_64t emj_ri_start = 0;
-static uint_64t emj_ri_end = 0;
-*/
-
-
 // Can a byte be interpreted as ASCII number?
 
 static int is_num(const char * string) {
@@ -658,23 +648,21 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
     int cp = FANSI_utf8_to_cp(state.string + state.pos_byte, byte_size);
 
     // Hacky grapheme approximation ensures flags (RI) aren't split, sets
-    // hair/skin modifiers to width zero (so greedy / not greedy searches will
+    // skin modifiers to width zero (so greedy / not greedy searches will
     // / will not grab them), and sets width zero to anything following a ZWJ
     // (for the same reason).  This will work in many cases, provided that the
     // emoji sequences are valid and recognized by the display device.
-    // Other graphemes are work similarly to the extent continuation code points
-    // are zero width naturally.  Prefixes and other things will not work.
+    // Other graphemes work similarly to the extent continuation code points
+    // are zero width naturally.  Prefixes, sequence interruptors,  and other
+    // things will not work.
 
-    if(cp >= 0x1F1E6 && cp <= 0x1F1FF) {  // Regional Indicator
+    if(cp >= 0x1F1E6 && cp <= 0x1F1FF) {         // Regional Indicator
       if(!state.last_ri) state.read_one_more = TRUE;
+      disp_size = state.last_ri * 2;
       state.last_ri = !state.last_ri;
-      disp_size = 1;
-    } else if (
-      (cp >= 0x1F9B0 && cp <= 0x1F9B3) ||  // Hair type
-      (cp >= 0x1F3FB && cp <= 0x1F9B3)     // Skin type
-    ) {
+    } else if (cp >= 0x1F3FB && cp <= 0x1F9B3) { // Skin type
       disp_size = 0;
-    } else if (cp == 0x200D) {             // Zero Width Joiner
+    } else if (cp == 0x200D) {                   // Zero Width Joiner
       state.last_zwj = 1;
       disp_size = 0;
     } else {
