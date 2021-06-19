@@ -702,15 +702,15 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
   // encoded versions of Unicode chars).  Shouldn't be an issue, but playing it
   // safe.
 
-  state.pos_byte += byte_size;
-  ++state.pos_ansi;
-  ++state.pos_raw;
   if(disp_size == NA_INTEGER) {
     state.err_code = 9;
     state.err_msg = "a malformed UTF-8 sequence";
     state.nchar_err = 1;
-    disp_size = byte_size;
+    disp_size = byte_size = 1;
   }
+  state.pos_byte += byte_size;
+  ++state.pos_ansi;
+  ++state.pos_raw;
   state.last_char_width = disp_size;
   if(state.pos_width_target > FANSI_lim.lim_int.max - disp_size)
     error(

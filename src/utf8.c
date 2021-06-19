@@ -193,7 +193,8 @@ int FANSI_utf8clen(char c) {
  * Basic validation, checks there is a zero in the right spot
  * for the first byte, and that continuation bytes start with 10.
  *
- * Assumes correct number of continuation bytes exist.
+ * Assumes correct number of continuation bytes exist and that
+ * input was read through FANSI_utf8clen.
  *
  * DO NOT USE AS STANDALONE UTF8 VALIDATION.
  */
