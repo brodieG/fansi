@@ -658,7 +658,7 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
 
     if(cp >= 0x1F1E6 && cp <= 0x1F1FF) {         // Regional Indicator
       if(!state.last_ri) state.read_one_more = TRUE;
-      disp_size = state.last_ri * 2;
+      disp_size = 1;    // read_next forces reading 2 RIs at a time
       state.last_ri = !state.last_ri;
     } else if (cp >= 0x1F3FB && cp <= 0x1F9B3) { // Skin type
       disp_size = 0;

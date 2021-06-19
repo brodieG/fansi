@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2017  Brodie Gaslam
+Copyright (C) 2021 Brodie Gaslam
 
 This file is part of "fansi - ANSI Control Sequence Aware String Functions"
 
@@ -361,8 +361,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn);
   SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn);
   SEXP FANSI_state_at_pos_ext(
-    SEXP x, SEXP pos, SEXP type, SEXP lag, SEXP ends,
-    SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm
+    SEXP x, SEXP pos, SEXP type,
+    SEXP keep, SEXP is_start, SEXP warn, SEXP term_cap, SEXP ctl,
+    SEXP norm, SEXP ids
   );
   SEXP FANSI_strwrap_ext(
     SEXP x, SEXP width,

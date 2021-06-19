@@ -173,155 +173,66 @@ struct FANSI_state FANSI_reset_pos(struct FANSI_state state) {
 /*
  * Compute the state given a character position (raw position)
  *
- * Assumption is that any byte > 127 is UTF8 (i.e. input strings must be all
- * legal ASCII, or must have been translated to UTF8).  Potential for relaxation
- * with latin-1 since those are all single byte single width, but right now
- * that's not implemented.
- *
  * This function is designed to be called iteratively on the same string with
  * monotonically increasing values of `pos`.  This allows us to compute state at
  * multiple positions while re-using the work we did on the earlier positions.
- * To transfer the state info from earlier positions we use a FANSI_state_pair
- * object that contains the state info from the previous computation.
  *
- * @param pos the raw position (i.e. treating parseable ansi tags as zero
- *   length) we want the state for
- * @param state_pair two states (see description)
+ *
+ * @param pos the minimum number of characters or width units, to include
+ *   (excluding SGR and similar).
+ * @param state the last state that was known not to exceed prior target.
  * @param int type whether to use character (0), width (1), or byte (2) when
- *   computing the position
- * @param lag in cases where requested breakpoint is not feasible because of
- *   multi width characters, whether to return end of prior (0) or the start of
- *   the next (1)
- * @param end whether the request is made for the ends of the string (i.e. as
- *   part of the `stop` parameter) (1), or not (0) (i.e. as part of the start
- *   parameters).
+ *   computing the position (looks like we don't use 2?)
+ * @param keep whether a partially started width unit should be kept (only
+ *   meaningful in type = 1 (width) mode
  */
-static struct FANSI_state_pair state_at_position(
-  int pos, struct FANSI_state_pair state_pair, int type, int lag, int end,
-  R_xlen_t i
+
+static struct FANSI_state_pair state_at_pos2(
+  int pos, struct FANSI_state state, int type, int keep, R_xlen_t i
 ) {
-  struct FANSI_state state = state_pair.cur;
-  int pos_init = type ? state.pos_width : state.pos_raw;
-  if(pos < pos_init)
+  if(type != 0 && type != 1)
+    error("Internal Error: type must be 0 or 1.");  // nocov
+  struct FANSI_state state_prev = state;
+  int pos_new = type ? state.pos_width : state.pos_raw;
+
+  if(pos < pos_new)
     // nocov start
     error(
       "Internal Error: %s (%d) than `pos` (%d)",
       "Cannot re-use a state for a later position",
-      pos_init, pos
+      pos_new, pos
     );
     // nocov end
-  int cond = 0;
 
-  // Need to reset pos_width_target since it could be distorted by a previous
-  // middle of wide char event
-  state.pos_width_target = state.pos_width;
-
-  struct FANSI_state state_res, state_prev, state_prev_buff;
-
-  state_prev = state_prev_buff = state_pair.prev;
-  state_res = state;
-
-  while(1) {
-    state_prev = state_res = state;
-    state.err_code = state.last = 0;
-
-    // Handle UTF-8, we need to record the byte size of the sequence as well as
-    // the corresponding display width.
-
-    if(state.pos_byte == FANSI_lim.lim_int.max)
-      // nocov start
-      // ... a bit tricky here, because we read ahead a few bytes in some
-      // circumstances, but not all, so the furthest pos_byte should be allowed
-      // to get actually varies
-      error("Internal Error: counter overflow while reading string.");
-      // nocov end
-
+  while(pos_new <= pos && state.string[state.pos_byte]) {
+    state_prev = state;
     state = FANSI_read_next(state, i);
-
-    // cond is just how many units we have left until our requested position.
-    // we can overshoot and it can be negative
-
-    switch(type) {
-      case 0: cond = pos - state.pos_raw; break;
-      case 1: cond = pos - state.pos_width; break;
-      default:
-        // nocov start
-        error("Internal Error: Illegal offset type; contact maintainer.");
-        // nocov end
-    }
-    // If zero width advance, we want to update prev state to be the newest
-    // state
-
-    if(state.pos_width == state_prev.pos_width) state_prev = state;
-
-    // We still have stuff to process, though keep in mind we can be at end of
-    // string with cond > 0 if we ask for position past end
-
-    if(cond >= 0) {
-      if(state.string[state.pos_byte]) {
-        // some ambiguity as to whether the next `state_prev` will be valid, so
-        // we store the current one just in case
-        state_prev_buff = state_prev;
-        continue;
-      }
-      // state_res = state_prev;
-      state_res = state;
-      break;
-    }
-    /*
-     * A key problem here is that what constitues a valid offset depends on the
-     * display width of the character.  For example, -1 makes sense if the
-     * character is 1 wide, or if we're looking to match that character to end.
-     *
-     * If instead we are matching the start of a wide character, then we're
-     * looking for the overshoot to be the width of the character.
-     */
-
-    if(type == 1) { // width mode
-      if(!lag) {
-        if(end && cond != -1) {
-          state_res = state_prev_buff;
-        } else if (!end && cond != -state.last_char_width) {
-          state_res = state;
-        }
-      }
-      // This is the width we hoped to get originally
-      state_res.pos_width_target = pos;
-    } else if(cond < -1) {
-      // nocov start
-      error(
-        "%s%s",
-        "Internal Error: partial width should only happen in type 'width'; ",
-        "contact maintainer."
-      );
-      // nocov end
-    }
-    break;
+    pos_new = type ? state.pos_raw : state.pos_width;
   }
-  state_res.warn = state.warn;  // otherwise can get double warning
+  int pos_prev = type ? state_prev.pos_raw : state_prev.pos_width;
 
-  // Keep advancing if there are any zero width UTF8 characters, not entirely
-  // sure what we're supposed to do with prev_buff here, need to have some test
-  // cases to see what happens.  Note we only do this when we end on zero width
-  // chars
+  struct FANSI_state state_res;
+  if(pos_new > pos && pos_prev == pos) {
+    // Overshot, but prior was just right.  We allow overshoot to make
+    // sure we get all zero width elements read before stopping (even in
+    // type 0 there will be some of these: e.g. SGR sequences).
+    state_res = state_prev;
+  } else if (pos_new > pos && pos_prev < pos && keep) {
+    // Overshoot, but only partial char (width mode only)
+    state_res = state;
+  } else if (pos_new > pos && pos_prev) {
+    // Same, but don't keep.
+    state_res = state_prev;
+  } else if (state.string[state.pos_byte]) {
+    // Finished string without getting position
+    state_res = state;
+  } else
+    error("Internal error, unexpected state at pos read result."); // nocov
 
-  if(end) {
-    struct FANSI_state state_next, state_next_prev, state_next_prev_prev;
-    state_next_prev_prev = state_res;
-    state_next_prev = FANSI_read_next(state_next_prev_prev, i);
-    state_next = FANSI_read_next(state_next_prev, i);
+  // Avoid potential double warning next time we read
+  state_prev.warn = state_res.warn;
 
-    while(!state_next.last_char_width) {
-      state_next_prev_prev = state_next_prev;
-      state_next_prev = state_next;
-      state_next = FANSI_read_next(state_next, i);
-      if(!state_next.string[state_next.pos_byte]) break;
-    }
-    state_res = state_next_prev_prev;
-  }
-  // We return the state just before we overshot the end
-
-  return (struct FANSI_state_pair){.cur=state_res, .prev=state_prev_buff};
+  return (struct FANSI_state_pair){.cur=state_res, .prev=state_prev};
 }
 /*
  * We always include the size of the delimiter; could be a problem that this
@@ -503,17 +414,20 @@ SEXP FANSI_sgr_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm) {
 
 /*
  * R interface for state_at_position
+ *
  * @param string we're interested in state of
- * @param pos integer positions along the string, one index, sorted
+ * @param pos integer positions along the string, zero-index
+ * @param keep TRUE or FALSE, whether to keep partial characters at
+ *   requested position.
  *
  * No carry param, that should be R-level.
  */
 
 SEXP FANSI_state_at_pos_ext(
   SEXP x, SEXP pos, SEXP type,
-  SEXP lag, SEXP ends,
-  SEXP warn, SEXP term_cap, SEXP ctl,
-  SEXP norm
+  SEXP keep, SEXP is_start, SEXP warn,
+  SEXP term_cap, SEXP ctl, SEXP norm,
+  SEXP ids
 ) {
   /*******************************************\
   * IMPORTANT: INPUT MUST ALREADY BE IN UTF8! *
@@ -523,18 +437,20 @@ SEXP FANSI_state_at_pos_ext(
   if(XLENGTH(x) != 1 || STRING_ELT(x, 0) == NA_STRING)
     error("Argument `x` must be scalar character and not be NA.");   // nocov
   if(
-      TYPEOF(norm) != LGLSXP || XLENGTH(norm) != 1 || 
+      TYPEOF(norm) != LGLSXP || XLENGTH(norm) != 1 ||
       asLogical(norm) == NA_LOGICAL
     )
     error("Argument `normalize` must be TRUE or FALSE.");      // nocov
   if(TYPEOF(pos) != INTSXP)
     error("Argument `pos` must be integer.");          // nocov
-  if(TYPEOF(lag) != LGLSXP)
-    error("Argument `lag` must be logical.");          // nocov
-  if(XLENGTH(pos) != XLENGTH(lag))
-    error("Argument `lag` must be the same length as `pos`.");  // nocov
-  if(XLENGTH(pos) != XLENGTH(ends))
+  if(TYPEOF(keep) != LGLSXP)
+    error("Argument `keep` must be logical.");          // nocov
+  if(XLENGTH(pos) != XLENGTH(keep))
+    error("Argument `keep` must be the same length as `pos`.");  // nocov
+  if(XLENGTH(pos) != XLENGTH(is_start))
     error("Argument `ends` must be the same length as `pos`."); // nocov
+  if(XLENGTH(pos) != XLENGTH(ids))
+    error("Argument `ids` must be the same length as `pos`."); // nocov
 
   int prt = 0;
   SEXP R_true = PROTECT(ScalarLogical(1)); ++prt;
@@ -570,7 +486,7 @@ SEXP FANSI_state_at_pos_ext(
   // position as well as the various position translations in a matrix with as
   // many *columns* as the character vector has elements
 
-  SEXP res_mx = PROTECT(allocVector(REALSXP, res_cols * len)); ++prt;
+  SEXP res_mx = PROTECT(allocVector(INTSXP, res_cols * len)); ++prt;
   SEXP dim = PROTECT(allocVector(INTSXP, 2)); ++prt;
   SEXP dim_names = PROTECT(allocVector(VECSXP, 2)); ++prt;
 
@@ -589,46 +505,65 @@ SEXP FANSI_state_at_pos_ext(
     x, warn, term_cap, R_true, R_true, type, ctl, (R_xlen_t) 0
   );
   struct FANSI_state state_prev = state;
-  state_pair.cur = state;
-  state_pair.prev = state_prev;
 
   // Compute state at each `pos` and record result in our results matrix
 
   int type_int = asInteger(type);
-  int pos_i, pos_prev = -1;
+  int pos_prev = -1;
+  int * pos_i = INTEGER(pos);
+  int * keep_i = LOGICAL(keep);
+  int * start_i = INTEGER(is_start);
   struct FANSI_buff buff;
+  int * res_mx_i = INTEGER(res_mx);
   FANSI_INIT_BUFF(&buff);
 
+  // Need to handle possibility of real indices; these should always be
+  // representable as R_xlen_t as they come from seq_len.
+  union i_or_d_p {int * i; double * d;};
+  union i_or_d_p id_i_p;
+
+  if(TYPEOF(ids) == INTSXP) id_i_p.i = INTEGER(ids);
+  else if(TYPEOF(ids) == REALSXP) id_i_p.d = REAL(ids);
+  else error("Internal Error: bad ID type.");
+
   for(R_xlen_t i = 0; i < len; i++) {
-    R_CheckUserInterrupt();
-    pos_i = INTEGER(pos)[i];
-    if(pos_i == NA_INTEGER) {
+    FANSI_interrupt(i);
+    if(pos_i[i] == NA_INTEGER) {
       error("Internal Error: NAs not allowed"); // nocov
     } else {
-      if(pos_i < pos_prev)
+      if(pos_i[i] < pos_prev)
         // nocov start
-        error("Internal Error: `pos` must be sorted %d %d.", pos_i, pos_prev);
+        error("Internal Error: `pos` must be sorted %d %d.", pos_i[i], pos_prev);
         // nocov end
+
+      R_xlen_t id_i;
+      id_i = (R_xlen_t)(TYPEOF(ids) == INTSXP ? id_i_p.i[i] : id_i_p.d[i]);
 
       // We need to allow the same position multiple times in case it shows up
       // as starts and ends, etc.
 
-      if(pos_i == pos_prev) state_pair.cur = state_pair.prev;
+      if(pos_i[i] == pos_prev) state_pair.cur = state_pair.prev;
 
-      state_pair = state_at_position(
-        pos_i, state_pair, type_int, INTEGER(lag)[i], INTEGER(ends)[i], i
-      );
+      state_pair =
+        state_at_pos2(pos_i[i], state_prev, type_int, keep_i[i], id_i);
       state = state_pair.cur;
+      state_prev = state_pair.prev;
 
-      // Record position, but set them back to 1 index, need to use double
-      // because INTEGER could overflow because of this + 1, although ironically
-      // `substr` probably can't subset the INTMAX character due to the 1
-      // indexing...
+      // Record position, these will be set back to 1 index at the R-level
+      // by adding 1 to the starts.
 
-      REAL(res_mx)[i * res_cols + 0] = state.pos_byte + 1;
-      REAL(res_mx)[i * res_cols + 1] = state.pos_raw + 1;
-      REAL(res_mx)[i * res_cols + 2] = state.pos_ansi + 1;
-      REAL(res_mx)[i * res_cols + 3] = state.pos_width_target + 1;
+      if(state.pos_ansi == FANSI_lim.lim_int.max && start_i[i]) {
+        // nocov start
+        error(
+          "Internal Error: integer overflow for start position at index[%td]",
+          id_i  // no FANSI_ind b/c already in 1 based index.
+        );
+        // nocov end
+      }
+      res_mx_i[i * res_cols + 0] = state.pos_byte;
+      res_mx_i[i * res_cols + 1] = state.pos_raw;
+      res_mx_i[i * res_cols + 2] = state.pos_ansi;  // this is what's used
+      res_mx_i[i * res_cols + 3] = state.pos_width_target;
 
       // Record color tag if state changed
 
@@ -646,7 +581,7 @@ SEXP FANSI_state_at_pos_ext(
       SET_STRING_ELT(res_str, i, res_chr);
       res_chr_prev = res_chr;
       UNPROTECT(1);  // note res_chr is protected by virtue of being in res_str
-      pos_prev = pos_i;
+      pos_prev = pos_i[i];
     }
     state_prev = state;
   }

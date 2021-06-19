@@ -304,12 +304,15 @@ substr_ctl_internal <- function(
 
   x.scalar <- length(x) == 1
   x.u <- if(x.scalar) x else unique_chr(x)
+  ids <- if(x.scalar) seq_along(s.s.valid) else seq_along(x)
 
   for(u in x.u) {
     elems <- which(x == u & s.s.valid)
     elems.len <- length(elems)
-    e.start <- start[elems]
+    # we want to specify minimum number of position/width elements
+    e.start <- start[elems] - 1L
     e.stop <- stop[elems]
+    e.ids <- ids[elems]
     x.elems <- if(x.scalar) rep(x, length.out=elems.len) else x[elems]
 
     # note, for expediency we're currently assuming that there is no overlap
@@ -317,35 +320,32 @@ substr_ctl_internal <- function(
 
     e.order <- forder(c(e.start, e.stop))
 
-    e.lag <- rep(c(round.start, round.stop), each=elems.len)[e.order]
-    e.ends <- rep(c(FALSE, TRUE), each=elems.len)[e.order]
+    e.keep <- rep(c(round.start, round.stop), each=elems.len)[e.order]
     e.sort <- c(e.start, e.stop)[e.order]
 
     state <- .Call(
       FANSI_state_at_pos_ext,
-      u, e.sort - 1L, type.int,
-      e.lag,   # whether to include a partially covered multi-byte character
-      e.ends,  # whether it's a start or end position
+      u, e.sort, type.int,
+      e.keep,  # whether to include a partially covered multi-byte character
+      rep(c(TRUE, FALSE), each=length(elems))[e.order], # start or end of string
       warn, term.cap.int,
-      ctl.int, normalize, carry
+      ctl.int, normalize,
+      c(e.ids, e.ids)[e.order]
     )
     # Recover the matching values for e.sort
-
-    e.unsort.idx <- match(seq_along(e.order), e.order)
+    e.unsort.idx <- match(seq_along(e.order), e.order)  # e.order[e.order]?
     start.stop.ansi.idx <- .Call(FANSI_cleave, e.unsort.idx)
     start.ansi.idx <- start.stop.ansi.idx[[1L]]
     stop.ansi.idx <- start.stop.ansi.idx[[2L]]
 
     # And use those to substr with
-
-    start.ansi <- state[[2]][3, start.ansi.idx]
+    start.ansi <- state[[2]][3, start.ansi.idx] + 1L
     stop.ansi <- state[[2]][3, stop.ansi.idx]
     start.tag <- state[[1]][start.ansi.idx]
     stop.tag <- state[[1]][stop.ansi.idx]
 
     # if there is any ANSI CSI at end then add a terminating CSI, warnings
     # should have been issued on first read
-
     end.csi <-
       if(terminate) close_sgr(stop.tag, warn=FALSE, normalize)
       else ""
@@ -363,7 +363,8 @@ substr_ctl_internal <- function(
 }
 
 ## Need to expose this so we can test bad UTF8 handling because substr will
-## behave different with bad UTF8 pre and post R 3.6.0
+## behave different with bad UTF8 pre and post R 3.6.0.  Make sure things
+## are sorted properly given starts are input -1L.
 
 state_at_pos <- function(
   x, starts, ends, warn=getOption('fansi.warn'),
@@ -373,10 +374,10 @@ state_at_pos <- function(
   is.start <- c(rep(TRUE, length(starts)), rep(FALSE, length(ends)))
   .Call(
     FANSI_state_at_pos_ext,
-    x, as.integer(c(starts, ends)) - 1L,
-    0L,      # character type
-    is.start,  # lags
-    !is.start, # ends
+    x, as.integer(c(starts - 1L, ends)),
+    0L,        # character type
+    is.start,  # keep if is.start
+    is.start,  # indicate that it's a start
     warn,
     seq_along(VALID.TERM.CAP),
     1L,        # ctl="all"
