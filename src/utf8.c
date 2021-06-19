@@ -184,11 +184,28 @@ static const unsigned char utf8_table4[] = {
   2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
   3,3,3,3,3,3,3,3,4,4,4,4,5,5,5,5 };
 
-int FANSI_utf8clen(char c)
-{
+int FANSI_utf8clen(char c) {
   /* This allows through 8-bit chars 10xxxxxx, which are invalid */
   if ((c & 0xc0) != 0xc0) return 1;
   return 1 + utf8_table4[c & 0x3f];
+}
+/*
+ * Basic validation, checks there is a zero in the right spot
+ * for the first byte, and that continuation bytes start with 10.
+ *
+ * Assumes correct number of continuation bytes exist.
+ *
+ * DO NOT USE AS STANDALONE UTF8 VALIDATION.
+ */
+int FANSI_valid_utf8(const char * chr, int bytes) {
+  int pass = !(*chr & (0x20 >> (bytes - 2)));
+  switch(bytes) {
+    case 4: pass &= (*(++chr) & 0xc0) == 0x80;
+    case 3: pass &= (*(++chr) & 0xc0) == 0x80;
+    case 2: pass &= (*(++chr) & 0xc0) == 0x80; break;
+    default: pass = 0;
+  }
+  return pass;
 }
 
 // Compute a unicode code point from a _valid_ UTF8 encoding
@@ -207,6 +224,7 @@ int FANSI_utf8_to_cp(const char * chr, int bytes) {
 
   return cp;
 }
+
 SEXP FANSI_utf8_to_cp_ext(SEXP x) {
   if(TYPEOF(x) != STRSXP)
     error("Argument `x` must be a character vector.");
