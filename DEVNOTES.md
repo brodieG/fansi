@@ -4,10 +4,15 @@ These are internal developer notes.
 
 ## Todo
 
-* This is definitely not parsimonious...  Maybe fix when we move substr to C?
+* This is definitely not parsimonious...  Since we're not moving to C we need to
+  figure out what we want to do about it.
 
     > substr_ctl("", 2, 4, carry = "\033[33m")
     [1] "\033[33m\033[0m"
+
+* How to deal with wraps of `"hello \033[33;44m world"`.  Notice extra space.
+* Once we add isolate, make sure that trailing sequences are not omitted if the
+  end is not isolated? (see Interactions section below).
 
 * Move the interrupt to be `_read_next` based with an unsigned counter?  With
   maybe the SGR reads contributing more to the counter?  What about writes?  Is
@@ -19,7 +24,6 @@ These are internal developer notes.
   internal and external functions.  Maybe also split off the write functions
   from general utilities.
 * Delete unused code (e.g. FANSI_color_size, digits_in_int, etc.).
-* How to deal with wraps of `"hello \033[33;44m world"`.  Notice extra space.
 * Change `unhandled_ctl` to point out specific problem sequence.
 * Check double warnings in all functions doing the two pass reading.
 
@@ -31,6 +35,7 @@ These are internal developer notes.
 * Do sgr_to_HTML (sgr_to_html2?), add check to sgr_to_html if any of the bad
   characters are found to escape or use `sgr_to_html2`.  Or do we just
   check for unescaped '<', '>', and '&'?
+* Hide symbols.
 
 ## Done
 
@@ -49,11 +54,6 @@ signatures.
 
 * Check whether anything other than `substr_ctl` uses `state_at_pos` and thus
   the assumptions about carry being handled externally might be incorrect.
-
-* Once we add isolate, make sure that trailing sequences are not omitted if the
-  end is not isolated?
-
-This doesn't make sense now to me.  Maybe if the beginning is not isolated?
 
 * It's possible we messed up and `sgr_to_html` had carry semantics whereas other
   stuff did not.
@@ -108,6 +108,45 @@ unsigned one (I think).
 Currently takes STRSXP.  A little awkward though, but we did it that way because
 we had the index.
 
+## Grapheme Boundaries
+
+So we need to modify `readUTF8` to know when to continue reading when the next
+char being zero width doesn't do it.
+
+* RI flags (even odd) (what about england/wales/scotland?)
+
+Exploring whether we can get away with a cheap implementation.
+
+Country flags are fine since each Regional Indicator (RI) on its own is 1 width,
+but together they are two (ah, but we can't break in the middle).
+
+Prepend we probably can't handle, as they too are zero width (some are anyway).
+
+Do not break before extending characters.
+
+* Grapheme extend (non spacing and enclosing marks, ZWNJ)
+* Emoji modifier
+
+Do not break before modifiers:
+
+* Emoji component 1F9B0..1F9B3 hair type
+* Emoji modifier 1F3FB..1F3FF skin color
+
+Do no break within emoji modifier sequences
+
+In practice, I think this means:
+
+* Treat modifier/component as width zero
+* Treat anything after a ZWJ as width zero
+* Handle RI/flags  U+1F1E6...U+1F1FF
+
+This should be usually right so long as the sequences are well formed.
+
+The pain is flags because we don't want to let substring in width mode cut in
+the middle.  But maybe that's okay?  All the rounding business should work if we
+just force the advance.  We just need to check whether the next thing is as flag
+and just advance extra.
+
 ## Crayon Compatibility
 
 ### Updating Crayon
@@ -132,102 +171,7 @@ Issue are:
 * We need to use regular expressions, not fixed, so might be a little slower.
 * It will not deal with things like "\033[1;31m".
 
-### Fansi Changes
-
-`normalize_sgr`: take all known SGRs form `\033[31;42m` and re-write them into
-`\033[31m\033[42m`.
-
-> What about non SGR escapes?  Should process be: strip non-SGR, then normalize?
-> Or do we just ignore non-SGR and let the user decide what they want to do with
-> the warnings?
-
-One problem with `normalize_sgr` is it will substantially complicate the code
-for anything computing width if we try to make it part of it.  So likely best
-way to deal with it is in "crayon.compat" mode, do a two pass process: first
-normalize, second do our thing.  Obviously this will be slower.
-
-Should `normalize_sgr` convert `\033[0m` and similar to the exploded version?
-And should it be exploded to all closing tags, or only to the active ones?
-Probably only the active ones.
-
-It's probably out of the question to normalize as we process, but it's not out
-of the question to write the closing tags on each.  What would it take to
-normalize as we process?
-
-* Known how to compute the normalized size.  Won't be able to use the
-  `copy_or_measure` framework as we won't know ahead of time what the string is,
-  which means we would have to generate it twice to use `copy_or_measure`.
-* Instead of skipping all the way to the end of the line and copying the whole
-  thing, we'd have to copy up to each ESC, and write the normalized version of
-  it.
-
-We get most of the value by just writing the end-tags, and that's easy and cheap
-to do.  It's just that then there is no great interface.  Either we normalize
-everything after the fact at the cost of rewriting it all, or we do a half-assed
-version where we hope we don't have to normalize the internals and write the
-normalized end tags.  Maybe that's the compromise.  Look for unnormalized tags
-inside, and if any exist, then use the full second pass, otherwise just write
-the normalized end tags.
-
-We also need to decide what is unnormalized.  For crayon, all we really care
-about is that "close" tags be pulled out, and they don't even have to be really
-pulled out, they just need to be appended.
-
-There is also the R level functions which use `substr`, so those will have to be
-two-pass unless we rewrite substr internally.
-
-So maybe first thing to do is the normalize version?  Then we can think if we
-want to change writelines?
-
-Aside: if we truly want to insulate `fansi` output from external SGR, we really
-should be starting with `\033[0m` too.  Maybe another option is to "insulate",
-which would just start and end with the null SGR, optionally?
-
-The other thing we can do is accept an "state.initial" input, and output a
-"state.end".  This way we can merge with any other SGR strings.
-
-### Normalize
-
-Biggest issue is dealing with the concept of closing tags, which we're really
-not set up to deal with.  However, we can have a pre-state, and a post-state,
-and we can figure out what transformations need to be applied to go from one to
-the other.
-
-So maybe we can't get fully away from mapping all the open and close styles in
-some way.
-
-If pre had color, but post does not, close color.
-If pre had x, but post does not, issue closing tag.
-
-Generate a list of the styles that pre had but post doesn't, and only those.
-Then, generate a `close_active_sgr` on that style.
-
-How do we handle closing styles when there are not corresponding opening
-styles?  If there is a lone ESC[m in the string, what do we close?
-Nothing?  Everything?  Do we give the user the option of providing a
-vector of starting styles to consider active (and possibly to instruct us
-on which action to take)?  We could e.g. give the user the option to close
-everything.
-
-Do we warn about closing tags that don't close an active style?  Maybe we
-do that, and then point to docs about bleed.  But it does mean we should
-include the bleed argument.
-
-## Bleed / Carry
-
-Add a `bleed` param that is a single string (or TRUE) that causes the
-program to bleed from string to string, with the initial state specified
-by that argument (or TRUE for just no starting state).  But this
-precludes using the argument in a form that recycles to the beginning of
-each string; really, bleeding and starts with X should be distinct,
-possibly orthogonal.
-
-What cares about bleed?  `expand`, obviously.  Maybe `strwrap` as that
-adds a terminator.  What about `substr`?
-
-Do we really want a "starts with x" option?  Probably not worth it?  Is it
-sufficiently different and important relative to bleed?  Under what
-circumstances would we really want it?
+## Interaction
 
 Is this the desired outcome:
 

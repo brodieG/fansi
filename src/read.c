@@ -31,6 +31,16 @@
  *   and no single byte characters are more than 1 wide.
  */
 
+/*
+static uint_64t emj_hair_start = 0;
+static uint_64t emj_hair_end = 0;
+static uint_64t emj_fitz_start = 0;
+static uint_64t emj_fitz_end = 0;
+static uint_64t emj_ri_start = 0;
+static uint_64t emj_ri_end = 0;
+*/
+
+
 // Can a byte be interpreted as ASCII number?
 
 static int is_num(const char * string) {
@@ -620,7 +630,7 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
   int mb_err = 0;
   int disp_size = 0;
   const char * mb_err_str =
-    "use `is.na(nchar(x, allowNA=TRUE))` to find problem strings.";
+    "use `validUTF8()` to find problem strings.";
 
   for(int i = 1; i < byte_size; ++i) {
     if(!state.string[state.pos_byte + i]) {
@@ -628,6 +638,8 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
       byte_size = i;
       break;
   } }
+  mb_err |= !FANSI_valid_utf8(state.string + state.pos_byte, byte_size);
+
   if(mb_err) {
     if(state.allowNA) {
       disp_size = NA_INTEGER;
@@ -641,28 +653,48 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
       );
       // nocov end
     }
-  } else {
-    // In order to compute char display width, we need to create a charsxp
-    // with the sequence in question.  Hopefully not too much overhead since
-    // at least we benefit from the global string hash table
-    //
-    // Note that we should probably not bother with computing this if display
-    // mode is not width as it's probably expensive.
+  } else if(state.use_nchar) {  // only true if in width mode
+    // Assumes valid UTF-8!
+    int cp = FANSI_utf8_to_cp(state.string + state.pos_byte, byte_size);
 
-    if(state.use_nchar) {
+    // Hacky grapheme approximation ensures flags (RI) aren't split, sets
+    // hair/skin modifiers to width zero (so greedy / not greedy searches will
+    // / will not grab them), and sets width zero to anything following a ZWJ
+    // (for the same reason).  This will work in many cases, provided that the
+    // emoji sequences are valid and recognized by the display device.
+    // Other graphemes are work similarly to the extent continuation code points
+    // are zero width naturally.  Prefixes and other things will not work.
+
+    if(cp >= 0x1f1e6 && cp <= 0x1F1FF) {  // Regional Indicator
+      if(state.last_ri) state.read_one_more = TRUE;
+      state.last_ri = !state.last_ri;
+      disp_size = 1;
+    } else if (
+      (cp >= 0x1F9B0 && cp <= 0x1F9B3) ||  // Hair type
+      (cp >= 0x1F3FB && cp <= 0x1F9B3)     // Skin type
+    ) {
+      disp_size = 0;
+    } else if (cp == 0x200D) {             // Zero Width Joiner
+      state.last_zwj = 1;
+      disp_size = 0;
+    } else {
+      // In order to compute char display width, we need to create a charsxp
+      // with the sequence in question.  Hopefully not too much overhead since
+      // at least we benefit from the global string hash table
       SEXP str_chr =
         PROTECT(mkCharLenCE(state.string + state.pos_byte, byte_size, CE_UTF8));
       disp_size = R_nchar(
-        str_chr, Width, state.allowNA, state.keepNA, mb_err_str
+        str_chr, Width, // Width is an enum
+        state.allowNA, state.keepNA, mb_err_str
       );
       UNPROTECT(1);
-    } else {
-      // This is not consistent with what we do with the padding where we use
-      // byte_size, but in this case we know we're supposed to be dealing
-      // with one char
-
-      disp_size = 1;
     }
+  } else {
+    // This is not consistent with what we do with the padding where we use
+    // byte_size, but in this case we know we're supposed to be dealing
+    // with one char
+
+    disp_size = 1;
   }
   // We are guaranteed that any string here is at most INT_MAX bytes long, so
   // nothing should overflow, except maybe width if we ever add some width
@@ -711,6 +743,7 @@ static struct FANSI_state read_c0(struct FANSI_state state) {
     --state.pos_raw;
     --state.pos_width;
     --state.pos_width_target;
+    state.last_char_width = 0;
   }
   return state;
 }
@@ -724,9 +757,14 @@ static struct FANSI_state read_c0(struct FANSI_state state) {
 struct FANSI_state FANSI_read_next(
   struct FANSI_state state, R_xlen_t i
 ) {
-  const char chr_val = state.string[state.pos_byte];
-  state.is_sgr = 0;
-  state.err_code = 0; // reset err code after each char
+  char chr_val;
+onemoretime:
+  chr_val = state.string[state.pos_byte];
+  struct FANSI_state state_prev = state;
+
+  // reset flags
+  state.last_zwj = state.last_ri = state.is_sgr = state.err_code =
+    state.read_one_more = 0;
   // this can only be one if the last thing read is a CSI
   if(chr_val) state.terminal = 0;
 
@@ -747,5 +785,12 @@ struct FANSI_state FANSI_read_next(
     );
     state.warn = -state.warn; // only warn once
   }
+  if(state_prev.last_zwj && state.use_nchar) {
+    state.pos_width = state_prev.pos_width;
+    state.pos_width_target = state_prev.pos_width_target;
+  }
+  if(state.read_one_more && state.string[state.pos_byte])
+    goto onemoretime;
+
   return state;
 }

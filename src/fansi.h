@@ -259,13 +259,20 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int pos_byte;
     int pos_byte_sgr_start;
 
-    // Are there bytes outside of 0-127
+    // Most of the objecs below are 1/0 could be a bitfield?  Or at a minimum as
+    // a char?
 
+    // Are there bytes outside of 0-127
     int has_utf8;
 
-    // Track width of last character (this seems to be the display width)
+    // Info on last character
+    int last_char_width;  // display width of last char
+    int last_zwj;         // was last a Zero Width Joiner
+    int last_ri;          // was last an unpaired Regional Indicator
 
-    int last_char_width;
+    // Need to read one more character before returning from read_next, used
+    // right now just to avoid splitting RI flags.
+    int read_one_more;
 
     /* Control Flags -----------------------------------------------------------
      *
@@ -447,9 +454,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP x, const char ** choices, int choice_count, const char * arg_name
   );
 
-  int FANSI_is_utf8_loc();
   int FANSI_utf8clen(char c);
-int FANSI_utf8_to_cp(const char * chr, int bytes);
+  int FANSI_valid_utf8(const char * chr, int bytes);
+  int FANSI_is_utf8_loc();
+  int FANSI_utf8_to_cp(const char * chr, int bytes);
   int FANSI_digits_in_int(int x);
   struct FANSI_string_as_utf8 FANSI_string_as_utf8(SEXP x);
   struct FANSI_state FANSI_state_init(
