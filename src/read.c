@@ -665,8 +665,8 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
     // Other graphemes are work similarly to the extent continuation code points
     // are zero width naturally.  Prefixes and other things will not work.
 
-    if(cp >= 0x1f1e6 && cp <= 0x1F1FF) {  // Regional Indicator
-      if(state.last_ri) state.read_one_more = TRUE;
+    if(cp >= 0x1F1E6 && cp <= 0x1F1FF) {  // Regional Indicator
+      if(!state.last_ri) state.read_one_more = TRUE;
       state.last_ri = !state.last_ri;
       disp_size = 1;
     } else if (
@@ -763,19 +763,23 @@ onemoretime:
   struct FANSI_state state_prev = state;
 
   // reset flags
-  state.last_zwj = state.last_ri = state.is_sgr = state.err_code =
-    state.read_one_more = 0;
+  state.last_zwj = state.is_sgr = state.err_code = state.read_one_more = 0;
   // this can only be one if the last thing read is a CSI
   if(chr_val) state.terminal = 0;
 
+  int is_ascii = chr_val >= 0x20 && chr_val < 0x7F;
+  int is_utf8 = chr_val < 0 || chr_val > 0x7f;
+
   // Normal ASCII characters
-  if(chr_val >= 0x20 && chr_val < 0x7F) state = read_ascii(state);
+  if(is_ascii) state = read_ascii(state);
   // UTF8 characters (if chr_val is signed, then > 0x7f will be negative)
-  else if (chr_val < 0 || chr_val > 0x7f) state = read_utf8(state, i);
+  else if (is_utf8) state = read_utf8(state, i);
   // ESC sequences
   else if (chr_val == 0x1B) state = read_esc(state);
   // C0 escapes (e.g. \t, \n, etc)
   else if(chr_val) state = read_c0(state);
+
+  if(!is_utf8) state.last_ri = 0;  // reset regional indicator
 
   if(state.warn > 0 && state.err_code) {
     warning(
