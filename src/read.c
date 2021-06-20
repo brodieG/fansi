@@ -566,6 +566,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       state.non_normalized |= non_normalized;
       if(esc_types & 2U) {
         state.pos_byte_sgr_start = seq_start;
+        state.last_sgr = 1;  // we  just read an SGR
       }
     } else {
       state = state_prev;
@@ -598,9 +599,9 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       // nocov end
     }
   } else {
+    state.last_sgr = 1;
     state.err_msg = "";
   }
-  state.last_esc = 1;
   return state;
 }
 /*
@@ -656,7 +657,7 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
       if(!state.last_ri) state.read_one_more = TRUE;
       disp_size = 1;    // read_next forces reading 2 RIs at a time
       state.last_ri = !state.last_ri;
-    } else if (cp >= 0x1F3FB && cp <= 0x1F9B3) { // Skin type
+    } else if (cp >= 0x1F3FB && cp <= 0x1F3FF) { // Skin type
       disp_size = 0;
     } else if (cp == 0x200D) {                   // Zero Width Joiner
       state.last_zwj = 1;
@@ -695,7 +696,7 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
   state.pos_byte += byte_size;
   ++state.pos_ansi;
   ++state.pos_raw;
-  if(state.pos_width_target > FANSI_lim.lim_int.max - disp_size)
+  if(state.pos_width > FANSI_lim.lim_int.max - disp_size)
     error(
       "String with display width greater than INT_MAX at index [%jd].",
       FANSI_ind(i)
@@ -746,7 +747,7 @@ onemoretime:
 
   // reset flags
   state.last_zwj = state.is_sgr = state.err_code = state.read_one_more =
-   state.last_esc =  0;
+   state.last_sgr =  0;
   // this can only be one if the last thing read is a CSI
   if(chr_val) state.terminal = 0;
 

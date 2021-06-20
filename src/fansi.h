@@ -264,7 +264,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     // Info on last character
     int last_zwj;         // was last a Zero Width Joiner
     int last_ri;          // was last an unpaired Regional Indicator
-    int last_esc;         // was an escape sequence
+    int last_sgr;         // was an sgr
 
     // Need to read one more character before returning from read_next, used
     // right now just to avoid splitting RI flags.
@@ -341,7 +341,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
    */
   struct FANSI_state_pair {
     struct FANSI_state cur;
-    struct FANSI_state prev;
+    struct FANSI_state restart;
   };
   /*
    * Sometimes need to keep track of a string and the encoding that it is in

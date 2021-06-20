@@ -174,6 +174,26 @@ struct FANSI_state FANSI_reset_pos(struct FANSI_state state) {
  * monotonically increasing values of `pos`.  This allows us to compute state at
  * multiple positions while re-using the work we did on the earlier positions.
  *
+ * The algorithm seeks to read past the requested point and rewind back to the
+ * best break point once it's clear we're past the requested point.
+ *
+ * The same code used for start and stop positions, with the concept that zero
+ * width chacters should always be consumed (i.e. excluded from start, included
+ * in end), except that in the special case that an escape sequence will cause a
+ * break if we're in "terminate" mode at the end of a string.
+ *
+ * Overshoot relates to the R-level `round` parameter, but it has diffrent
+ * meanings for start and end.  For `start`, to overshoot means to exclude the
+ * character from the final substring.  For `end`, it means to include it.  This
+ * makes sense if you consider a substring '123' from 'oo123oo'.  If we are
+ * targeting the start of '123' and overshoot, we end up with '23oo'.  If we are
+ * targeting the end and overshoot we end up with 'oo123o'.
+ *
+ * One oddity is that Unicode "controls" (which AFAICT includes the ESC) are
+ * supposed to create break points for graphemes, but both OS X term and iterm2
+ * ignore this (Big Sur c.a. 6/2021).  So we don't break at them either.  Tested
+ * this with CSI SGR and regular controls like \a.
+ *
  * @param pos the minimum number of characters or width units, to include
  *   (excluding SGR and similar).
  * @param is_start is this for the beginning of a substring?  We tried to avoid
@@ -182,10 +202,8 @@ struct FANSI_state FANSI_reset_pos(struct FANSI_state state) {
  * @param state the last state that was known not to exceed prior target.
  * @param int type whether to use character (0), width (1), or byte (2) when
  *   computing the position (looks like we don't use 2?)
- * @param keep whether a partially started width unit should be kept (only
- *   meaningful in type = 1 (width) mode.  Keep means different things for
- *   in end result for start position, and end position.  If you keep, it
- *   means you retur
+ * @param overshoot whether a partially started width unit should be kept (only
+ *   meaningful in type = 1 (width) mode.  See details.
  */
 
 static struct FANSI_state_pair state_at_pos2(
@@ -194,53 +212,45 @@ static struct FANSI_state_pair state_at_pos2(
 ) {
   if(type != 0 && type != 1)
     error("Internal Error: type must be 0 or 1.");  // nocov
-  struct FANSI_state state_prev = state;
-  int pos_new, pos_prev;
+  struct FANSI_state state_res, state_restart;
+  state_res = state_restart = state;
+  int pos_new, pos_restart;
+  int pos_ini = pos;
   int warn_max = 0;
-  pos_new = pos_prev = type ? state.pos_width : state.pos_raw;
+  int os = overshoot;
+  pos_new = pos_restart = type ? state.pos_width : state.pos_raw;
 
   // Read until we are sure we've passed our threshold, and include all trailing
-  // zero width items (with one exception).  Look at post processing after while
-  // loop for context.
+  // zero width items (with one exception).
   while(
-    (pos_new <= pos || pos_new == pos_prev) && state.string[state.pos_byte]
+    (pos_new <= pos || pos_new == pos_restart) && state.string[state.pos_byte]
   ) {
-    state_prev = state;
-    pos_prev = pos_new;
+    pos_restart = pos_new;
     state = FANSI_read_next(state, i);
     warn_max = warn_max < state.warn ? state.warn : warn_max;
     pos_new = type ? state.pos_width : state.pos_raw;
-    // For ends, don't consume trailing esc in terminate mode as it could be
-    // an SGR that would be immediately closed.
-    if(pos_new >= pos && !is_start && terminate && state.last_esc) {
-      state = state_prev;
-      pos_new = pos_prev;
-      break;
-  } }
-  struct FANSI_state state_res;
-  if(pos_new == pos) {
-    state_res = state;
-  } else if(pos_new > pos && pos_prev == pos) {
-    // Overshot, but prior was just right.  We allow overshoot to make
-    // sure we get all zero width elements read before stopping (even in
-    // type 0 there will be some of these: e.g. SGR sequences).
-    state_res = state_prev;
-  } else if (pos_new > pos && pos_prev < pos && overshoot) {
-    // Overshoot, but only partial char (width mode only)
-    state_res = state;
-  } else if (pos_new > pos && pos_prev < pos) {
-    // Same, but don't overshoot.
-    state_res = state_prev;
-  } else if (!state.string[state.pos_byte]) {
-    // Finished string without getting position
-    state_res = state;
-  } else
-    error("Internal error, unexpected state at pos read result."); // nocov
 
+    // Last spot that's safe to restart from either as start or stop
+    // Needed b/c starts read trailing SGR but stops don't (in terminate mode)
+    if(pos_new > pos_restart && pos_new <= pos_ini) state_restart = state;
+
+    // overshoot gives us one chance to extend what we're looking for
+    if(pos_restart < pos && pos_new > pos && os) {
+      os = 0;
+      pos = pos_new;
+    }
+    // Set an anchor point to rewind to last read item, except if a trailing
+    // SGR in terminate mode, as that would be immediately closed.
+    if(
+      !(state.last_sgr && !is_start && terminate && FANSI_sgr_active(state.sgr))
+    ) {
+      if(pos_new <= pos) state_res = state;
+    }
+  }
   // Avoid potential double warning next time we read
-  state_prev.warn = warn_max;
+  state_res.warn = state_restart.warn = warn_max;
 
-  return (struct FANSI_state_pair){.cur=state_res, .prev=state_prev};
+  return (struct FANSI_state_pair){.cur=state_res, .restart=state_restart};
 }
 /*
  * We always include the size of the delimiter; could be a problem that this
@@ -423,10 +433,7 @@ SEXP FANSI_sgr_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm) {
 /*
  * R interface for state_at_position
  *
- * @param string we're interested in state of
- * @param pos integer positions along the string, zero-index
- * @param overshoot TRUE or FALSE, whether to overshoot when only have
- *   read a partial character at a position.
+ * See state_at_pos2.
  *
  * No carry param, that should be R-level.
  */
@@ -555,9 +562,10 @@ SEXP FANSI_state_at_pos_ext(
       R_xlen_t id_i;
       id_i = (R_xlen_t)(TYPEOF(ids) == INTSXP ? id_i_p.i[i] : id_i_p.d[i]) - 1;
 
-      state_prev = state_pair.prev; // Last state read before possible overshoot
+      state_prev = state_pair.cur;
       state_pair = state_at_pos2(
-        pos_i[i], state_prev, type_int, start_i[i], overshoot_i[i], term, id_i
+        pos_i[i], state_pair.restart, type_int, start_i[i], overshoot_i[i],
+        term, id_i
       );
       state = state_pair.cur;
 
