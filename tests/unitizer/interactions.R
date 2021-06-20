@@ -54,6 +54,7 @@ unitizer_sect("normalize", {
 
 unitizer_sect("carry corner cases", {
   substr_ctl("", 2, 4, carry="\033[33m")
+  substr_ctl("", 2, 4, carry = "\033[33m", terminate=FALSE)
   substr_ctl(character(), 2, 4, carry="\033[33m")
   substr_ctl(NA, 2, 4, carry="\033[33m")
   substr_ctl(environment(), 2, 4, carry="\033[33m")

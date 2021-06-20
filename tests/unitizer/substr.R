@@ -77,6 +77,9 @@ unitizer_sect("Corner cases", {
   substr_ctl(str.2, 3, 4)
   substr_ctl(str.2, 3, 5)
 
+  substr_ctl(str.2, 3, 4, terminate=FALSE)
+  substr_ctl(str.2, 3, 5, terminate=FALSE)
+
   substr_ctl(str.2, -1, 2)
   substr_ctl(str.2, -2, -1)
 
@@ -111,6 +114,9 @@ unitizer_sect("Corner cases", {
 
   substr_ctl(str.2, 2, 6, ctl=c('all', 'sgr'))
   substr_ctl(str.2, 8, 10, ctl=c('all', 'sgr'))
+
+  # Make sure things stay in order
+  substr2_ctl(rep("o\033[31m ", 2), 1:2, 1:2)
 })
 unitizer_sect("Obscure escapes", {
   # illegal 38/48
