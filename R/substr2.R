@@ -72,15 +72,17 @@
 #'   to compute the SGR required to close active SGR.
 #' @param x a character vector or object that can be coerced to such.
 #' @param type character(1L) partial matching `c("chars", "width")`, although
-#'   `type="width"` only works correctly with R >= 3.2.2.  With "width", whether
-#'   C0 and C1 are treated as zero width may depend on R version and locale in
-#'   addition what the `ctl` parameter is set to.  For example, for R4.1 in
-#'   UTF-8 locales C0 and C1 will be zero width even if the value of `ctl` is
-#'   such that they wouldn't be so in other circumstances.
+#'   `type="width"` only works correctly with R >= 3.2.2.  See
+#'   [`?nchar`][base::nchar]. With "width", the results might be affected by
+#'   locale changes, Unicode database updates, and logic changes for processing
+#'   of complex graphemes.  Generally you should not rely on a specific output
+#'   e.g. by embedding it in unit tests.  For the most part `fansi` (currently)
+#'   uses the internals of `base::nchar(type='width')`, but there are exceptions
+#'   and this may change in the future.
 #' @param round character(1L) partial matching
 #'   `c("start", "stop", "both", "neither")`, controls how to resolve
 #'   ambiguities when a `start` or `stop` value in "width" `type` mode falls
-#'   within a multi-byte character or a wide display character.  See details.
+#'   within a wide display character.  See details.
 #' @param tabs.as.spaces FALSE (default) or TRUE, whether to convert tabs to
 #'   spaces.  This can only be set to TRUE if `strip.spaces` is FALSE.
 #' @param tab.stops integer(1:n) indicating position of tab stops to use
@@ -269,6 +271,9 @@ substr2_sgr <- function(
 
 ## @x must already have been converted to UTF8
 ## @param type.int is supposed to be the matched version of type, minus 1
+##
+## Increasingly, it seems trying to re-use the crayon method instead of doing
+## everything in C was a big mistake...
 
 substr_ctl_internal <- function(
   x, start, stop, type.int, round, tabs.as.spaces,
@@ -317,7 +322,6 @@ substr_ctl_internal <- function(
 
     # note, for expediency we're currently assuming that there is no overlap
     # between starts and stops
-
     e.order <- forder(c(e.start, e.stop))
 
     e.keep <- rep(c(!round.start, round.stop), each=elems.len)[e.order]
@@ -344,21 +348,29 @@ substr_ctl_internal <- function(
     start.tag <- state[[1]][start.ansi.idx]
     stop.tag <- state[[1]][stop.ansi.idx]
 
-    # if there is any ANSI CSI at end then add a terminating CSI, warnings
-    # should have been issued on first read
-    end.csi <-
-      if(terminate) close_sgr(stop.tag, warn=FALSE, normalize)
-      else ""
-    tmp <- paste0(
-      start.tag,
-      substr(x.elems, start.ansi, stop.ansi)
-    )
-    res[elems] <- paste0(
-      if(normalize)
-        normalize_sgr(tmp, warn=warn, term.cap=VALID.TERM.CAP[term.cap.int])
-      else tmp, end.csi
-    )
-  }
+    # It's possible to end up with starts after stops because starts always
+    # ingest trailing SGR.
+    empty.req <- e.start >= e.stop
+    empty.res <- !empty.req & start.ansi > stop.ansi
+    if(!terminate) res[elems[empty.res]] <- start.tag[empty.res]
+
+    # Finalize real substrings
+    full <- !empty.res & !empty.req
+    if(any(full)) {
+      # if there is any ANSI CSI at end then add a terminating CSI, warnings
+      # should have been issued on first read
+      end.csi <-
+        if(terminate) close_sgr(stop.tag[full], warn=FALSE, normalize)
+        else ""
+
+      substring <- substr(x.elems[full], start.ansi[full], stop.ansi[full])
+      tmp <- paste0(start.tag[full], substring)
+      term.cap <- VALID.TERM.CAP[term.cap.int]
+      res[elems[full]] <- paste0(
+        if(normalize) normalize_sgr(tmp, warn=FALSE, term.cap=term.cap)
+        else tmp,
+        end.csi
+  ) } }
   res
 }
 
