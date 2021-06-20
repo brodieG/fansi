@@ -312,7 +312,7 @@ in_html <- function(x, css=character(), pre=TRUE, display=TRUE, clean=display) {
     if(pre) "</pre>",
     "</body>", "</html>"
   )
-  f <- tempfile()
+  f <- paste0(tempfile(), ".html")
   writeLines(html, f)
   if(display) browseURL(f)  # nocov, can't do this in tests
   if(clean) {
