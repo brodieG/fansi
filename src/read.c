@@ -271,7 +271,6 @@ static struct FANSI_state read_ascii(struct FANSI_state state) {
   ++state.pos_ansi;
   ++state.pos_raw;
   ++state.pos_width;
-  ++state.pos_width_target;
   return state;
 }
 /*
@@ -701,7 +700,6 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
       "String with display width greater than INT_MAX at index [%jd].",
       FANSI_ind(i)
     );
-  state.pos_width_target += disp_size;
   state.pos_width += disp_size;        // won't overflow if _target doesn't
   state.has_utf8 = 1;
   return state;
@@ -726,7 +724,6 @@ static struct FANSI_state read_c0(struct FANSI_state state) {
   ) {
     --state.pos_raw;
     --state.pos_width;
-    --state.pos_width_target;
   }
   return state;
 }
@@ -775,10 +772,9 @@ onemoretime:
     );
     state.warn = -state.warn; // only warn once
   }
-  if(state_prev.last_zwj && state.use_nchar) {
+  if(state_prev.last_zwj && state.use_nchar)
     state.pos_width = state_prev.pos_width;
-    state.pos_width_target = state_prev.pos_width_target;
-  }
+
   if(state.read_one_more && state.string[state.pos_byte])
     goto onemoretime;
 

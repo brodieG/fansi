@@ -243,10 +243,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      *   characters whereas this one does not.
      * - pos_width: the character postion accounting for double width
      *   characters, etc., note in this case ASCII escape sequences are treated
-     *   as zero chars.  Width is computed with R_nchar.
-     * - pos_width_target: pos_width when the requested width cannot be matched
-     *   exactly, pos_width is the exact width, and this one is what was
-     *   actually requested.  Needed so we can match back to request.
+     *   as zero chars.  Width is computed mostly with R_nchar.
      *
      * Actually not clear if there is a difference b/w pos_raw and pos_ansi,
      * might need to remove one
@@ -255,7 +252,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int pos_ansi;
     int pos_raw;
     int pos_width;
-    int pos_width_target;
     int pos_byte;
     int pos_byte_sgr_start;
 

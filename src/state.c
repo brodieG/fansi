@@ -134,20 +134,18 @@ struct FANSI_state FANSI_state_init(
 
 struct FANSI_state FANSI_reset_width(struct FANSI_state state) {
   state.pos_width = 0;
-  state.pos_width_target = 0;
   return state;
 }
 // Error message specific to use in adding spaces for tabs.
 struct FANSI_state FANSI_inc_width(
   struct FANSI_state state, int inc, R_xlen_t i
 ) {
-  if(state.pos_width_target > FANSI_lim.lim_int.max - inc)
+  if(state.pos_width > FANSI_lim.lim_int.max - inc)
     error(
       "Expanding tabs will cause string to exceed INT_MAX at index [%ju].",
       FANSI_ind(i)
     );
 
-  state.pos_width_target += inc;
   state.pos_width += inc;
   return state;
 }
@@ -164,8 +162,7 @@ struct FANSI_state FANSI_reset_pos(struct FANSI_state state) {
   state.pos_ansi = 0;
   state.pos_raw = 0;
   state.pos_width = 0;
-  state.pos_width_target = 0;
-  state.last_esc = 0;
+  state.last_sgr = 0;
   state.terminal = 0;
   state.non_normalized = 0;
   return state;
@@ -578,10 +575,9 @@ SEXP FANSI_state_at_pos_ext(
       res_mx_i[i * res_cols + 0] = state.pos_byte;
       res_mx_i[i * res_cols + 1] = state.pos_raw;
       res_mx_i[i * res_cols + 2] = state.pos_ansi;  // this is what's used
-      res_mx_i[i * res_cols + 3] = state.pos_width_target;
+      res_mx_i[i * res_cols + 3] = state.pos_width;
 
       // Record color tag if state changed
-
       if(FANSI_sgr_comp(state.sgr, state_prev.sgr)) {
         // this computes length twice..., we know state_char can be at most
         // INT_MAX excluding NULL (and certainly will be much less).
