@@ -320,7 +320,7 @@ substr_ctl_internal <- function(
 
     e.order <- forder(c(e.start, e.stop))
 
-    e.keep <- rep(c(round.start, round.stop), each=elems.len)[e.order]
+    e.keep <- rep(c(!round.start, round.stop), each=elems.len)[e.order]
     e.sort <- c(e.start, e.stop)[e.order]
 
     state <- .Call(
@@ -329,7 +329,7 @@ substr_ctl_internal <- function(
       e.keep,  # whether to include a partially covered multi-byte character
       rep(c(TRUE, FALSE), each=length(elems))[e.order], # start or end of string
       warn, term.cap.int,
-      ctl.int, normalize,
+      ctl.int, normalize, terminate,
       c(e.ids, e.ids)[e.order]
     )
     # Recover the matching values for e.sort
@@ -369,7 +369,7 @@ substr_ctl_internal <- function(
 state_at_pos <- function(
   x, starts, ends, warn=getOption('fansi.warn'),
   normalize=getOption('fansi.normalize', FALSE),
-  carry=getOption('fansi.carry', FALSE)
+  terminate=getOption('fansi.terminate', FALSE)
 ) {
   is.start <- c(rep(TRUE, length(starts)), rep(FALSE, length(ends)))
   .Call(
@@ -382,6 +382,7 @@ state_at_pos <- function(
     seq_along(VALID.TERM.CAP),
     1L,        # ctl="all"
     normalize,
-    carry
+    terminate,
+    rep(seq_along(starts), 2)
   )
 }

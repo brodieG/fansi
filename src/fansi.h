@@ -268,6 +268,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     // Info on last character
     int last_zwj;         // was last a Zero Width Joiner
     int last_ri;          // was last an unpaired Regional Indicator
+    int last_esc;         // was an escape sequence
 
     // Need to read one more character before returning from read_next, used
     // right now just to avoid splitting RI flags.
@@ -361,8 +362,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn);
   SEXP FANSI_state_at_pos_ext(
     SEXP x, SEXP pos, SEXP type,
-    SEXP keep, SEXP is_start, SEXP warn, SEXP term_cap, SEXP ctl,
-    SEXP norm, SEXP ids
+    SEXP overshoot, SEXP is_start, SEXP warn, SEXP term_cap, SEXP ctl,
+    SEXP norm, SEXP terminate, SEXP ids
   );
   SEXP FANSI_strwrap_ext(
     SEXP x, SEXP width,

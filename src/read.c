@@ -601,6 +601,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
   } else {
     state.err_msg = "";
   }
+  state.last_esc = 1;
   return state;
 }
 /*
@@ -740,12 +741,15 @@ struct FANSI_state FANSI_read_next(
   struct FANSI_state state, R_xlen_t i
 ) {
   char chr_val;
+
 onemoretime:
+
   chr_val = state.string[state.pos_byte];
   struct FANSI_state state_prev = state;
 
   // reset flags
-  state.last_zwj = state.is_sgr = state.err_code = state.read_one_more = 0;
+  state.last_zwj = state.is_sgr = state.err_code = state.read_one_more =
+   state.last_esc =  0;
   // this can only be one if the last thing read is a CSI
   if(chr_val) state.terminal = 0;
 
