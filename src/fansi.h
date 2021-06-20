@@ -266,7 +266,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int has_utf8;
 
     // Info on last character
-    int last_char_width;  // display width of last char
     int last_zwj;         // was last a Zero Width Joiner
     int last_ri;          // was last an unpaired Regional Indicator
 

@@ -272,7 +272,6 @@ static struct FANSI_state read_ascii(struct FANSI_state state) {
   ++state.pos_raw;
   ++state.pos_width;
   ++state.pos_width_target;
-  state.last_char_width = 1;
   return state;
 }
 /*
@@ -581,7 +580,6 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
     // All errors are zero width; there should not be any errors if
     // !esc_recognized.
     state.err_code = err_code;  // b/c we want the worst err code
-    state.last_char_width = 0;
     if(err_code == 3) {
       state.err_msg =
         "a CSI SGR sequence with color codes not supported by terminal";
@@ -601,8 +599,6 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       // nocov end
     }
   } else {
-    // Not 100% sure this is right...
-    state.last_char_width = 1;
     state.err_msg = "";
   }
   return state;
@@ -699,7 +695,6 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
   state.pos_byte += byte_size;
   ++state.pos_ansi;
   ++state.pos_raw;
-  state.last_char_width = disp_size;
   if(state.pos_width_target > FANSI_lim.lim_int.max - disp_size)
     error(
       "String with display width greater than INT_MAX at index [%jd].",
@@ -731,7 +726,6 @@ static struct FANSI_state read_c0(struct FANSI_state state) {
     --state.pos_raw;
     --state.pos_width;
     --state.pos_width_target;
-    state.last_char_width = 0;
   }
   return state;
 }
