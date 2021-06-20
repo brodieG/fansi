@@ -4,6 +4,19 @@ These are internal developer notes.
 
 ## Todo
 
+* Tests for sequences:
+    * All combinations of RI.
+    * Have ZWJ continuations right after an overshoot.
+    * That the index is issues correctly for substrings with e.g. bad ESCs
+    * What happens with bad ESCs at beginning/end of substrings
+
+* Add test that confirms were not messing up the integer overflow check
+  for the start indices.
+
+* Simplify FANSI_valid_utf8 by having it call clen and return number of bytes.
+  (problem is when invalid due to requesting bytes beyond null terminator, how
+  do we designate that, negative bytes?).
+
 * This is definitely not parsimonious...  Since we're not moving to C we need to
   figure out what we want to do about it.
 
@@ -24,7 +37,8 @@ These are internal developer notes.
   internal and external functions.  Maybe also split off the write functions
   from general utilities.
 * Delete unused code (e.g. FANSI_color_size, digits_in_int, etc.).
-* Change `unhandled_ctl` to point out specific problem sequence.
+* Change `unhandled_ctl` to point out specific problem sequence (for when there
+  are many in a row?).
 * Check double warnings in all functions doing the two pass reading.
 
 * Bunch of docs don't have @return tags, oddly (fixed some).
@@ -210,6 +224,25 @@ future about wanting to terminate the beginning?
 
 So we're left with just `carry` and terminate, and instructions on how to do
 things manually.
+
+## Consumption of Zero Width
+
+Generally, we always want to consume if there is some non-zero width that
+follows.  But, if we're at end, do we want to consume?  Specifically, with
+respect to trailing SGRs, which in terminate mode makes no sense to add.
+
+So how do we decide?  If last thing was an SGR, drop it?  In practice, for
+starts that won't affect anything as the state will go from being computed and
+pasted to just being present in the string directly (which maybe is a plus)?
+For ends it lets us avoid superfluous tags that get closed immediately if
+`terminate = TRUE`.  So we could try:
+
+* If last thing read is an SGR.
+* If terminate = TRUE.
+* Stop before it.
+
+This works by virtue of us only wanting to affect the end, and the beginning not
+being affected by it.  Not great, but maybe we'll have to make do?
 
 ## Overflow
 
@@ -557,11 +590,11 @@ microbenchmark(times=1,
   nchar_esc(utf8.c, type='width'),
   nchar(strip_esc(utf8.c), type='width')
 )
-## Unit: milliseconds
-##                                      expr       min        lq      mean
-##                      nchar(utf8.big.wrap)  131.7149  131.7149  131.7149
-##      nchar(utf8.big.wrap, type = "width") 3749.5948 3749.5948 3749.5948
-##         nchar_esc(utf8.c, type = "width") 3930.9955 3930.9955 3930.9955
+    Unit: milliseconds
+                                         expr       min        lq      mean
+                         nchar(utf8.big.wrap)  131.7149  131.7149  131.7149
+         nchar(utf8.big.wrap, type = "width") 3749.5948 3749.5948 3749.5948
+            nchar_esc(utf8.c, type = "width") 3930.9955 3930.9955 3930.9955
 ##  nchar(strip_esc(utf8.c), type = "width") 3930.2643 3930.2643 3930.2643
 ```
 
