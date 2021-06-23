@@ -321,7 +321,10 @@ static SEXP strwrap(
     // and we happen to hit the width in a two space sequence such as we might
     // get after [.!?].
     //
-    // We're ignoring otherw word boundaries, but strwrap does too.
+    // We're ignoring other word boundaries, but strwrap does too.
+    //
+    // Recall that if `strip_spaces == TRUE` string will have already been
+    // processed to remove sequential spaces.
 
     if(
       state.string[state.pos_byte] == ' ' ||
@@ -559,8 +562,8 @@ SEXP FANSI_strwrap_ext(
   // Strip whitespaces as needed; `strwrap` doesn't seem to do this with prefix
   // and initial, so we don't either
   int strip_spaces_int = asInteger(strip_spaces);
-
-  if(strip_spaces_int) {x = PROTECT(FANSI_process(x, &buff)); ++prt;}
+  if(strip_spaces_int)
+    x = PROTECT(FANSI_process(x, term_cap, ctl, &buff)); ++prt;
 
   // and tabs
   if(asInteger(tabs_as_spaces)) {
