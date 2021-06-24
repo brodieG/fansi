@@ -373,7 +373,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP ctl, SEXP norm, SEXP carry,
     SEXP terminate
   );
-  SEXP FANSI_process_ext(SEXP input, SEXP term_cap);
+  SEXP FANSI_process_ext(SEXP input, SEXP term_cap, SEXP ctl);
   SEXP FANSI_tabs_as_spaces_ext(
     SEXP vec, SEXP tab_stops, SEXP warn, SEXP term_cap, SEXP ctl
   );

@@ -712,9 +712,12 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
  */
 static struct FANSI_state read_c0(struct FANSI_state state) {
   int is_nl = state.string[state.pos_byte] == '\n';
-  if(!is_nl) {
-    // question: should we make the comment about tabs as spaces?
+  int is_tab = state.string[state.pos_byte] == '\t';
+  if(!is_nl && !is_tab) {
     state.err_msg = "a C0 control character";
+    state.err_code = 8;
+  } else if (is_tab) {
+    state.err_msg = "a tab (see `?tabs_as_spaces` or `tabs.as.spaces` param) ";
     state.err_code = 8;
   }
   state = read_ascii(state);
