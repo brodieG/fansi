@@ -20,6 +20,11 @@
 #' character vector.  Unhandled sequences may cause `fansi` to interpret strings
 #' in a way different to your display.  See [fansi] for details.
 #'
+#' To work around tabs present in input, you can use [`tabs_as_spaces`] or the
+#' `tabs.as.spaces` parameter on functions that have it, or the [`strip_ctl`]
+#' function to remove the troublesome sequences.  Alternatively, you can use
+#' `warn=FALSE` to suppress the warnings.
+#'
 #' This is a debugging function that is not optimized for speed.
 #'
 #' The return value is a data frame with five columns:

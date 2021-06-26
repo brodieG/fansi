@@ -105,6 +105,9 @@
 #'   problematic _Control Sequences_ are encountered.  These could cause the
 #'   assumptions `fansi` makes about how strings are rendered on your display
 #'   to be incorrect, for example by moving the cursor (see [`?fansi`][fansi]).
+#'   If the problematic sequence is a tab, you can use the `tabs.as.spaces`
+#'   parameter on functions that have it, or the `tabs_as_spaces` function, to
+#'   turn the tabs to spaces and resolve the warning that way.
 #' @param term.cap character a vector of the capabilities of the terminal, can
 #'   be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
 #'   starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
