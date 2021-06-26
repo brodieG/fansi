@@ -17,6 +17,7 @@
  */
 
 #include "fansi.h"
+
 /*
  * Data related to prefix / initial
  *
@@ -280,8 +281,9 @@ static SEXP strwrap(
   // items we're going to have, unless we're in first only in which case we know
   // we only need one element per and don't actually use these
 
+  int prt = 0;
   SEXP char_list_start, char_list;
-  char_list_start = char_list = PROTECT(list1(R_NilValue));
+  char_list_start = char_list = PROTECT(list1(R_NilValue)); ++prt;
 
   int prev_boundary = 0;    // tracks if previous char was a boundary
   int has_boundary = 0;     // tracks if at least one boundary in a line
@@ -298,7 +300,7 @@ static SEXP strwrap(
   // possibility for multiple elements between words
 
   if(carry) state.sgr = *sgr_carry;
-  struct FANSI_state state_start, state_bound, state_prev;
+  struct FANSI_state state_start, state_bound, state_prev, state_tmp;
   state_start = state_bound = state_prev = state;
   R_xlen_t size = 0;
   SEXP res_sxp;
@@ -306,14 +308,19 @@ static SEXP strwrap(
   while(1) {
     struct FANSI_state state_next;
 
-    // Can no longer advance after we reach end, but we still need to assemble
-    // strings so we assign `state` even though technically not correct
-
-    if(!state.string[state.pos_byte]){
-      state_next = state;
-    } else {
-      state_next = FANSI_read_next(state, index);
-    }
+    state_next = state; // if we hit end of string, re-use state.
+    // Advance one element, except if start of line then consume leading SGR so
+    // that when it's output it's merged into one ESC (if normalized=FALSE)
+    if(state.string[state.pos_byte]) {
+      if(state.pos_byte != state_start.pos_byte) {
+        state_next = FANSI_read_next(state_next, index);
+      } else {
+        do {
+          state_tmp = state_next;
+          state_next = FANSI_read_next(state_next, index);
+        } while(state_next.last_sgr);
+        state_start = state_tmp;
+    } }
     state.warn = state_bound.warn = state_next.warn;  // avoid double warning
 
     // detect word boundaries and paragraph starts; we need to track
@@ -391,7 +398,7 @@ static SEXP strwrap(
           para_start ? pre_first : pre_next,
           width_tar, pad_chr, index, normalize, terminate
         )
-      );
+      ); ++prt;
       first_line = 0;
       last_start = state_start.pos_byte;
       // first_only for `strtrim`
@@ -399,7 +406,7 @@ static SEXP strwrap(
       if(!first_only) {
         SETCDR(char_list, list1(res_sxp));
         char_list = CDR(char_list);
-        UNPROTECT(1);
+        UNPROTECT(1); --prt;
       } else {
         // Need end state if in trim mode and we wish to carry
         if(carry)
@@ -448,7 +455,7 @@ static SEXP strwrap(
   SEXP res;
 
   if(!first_only) {
-    res = PROTECT(allocVector(STRSXP, size));
+    res = PROTECT(allocVector(STRSXP, size)); ++prt;
     char_list = char_list_start;
     for(R_xlen_t i = 0; i < size; ++i) {
       char_list = CDR(char_list); // first element is NULL
@@ -462,7 +469,8 @@ static SEXP strwrap(
     // recall there is an extra open PROTECT in first_only mode
     res = res_sxp;
   }
-  UNPROTECT(2);
+
+  UNPROTECT(prt);
   *sgr_carry = state.sgr;
   return res;
 }
@@ -562,9 +570,9 @@ SEXP FANSI_strwrap_ext(
   // Strip whitespaces as needed; `strwrap` doesn't seem to do this with prefix
   // and initial, so we don't either
   int strip_spaces_int = asInteger(strip_spaces);
-  if(strip_spaces_int)
+  if(strip_spaces_int) {
     x = PROTECT(FANSI_process(x, term_cap, ctl, &buff)); ++prt;
-
+  }
   // and tabs
   if(asInteger(tabs_as_spaces)) {
     x = PROTECT(FANSI_tabs_as_spaces(x, tab_stops, &buff, warn, term_cap, ctl));
