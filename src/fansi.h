@@ -1,5 +1,5 @@
 /*
-Copyright (C) 2017  Brodie Gaslam
+Copyright (C) 2021 Brodie Gaslam
 
 This file is part of "fansi - ANSI Control Sequence Aware String Functions"
 
@@ -243,10 +243,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      *   characters whereas this one does not.
      * - pos_width: the character postion accounting for double width
      *   characters, etc., note in this case ASCII escape sequences are treated
-     *   as zero chars.  Width is computed with R_nchar.
-     * - pos_width_target: pos_width when the requested width cannot be matched
-     *   exactly, pos_width is the exact width, and this one is what was
-     *   actually requested.  Needed so we can match back to request.
+     *   as zero chars.  Width is computed mostly with R_nchar.
      *
      * Actually not clear if there is a difference b/w pos_raw and pos_ansi,
      * might need to remove one
@@ -255,17 +252,23 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int pos_ansi;
     int pos_raw;
     int pos_width;
-    int pos_width_target;
     int pos_byte;
     int pos_byte_sgr_start;
 
-    // Are there bytes outside of 0-127
+    // Most of the objecs below are 1/0 could be a bitfield?  Or at a minimum as
+    // a char?
 
+    // Are there bytes outside of 0-127
     int has_utf8;
 
-    // Track width of last character (this seems to be the display width)
+    // Info on last character
+    int last_zwj;         // was last a Zero Width Joiner
+    int last_ri;          // was last an unpaired Regional Indicator
+    int last_sgr;         // was an sgr
 
-    int last_char_width;
+    // Need to read one more character before returning from read_next, used
+    // right now just to avoid splitting RI flags.
+    int read_one_more;
 
     /* Control Flags -----------------------------------------------------------
      *
@@ -314,9 +317,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     // Whether to use R_nchar, really only needed when we're doing things in
     // width mode
     int use_nchar;
-    // Whether the most recently read escape sequence is adjacent a NULL, which
-    // allows us to decide not to write it back out as it would be redundant.
-    int terminal;
     // Last sequence of SGRs contained non-normal escapes
     int non_normalized;
 
@@ -338,7 +338,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
    */
   struct FANSI_state_pair {
     struct FANSI_state cur;
-    struct FANSI_state prev;
+    struct FANSI_state restart;
   };
   /*
    * Sometimes need to keep track of a string and the encoding that it is in
@@ -354,8 +354,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn);
   SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn);
   SEXP FANSI_state_at_pos_ext(
-    SEXP x, SEXP pos, SEXP type, SEXP lag, SEXP ends,
-    SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm
+    SEXP x, SEXP pos, SEXP type,
+    SEXP overshoot, SEXP is_start, SEXP warn, SEXP term_cap, SEXP ctl,
+    SEXP norm, SEXP terminate, SEXP ids
   );
   SEXP FANSI_strwrap_ext(
     SEXP x, SEXP width,
@@ -369,7 +370,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP ctl, SEXP norm, SEXP carry,
     SEXP terminate
   );
-  SEXP FANSI_process_ext(SEXP input);
+  SEXP FANSI_process_ext(SEXP input, SEXP term_cap, SEXP ctl);
   SEXP FANSI_tabs_as_spaces_ext(
     SEXP vec, SEXP tab_stops, SEXP warn, SEXP term_cap, SEXP ctl
   );
@@ -417,10 +418,13 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_sgr_at_end_ext(
     SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry
   );
+  SEXP FANSI_utf8_to_cp_ext(SEXP x);
 
   // - Internal funs -----------------------------------------------------------
 
-  SEXP FANSI_process(SEXP input, struct FANSI_buff * buff);
+  SEXP FANSI_process(
+    SEXP input, SEXP term_cap, SEXP ctl, struct FANSI_buff *buff
+  );
   SEXP FANSI_tabs_as_spaces(
     SEXP vec, SEXP tab_stops, struct FANSI_buff * buff, SEXP warn,
     SEXP term_cap, SEXP ctl
@@ -446,8 +450,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP x, const char ** choices, int choice_count, const char * arg_name
   );
 
-  int FANSI_is_utf8_loc();
   int FANSI_utf8clen(char c);
+  int FANSI_valid_utf8(const char * chr, int bytes);
+  int FANSI_is_utf8_loc();
+  int FANSI_utf8_to_cp(const char * chr, int bytes);
   int FANSI_digits_in_int(int x);
   struct FANSI_string_as_utf8 FANSI_string_as_utf8(SEXP x);
   struct FANSI_state FANSI_state_init(

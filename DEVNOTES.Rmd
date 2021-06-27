@@ -4,35 +4,93 @@ These are internal developer notes.
 
 ## Todo
 
-* This is definitely not parsimonious...  Maybe fix when we move substr to C?
+* Add "all" `term.cap`.
 
-    > substr_ctl("", 2, 4, carry = "\033[33m")
-    [1] "\033[33m\033[0m"
+
+* Rewrite the COPY/MCOPY macros to use the buffer origin to measure size instead
+  of `len`?  That should be safer.
+
+* Confirm invalid UTF-8 assumptions (do we consume the lead byte count, just on
+  byte?).  Right now we consume the lead byte bytes.
+
+* Add test that confirms were not messing up the integer overflow check
+  for the start indices.  Not sure how to do this.
+
+* Simplify FANSI_valid_utf8 by having it call clen and return number of bytes.
+  (problem is when invalid due to requesting bytes beyond null terminator, how
+  do we designate that, negative bytes?).
 
 * Move the interrupt to be `_read_next` based with an unsigned counter?  With
   maybe the SGR reads contributing more to the counter?  What about writes?  Is
   there a more universal way to check for interrupts?  Main issue is that it's
   possible (though perhaps unlikely) that there will be some very slow
   individual loop iterations as we saw with `tabs_as_spaces`.
-* Write a section on performance in the fansi section.
+
+* Write a section on performance in the fansi section (note that overhead is
+  actually higher for small strings for substr; it looked really low either b/c
+  substr was slower before, or because it is still slow for longer strings due
+  to utf8 validation).
+
 * Look into hiding global functions / structures, and split off fansi.h into the
   internal and external functions.  Maybe also split off the write functions
   from general utilities.
+
 * Delete unused code (e.g. FANSI_color_size, digits_in_int, etc.).
-* How to deal with wraps of `"hello \033[33;44m world"`.  Notice extra space.
-* Change `unhandled_ctl` to point out specific problem sequence.
+
+* Change `unhandled_ctl` to point out specific problem sequence (for when there
+  are many in a row?).
+
 * Check double warnings in all functions doing the two pass reading.
 
 * Bunch of docs don't have @return tags, oddly (fixed some).
+
 * Make sure we check we're not using `intmax_t` or `uintmax_t` in a tight loop
   anywhere.
+
 * Cleanup limits structure, is it really needed now we have a better view of
   what we're dealing with?
+
 * Do sgr_to_HTML (sgr_to_html2?), add check to sgr_to_html if any of the bad
   characters are found to escape or use `sgr_to_html2`.  Or do we just
   check for unescaped '<', '>', and '&'?
 
 ## Done
+
+* Make sure `strwrap` and others consume initial SGR (substr does so)?  It looks
+  like stwrap doesn't: `strwrap_ctl(c("\033[31mhello world", "\033[42mgoodbye moon"), carry=TRUE, 10)`
+
+Now they do.
+
+* Double check that `strwrap` is doing carry correctly in non-trim mode.
+
+It is.
+
+* Are .terminal and .last_sgr at cross purposes?  Maybe, terminal does not get
+  reset if you hit the NULL.
+
+Removed .terminal.
+
+* How to deal with wraps of `"hello \033[33;44m world"`.  Notice extra space.
+  Correct way to do this is make sure that the escape does not interrupt white
+  space removal in reading of string.  I think the rest will work out.
+
+* Tests for sequences:
+    * All combinations of RI.
+    * Have ZWJ continuations right after an overshoot.
+    * That the index is issues correctly for substrings with e.g. bad ESCs
+    * What happens with bad ESCs at beginning/end of substrings
+
+* Once we add isolate, make sure that trailing sequences are not omitted if the
+  end is not isolated? (see Interactions section below).
+
+* This is definitely not parsimonious...  Since we're not moving to C we need to
+  figure out what we want to do about it.
+
+    > substr_ctl("", 2, 4, carry = "\033[33m")
+    [1] "\033[33m\033[0m"
+
+
+* Get rid of pos_width_target (seemingly only state_at_pos used it?).
 
 * How do we currently handle styles across elements?
     * We don't.  `strwrap` carries the style within one single character
@@ -49,11 +107,6 @@ signatures.
 
 * Check whether anything other than `substr_ctl` uses `state_at_pos` and thus
   the assumptions about carry being handled externally might be incorrect.
-
-* Once we add isolate, make sure that trailing sequences are not omitted if the
-  end is not isolated?
-
-This doesn't make sense now to me.  Maybe if the beginning is not isolated?
 
 * It's possible we messed up and `sgr_to_html` had carry semantics whereas other
   stuff did not.
@@ -108,6 +161,85 @@ unsigned one (I think).
 Currently takes STRSXP.  A little awkward though, but we did it that way because
 we had the index.
 
+
+## Wrap Strip Space
+
+I think the logic needed right now is to make sure that sequences of
+tabs/spaces/newlines are replaced correctly:
+
+* "    "         -> " "
+* ".  "          -> ".  "
+* "   \n  "      -> " "
+* "   \n  \n  "  -> "\n\n"
+
+So what do we do if an escape interrupts?
+
+* If another non-white space after escape?
+    * Nothing, everything is fine
+* If another white space sequence after escape?
+    * Scan forward until find the first non-SGR non-whitespace (be sure to
+      read ESC with `FANSI_read_next`, accumulting any SGR ESC).
+    * Compute correct continuation as currently, and write it along with the
+      rest of the beginning of the string.
+    * Write out the SGR
+    * Other CTLs will not get moved, this should be documented.
+
+Odd cases to think about:
+
+* SGR between two spaces following a periods.
+* SGR between first and last newline.
+
+Special cases are:
+
+* Two spaces after a period
+    * ESC between two spaces, stays there, otherwise at end.
+* `n` newlines
+    * After first stays after first
+    * After second stays at end
+
+If there are different ESCs at different spots, then apply above rules to each.
+
+The above is too complicated, just put it at very end in all cases.
+
+## Grapheme Boundaries
+
+So we need to modify `readUTF8` to know when to continue reading when the next
+char being zero width doesn't do it.
+
+* RI flags (even odd) (what about england/wales/scotland?)
+
+Exploring whether we can get away with a cheap implementation.
+
+Country flags are fine since each Regional Indicator (RI) on its own is 1 width,
+but together they are two (ah, but we can't break in the middle).
+
+Prepend we probably can't handle, as they too are zero width (some are anyway).
+
+Do not break before extending characters.
+
+* Grapheme extend (non spacing and enclosing marks, ZWNJ)
+* Emoji modifier
+
+Do not break before modifiers:
+
+* Emoji component 1F9B0..1F9B3 hair type
+* Emoji modifier 1F3FB..1F3FF skin color
+
+Do no break within emoji modifier sequences
+
+In practice, I think this means:
+
+* Treat modifier/component as width zero
+* Treat anything after a ZWJ as width zero
+* Handle RI/flags  U+1F1E6...U+1F1FF
+
+This should be usually right so long as the sequences are well formed.
+
+The pain is flags because we don't want to let substring in width mode cut in
+the middle.  But maybe that's okay?  All the rounding business should work if we
+just force the advance.  We just need to check whether the next thing is as flag
+and just advance extra.
+
 ## Crayon Compatibility
 
 ### Updating Crayon
@@ -132,102 +264,7 @@ Issue are:
 * We need to use regular expressions, not fixed, so might be a little slower.
 * It will not deal with things like "\033[1;31m".
 
-### Fansi Changes
-
-`normalize_sgr`: take all known SGRs form `\033[31;42m` and re-write them into
-`\033[31m\033[42m`.
-
-> What about non SGR escapes?  Should process be: strip non-SGR, then normalize?
-> Or do we just ignore non-SGR and let the user decide what they want to do with
-> the warnings?
-
-One problem with `normalize_sgr` is it will substantially complicate the code
-for anything computing width if we try to make it part of it.  So likely best
-way to deal with it is in "crayon.compat" mode, do a two pass process: first
-normalize, second do our thing.  Obviously this will be slower.
-
-Should `normalize_sgr` convert `\033[0m` and similar to the exploded version?
-And should it be exploded to all closing tags, or only to the active ones?
-Probably only the active ones.
-
-It's probably out of the question to normalize as we process, but it's not out
-of the question to write the closing tags on each.  What would it take to
-normalize as we process?
-
-* Known how to compute the normalized size.  Won't be able to use the
-  `copy_or_measure` framework as we won't know ahead of time what the string is,
-  which means we would have to generate it twice to use `copy_or_measure`.
-* Instead of skipping all the way to the end of the line and copying the whole
-  thing, we'd have to copy up to each ESC, and write the normalized version of
-  it.
-
-We get most of the value by just writing the end-tags, and that's easy and cheap
-to do.  It's just that then there is no great interface.  Either we normalize
-everything after the fact at the cost of rewriting it all, or we do a half-assed
-version where we hope we don't have to normalize the internals and write the
-normalized end tags.  Maybe that's the compromise.  Look for unnormalized tags
-inside, and if any exist, then use the full second pass, otherwise just write
-the normalized end tags.
-
-We also need to decide what is unnormalized.  For crayon, all we really care
-about is that "close" tags be pulled out, and they don't even have to be really
-pulled out, they just need to be appended.
-
-There is also the R level functions which use `substr`, so those will have to be
-two-pass unless we rewrite substr internally.
-
-So maybe first thing to do is the normalize version?  Then we can think if we
-want to change writelines?
-
-Aside: if we truly want to insulate `fansi` output from external SGR, we really
-should be starting with `\033[0m` too.  Maybe another option is to "insulate",
-which would just start and end with the null SGR, optionally?
-
-The other thing we can do is accept an "state.initial" input, and output a
-"state.end".  This way we can merge with any other SGR strings.
-
-### Normalize
-
-Biggest issue is dealing with the concept of closing tags, which we're really
-not set up to deal with.  However, we can have a pre-state, and a post-state,
-and we can figure out what transformations need to be applied to go from one to
-the other.
-
-So maybe we can't get fully away from mapping all the open and close styles in
-some way.
-
-If pre had color, but post does not, close color.
-If pre had x, but post does not, issue closing tag.
-
-Generate a list of the styles that pre had but post doesn't, and only those.
-Then, generate a `close_active_sgr` on that style.
-
-How do we handle closing styles when there are not corresponding opening
-styles?  If there is a lone ESC[m in the string, what do we close?
-Nothing?  Everything?  Do we give the user the option of providing a
-vector of starting styles to consider active (and possibly to instruct us
-on which action to take)?  We could e.g. give the user the option to close
-everything.
-
-Do we warn about closing tags that don't close an active style?  Maybe we
-do that, and then point to docs about bleed.  But it does mean we should
-include the bleed argument.
-
-## Bleed / Carry
-
-Add a `bleed` param that is a single string (or TRUE) that causes the
-program to bleed from string to string, with the initial state specified
-by that argument (or TRUE for just no starting state).  But this
-precludes using the argument in a form that recycles to the beginning of
-each string; really, bleeding and starts with X should be distinct,
-possibly orthogonal.
-
-What cares about bleed?  `expand`, obviously.  Maybe `strwrap` as that
-adds a terminator.  What about `substr`?
-
-Do we really want a "starts with x" option?  Probably not worth it?  Is it
-sufficiently different and important relative to bleed?  Under what
-circumstances would we really want it?
+## Interaction
 
 Is this the desired outcome:
 
@@ -266,6 +303,63 @@ future about wanting to terminate the beginning?
 
 So we're left with just `carry` and terminate, and instructions on how to do
 things manually.
+
+## Consumption of Zero Width
+
+Generally, we always want to consume if there is some non-zero width that
+follows.  But, if we're at end, do we want to consume?  Specifically, with
+respect to trailing SGRs, which in terminate mode makes no sense to add.
+
+So how do we decide?  If last thing was an SGR, drop it?  In practice, for
+starts that won't affect anything as the state will go from being computed and
+pasted to just being present in the string directly (which maybe is a plus)?
+For ends it lets us avoid superfluous tags that get closed immediately if
+`terminate = TRUE`.  So we could try:
+
+* If last thing read is an SGR.
+* If terminate = TRUE.
+* Stop before it.
+
+This works by virtue of us only wanting to affect the end, and the beginning not
+being affected by it.  Not great, but maybe we'll have to make do?
+
+Some interesting complications:
+
+* What if there is padding added at the end?  Is that the same as
+  `terminate=FALSE`.
+    * Distinguish with SGR in trailing spaces?  Yes, those are not the same as
+      those that are stuck to the end of the last word.
+* How do we know that a trailing SGR is redundant?  `terminate` must be TRUE,
+  but also there must not be padding.
+
+Should we really not issue unsupported SGR?  There is a difference between the
+display not supporting it, and `fansi` not understanding it.  It seems that
+things like 999 should be removed, whereas things like 38;2 or 91 should not?
+The real problem, and it applies specifically to the 38;2 and also 38;5 is that
+the trailing codes should be interpreted differently.  So if we want something
+to show up on the terminal correctly we have to drop the bad stuff.
+
+We did not use to do this before 1.0, but then it leads to weird stuff like:
+
+    "++ \033[38;2;31;42;4mworld\033[0m"
+    "\033[2;4;31;42m++ boohaythere\03"
+
+Where the 38 code is issued at first (because it wasn't processed, but not
+issued at second, where it was processed.
+
+There is still the possibility for inconsistencies with such codes remaining in
+the middle of the substring because they are not explicitly modified,
+particularly with `substr` (well, with everything, but `substr` would be most
+difficult to deal with).
+
+Are there any conditions where `terminate=TRUE && !padding && .last_sgr` where
+we want to keep the last SGR?  The one example that comes to mind right now is
+when in the user string the active SGR is closed with a specific tag, but then
+that specific tag is dropped and instead we end with ESC[0m.  It feels
+aggressive to do this, but the more I think about it it probably is consistent.
+
+So now we strip all trailing SGR, even things that would cleanly close preceding
+SGR, and close with a ESC[0m.  While aggressive, this is more consistent.
 
 ## Overflow
 
@@ -613,11 +707,11 @@ microbenchmark(times=1,
   nchar_esc(utf8.c, type='width'),
   nchar(strip_esc(utf8.c), type='width')
 )
-## Unit: milliseconds
-##                                      expr       min        lq      mean
-##                      nchar(utf8.big.wrap)  131.7149  131.7149  131.7149
-##      nchar(utf8.big.wrap, type = "width") 3749.5948 3749.5948 3749.5948
-##         nchar_esc(utf8.c, type = "width") 3930.9955 3930.9955 3930.9955
+    Unit: milliseconds
+                                         expr       min        lq      mean
+                         nchar(utf8.big.wrap)  131.7149  131.7149  131.7149
+         nchar(utf8.big.wrap, type = "width") 3749.5948 3749.5948 3749.5948
+            nchar_esc(utf8.c, type = "width") 3930.9955 3930.9955 3930.9955
 ##  nchar(strip_esc(utf8.c), type = "width") 3930.2643 3930.2643 3930.2643
 ```
 

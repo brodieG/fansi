@@ -563,17 +563,16 @@ SEXP FANSI_mkChar(
 
   if(len > FANSI_lim.lim_R_len_t.max)
     error(
-      "%s at index [%jd]."
+      "%s at index [%jd].",
       "Attempting to create CHARSXP longer than R_LEN_T_MAX",
       FANSI_ind(i)
     );
 
   // Annoyingly mkCharLenCE accepts int parameter instead of R_len_t, so we need
   // to check that too.
-
   if(end - start > FANSI_lim.lim_int.max)
     error(
-      "%s at index [%jd]."
+      "%s at index [%jd].",
       "Attempting to create CHARSXP longer than INT_MAX",
       FANSI_ind(i)
     );

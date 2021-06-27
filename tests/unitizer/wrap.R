@@ -81,6 +81,7 @@ unitizer_sect("Basic Ansi", {
     "normal \033[6mblinking quickly oh my\033[25m normal"
   )
   strwrap_ctl(hello.blinky, 10)
+  strwrap_ctl(hello.blinky, 10, terminate=FALSE)
 
   # simplify
 
@@ -256,6 +257,7 @@ unitizer_sect("rare escapes", {
     "hello \033[53mworld woohoo\033[55m woohoo"
   )
   strwrap_ctl(hello.border, 12)
+  strwrap_ctl(hello.border, 12, terminate=FALSE)
   hello.ideogram <- c(
     "hello \033[60mworld woohoo\033[65m woohoo",
     "hello \033[61mworld woohoo\033[65m woohoo",
@@ -263,7 +265,7 @@ unitizer_sect("rare escapes", {
     "hello \033[63mworld woohoo\033[65m woohoo",
     "hello \033[64mworld woohoo\033[65m woohoo"
   )
-  strwrap_ctl(hello.ideogram, 12)
+  strwrap_ctl(hello.ideogram, 12, terminate=FALSE)
   hello.font <- c(
     "hello \033[10mworld woohoo\033[10m woohoo",
     "hello \033[11mworld woohoo\033[10m woohoo",
@@ -276,7 +278,7 @@ unitizer_sect("rare escapes", {
     "hello \033[18mworld woohoo\033[10m woohoo",
     "hello \033[19mworld woohoo\033[10m woohoo"
   )
-  strwrap_ctl(hello.font, 12)
+  strwrap_ctl(hello.font, 12, terminate=FALSE)
 })
 unitizer_sect("term cap and bright", {
   # default term cap should recognize bright and 256, but not true color.
@@ -332,6 +334,36 @@ unitizer_sect("corner cases", {
   ## dropped, and _trailing_ SGR should be dropped.
   strwrap_ctl("hello world\033[31m\033A", 12)
   strwrap_ctl("hello world\033A\033[31m", 12)
+
+  # Islanded SGR escape sequence
+  strwrap_ctl("hello \033[44m world", 5)
+  strwrap_ctl("hello \033[44m world", 6)
+  strwrap_ctl("hello \033[44m world", 5, terminate=FALSE)
+  strwrap_ctl("hello \033[44m world", 6, terminate=FALSE)
+
+  strwrap_ctl("hello\n\033[44m\nworld", 5)
+  strwrap_ctl("hello \n\033[44m\n world", 5)
+  strwrap_ctl("hello \n \033[44m\n world", 5)
+  strwrap_ctl("hello \n \n\033[44mworld", 5)
+  strwrap_ctl("hello \n \n\033[44m world", 5)
+  strwrap_ctl("hello \n \n\033[44m\nworld", 5)
+  strwrap_ctl("hello \033[44m\n\n world", 5)
+  strwrap("hello \n\n world", 5)
+
+  ## Trailing SGR followed by word break
+  strwrap_ctl("\033[33mAB\033[44m CD", 3)
+
+  ## New paragraph with wrap.always and trailing SGR
+  strwrap2_ctl("AB\033[44m\n\nCD", 3, wrap.always=TRUE)
+  strwrap2_ctl("AB\033[44m\n\nCD", 3, wrap.always=TRUE, pad.end="#")
+  strwrap2_ctl("AB\033[44m\n\nCD", 3, wrap.always=TRUE, terminate=FALSE)
+
+  ## Don't omit trail SGR when there is padding
+  strwrap2_ctl("AB\033[44m CD", 4, pad.end="#")
+  strwrap2_ctl("AB\033[44m CD", 3, pad.end="#")
+
+  ## Combine Leading SGR without stripping spaces
+  strwrap2_sgr("\033[43mAB \033[34mCD", strip.spaces=FALSE, 4)
 })
 unitizer_sect("bad inputs", {
   strwrap_ctl(1:3)

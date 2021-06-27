@@ -229,3 +229,6 @@ unitizer_sect("fansi lines", {
   fansi_lines(1:3)
   fansi_lines(1:3, step='hello')
 })
+unitizer_sect("unique_chr", {
+  fansi:::unique_chr(rep("o\033[31m ", 2))
+})

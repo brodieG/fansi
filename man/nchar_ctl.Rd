@@ -33,11 +33,13 @@ nzchar_sgr(x, keepNA = NA, warn = getOption("fansi.warn"))
 \item{x}{a character vector or object that can be coerced to such.}
 
 \item{type}{character(1L) partial matching \code{c("chars", "width")}, although
-\code{type="width"} only works correctly with R >= 3.2.2.  With "width", whether
-C0 and C1 are treated as zero width may depend on R version and locale in
-addition what the \code{ctl} parameter is set to.  For example, for R4.1 in
-UTF-8 locales C0 and C1 will be zero width even if the value of \code{ctl} is
-such that they wouldn't be so in other circumstances.}
+\code{type="width"} only works correctly with R >= 3.2.2.  See
+\code{\link[base:nchar]{?nchar}}. With "width", the results might be affected by
+locale changes, Unicode database updates, and logic changes for processing
+of complex graphemes.  Generally you should not rely on a specific output
+e.g. by embedding it in unit tests.  For the most part \code{fansi} (currently)
+uses the internals of \code{base::nchar(type='width')}, but there are exceptions
+and this may change in the future.}
 
 \item{allowNA}{logical: should \code{NA} be returned for invalid
     multibyte strings or \code{"bytes"}-encoded strings (rather than
@@ -66,7 +68,10 @@ above, in which case it means "all but".
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
-to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).}
+to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
+If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
+parameter on functions that have it, or the \code{tabs_as_spaces} function, to
+turn the tabs to spaces and resolve the warning that way.}
 
 \item{strip}{character, deprecated in favor of \code{ctl}.}
 }

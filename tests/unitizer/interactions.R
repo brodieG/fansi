@@ -54,6 +54,7 @@ unitizer_sect("normalize", {
 
 unitizer_sect("carry corner cases", {
   substr_ctl("", 2, 4, carry="\033[33m")
+  substr_ctl("", 2, 4, carry = "\033[33m", terminate=FALSE)
   substr_ctl(character(), 2, 4, carry="\033[33m")
   substr_ctl(NA, 2, 4, carry="\033[33m")
   substr_ctl(environment(), 2, 4, carry="\033[33m")
@@ -73,6 +74,9 @@ unitizer_sect("carry corner cases", {
   strwrap_sgr(wrp.0, 20, carry=character())
   strwrap2_ctl(wrp.0, 20, carry=1)
   strwrap2_sgr(wrp.0, 20, carry=Inf)
+
+  ## leading SGR consumed and merged with carry
+  strwrap_ctl(c("\033[33mA \033[4mB", "\033[44mC D"), carry=TRUE, 2)
 })
 
 unitizer_sect("terminate", {

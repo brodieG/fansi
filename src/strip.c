@@ -201,47 +201,61 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
   UNPROTECT(1);
   return res_fin;
 }
+static int is_special(char x) {
+  return x != '\t' && x != '\n' && x >= 0 && x < 0x20 && x;
+}
 /*
  * Strips Extra ASCII Spaces
  *
  * Won't do anything about weird UTF8 spaces, etc.  Originally used to have the
  * option to handle ANSI ESC sequences and other escapes, but we ditched that in
  * favor of simplicity.  All those characters / sequences are treated as normal
- * characters, except for the newline.
+ * characters, except for the newline and tab.
  *
  * Allows two spaces after periods, question marks, and exclamation marks.  This
  * is to line up with strwrap behavior.
  */
 
-SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
+SEXP FANSI_process(
+  SEXP input, SEXP term_cap, SEXP ctl, struct FANSI_buff *buff
+) {
   if(TYPEOF(input) != STRSXP) error("Input is not a character vector.");
 
   PROTECT_INDEX ipx;
   SEXP res = input;
-  PROTECT_WITH_INDEX(res, &ipx);  // reserve spot if we need to alloc later
+  // reserve spot if we need to alloc later
+  int prt = 0;
+  PROTECT_WITH_INDEX(res, &ipx); ++prt;
+  SEXP R_true = PROTECT(ScalarLogical(1)); ++prt;
+  SEXP R_false = PROTECT(ScalarLogical(0)); ++prt;
+  SEXP R_zero = PROTECT(ScalarInteger(0)); ++prt;
+  char * err_msg = "Processing whitespace";
 
   int strip_any = 0;          // Have any elements in the STRSXP been stripped
 
   R_xlen_t len = XLENGTH(res);
   for(R_xlen_t i = 0; i < len; ++i) {
     FANSI_interrupt(i);
-    SEXP chrsxp = STRING_ELT(res, i);
-    FANSI_check_chrsxp(chrsxp, i);
-    const char * string = CHAR(chrsxp);
+    // Don't warn - we don't modify or interpret sequences
+    struct FANSI_state state = FANSI_state_init_full(
+      input, R_false, term_cap, R_true, R_true, R_zero, ctl, i
+    );
+    const char * string = state.string;
     const char * string_start = string;
     char * buff_track;
 
-    R_len_t len_j = LENGTH(chrsxp);
+    int len_j = LENGTH(STRING_ELT(input, i)); // R_len_t checked to fit in int
     int strip_this, to_strip, to_strip_nl, punct_prev, punct_prev_prev,
         space_prev, space_start, para_start, newlines, newlines_start,
-        has_tab_or_nl, leading_spaces;
+        has_tab_or_nl, leading_spaces, reset;
 
     strip_this = to_strip = to_strip_nl = punct_prev = punct_prev_prev =
-      space_prev = space_start = newlines = newlines_start = has_tab_or_nl = 0;
+      space_prev = space_start = newlines = newlines_start = has_tab_or_nl =
+      reset = 0;
 
     para_start = leading_spaces = 1;
 
-    R_len_t j_last = 0;
+    int j_last = 0;
 
     // All spaces [ \t\n] are converted to spaces.  First space is kept, unless
     // right after [.?!][)\\"']{0,1}, in which case one more space can be kept.
@@ -251,7 +265,7 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
     //
     // We purposefully allow ourselves to read up to the NULL terminator.
 
-    for(R_len_t j = 0; j <= len_j; ++j) {
+    for(int j = 0; j <= len_j; ++j) {
       int newline = string[j] == '\n';
       int tab = string[j] == '\t';
 
@@ -270,10 +284,27 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
       // Need to keep track if we're in a sequence that starts with a space in
       // case a line ends, as normally we keep one or two spaces, but if we hit
       // the end of the line we don't want to keep them.
-
       if(space && !para_start) {
         if(!space_prev) space_start = 1;
         else if(space && space_prev && punct_prev_prev) space_start = 2;
+      }
+      // Anything we want to treat as a control is kept, and in the end will
+      // be copied to the end of the string in question.
+
+      int special = is_special(string[j]);
+      int special_len = 0;
+
+      if(special) { // Check that it is really special.
+        int pos_prev = state.pos_byte = j;
+        int pos_raw = state.pos_raw;
+        state = FANSI_read_next(state, i);
+
+        // Sequence is special if pos_raw does not advance
+        if(state.pos_raw == pos_raw) {
+          special_len = state.pos_byte - pos_prev;
+        } else {
+          special = special_len = 0;
+        }
       }
       /*
       Rprintf(
@@ -285,12 +316,13 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
       );
       */
       // transcribe string if:
+      // Rprintf("chr j %02d %03x special %d ctl %d strip %d spc %d spc_start %d tostrip %d\n", j, string[j], special, state.ctl, to_strip, space, space_start, to_strip);
       if(
         // we've hit something that we don't need to strip, and we have accrued
         // characters to strip (more than one space, or more than two spaces if
         // preceeded by punct, or leading spaces
         (
-          !space && (
+          !space && !special && (
             (
               (to_strip && leading_spaces) ||
               (to_strip > 1 && (!punct_prev)) ||
@@ -302,6 +334,7 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
         // string end and we've already stripped previously or ending in spaces
         (line_end && (strip_this || space_start))
       ) {
+        // Rprintf("  write\n");
         // need to copy entire STRSXP since we haven't done that yet
         if(!strip_any) {
           REPROTECT(res = duplicate(input), ipx);
@@ -319,11 +352,12 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
 
         char spc_chr = ' ';
         int copy_to = j;
+        int to_strip0 = to_strip;
 
         if(newlines > 1) {
           copy_to = newlines_start;
           space_start = 2;
-          to_strip = to_strip_nl;
+          to_strip = to_strip_nl; // how many chars to strip by first newline
           spc_chr = '\n';
         }
         // Copy the portion up to the point we know should be copied, will add
@@ -334,42 +368,64 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
           j_last -       // less last time we copied
           to_strip;      // less extra stuff to strip
 
-        /*
-        Rprintf(
-          "Copy bytes %d j: %d j_last: %d to_str: %d spc_str: %d, buff_t: %d\n",
-          copy_bytes, j, j_last, to_strip,
-          space_start,
-          buff_track - buff->buff
-        );
-        */
+         // Rprintf("  copy_bytes %d copy_to %d strip %d\n", copy_bytes, copy_to, to_strip0);
         if(copy_bytes) {
-          memcpy(buff_track, string_start, copy_bytes);
-          buff_track += copy_bytes;
+          // Rprintf("  woff %d roff %d bytes %d\n", buff_track - buff->buff, string_start - string, copy_bytes);
+          int len = buff_track - buff->buff; // for W_MCOPY
+          FANSI_W_MCOPY(&buff_track, string_start, copy_bytes);
         }
-        // Overwrite the trailing bytes with spaces or newlines as needed
-        // because we could have tabs in there; note that we can have
-        // `copy_bytes` == 0 and still want to do this (e.g. leading '\n\n')
-
+        // Instead of all the trailing spaces etc we skip, write one or two
+        // spaces or newlines as needed.
         if(!line_end) {
           if(space_start) *(buff_track++) = spc_chr;
           if(space_start > 1) *(buff_track++) = spc_chr;
         }
+        // Anything that is not a space/tab/nl that was considered non-breaking
+        // with respect to trailing white space should be copied at end
+        // otherwise unmodified.
+        // Rprintf("  Trail jl %d copy %d copy_to %d\n", j_last, copy_bytes, copy_to);
+        int copy_end = j_last + copy_bytes;
+        for(int k = copy_end; k < copy_end + to_strip0; ++k) {
+          // Rprintf("  %03d %02x %d", k, string[k], is_special(string[k]));
+          if(is_special(string[k])) {
+            state.pos_byte = k;
+            state = FANSI_read_next(state, i);
+            int bytes = state.pos_byte - k;
+            // Rprintf("  pos %d k %d bytes %d\n", state.pos_byte, k, bytes);
+            // Rprintf("  s woff %d roff %d bytes %d\n", buff_track - buff->buff, string_start - string + k, bytes);
+            int len = buff_track - buff->buff; // for W_MCOPY
+            FANSI_W_MCOPY(&buff_track, string + k, bytes);
+            k += bytes - 1;
+          }
+        }
+        // Preprare for next sequence
         string_start = string + j;
         j_last = j;
-        to_strip = space_start = newlines = has_tab_or_nl = leading_spaces = 0;
+        reset = 1;
       } else if(space) {
         to_strip++;
+      } else if(special) {
+        // treat special like a space, but only if preceded by space
+        if(space_prev) {
+          to_strip += special_len;
+          space = 1;
+        }
+        j += special_len - 1;
       } else {
+        reset = 1;
+      }
+      // We ended streak of spaces/etc so, reset
+      if(reset) {
+        reset = 0;
         to_strip = space_start = newlines = has_tab_or_nl = leading_spaces = 0;
       }
       para_start = newlines > 1;
       space_prev = space;
-      punct_prev_prev = punct_prev;
+      punct_prev_prev = punct_prev || (special && punct_prev_prev);
 
       // To match what `strwrap` does, we treat as punctuation [.?!], and also
       // treat them as punctuation if they are followed by closing quotes or
       // parens.
-
       punct_prev =
         (string[j] == '.' || string[j] == '!' || string[j] == '?') ||
         (
@@ -386,14 +442,14 @@ SEXP FANSI_process(SEXP input, struct FANSI_buff *buff) {
       UNPROTECT(1);
     }
   }
-  UNPROTECT(1);
+  UNPROTECT(prt);
   return res;
 }
 
-SEXP FANSI_process_ext(SEXP input) {
+SEXP FANSI_process_ext(SEXP input, SEXP term_cap, SEXP ctl) {
   struct FANSI_buff buff;
   FANSI_INIT_BUFF(&buff);
-  SEXP res = PROTECT(FANSI_process(input, &buff));
+  SEXP res = PROTECT(FANSI_process(input, term_cap, ctl, &buff));
   FANSI_release_buff(&buff, 1);
   UNPROTECT(1);
   return res;

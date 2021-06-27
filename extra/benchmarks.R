@@ -24,7 +24,8 @@ library(fansi)
 
 # Let's test fansi with a reasonable size text (from Project Guttenberg):
 
-raw.txt <- readLines("~/Downloads/ulysses.txt", encoding='UTF-8')
+# raw.txt <- readLines("~/Downloads/ulysses.txt", encoding='UTF-8')
+raw.txt <- readLines(unz('extra/ulysses.zip', 'ulysses.txt'))
 ulysses <- tail(raw.txt, -30)
 length(ulysses)
 
@@ -47,12 +48,7 @@ writeLines(head(in.cols, 30))
 # We can even convert to HTML
 
 as.html <- fansi::sgr_to_html(head(in.cols, 30))
-as.page <- sprintf(
-  "<html><meta charset='UTF-8'><pre>%s</pre></html>",
-  paste0(as.html, collapse="\n")
-)
-writeLines(as.page, (f <- tempfile()))
-browseURL(f)
+in_html(as.html)
 
 # fansi functions are mostly comparable in speed to their base
 # counterparts, and in the case of strwrap much faster:
@@ -62,13 +58,12 @@ system.time(wrapped.base <- strwrap(ulysses, 26))
 
 identical(wrapped.base, wrapped.ctl)
 
-
 system.time(strsplit(ulysses, " "))
 system.time(strsplit_ctl(ulysses, " "))
 system.time(strwrap_ctl(ulysses, 25))
 
 ulysses.c <- paste0(ulysses, collapse='\n')
-ulysses.c.c <- paste0(ulysses.f, collapse='\n')
+ulysses.c.c <- paste0(ulysses.color, collapse='\n')
 
 n <- 1e4
 starts <- 1:n
@@ -82,6 +77,12 @@ system.time(substr_ctl(ulysses.c.c.r, starts, stops))
 system.time(substr(ulysses.c.r, starts, stops))
 system.time(zz <- stri_sub(ulysses.c.r, starts, stops))
 
+system.time(for(i in 1:10) substr(ulysses.c.r, starts, stops))
+
+ulysses.10 <- replicate(10, ulysses)
+system.time(substr(ulysses.10, 20, 50))
+system.time(stri_sub(ulysses.10, 20, 50))  # substr slow for long strings
+
 system.time(csi <- fansi::strwrap_ctl(ulysses.c, 30))
 system.time(normal <- strwrap(ulysses.c, 30))
 
@@ -93,6 +94,8 @@ close <- sample(seq_along(ulysses), 1e4)
 ulysses.clr <- ulysses
 ulysses.clr[open] <- paste0('\033[41m', ulysses.clr[open])
 ulysses.clr[close] <- paste0(ulysses.clr[close], '\033[m')
+
+
 
 
 system.time(csi.clr <- fansi::strwrap_esc(ulysses.clr, 30))

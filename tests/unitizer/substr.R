@@ -77,8 +77,15 @@ unitizer_sect("Corner cases", {
   substr_ctl(str.2, 3, 4)
   substr_ctl(str.2, 3, 5)
 
+  substr_ctl(str.2, 3, 4, terminate=FALSE)
+  substr_ctl(str.2, 3, 5, terminate=FALSE)
+
   substr_ctl(str.2, -1, 2)
   substr_ctl(str.2, -2, -1)
+  substr_ctl(str.2, 4, 1)
+  substr_ctl(str.2, 4, 1, terminate=FALSE)
+  substr_ctl(str.2, 4, 1, carry="\033[44m")
+  substr_ctl(str.2, 4, 1, carry="\033[44m", terminate=FALSE)
 
   substr_ctl("hello", 5, 5)
   substr_ctl("hello", 6, 6)
@@ -111,6 +118,13 @@ unitizer_sect("Corner cases", {
 
   substr_ctl(str.2, 2, 6, ctl=c('all', 'sgr'))
   substr_ctl(str.2, 8, 10, ctl=c('all', 'sgr'))
+
+  # Make sure things stay in order
+  substr2_ctl(rep("o\033[31m ", 2), 1:2, 1:2)
+
+  # bad sequence at beginning or end
+  substr_ctl("\033[41bhello", 1, 5)
+  substr_ctl("hello\033[41b", 1, 5)
 })
 unitizer_sect("Obscure escapes", {
   # illegal 38/48
@@ -209,4 +223,10 @@ unitizer_sect('`ctl` related issues', {
   substr_sgr("ab\n\033[31m\tcd\n", 3, 6, warn=FALSE)
   substr_ctl("ab\n\033[31m\tcd\n", 3, 6, warn=FALSE, ctl=c('all', 'nl'))
   substr_ctl("ab\n\033[31m\tcd\n", 3, 6, warn=FALSE, ctl=c('all', 'nl', 'c0'))
+
+  # Index reporting
+
+  substr_sgr(c("\a", "b", "c"), 1, 1)
+  substr_sgr(c("a", "\b", "c"), 1, 1)
+  substr_sgr(c("a", "b", "\ac"), 1, 1)
 })

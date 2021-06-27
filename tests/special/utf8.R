@@ -120,6 +120,8 @@ unitizer_sect("rounding", {
   substr2_ctl(lorem.cn.col.2, 2, 3, type='width', round='neither')
   substr2_ctl(lorem.cn.col.2, 2, 4, type='width', round='neither')
   substr2_ctl(lorem.cn.col.2, 3, 4, type='width', round='neither')
+
+  substr2_ctl(lorem.cn.col.2, 2, 3, type='width', round='neither', terminate=FALSE)
 })
 unitizer_sect("multi-elem", {
   # Due to preservation of state issues, need to make sure works well with
@@ -440,4 +442,73 @@ unitizer_sect("issue 54 ctd", {
 })
 unitizer_sect("html_esc", {
   html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "\U0001F600")
+})
+
+unitizer_sect("utf8 to unicode", {
+  cps <- c(
+    "a", "A", "\u0079", "\u0080", "\u07ff", "\u0800", "\uFFFF", "\U00010000",
+    "\U0010FFFF"
+  )
+  as.hexmode(.Call(fansi:::FANSI_utf8_to_cp, cps))
+})
+unitizer_sect("graphemes", {
+  # Flags
+  flags <- paste0(
+    rep("\U0001F1E6\U0001F1FF\U0001F1E7\U0001F1FE\U0001F1E8\U0001F1FD", 2),
+    collapse=""
+  )
+  strwrap2_ctl(flags, 6, wrap.always=TRUE, pad.end=' ', carry="\033[44m")
+  strwrap2_ctl(flags, 7, wrap.always=TRUE, pad.end=' ', carry="\033[44m")
+  flags.1 <- paste0("a", flags)
+  strwrap2_ctl(flags.1, 7, wrap.always=TRUE, pad.end=' ', carry="\033[44m")
+
+  substr2_ctl(flags, 1, 1, type='width')
+  substr2_ctl(flags, 1, 1, type='width', round='stop')
+  substr2_ctl(flags, 1, 2, type='width', round='neither')
+  substr2_ctl(flags, 2, 3, type='width', round='stop')
+  substr2_ctl(flags, 2, 3, type='width', round='start')
+  substr2_ctl(flags, 2, 3, type='width', round='both')
+  substr2_ctl(flags, 2, 3, type='width', round='neither')
+
+  # Emoji sequences
+
+  emo.0 <- "\U0001F476\U0001F3FD\U0001F468\U0001F3FF\U0001F46E\U0001F3FF"
+  emo.1 <- "A_\U0001F468\U0001F3FE\U000200D\U0001F9B3_B"
+  emo.2 <- "\U0001F468\U0001F3FE\U000200D\U0001F9B3"
+
+  substr2_ctl(emo.0, 1, 1, type='width')
+  substr2_ctl(emo.0, 1, 1, type='width', round='stop')
+  substr2_ctl(emo.0, 1, 2, type='width', round='stop')
+  substr2_ctl(emo.0, 2, 3, type='width', round='stop')
+  substr2_ctl(emo.0, 2, 3, type='width', round='start')
+  substr2_ctl(emo.0, 2, 3, type='width', round='both')
+  substr2_ctl(emo.0, 2, 3, type='width', round='neither')
+
+  substr2_ctl(emo.1, 1, 3, type='width')
+  substr2_ctl(emo.1, 1, 3, type='width', round='stop')
+  substr2_ctl(emo.1, 3, 5, type='width')
+  substr2_ctl(emo.1, 4, 5, type='width')
+
+  emo.3 <- "\U0001F469\U0001F3FD\u200D\u2708\uFE0F"
+  emo.4 <- "\U0001F468\u200D\U0001F469\u200D\U0001F467\u200D\U0001F466"
+
+  emo.big <- rep(
+    sprintf(
+      paste0(
+        "once upon a time %s there was a humpty %s%s dumpty %s on the wall %s",
+        "and he had %s a %s big fall %s oh no %s"
+      ),
+      flags, emo.0, emo.0, emo.1, emo.2, emo.3, emo.4, emo.3, emo.2
+    ),
+    2
+  )
+  strwrap2_ctl(emo.big, 10, wrap.always=TRUE, carry="\033[44m", pad.end=" ")
+
+  # Corner cases, effect of SGRs in emo-sequences, on OS X term they are
+  # excluded from flow so don't interrupt sequences.
+  emo.5 <- "\xf0\x9f\x91\xb6\033[43m\xf0\x9f\x8f\xbd###\033[m"
+  Encoding(emo.5) <- "UTF-8"
+
+  substr2_ctl(emo.5, 1, 2, type='width')
+  substr2_ctl(emo.5, 2, 3, type='width')
 })

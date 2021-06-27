@@ -71,7 +71,10 @@ substr2_sgr(
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
-to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).}
+to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
+If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
+parameter on functions that have it, or the \code{tabs_as_spaces} function, to
+turn the tabs to spaces and resolve the warning that way.}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
@@ -114,16 +117,18 @@ prepended onto.  See the "SGR Interactions" section of \code{\link[=fansi]{?fans
 details.}
 
 \item{type}{character(1L) partial matching \code{c("chars", "width")}, although
-\code{type="width"} only works correctly with R >= 3.2.2.  With "width", whether
-C0 and C1 are treated as zero width may depend on R version and locale in
-addition what the \code{ctl} parameter is set to.  For example, for R4.1 in
-UTF-8 locales C0 and C1 will be zero width even if the value of \code{ctl} is
-such that they wouldn't be so in other circumstances.}
+\code{type="width"} only works correctly with R >= 3.2.2.  See
+\code{\link[base:nchar]{?nchar}}. With "width", the results might be affected by
+locale changes, Unicode database updates, and logic changes for processing
+of complex graphemes.  Generally you should not rely on a specific output
+e.g. by embedding it in unit tests.  For the most part \code{fansi} (currently)
+uses the internals of \code{base::nchar(type='width')}, but there are exceptions
+and this may change in the future.}
 
 \item{round}{character(1L) partial matching
 \code{c("start", "stop", "both", "neither")}, controls how to resolve
 ambiguities when a \code{start} or \code{stop} value in "width" \code{type} mode falls
-within a multi-byte character or a wide display character.  See details.}
+within a wide display character.  See details.}
 
 \item{tabs.as.spaces}{FALSE (default) or TRUE, whether to convert tabs to
 spaces.  This can only be set to TRUE if \code{strip.spaces} is FALSE.}
@@ -174,6 +179,8 @@ implementation of the calculation is different.
 \note{
 Non-ASCII strings are converted to and returned in UTF-8 encoding.
 Width calculations will not work properly in R < 3.2.2.
+
+If \code{stop} < \code{start}, the return value is always an empty string.
 }
 \section{_ctl vs. _sgr}{
 

@@ -71,7 +71,6 @@ struct FANSI_tok_res {
   int err_code;             // see struct FANSI_state
   int last;                 // Whether it is the last parameter substring
   int is_sgr;               // Whether sequence is known to be SGR
-  int terminal;             // Whether sequence is last thing before term NULL
 };
 /*
  * Attempts to read CSI SGR tokens
@@ -85,9 +84,9 @@ struct FANSI_tok_res {
 static struct FANSI_tok_res parse_token(const char * string) {
   unsigned int mult, val;
   int len, len_intermediate, len_tail, last, non_standard, private, err_code,
-    leading_zeros, not_zero, is_sgr, terminal;
+    leading_zeros, not_zero, is_sgr;
   len = len_intermediate = len_tail = val = last = non_standard = private =
-    err_code = leading_zeros = not_zero = is_sgr = terminal = 0;
+    err_code = leading_zeros = not_zero = is_sgr = 0;
   mult = 1;
 
   // `private` a bit redundant since we don't actually use it differentially to
@@ -114,7 +113,7 @@ static struct FANSI_tok_res parse_token(const char * string) {
   }
   // check for final byte
 
-  terminal = is_sgr = 0;
+  is_sgr = 0;
   last = 1;
   if((*string == ';' || *string == 'm') && !len_intermediate) {
     // valid end of SGR parameter substring
@@ -125,7 +124,6 @@ static struct FANSI_tok_res parse_token(const char * string) {
     // the err_code value, it's cleaner to just explicitly determine whether
     // sequence is actually sgr.
     if(*string == 'm') is_sgr = 1;
-    if(last && *(string + 1) == 0) terminal = 1;
   } else if(*string >= 0x40 && *string <= 0x7E && len_intermediate <= 1) {
     // valid final byte
     err_code = 4;
@@ -162,7 +160,6 @@ static struct FANSI_tok_res parse_token(const char * string) {
     .err_code=err_code,
     .last=last,
     .is_sgr=is_sgr,
-    .terminal=terminal
   };
 }
 /*
@@ -193,7 +190,6 @@ static struct FANSI_state parse_colors(
   state.last = res.last;
   state.err_code = res.err_code;
   state.is_sgr = res.is_sgr;
-  state.terminal = res.terminal;
 
   if(!state.err_code) {
     if((res.val != 2 && res.val != 5) || state.last) {
@@ -231,7 +227,6 @@ static struct FANSI_state parse_colors(
         state.last = res.last;
         state.err_code = res.err_code;
         state.is_sgr = res.is_sgr;
-        state.terminal = res.terminal;
 
         if(!state.err_code) {
           int early_end = res.last && i < (i_max - 1);
@@ -271,8 +266,6 @@ static struct FANSI_state read_ascii(struct FANSI_state state) {
   ++state.pos_ansi;
   ++state.pos_raw;
   ++state.pos_width;
-  ++state.pos_width_target;
-  state.last_char_width = 1;
   return state;
 }
 /*
@@ -407,7 +400,6 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
         state.last = tok_res.last;
         state.err_code = tok_res.err_code;
         state.is_sgr = tok_res.is_sgr;
-        state.terminal = tok_res.terminal;
 
         // Note we use `state.err_code` instead of `tok_res.err_code` as
         // parse_colors internally calls parse_token
@@ -568,6 +560,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       state.non_normalized |= non_normalized;
       if(esc_types & 2U) {
         state.pos_byte_sgr_start = seq_start;
+        state.last_sgr = 1;  // we  just read an SGR, but maybe invalid
       }
     } else {
       state = state_prev;
@@ -581,7 +574,6 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
     // All errors are zero width; there should not be any errors if
     // !esc_recognized.
     state.err_code = err_code;  // b/c we want the worst err code
-    state.last_char_width = 0;
     if(err_code == 3) {
       state.err_msg =
         "a CSI SGR sequence with color codes not supported by terminal";
@@ -601,8 +593,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       // nocov end
     }
   } else {
-    // Not 100% sure this is right...
-    state.last_char_width = 1;
+    state.last_sgr = 1;
     state.err_msg = "";
   }
   return state;
@@ -620,7 +611,7 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
   int mb_err = 0;
   int disp_size = 0;
   const char * mb_err_str =
-    "use `is.na(nchar(x, allowNA=TRUE))` to find problem strings.";
+    "use `validUTF8()` to find problem strings.";
 
   for(int i = 1; i < byte_size; ++i) {
     if(!state.string[state.pos_byte + i]) {
@@ -628,6 +619,8 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
       byte_size = i;
       break;
   } }
+  mb_err |= !FANSI_valid_utf8(state.string + state.pos_byte, byte_size);
+
   if(mb_err) {
     if(state.allowNA) {
       disp_size = NA_INTEGER;
@@ -641,28 +634,46 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
       );
       // nocov end
     }
-  } else {
-    // In order to compute char display width, we need to create a charsxp
-    // with the sequence in question.  Hopefully not too much overhead since
-    // at least we benefit from the global string hash table
-    //
-    // Note that we should probably not bother with computing this if display
-    // mode is not width as it's probably expensive.
+  } else if(state.use_nchar) {  // only true if in width mode
+    // Assumes valid UTF-8!
+    int cp = FANSI_utf8_to_cp(state.string + state.pos_byte, byte_size);
 
-    if(state.use_nchar) {
+    // Hacky grapheme approximation ensures flags (RI) aren't split, sets
+    // skin modifiers to width zero (so greedy / not greedy searches will
+    // / will not grab them), and sets width zero to anything following a ZWJ
+    // (for the same reason).  This will work in many cases, provided that the
+    // emoji sequences are valid and recognized by the display device.
+    // Other graphemes work similarly to the extent continuation code points
+    // are zero width naturally.  Prefixes, sequence interruptors,  and other
+    // things will not work.
+
+    if(cp >= 0x1F1E6 && cp <= 0x1F1FF) {         // Regional Indicator
+      if(!state.last_ri) state.read_one_more = TRUE;
+      disp_size = 1;    // read_next forces reading 2 RIs at a time
+      state.last_ri = !state.last_ri;
+    } else if (cp >= 0x1F3FB && cp <= 0x1F3FF) { // Skin type
+      disp_size = 0;
+    } else if (cp == 0x200D) {                   // Zero Width Joiner
+      state.last_zwj = 1;
+      disp_size = 0;
+    } else {
+      // In order to compute char display width, we need to create a charsxp
+      // with the sequence in question.  Hopefully not too much overhead since
+      // at least we benefit from the global string hash table
       SEXP str_chr =
         PROTECT(mkCharLenCE(state.string + state.pos_byte, byte_size, CE_UTF8));
       disp_size = R_nchar(
-        str_chr, Width, state.allowNA, state.keepNA, mb_err_str
+        str_chr, Width, // Width is an enum
+        state.allowNA, state.keepNA, mb_err_str
       );
       UNPROTECT(1);
-    } else {
-      // This is not consistent with what we do with the padding where we use
-      // byte_size, but in this case we know we're supposed to be dealing
-      // with one char
-
-      disp_size = 1;
     }
+  } else {
+    // This is not consistent with what we do with the padding where we use
+    // byte_size, but in this case we know we're supposed to be dealing
+    // with one char
+
+    disp_size = 1;
   }
   // We are guaranteed that any string here is at most INT_MAX bytes long, so
   // nothing should overflow, except maybe width if we ever add some width
@@ -670,22 +681,20 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
   // encoded versions of Unicode chars).  Shouldn't be an issue, but playing it
   // safe.
 
-  state.pos_byte += byte_size;
-  ++state.pos_ansi;
-  ++state.pos_raw;
   if(disp_size == NA_INTEGER) {
     state.err_code = 9;
     state.err_msg = "a malformed UTF-8 sequence";
     state.nchar_err = 1;
-    disp_size = byte_size;
+    disp_size = byte_size = 1;
   }
-  state.last_char_width = disp_size;
-  if(state.pos_width_target > FANSI_lim.lim_int.max - disp_size)
+  state.pos_byte += byte_size;
+  ++state.pos_ansi;
+  ++state.pos_raw;
+  if(state.pos_width > FANSI_lim.lim_int.max - disp_size)
     error(
       "String with display width greater than INT_MAX at index [%jd].",
       FANSI_ind(i)
     );
-  state.pos_width_target += disp_size;
   state.pos_width += disp_size;        // won't overflow if _target doesn't
   state.has_utf8 = 1;
   return state;
@@ -698,7 +707,6 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
 static struct FANSI_state read_c0(struct FANSI_state state) {
   int is_nl = state.string[state.pos_byte] == '\n';
   if(!is_nl) {
-    // question: should we make the comment about tabs as spaces?
     state.err_msg = "a C0 control character";
     state.err_code = 8;
   }
@@ -710,7 +718,6 @@ static struct FANSI_state read_c0(struct FANSI_state state) {
   ) {
     --state.pos_raw;
     --state.pos_width;
-    --state.pos_width_target;
   }
   return state;
 }
@@ -724,20 +731,31 @@ static struct FANSI_state read_c0(struct FANSI_state state) {
 struct FANSI_state FANSI_read_next(
   struct FANSI_state state, R_xlen_t i
 ) {
-  const char chr_val = state.string[state.pos_byte];
-  state.is_sgr = 0;
-  state.err_code = 0; // reset err code after each char
+  char chr_val;
+
+onemoretime:
+
+  chr_val = state.string[state.pos_byte];
+  struct FANSI_state state_prev = state;
+
+  // reset flags
+  state.last_zwj = state.is_sgr = state.err_code = state.read_one_more =
+  state.last_sgr =  0;
   // this can only be one if the last thing read is a CSI
-  if(chr_val) state.terminal = 0;
+
+  int is_ascii = chr_val >= 0x20 && chr_val < 0x7F;
+  int is_utf8 = chr_val < 0 || chr_val > 0x7f;
 
   // Normal ASCII characters
-  if(chr_val >= 0x20 && chr_val < 0x7F) state = read_ascii(state);
+  if(is_ascii) state = read_ascii(state);
   // UTF8 characters (if chr_val is signed, then > 0x7f will be negative)
-  else if (chr_val < 0 || chr_val > 0x7f) state = read_utf8(state, i);
+  else if (is_utf8) state = read_utf8(state, i);
   // ESC sequences
   else if (chr_val == 0x1B) state = read_esc(state);
   // C0 escapes (e.g. \t, \n, etc)
   else if(chr_val) state = read_c0(state);
+
+  if(!is_utf8) state.last_ri = 0;  // reset regional indicator
 
   if(state.warn > 0 && state.err_code) {
     warning(
@@ -747,5 +765,11 @@ struct FANSI_state FANSI_read_next(
     );
     state.warn = -state.warn; // only warn once
   }
+  if(state_prev.last_zwj && state.use_nchar)
+    state.pos_width = state_prev.pos_width;
+
+  if(state.read_one_more && state.string[state.pos_byte])
+    goto onemoretime;
+
   return state;
 }

@@ -63,6 +63,7 @@
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work properly in R < 3.2.2.
+#' @note If `stop` < `start`, the return value is always an empty string.
 #' @inheritParams base::substr
 #' @export
 #' @seealso [`?fansi`][fansi] for details on how _Control Sequences_ are
@@ -72,15 +73,17 @@
 #'   to compute the SGR required to close active SGR.
 #' @param x a character vector or object that can be coerced to such.
 #' @param type character(1L) partial matching `c("chars", "width")`, although
-#'   `type="width"` only works correctly with R >= 3.2.2.  With "width", whether
-#'   C0 and C1 are treated as zero width may depend on R version and locale in
-#'   addition what the `ctl` parameter is set to.  For example, for R4.1 in
-#'   UTF-8 locales C0 and C1 will be zero width even if the value of `ctl` is
-#'   such that they wouldn't be so in other circumstances.
+#'   `type="width"` only works correctly with R >= 3.2.2.  See
+#'   [`?nchar`][base::nchar]. With "width", the results might be affected by
+#'   locale changes, Unicode database updates, and logic changes for processing
+#'   of complex graphemes.  Generally you should not rely on a specific output
+#'   e.g. by embedding it in unit tests.  For the most part `fansi` (currently)
+#'   uses the internals of `base::nchar(type='width')`, but there are exceptions
+#'   and this may change in the future.
 #' @param round character(1L) partial matching
 #'   `c("start", "stop", "both", "neither")`, controls how to resolve
 #'   ambiguities when a `start` or `stop` value in "width" `type` mode falls
-#'   within a multi-byte character or a wide display character.  See details.
+#'   within a wide display character.  See details.
 #' @param tabs.as.spaces FALSE (default) or TRUE, whether to convert tabs to
 #'   spaces.  This can only be set to TRUE if `strip.spaces` is FALSE.
 #' @param tab.stops integer(1:n) indicating position of tab stops to use
@@ -103,6 +106,9 @@
 #'   problematic _Control Sequences_ are encountered.  These could cause the
 #'   assumptions `fansi` makes about how strings are rendered on your display
 #'   to be incorrect, for example by moving the cursor (see [`?fansi`][fansi]).
+#'   If the problematic sequence is a tab, you can use the `tabs.as.spaces`
+#'   parameter on functions that have it, or the `tabs_as_spaces` function, to
+#'   turn the tabs to spaces and resolve the warning that way.
 #' @param term.cap character a vector of the capabilities of the terminal, can
 #'   be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
 #'   starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
@@ -269,6 +275,9 @@ substr2_sgr <- function(
 
 ## @x must already have been converted to UTF8
 ## @param type.int is supposed to be the matched version of type, minus 1
+##
+## Increasingly, it seems trying to re-use the crayon method instead of doing
+## everything in C was a big mistake...
 
 substr_ctl_internal <- function(
   x, start, stop, type.int, round, tabs.as.spaces,
@@ -304,83 +313,92 @@ substr_ctl_internal <- function(
 
   x.scalar <- length(x) == 1
   x.u <- if(x.scalar) x else unique_chr(x)
+  ids <- if(x.scalar) seq_along(s.s.valid) else seq_along(x)
 
   for(u in x.u) {
     elems <- which(x == u & s.s.valid)
     elems.len <- length(elems)
-    e.start <- start[elems]
+    # we want to specify minimum number of position/width elements
+    e.start <- start[elems] - 1L
     e.stop <- stop[elems]
+    e.ids <- ids[elems]
     x.elems <- if(x.scalar) rep(x, length.out=elems.len) else x[elems]
 
     # note, for expediency we're currently assuming that there is no overlap
     # between starts and stops
-
     e.order <- forder(c(e.start, e.stop))
 
-    e.lag <- rep(c(round.start, round.stop), each=elems.len)[e.order]
-    e.ends <- rep(c(FALSE, TRUE), each=elems.len)[e.order]
+    e.keep <- rep(c(!round.start, round.stop), each=elems.len)[e.order]
     e.sort <- c(e.start, e.stop)[e.order]
 
     state <- .Call(
       FANSI_state_at_pos_ext,
-      u, e.sort - 1L, type.int,
-      e.lag,   # whether to include a partially covered multi-byte character
-      e.ends,  # whether it's a start or end position
+      u, e.sort, type.int,
+      e.keep,  # whether to include a partially covered multi-byte character
+      rep(c(TRUE, FALSE), each=length(elems))[e.order], # start or end of string
       warn, term.cap.int,
-      ctl.int, normalize, carry
+      ctl.int, normalize, terminate,
+      c(e.ids, e.ids)[e.order]
     )
     # Recover the matching values for e.sort
-
-    e.unsort.idx <- match(seq_along(e.order), e.order)
+    e.unsort.idx <- match(seq_along(e.order), e.order)  # e.order[e.order]?
     start.stop.ansi.idx <- .Call(FANSI_cleave, e.unsort.idx)
     start.ansi.idx <- start.stop.ansi.idx[[1L]]
     stop.ansi.idx <- start.stop.ansi.idx[[2L]]
 
     # And use those to substr with
-
-    start.ansi <- state[[2]][3, start.ansi.idx]
+    start.ansi <- state[[2]][3, start.ansi.idx] + 1L
     stop.ansi <- state[[2]][3, stop.ansi.idx]
     start.tag <- state[[1]][start.ansi.idx]
     stop.tag <- state[[1]][stop.ansi.idx]
 
-    # if there is any ANSI CSI at end then add a terminating CSI, warnings
-    # should have been issued on first read
+    # It's possible to end up with starts after stops because starts always
+    # ingest trailing SGR.
+    empty.req <- e.start >= e.stop
+    empty.res <- !empty.req & start.ansi > stop.ansi
+    if(!terminate) res[elems[empty.res]] <- start.tag[empty.res]
 
-    end.csi <-
-      if(terminate) close_sgr(stop.tag, warn=FALSE, normalize)
-      else ""
-    tmp <- paste0(
-      start.tag,
-      substr(x.elems, start.ansi, stop.ansi)
-    )
-    res[elems] <- paste0(
-      if(normalize)
-        normalize_sgr(tmp, warn=warn, term.cap=VALID.TERM.CAP[term.cap.int])
-      else tmp, end.csi
-    )
-  }
+    # Finalize real substrings
+    full <- !empty.res & !empty.req
+    if(any(full)) {
+      # if there is any ANSI CSI at end then add a terminating CSI, warnings
+      # should have been issued on first read
+      end.csi <-
+        if(terminate) close_sgr(stop.tag[full], warn=FALSE, normalize)
+        else ""
+
+      substring <- substr(x.elems[full], start.ansi[full], stop.ansi[full])
+      tmp <- paste0(start.tag[full], substring)
+      term.cap <- VALID.TERM.CAP[term.cap.int]
+      res[elems[full]] <- paste0(
+        if(normalize) normalize_sgr(tmp, warn=FALSE, term.cap=term.cap)
+        else tmp,
+        end.csi
+  ) } }
   res
 }
 
 ## Need to expose this so we can test bad UTF8 handling because substr will
-## behave different with bad UTF8 pre and post R 3.6.0
+## behave different with bad UTF8 pre and post R 3.6.0.  Make sure things
+## are sorted properly given starts are input -1L.
 
 state_at_pos <- function(
   x, starts, ends, warn=getOption('fansi.warn'),
   normalize=getOption('fansi.normalize', FALSE),
-  carry=getOption('fansi.carry', FALSE)
+  terminate=getOption('fansi.terminate', FALSE)
 ) {
   is.start <- c(rep(TRUE, length(starts)), rep(FALSE, length(ends)))
   .Call(
     FANSI_state_at_pos_ext,
-    x, as.integer(c(starts, ends)) - 1L,
-    0L,      # character type
-    is.start,  # lags
-    !is.start, # ends
+    x, as.integer(c(starts - 1L, ends)),
+    0L,        # character type
+    is.start,  # keep if is.start
+    is.start,  # indicate that it's a start
     warn,
     seq_along(VALID.TERM.CAP),
     1L,        # ctl="all"
     normalize,
-    carry
+    terminate,
+    rep(seq_along(starts), 2)
   )
 }
