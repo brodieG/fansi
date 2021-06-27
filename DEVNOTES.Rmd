@@ -6,9 +6,6 @@ These are internal developer notes.
 
 * Add "all" `term.cap`.
 
-* Double check that `strwrap` is doing carry correctly in non-trim mode.
-
-* Make sure `strwrap` and others consume initial SGR (substr does so)?
 
 * Rewrite the COPY/MCOPY macros to use the buffer origin to measure size instead
   of `len`?  That should be safer.
@@ -17,7 +14,7 @@ These are internal developer notes.
   byte?).  Right now we consume the lead byte bytes.
 
 * Add test that confirms were not messing up the integer overflow check
-  for the start indices.
+  for the start indices.  Not sure how to do this.
 
 * Simplify FANSI_valid_utf8 by having it call clen and return number of bytes.
   (problem is when invalid due to requesting bytes beyond null terminator, how
@@ -58,6 +55,20 @@ These are internal developer notes.
   check for unescaped '<', '>', and '&'?
 
 ## Done
+
+* Make sure `strwrap` and others consume initial SGR (substr does so)?  It looks
+  like stwrap doesn't: `strwrap_ctl(c("\033[31mhello world", "\033[42mgoodbye moon"), carry=TRUE, 10)`
+
+Now they do.
+
+* Double check that `strwrap` is doing carry correctly in non-trim mode.
+
+It is.
+
+* Are .terminal and .last_sgr at cross purposes?  Maybe, terminal does not get
+  reset if you hit the NULL.
+
+Removed .terminal.
 
 * How to deal with wraps of `"hello \033[33;44m world"`.  Notice extra space.
   Correct way to do this is make sure that the escape does not interrupt white
@@ -341,6 +352,14 @@ the middle of the substring because they are not explicitly modified,
 particularly with `substr` (well, with everything, but `substr` would be most
 difficult to deal with).
 
+Are there any conditions where `terminate=TRUE && !padding && .last_sgr` where
+we want to keep the last SGR?  The one example that comes to mind right now is
+when in the user string the active SGR is closed with a specific tag, but then
+that specific tag is dropped and instead we end with ESC[0m.  It feels
+aggressive to do this, but the more I think about it it probably is consistent.
+
+So now we strip all trailing SGR, even things that would cleanly close preceding
+SGR, and close with a ESC[0m.  While aggressive, this is more consistent.
 
 ## Overflow
 

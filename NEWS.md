@@ -33,10 +33,9 @@ there are some corner cases with changes (e.g. in `strwrap_ctl` SGRs embedded in
 whitespace sequences don't break the sequence).
 
 The changes are a side effect of applying more consistent treatment of corner
-cases around leading and trailing SGR in substrings.  Trailing SGR is now
-omitted as it would be immediately closed (assuming `terminate=TRUE`, the
-default).  Leading SGR is interpreted and re-output in compact form (assuming
-`normalize=FALSE`, also the default).
+cases around leading and trailing SGR in substrings.  Trailing SGR in the output
+is now omitted as it would be immediately closed (assuming `terminate=TRUE`, the
+default).  Leading SGR is interpreted and re-output.
 
 Normally output consistency alone would not be a reason to change behavior, but
 in this case the changes should be almost always undetectable in the
