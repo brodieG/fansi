@@ -21,6 +21,7 @@ if(getRversion() < "3.2.2") {
   )
   on.exit(old.opt)
   pattern <- "^[^.].*\\.[Rr]$"
+  # pattern <- "wrap"
   unitize_dir(
     'unitizer',
     pattern=pattern,

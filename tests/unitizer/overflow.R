@@ -37,8 +37,8 @@ unitizer_sect('wrap', {
   tce(strwrap_ctl(string4, 16))
 
   ## Overflow when wrap adds a closing tag
-  invisible(fansi:::set_int_max(12))
-  tce(strwrap_ctl("hello\033[31m a", 5))
+  invisible(fansi:::set_int_max(9))
+  tce(strwrap_ctl("A\033[31m a", 5))
 })
 unitizer_sect('html', {
   invisible(fansi:::set_int_max(38))
@@ -94,8 +94,17 @@ unitizer_sect('size buffer', {
   dat['smaller 2.0', 'prev'] == dat['grow 2.0', 'prev']
   dat['grow 1.1', 'prev']    == dat['grow 2.0', 'self']
   dat['grow 2.1', 'prev']    == dat['grow 1.1', 'self']
+})
+unitizer_sect('misc', {
+  invisible(fansi:::set_int_max(5))
+  # this is from trying to create result matrix names, so need longer than that
+  # to test other stuff
+  substr_ctl("\033[43mA B", 5, 5)
 
 
+  ## this caused a segfault due to missing comma in error(...)
+  invisible(fansi:::set_int_max(1L))
+  substr_ctl("1", 2, 2)
 })
 
 new_max <- fansi:::set_int_max(old_max)

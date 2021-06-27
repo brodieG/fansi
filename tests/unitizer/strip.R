@@ -45,16 +45,14 @@ unitizer_sect("Whitespace", {
   fansi:::process('hello? ')
 
   # Tabs / ctrl; newlines remain
-
   fansi:::process(' \t hello')
   fansi:::process(' \t\a\r hello')
+  fansi:::process(' \t\a\r hello', ctl=c("all", "c0"))
 
   # interactiong between punct and ctrl
-
   fansi:::process('hello.  \r world.')
 
   # CSIs
-
   fansi:::process('hello.  \033[31m world.\033[0m')
 
   # Make sure we are not inadvertently changing SXPs
@@ -64,7 +62,6 @@ unitizer_sect("Whitespace", {
   str1
 
   # Paragraphs and so on
-
   fansi:::process('hello.\n\nworld')
   fansi:::process('hello.\n\n\nworld')
   fansi:::process('hello.\n\n\n\nworld')
@@ -76,6 +73,40 @@ unitizer_sect("Whitespace", {
   fansi:::process('hello.\n\nworld\n\n  ')
   fansi:::process('\n\nhello.\n\t\n\tworld\n\t\n woohoo\n ')
   fansi:::process('\n \t\nhello.\n\t\n\tworld\n\t\n woohoo\n ')
+
+  # corner cases
+  fansi:::process('hello.\n\033[44m\nworld')
+  fansi:::process('hello.\n\033[44m\n \t\nworld')
+  fansi:::process('hello.\033[44m\n\n \t\nworld')
+  fansi:::process('hello.\n\n \t\n\033[44mworld')
+  fansi:::process('hello.\n\n\033[44m \t\nworld')
+
+  fansi:::process('hello \033[44m world')
+  fansi:::process("hello. \033[44m world")
+
+  fansi:::process('hello\033[44m\033[31m world')
+  fansi:::process('hello\033[44m\033[31m\n\nworld')
+  fansi:::process('hello\n\033[44m\033[31m\nworld')
+  fansi:::process('hello\n\n\033[44m\033[31mworld')
+
+  fansi:::process('hello\033[44m\033[31d world')
+  fansi:::process('hello \033[44m\033[31d world')
+  fansi:::process('hello \033[44m \033[31d world')
+  fansi:::process('hello\033[44m\033[31d world', ctl=c("all", "csi"))
+  fansi:::process('hello \033[44m\033[31d world', ctl=c("all", "csi"))
+  fansi:::process('hello \033[44m \033[31d world', ctl=c("all", "csi"))
+  fansi:::process('hello\033[44m\a world', ctl=c("all"))
+  fansi:::process('hello\033[44m\a world', ctl=c("all", "c0"))
+  fansi:::process('hello.  \033[44m\a world', ctl=c("all"))
+  fansi:::process('hello.  \033[44m\a world', ctl=c("all", "c0"))
+  fansi:::process('hello. \033[44m \a world', ctl=c("all"))
+  fansi:::process('hello. \033[44m \a world', ctl=c("all", "c0"))
+  fansi:::process('hello.\n\033[44m \a world', ctl=c("all"))
+  fansi:::process('hello.\n\033[44m \a world', ctl=c("all", "c0"))
+  fansi:::process('hello.\n\033[44m\n\a world', ctl=c("all"))
+  fansi:::process('hello.\n\033[44m\n\a world', ctl=c("all", "c0"))
+  fansi:::process('hello.\n\033[44m\a\n world', ctl=c("all"))
+  fansi:::process('hello.\n\033[44m\a\n world', ctl=c("all", "c0"))
 })
 unitizer_sect("Selective stripping", {
   string.0 <- "hello\033k\033[45p world\n\033[31mgoodbye\a moon"
