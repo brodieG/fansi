@@ -113,6 +113,16 @@ cumulative "Graphic Rendition Combination Mode".  This means new SGR
 sequences add to rather than replace previous ones, although in some cases
 the effect is the same as replacement (e.g. if you have a color active and
 pick another one).
+
+While we try to minimize changes across \code{fansi} versions in how SGR sequences
+are output, we focus on minimizing the changes to rendered output, not
+necessarily the specific SGR sequences used to produce it.  To maximize the
+odds of getting stable SGR output use \code{\link{normalize_sgr}} and set \code{term.cap} to
+a specific set of capabilities.  In general it is likely best not to rely on
+the exact SGR encoding of \code{fansi} output.
+
+Note that \code{width} calculations may also change across R versions, locales,
+etc. (see "Encodings / UTF-8" below).
 }
 
 \section{SGR Interactions}{
@@ -145,7 +155,7 @@ strings they are appended to.  There are no parameters to control what
 happens automatically in this case, but \code{fansi} provides several functions
 that can help the user get their desired outcome.  \code{sgr_at_end} computes the
 active SGR at the end of a string, this can then be prepended onto the
-\emph{input} of \code{fansi} functions so that they are aware of what the active style
+\emph{input} of \code{fansi} functions so that they are aware of the active style
 at the beginning of the string.  Alternatively, one could use
 \code{close_sgr(sgr_at_end(...))} and pre-pend that to the \emph{output} of \code{fansi}
 functions so they are unaffected by preceding SGR.  One could also just
@@ -193,9 +203,9 @@ strings without \emph{Control Sequences}.
 
 
 The maximum length of input character vector elements allowed by \code{fansi} is
-the 32 bit INT_MAX, excluding the terminating NULL.  This appears to be the
+the 32 bit INT_MAX, excluding the terminating NULL.  As of R4.1 this is the
 limit for R character vector elements generally, but is enforced at the C
-level nonetheless.
+level by \code{fansi} nonetheless.
 
 It is possible that during processing strings that are shorter than INT_MAX
 would become longer than that. \code{fansi} checks for that overflow and will
