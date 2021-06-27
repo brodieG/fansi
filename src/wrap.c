@@ -234,6 +234,8 @@ static SEXP writeline(
  * set the encoding to UTF8 if there are any bytes greater than 127, or NATIVE
  * otherwise under the assumption that 0-127 is valid in all encodings.
  *
+ * This should be re-written based on a grammar.
+ *
  * @param buff a pointer to a buffer struct.  We use pointer to a
  *   pointer because it may need to be resized, but we also don't want to
  *   re-allocate the buffer between calls.
@@ -292,13 +294,11 @@ static SEXP strwrap(
   // byte we previously wrote from, need to track to detect potential infinite
   // loop when we wrap-always but the wrap width is narrower than a wide
   // character
-
   int first_line = 1;
   int last_start = 0;
 
   // Need to keep track of where word boundaries start and end due to
   // possibility for multiple elements between words
-
   if(carry) state.sgr = *sgr_carry;
   struct FANSI_state state_start, state_bound, state_prev, state_tmp;
   state_start = state_bound = state_prev = state;
@@ -309,18 +309,9 @@ static SEXP strwrap(
     struct FANSI_state state_next;
 
     state_next = state; // if we hit end of string, re-use state.
-    // Advance one element, except if start of line then consume leading SGR so
-    // that when it's output it's merged into one ESC (if normalized=FALSE)
-    if(state.string[state.pos_byte]) {
-      if(state.pos_byte != state_start.pos_byte) {
-        state_next = FANSI_read_next(state_next, index);
-      } else {
-        do {
-          state_tmp = state_next;
-          state_next = FANSI_read_next(state_next, index);
-        } while(state_next.last_sgr);
-        state_start = state_tmp;
-    } }
+    // Look ahead one element
+    if(state.string[state.pos_byte])
+      state_next = FANSI_read_next(state_next, index);
     state.warn = state_bound.warn = state_next.warn;  // avoid double warning
 
     // detect word boundaries and paragraph starts; we need to track
@@ -331,21 +322,31 @@ static SEXP strwrap(
     // We're ignoring other word boundaries, but strwrap does too.
     //
     // Recall that if `strip_spaces == TRUE` string will have already been
-    // processed to remove sequential spaces.
+    // processed to remove sequential spaces (except those following sentence
+    // end).
 
     if(
       state.string[state.pos_byte] == ' ' ||
       state.string[state.pos_byte] == '\t' ||
       state.string[state.pos_byte] == '\n'
     ) {
-      if(strip_spaces && !prev_boundary) state_bound = state;
-      else if(!strip_spaces) state_bound = state;
+      if(strip_spaces && !prev_boundary) {
+        if(
+          state.last_sgr && terminate &&
+          (FANSI_sgr_active(state.sgr) || !FANSI_sgr_active(state.sgr_prev)) &&
+          (!(*pad_chr) || state.pos_width == width_tar)
+        ) {
+          state_bound = state_prev;
+        } else {
+          state_bound = state;
+        }
+      } else if(!strip_spaces) {
+        state_bound = state;
+      }
       has_boundary = prev_boundary = 1;
-    } else {
-      prev_boundary = 0;
-    }
-    // Write the line
+    } else prev_boundary = 0;
 
+    // Write the line
     if(
       !state.string[state.pos_byte] ||
       // newlines kept in strtrim mode
@@ -380,7 +381,6 @@ static SEXP strwrap(
       }
       // If not stripping spaces we need to keep the last boundary char; note
       // that boundary is advanced when strip_spaces == FALSE in earlier code.
-
       if(
         !strip_spaces && has_boundary && (
           state_bound.string[state_bound.pos_byte] == ' ' ||
@@ -390,8 +390,8 @@ static SEXP strwrap(
       ) {
         state_bound = FANSI_read_next(state_bound, index);
       }
-      // Write the string
 
+      // Write the string
       res_sxp = PROTECT(
         writeline(
           state_bound, state_start, buff,
@@ -401,42 +401,53 @@ static SEXP strwrap(
       ); ++prt;
       first_line = 0;
       last_start = state_start.pos_byte;
-      // first_only for `strtrim`
 
+      // first_only for `strtrim`
       if(!first_only) {
         SETCDR(char_list, list1(res_sxp));
         char_list = CDR(char_list);
         UNPROTECT(1); --prt;
       } else {
-        // Need end state if in trim mode and we wish to carry
+        // Need end state if in strtrim mode and we wish to carry
         if(carry)
           while(state.string[state.pos_byte])
             state = FANSI_read_next(state, index);
         break;
       }
-      // overflow should be impossible here since string is at most int long
 
+      // overflow should be impossible here since string is at most int long
       ++size;
       if(!state.string[state.pos_byte]) break;
 
       // Next line will be the beginning of a paragraph
-
       para_start = (state.string[state.pos_byte] == '\n');
       width_tar = para_start ? width_1 : width_2;
 
       // Recreate what the state is at the wrap point, including skipping the
-      // wrap character if there was one, and any subsequent leading spaces if
-      // there are any and we are in strip_space mode.  If there was no boundary
-      // then we're hard breaking and we reset position to the next position.
-
+      // wrap character if there was one, and any subsequent leading spaces or
+      // SGR  if there are any and we are in strip_space mode.  If there was no
+      // boundary then we're hard breaking and we reset position to the next
+      // position.
       if(has_boundary && para_start) {
-        state_bound = FANSI_read_next(state_bound, index);
+        do state_bound = FANSI_read_next(state_bound, index);
+        while (state_bound.last_sgr);
       } else if(!has_boundary) {
         state_bound = state;
       }
-      if(strip_spaces) {
-        while(state_bound.string[state_bound.pos_byte] == ' ') {
-          state_bound = FANSI_read_next(state_bound, index);
+      if(strip_spaces) {  // no tabs guaranteed
+        while(
+          state_bound.string[state_bound.pos_byte] == ' ' ||
+          state_bound.string[state_bound.pos_byte] == 0x1b
+        ) {
+          state_tmp = FANSI_read_next(state_bound, index);
+          if(
+            state_bound.string[state_bound.pos_byte] == 0x1b &&
+            !state_tmp.last_sgr
+          ) {
+            state_bound.warn = state_tmp.warn;  // avoid double warnings
+            break;
+          }
+          state_bound = state_tmp;
       } }
       has_boundary = 0;
       state_bound.pos_width = 0;

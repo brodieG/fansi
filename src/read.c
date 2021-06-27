@@ -566,7 +566,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       state.non_normalized |= non_normalized;
       if(esc_types & 2U) {
         state.pos_byte_sgr_start = seq_start;
-        state.last_sgr = 1;  // we  just read an SGR
+        state.last_sgr = 1;  // we  just read an SGR, but maybe invalid
       }
     } else {
       state = state_prev;
