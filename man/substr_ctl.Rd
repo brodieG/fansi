@@ -71,7 +71,10 @@ substr2_sgr(
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
-to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).}
+to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
+If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
+parameter on functions that have it, or the \code{tabs_as_spaces} function, to
+turn the tabs to spaces and resolve the warning that way.}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
@@ -176,6 +179,8 @@ implementation of the calculation is different.
 \note{
 Non-ASCII strings are converted to and returned in UTF-8 encoding.
 Width calculations will not work properly in R < 3.2.2.
+
+If \code{stop} < \code{start}, the return value is always an empty string.
 }
 \section{_ctl vs. _sgr}{
 

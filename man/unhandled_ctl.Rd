@@ -24,9 +24,16 @@ problem.  See details.
 \description{
 Will return position and types of unhandled \emph{Control Sequences} in a
 character vector.  Unhandled sequences may cause \code{fansi} to interpret strings
-in a way different to your display.  See \link{fansi} for details.
+in a way different to your display.  See \link{fansi} for details.  Functions that
+interpret SGR might omit bad SGR sequences in output substrings, particularly
+if they are leading or trailing.
 }
 \details{
+To work around tabs present in input, you can use \code{\link{tabs_as_spaces}} or the
+\code{tabs.as.spaces} parameter on functions that have it, or the \code{\link{strip_ctl}}
+function to remove the troublesome sequences.  Alternatively, you can use
+\code{warn=FALSE} to suppress the warnings.
+
 This is a debugging function that is not optimized for speed.
 
 The return value is a data frame with five columns:

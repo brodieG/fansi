@@ -24,7 +24,10 @@ count begins from the beginning of the input line.}
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
-to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).}
+to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
+If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
+parameter on functions that have it, or the \code{tabs_as_spaces} function, to
+turn the tabs to spaces and resolve the warning that way.}
 
 \item{ctl}{character, which \emph{Control Sequences} should be treated
 specially. See the "_ctl vs. _sgr" section for details.

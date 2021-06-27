@@ -4,16 +4,44 @@
 
 ### Features
 
+* [#66](https://github.com/brodieG/fansi/issues/66) Improved handling of
+  graphemes in `type="width"` mode.  Flags and well formed emoji sequences
+  should have widths computed correctly in most common use cases.
 * [#64](https://github.com/brodieG/fansi/issues/64) New function `normalize_sgr`
   converts compound SGR sequences into normalized form (e.g. "ESC[44;31m"
   becomes "ESC[31mESC[44m") for better compatibility with
   [`crayon`](https://github.com/r-lib/crayon).  Additionally, most functions
   gain a `normalize` parameter so that they may return their output in
   normalized form.
-* [#71](https://github.com/brodieG/fansi/issues/71) Functions that write SGR are
-  now more parsimonious.
 * `html_esc` gains a `what` parameter to indicate which HTML special characters
   should be escaped.
+* Many functions gain `carry` and `terminate` parameters to control how `fansi`
+  generated substrings interact with surrounding formats.
+* New function `state_at_end` to compute active SGR state at end of a string.
+* New function `close_sgr` to generate a closing SGR sequence given an active
+  SGR state.
+* [#71](https://github.com/brodieG/fansi/issues/71) Functions that write SGR are
+  now more parsimonious (see "Behavior Changes" below).
+
+### Behavior Changes
+
+A big part of the 1.0 release is an extensive refactoring of many parts of the
+ANSI CSI SGR intake and output algorithms.  In some cases this means that some
+`fansi` functions will output SGR slightly differently than they did before.  In
+almost all cases the rendering of the SGR should remain unchanged, although
+there are some corner cases with changes (e.g. in `strwrap_ctl` SGRs embedded in
+whitespace sequences don't break the sequence).
+
+The changes are a side effect of applying more consistent treatment of corner
+cases around leading and trailing SGR in substrings.  Trailing SGR is now
+omitted as it would be immediately closed (assuming `terminate=TRUE`, the
+default).  Leading SGR is interpreted and re-output in compact form (assuming
+`normalize=FALSE`, also the default).
+
+Normally output consistency alone would not be a reason to change behavior, but
+in this case the changes should be almost always undetectable in the
+**rendered** output, and maintaining old behavior would further complicate
+finicky C string manipulation code.
 
 ### Bug Fixes
 
@@ -22,6 +50,8 @@
 
 ### Internal Changes
 
+* More aggressive UTF-8 validation, also, invalid UTF-8 now advance only one
+  byte instead of their putative width based on a valid initial byte.
 * Reduce peak memory usage by making some intermediate buffers eligible for
   garbage collection prior to native code returning to R.
 * Reworked internals to simplify buffer computation and synchronization.

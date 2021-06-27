@@ -50,7 +50,7 @@
 #' @param strip.spaces TRUE (default) or FALSE, if TRUE, extraneous white spaces
 #'   (spaces, newlines, tabs) are removed in the same way as [base::strwrap]
 #'   does.  When FALSE, whitespaces are preserved, except for newlines as those
-#'   are implicit in boundaries between vector elements.
+#'   are implicit boundaries between output vector elements.
 #' @param tabs.as.spaces FALSE (default) or TRUE, whether to convert tabs to
 #'   spaces.  This can only be set to TRUE if `strip.spaces` is FALSE.
 #' @note For the `strwrap*` functions the `carry` parameter affects whether

@@ -63,6 +63,7 @@
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work properly in R < 3.2.2.
+#' @note If `stop` < `start`, the return value is always an empty string.
 #' @inheritParams base::substr
 #' @export
 #' @seealso [`?fansi`][fansi] for details on how _Control Sequences_ are

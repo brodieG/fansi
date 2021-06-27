@@ -91,6 +91,10 @@ default.
 \code{fansi} will will warn if it encounters \emph{Control Sequences} that it cannot
 interpret or that might conflict with terminal capabilities.  You can turn
 off warnings via the \code{warn} parameter or via the "fansi.warn" global option.
+Any SGR codes that it interprets and re-outputs in substrings will be
+compatible with the specified terminal capabilities; however, some parts of
+substrings are copied as-is and those will retain the original unsupported
+SGR codes.
 
 \code{fansi} can work around "C0" tab control characters by turning them into
 spaces first with \code{\link{tabs_as_spaces}} or with the \code{tabs.as.spaces} parameter
@@ -119,31 +123,30 @@ interact with each other.  Additionally, a substring does not inherently
 contain all the information required to recreate its formatting as it
 appeared in its source string.
 
-One form of possible interaction to consider is how a character vector
-provided to \code{fansi} functions interacts with itself.  By default, \code{fansi}
-assumes that each element in an input character vector is independent, but
-this is incorrect if the input is a single document with each element a line
-in it.  In that situation unterminated SGR from each line should bleed into
-subsequent ones.  Setting \code{carry = TRUE} enables the "single document"
-interpretation. \code{\link{sgr_to_html}} is the exception as for legacy reasons it
-defaults to \code{carry = TRUE}.
+One form of interaction to consider is how a character vector provided to
+\code{fansi} functions affect itself.  By default, \code{fansi} assumes that each
+element in an input character vector is independent, but this is incorrect if
+the input is a single document with each element a line in it.  In that
+situation unterminated SGR codes from each line should bleed into subsequent
+ones.  Setting \code{carry = TRUE} enables the "single document" interpretation.
+\code{\link{sgr_to_html}} is the exception as for legacy reasons it defaults to \code{carry = TRUE}.
 
 Another form of interaction is when substrings produced by \code{fansi} are
 spliced with or into other substrings.  By default \code{fansi} automatically
-terminates substrings it produces if they contain active SGR.  This prevents
-the SGR therein from affecting display of external strings, which is useful
-e.g. when arranging text in columns.  We can allow the SGR to bleed into
-appended strings by setting \code{terminate = FALSE}.  \code{carry} is unaffected by
-\code{terminate} as \code{fansi} records the ending SGR state prior to termination
-internally.
+terminates substrings it produces if they contain active SGR formats.  This
+prevents the SGR formats therein from affecting display of external strings,
+which is useful e.g. when arranging text in columns.  We can allow the SGR
+formats to bleed into appended strings by setting \code{terminate = FALSE}.
+\code{carry} is unaffected by \code{terminate} as \code{fansi} records the ending SGR state
+prior to termination internally.
 
-Finally, \code{fansi} strings will be affected by any active SGR in strings they
-are appended to.  There are no parameters to control what happens
-automatically in this case, but \code{fansi} provides several functions that can
-help the user get their desired outcome.  \code{sgr_at_end} computes the active
-SGR at the end of a string, this can then be prepended onto the \emph{input} of
-\code{fansi} functions so that they are aware of what the active style at the
-beginning of the string.  Alternatively, one could use
+Finally, \code{fansi} strings will be affected by any active SGR formats in
+strings they are appended to.  There are no parameters to control what
+happens automatically in this case, but \code{fansi} provides several functions
+that can help the user get their desired outcome.  \code{sgr_at_end} computes the
+active SGR at the end of a string, this can then be prepended onto the
+\emph{input} of \code{fansi} functions so that they are aware of what the active style
+at the beginning of the string.  Alternatively, one could use
 \code{close_sgr(sgr_at_end(...))} and pre-pend that to the \emph{output} of \code{fansi}
 functions so they are unaffected by preceding SGR.  One could also just
 prepend "ESC[0m", but in some cases as described in
@@ -170,33 +173,20 @@ to the way R does.
 These issues are most likely to occur with invalid UTF-8 sequences,
 combining character sequences, and emoji.  For example, whether special
 characters such as emoji are considered one or two wide evolves as software
-adopts newer versions of Unicode.  Do not expect the \code{fansi} width
-calculations to always work correctly with strings containing emoji.
+implements newer versions the Unicode databases.  Do not expect the \code{fansi}
+width calculations to always work correctly with strings containing emoji.
 
-Internally, \code{fansi} computes the width of every UTF-8 character sequence
+Internally, \code{fansi} computes the width of most UTF-8 character sequences
 outside of the ASCII range using the native \code{R_nchar} function.  This will
-cause such characters to be processed slower than ASCII characters.
-Additionally, \code{fansi} character width computations can differ from R width
-computations despite the use of \code{R_nchar}. \code{fansi} always computes width for
-each character individually, which assumes that the sum of the widths of each
-character is equal to the width of a sequence.  However, it is theoretically
-possible for a character sequence that forms a single grapheme to break that
-assumption. In informal testing we have found this to be rare because in the
-most common multi-character graphemes the trailing characters are computed as
-zero width.
+cause such characters to be processed slower than ASCII characters.  \code{fansi}
+also attempts to approximate the effect of emoji combining sequences on
+string widths, which R does not at least as of R 4.1.  The
+\href{https://cran.r-project.org/package=utf8}{\code{utf8}} package provides a
+conforming grapheme parsing implementation.
 
-As of R 3.4.0 \code{substr} appears to use UTF-8 character byte sizes as indicated
-by the leading byte, irrespective of whether the subsequent bytes lead to a
-valid sequence.  Additionally, UTF-8 byte sequences as long as 5 or 6 bytes
-may be allowed, which is likely a holdover from older Unicode versions.
-\code{fansi} mimics this behavior.  It is likely \code{substr} will start failing with
-invalid UTF-8 byte sequences with R 3.6.0 (as per SVN r74488).  In general,
-you should assume that \code{fansi} may not replicate base R exactly when there
-are illegal UTF-8 sequences present.
-
-Our long term objective is to implement proper UTF-8 character width
-computations, but for simplicity and also because R and our terminal do not
-do it properly either we are deferring the issue for now.
+Because \code{fansi} implements it's own internal UTF-8 parsing it is possible
+that you will see results different from those that R produces even on
+strings without \emph{Control Sequences}.
 }
 
 \section{Overflow}{

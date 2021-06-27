@@ -4,11 +4,17 @@ These are internal developer notes.
 
 ## Todo
 
-* Tests for sequences:
-    * All combinations of RI.
-    * Have ZWJ continuations right after an overshoot.
-    * That the index is issues correctly for substrings with e.g. bad ESCs
-    * What happens with bad ESCs at beginning/end of substrings
+* Add "all" `term.cap`.
+
+* Double check that `strwrap` is doing carry correctly in non-trim mode.
+
+* Make sure `strwrap` and others consume initial SGR (substr does so)?
+
+* Rewrite the COPY/MCOPY macros to use the buffer origin to measure size instead
+  of `len`?  That should be safer.
+
+* Confirm invalid UTF-8 assumptions (do we consume the lead byte count, just on
+  byte?).  Right now we consume the lead byte bytes.
 
 * Add test that confirms were not messing up the integer overflow check
   for the start indices.
@@ -17,41 +23,63 @@ These are internal developer notes.
   (problem is when invalid due to requesting bytes beyond null terminator, how
   do we designate that, negative bytes?).
 
+* Move the interrupt to be `_read_next` based with an unsigned counter?  With
+  maybe the SGR reads contributing more to the counter?  What about writes?  Is
+  there a more universal way to check for interrupts?  Main issue is that it's
+  possible (though perhaps unlikely) that there will be some very slow
+  individual loop iterations as we saw with `tabs_as_spaces`.
+
+* Write a section on performance in the fansi section (note that overhead is
+  actually higher for small strings for substr; it looked really low either b/c
+  substr was slower before, or because it is still slow for longer strings due
+  to utf8 validation).
+
+* Look into hiding global functions / structures, and split off fansi.h into the
+  internal and external functions.  Maybe also split off the write functions
+  from general utilities.
+
+* Delete unused code (e.g. FANSI_color_size, digits_in_int, etc.).
+
+* Change `unhandled_ctl` to point out specific problem sequence (for when there
+  are many in a row?).
+
+* Check double warnings in all functions doing the two pass reading.
+
+* Bunch of docs don't have @return tags, oddly (fixed some).
+
+* Make sure we check we're not using `intmax_t` or `uintmax_t` in a tight loop
+  anywhere.
+
+* Cleanup limits structure, is it really needed now we have a better view of
+  what we're dealing with?
+
+* Do sgr_to_HTML (sgr_to_html2?), add check to sgr_to_html if any of the bad
+  characters are found to escape or use `sgr_to_html2`.  Or do we just
+  check for unescaped '<', '>', and '&'?
+
+## Done
+
+* How to deal with wraps of `"hello \033[33;44m world"`.  Notice extra space.
+  Correct way to do this is make sure that the escape does not interrupt white
+  space removal in reading of string.  I think the rest will work out.
+
+* Tests for sequences:
+    * All combinations of RI.
+    * Have ZWJ continuations right after an overshoot.
+    * That the index is issues correctly for substrings with e.g. bad ESCs
+    * What happens with bad ESCs at beginning/end of substrings
+
+* Once we add isolate, make sure that trailing sequences are not omitted if the
+  end is not isolated? (see Interactions section below).
+
 * This is definitely not parsimonious...  Since we're not moving to C we need to
   figure out what we want to do about it.
 
     > substr_ctl("", 2, 4, carry = "\033[33m")
     [1] "\033[33m\033[0m"
 
-* How to deal with wraps of `"hello \033[33;44m world"`.  Notice extra space.
-* Once we add isolate, make sure that trailing sequences are not omitted if the
-  end is not isolated? (see Interactions section below).
 
-* Move the interrupt to be `_read_next` based with an unsigned counter?  With
-  maybe the SGR reads contributing more to the counter?  What about writes?  Is
-  there a more universal way to check for interrupts?  Main issue is that it's
-  possible (though perhaps unlikely) that there will be some very slow
-  individual loop iterations as we saw with `tabs_as_spaces`.
-* Write a section on performance in the fansi section.
-* Look into hiding global functions / structures, and split off fansi.h into the
-  internal and external functions.  Maybe also split off the write functions
-  from general utilities.
-* Delete unused code (e.g. FANSI_color_size, digits_in_int, etc.).
-* Change `unhandled_ctl` to point out specific problem sequence (for when there
-  are many in a row?).
-* Check double warnings in all functions doing the two pass reading.
-
-* Bunch of docs don't have @return tags, oddly (fixed some).
-* Make sure we check we're not using `intmax_t` or `uintmax_t` in a tight loop
-  anywhere.
-* Cleanup limits structure, is it really needed now we have a better view of
-  what we're dealing with?
-* Do sgr_to_HTML (sgr_to_html2?), add check to sgr_to_html if any of the bad
-  characters are found to escape or use `sgr_to_html2`.  Or do we just
-  check for unescaped '<', '>', and '&'?
-* Hide symbols.
-
-## Done
+* Get rid of pos_width_target (seemingly only state_at_pos used it?).
 
 * How do we currently handle styles across elements?
     * We don't.  `strwrap` carries the style within one single character
@@ -121,6 +149,46 @@ unsigned one (I think).
 
 Currently takes STRSXP.  A little awkward though, but we did it that way because
 we had the index.
+
+
+## Wrap Strip Space
+
+I think the logic needed right now is to make sure that sequences of
+tabs/spaces/newlines are replaced correctly:
+
+* "    "         -> " "
+* ".  "          -> ".  "
+* "   \n  "      -> " "
+* "   \n  \n  "  -> "\n\n"
+
+So what do we do if an escape interrupts?
+
+* If another non-white space after escape?
+    * Nothing, everything is fine
+* If another white space sequence after escape?
+    * Scan forward until find the first non-SGR non-whitespace (be sure to
+      read ESC with `FANSI_read_next`, accumulting any SGR ESC).
+    * Compute correct continuation as currently, and write it along with the
+      rest of the beginning of the string.
+    * Write out the SGR
+    * Other CTLs will not get moved, this should be documented.
+
+Odd cases to think about:
+
+* SGR between two spaces following a periods.
+* SGR between first and last newline.
+
+Special cases are:
+
+* Two spaces after a period
+    * ESC between two spaces, stays there, otherwise at end.
+* `n` newlines
+    * After first stays after first
+    * After second stays at end
+
+If there are different ESCs at different spots, then apply above rules to each.
+
+The above is too complicated, just put it at very end in all cases.
 
 ## Grapheme Boundaries
 
@@ -243,6 +311,36 @@ For ends it lets us avoid superfluous tags that get closed immediately if
 
 This works by virtue of us only wanting to affect the end, and the beginning not
 being affected by it.  Not great, but maybe we'll have to make do?
+
+Some interesting complications:
+
+* What if there is padding added at the end?  Is that the same as
+  `terminate=FALSE`.
+    * Distinguish with SGR in trailing spaces?  Yes, those are not the same as
+      those that are stuck to the end of the last word.
+* How do we know that a trailing SGR is redundant?  `terminate` must be TRUE,
+  but also there must not be padding.
+
+Should we really not issue unsupported SGR?  There is a difference between the
+display not supporting it, and `fansi` not understanding it.  It seems that
+things like 999 should be removed, whereas things like 38;2 or 91 should not?
+The real problem, and it applies specifically to the 38;2 and also 38;5 is that
+the trailing codes should be interpreted differently.  So if we want something
+to show up on the terminal correctly we have to drop the bad stuff.
+
+We did not use to do this before 1.0, but then it leads to weird stuff like:
+
+    "++ \033[38;2;31;42;4mworld\033[0m"
+    "\033[2;4;31;42m++ boohaythere\03"
+
+Where the 38 code is issued at first (because it wasn't processed, but not
+issued at second, where it was processed.
+
+There is still the possibility for inconsistencies with such codes remaining in
+the middle of the substring because they are not explicitly modified,
+particularly with `substr` (well, with everything, but `substr` would be most
+difficult to deal with).
+
 
 ## Overflow
 
