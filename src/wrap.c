@@ -153,15 +153,6 @@ static SEXP writeline(
       state_start.sgr = (struct FANSI_sgr){.color = -1, .bg_color = -1};
       state_bound.sgr = (struct FANSI_sgr){.color = -1, .bg_color = -1};
   } }
-  // In case the last state read was at the end of the string, use the prior
-  // state.  No point writing a state that will be immediately closed.  But we
-  // must write it if we're going to add padding.
-
-  if(state_bound.terminal && !target_pad && FANSI_sgr_active(state_bound.sgr)) {
-    state_bound.sgr = state_bound.sgr_prev;
-    state_bound.pos_byte = state_bound.pos_byte_sgr_start;
-    state_bound.terminal = 0;
-  }
   // state_bound.pos_byte 1 past what we need, so this should include room
   // for NULL terminator
   if(

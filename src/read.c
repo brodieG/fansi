@@ -71,7 +71,6 @@ struct FANSI_tok_res {
   int err_code;             // see struct FANSI_state
   int last;                 // Whether it is the last parameter substring
   int is_sgr;               // Whether sequence is known to be SGR
-  int terminal;             // Whether sequence is last thing before term NULL
 };
 /*
  * Attempts to read CSI SGR tokens
@@ -85,9 +84,9 @@ struct FANSI_tok_res {
 static struct FANSI_tok_res parse_token(const char * string) {
   unsigned int mult, val;
   int len, len_intermediate, len_tail, last, non_standard, private, err_code,
-    leading_zeros, not_zero, is_sgr, terminal;
+    leading_zeros, not_zero, is_sgr;
   len = len_intermediate = len_tail = val = last = non_standard = private =
-    err_code = leading_zeros = not_zero = is_sgr = terminal = 0;
+    err_code = leading_zeros = not_zero = is_sgr = 0;
   mult = 1;
 
   // `private` a bit redundant since we don't actually use it differentially to
@@ -114,7 +113,7 @@ static struct FANSI_tok_res parse_token(const char * string) {
   }
   // check for final byte
 
-  terminal = is_sgr = 0;
+  is_sgr = 0;
   last = 1;
   if((*string == ';' || *string == 'm') && !len_intermediate) {
     // valid end of SGR parameter substring
@@ -125,7 +124,6 @@ static struct FANSI_tok_res parse_token(const char * string) {
     // the err_code value, it's cleaner to just explicitly determine whether
     // sequence is actually sgr.
     if(*string == 'm') is_sgr = 1;
-    if(last && *(string + 1) == 0) terminal = 1;
   } else if(*string >= 0x40 && *string <= 0x7E && len_intermediate <= 1) {
     // valid final byte
     err_code = 4;
@@ -162,7 +160,6 @@ static struct FANSI_tok_res parse_token(const char * string) {
     .err_code=err_code,
     .last=last,
     .is_sgr=is_sgr,
-    .terminal=terminal
   };
 }
 /*
@@ -193,7 +190,6 @@ static struct FANSI_state parse_colors(
   state.last = res.last;
   state.err_code = res.err_code;
   state.is_sgr = res.is_sgr;
-  state.terminal = res.terminal;
 
   if(!state.err_code) {
     if((res.val != 2 && res.val != 5) || state.last) {
@@ -231,7 +227,6 @@ static struct FANSI_state parse_colors(
         state.last = res.last;
         state.err_code = res.err_code;
         state.is_sgr = res.is_sgr;
-        state.terminal = res.terminal;
 
         if(!state.err_code) {
           int early_end = res.last && i < (i_max - 1);
@@ -405,7 +400,6 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
         state.last = tok_res.last;
         state.err_code = tok_res.err_code;
         state.is_sgr = tok_res.is_sgr;
-        state.terminal = tok_res.terminal;
 
         // Note we use `state.err_code` instead of `tok_res.err_code` as
         // parse_colors internally calls parse_token
@@ -746,9 +740,8 @@ onemoretime:
 
   // reset flags
   state.last_zwj = state.is_sgr = state.err_code = state.read_one_more =
-   state.last_sgr =  0;
+  state.last_sgr =  0;
   // this can only be one if the last thing read is a CSI
-  if(chr_val) state.terminal = 0;
 
   int is_ascii = chr_val >= 0x20 && chr_val < 0x7F;
   int is_utf8 = chr_val < 0 || chr_val > 0x7f;
