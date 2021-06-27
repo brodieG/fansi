@@ -302,11 +302,11 @@ static SEXP strwrap(
 
   while(1) {
     struct FANSI_state state_next;
+    int end = !state.string[state.pos_byte];
 
     state_next = state; // if we hit end of string, re-use state.
     // Look ahead one element
-    if(state.string[state.pos_byte])
-      state_next = FANSI_read_next(state_next, index);
+    if(!end) state_next = FANSI_read_next(state_next, index);
     state.warn = state_bound.warn = state_next.warn;  // avoid double warning
 
     // detect word boundaries and paragraph starts; we need to track
@@ -320,21 +320,19 @@ static SEXP strwrap(
     // processed to remove sequential spaces (except those following sentence
     // end).
 
+    int strip_trail_sgr =
+      state.last_sgr && terminate &&
+      (!(*pad_chr) || state.pos_width == width_tar);
+
     if(
       state.string[state.pos_byte] == ' ' ||
       state.string[state.pos_byte] == '\t' ||
       state.string[state.pos_byte] == '\n'
     ) {
+      // trailing SGR (end of string case handled later)
       if(strip_spaces && !prev_boundary) {
-        if(
-          state.last_sgr && terminate &&
-          (FANSI_sgr_active(state.sgr) || !FANSI_sgr_active(state.sgr_prev)) &&
-          (!(*pad_chr) || state.pos_width == width_tar)
-        ) {
-          state_bound = state_prev;
-        } else {
-          state_bound = state;
-        }
+        if(strip_trail_sgr) state_bound = state_prev;
+        else state_bound = state;
       } else if(!strip_spaces) {
         state_bound = state;
       }
@@ -343,7 +341,7 @@ static SEXP strwrap(
 
     // Write the line
     if(
-      !state.string[state.pos_byte] ||
+      end ||
       // newlines kept in strtrim mode
       (state.string[state.pos_byte] == '\n' && !first_only) ||
       (
@@ -358,12 +356,14 @@ static SEXP strwrap(
         (has_boundary || wrap_always)
       )
     ) {
-      if(
-        !state.string[state.pos_byte] ||
-        (wrap_always && !has_boundary) || first_only
-      ) {
+      if(end || (wrap_always && !has_boundary) || first_only) {
         if(state.pos_width > width_tar && wrap_always) {
-          state = state_prev; // wide char overshoot
+          // wide char overshoot
+          state = state_prev;
+          end = 0;
+        } else if (end && strip_trail_sgr) {
+          // trailing SGR
+          state = state_prev;
         }
         state_bound = state;
       }
@@ -412,7 +412,7 @@ static SEXP strwrap(
 
       // overflow should be impossible here since string is at most int long
       ++size;
-      if(!state.string[state.pos_byte]) break;
+      if(end) break;
 
       // Next line will be the beginning of a paragraph
       para_start = (state.string[state.pos_byte] == '\n');

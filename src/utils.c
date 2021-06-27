@@ -570,7 +570,6 @@ SEXP FANSI_mkChar(
 
   // Annoyingly mkCharLenCE accepts int parameter instead of R_len_t, so we need
   // to check that too.
-
   if(end - start > FANSI_lim.lim_int.max)
     error(
       "%s at index [%jd].",

@@ -240,9 +240,7 @@ static struct FANSI_state_pair state_at_pos2(
     }
     // Set an anchor point to rewind to last read item, except if a trailing
     // SGR in terminate mode, as that would be immediately closed.
-    if(
-      !(state.last_sgr && !is_start && terminate && FANSI_sgr_active(state.sgr))
-    ) {
+    if(!(state.last_sgr && !is_start && terminate)) {
       if(pos_new <= pos) state_res = state;
     }
   }
