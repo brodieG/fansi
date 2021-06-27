@@ -291,6 +291,7 @@ static SEXP strwrap(
   // character
   int first_line = 1;
   int last_start = 0;
+  int new_line = 1;
 
   // Need to keep track of where word boundaries start and end due to
   // possibility for multiple elements between words
@@ -301,10 +302,39 @@ static SEXP strwrap(
   SEXP res_sxp;
 
   while(1) {
+    if(new_line) {
+      // Strip leading spaces and/or SGR
+      new_line = 0;
+      if(strip_spaces) {  // no tabs guaranteed
+        while(
+          state_bound.string[state_bound.pos_byte] == ' ' ||
+          state_bound.string[state_bound.pos_byte] == 0x1b
+        ) {
+          state_tmp = FANSI_read_next(state_bound, index);
+          if(
+            state_bound.string[state_bound.pos_byte] == 0x1b &&
+            !state_tmp.last_sgr
+          ) {
+            state_bound.warn = state_tmp.warn;  // avoid double warnings
+            break;
+          }
+          state_bound = state_tmp;
+        }
+      } else if(state_bound.string[state_bound.pos_byte] == 0x1b) {
+        state_tmp = FANSI_read_next(state_bound, index);
+        if(state_tmp.last_sgr) state_bound = state_tmp;
+        else state_bound.warn = state_tmp.warn;  // avoid double warnings
+      }
+      has_boundary = 0;
+      state_bound.pos_width = 0;
+
+      state_prev = state;
+      state = state_start = state_bound;
+    }
     struct FANSI_state state_next;
     int end = !state.string[state.pos_byte];
 
-    state_next = state; // if we hit end of string, re-use state.
+    state_next = state; // if we hit end of string, re-use state as next
     // Look ahead one element
     if(!end) state_next = FANSI_read_next(state_next, index);
     state.warn = state_bound.warn = state_next.warn;  // avoid double warning
@@ -362,7 +392,7 @@ static SEXP strwrap(
           state = state_prev;
           end = 0;
         } else if (end && strip_trail_sgr) {
-          // trailing SGR
+          // trailing SGR for end of string
           state = state_prev;
         }
         state_bound = state;
@@ -429,26 +459,7 @@ static SEXP strwrap(
       } else if(!has_boundary) {
         state_bound = state;
       }
-      if(strip_spaces) {  // no tabs guaranteed
-        while(
-          state_bound.string[state_bound.pos_byte] == ' ' ||
-          state_bound.string[state_bound.pos_byte] == 0x1b
-        ) {
-          state_tmp = FANSI_read_next(state_bound, index);
-          if(
-            state_bound.string[state_bound.pos_byte] == 0x1b &&
-            !state_tmp.last_sgr
-          ) {
-            state_bound.warn = state_tmp.warn;  // avoid double warnings
-            break;
-          }
-          state_bound = state_tmp;
-      } }
-      has_boundary = 0;
-      state_bound.pos_width = 0;
-
-      state_prev = state;
-      state = state_start = state_bound;
+      new_line = 1;
     } else {
       state_prev = state;
       state = state_next;
