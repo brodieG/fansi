@@ -495,14 +495,14 @@ SEXP FANSI_state_at_pos_ext(
     "pos.byte", "pos.raw", "pos.ansi", "pos.width"
   };
   SEXP res_rn = PROTECT(allocVector(STRSXP, res_cols)); ++prt;
-  for(int i = 0; i < res_cols; i++)
+  for(int i = 0; i < res_cols; i++) {
     SET_STRING_ELT(
       res_rn, i,
       FANSI_mkChar(
         rownames[i], rownames[i] + strlen(rownames[i]),
         CE_NATIVE, (R_xlen_t) 0
     ) );
-
+  }
   // Result will comprise a character vector with all the state tags at the
   // position as well as the various position translations in a matrix with as
   // many *columns* as the character vector has elements

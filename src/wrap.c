@@ -146,9 +146,13 @@ static SEXP writeline(
   // We do not re-terminate the string, instead relying on widths / sizes to
   // make sure only the non-indent bit is copied
 
-  if(state_bound.pos_byte == state_start.pos_byte)
+  if(state_bound.pos_byte == state_start.pos_byte) {
     pre_dat = drop_pre_indent(pre_dat);
-
+    // Also, don't open a state that will get immediately closed
+    if(!target_pad && terminate) {
+      state_start.sgr = (struct FANSI_sgr){.color = -1, .bg_color = -1};
+      state_bound.sgr = (struct FANSI_sgr){.color = -1, .bg_color = -1};
+  } }
   // In case the last state read was at the end of the string, use the prior
   // state.  No point writing a state that will be immediately closed.  But we
   // must write it if we're going to add padding.
