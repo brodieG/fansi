@@ -179,6 +179,8 @@ close_sgr <- function(
 ##
 ## This is to simulate what `strwrap` does, exposed for testing purposes.
 
-process <- function(x)
-  .Call(FANSI_process, enc2utf8(x), seq_along(VALID.TERM.CAP))
+process <- function(x, ctl="all")
+  .Call(
+    FANSI_process, enc2utf8(x), seq_along(VALID.TERM.CAP), match(ctl, VALID.CTL)
+  )
 
