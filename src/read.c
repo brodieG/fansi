@@ -287,10 +287,9 @@ static struct FANSI_state parse_colors(
  *
  */
 
-static struct FANSI_url parse_url(const char *x, int pos) {
-  x += pos;
+static struct FANSI_url parse_url(const char *x) {
   const char *x0 = x;
-  struct FANSI_url url = {.bytes=0};
+  struct FANSI_url url = {.url{val=NULL, .len=0}, .id{val=NULL, .len=0}};
 
   if(*x == ']' && *(x + 1) == '8' && *(x + 2) == ';') {
     x += 3;
@@ -319,11 +318,11 @@ static struct FANSI_url parse_url(const char *x, int pos) {
       if(end - x >= 3 && !memcmp(x, "id=", (size_t)3)) {
         char * y = x + 3;
         while(y != ';' && y != ':') ++y;
-        url.id = {x + 3 + pos, y - 1 + pos};
+        url.id = {x + 3, (int) ((y - x) - 1)};
       }
       // Record the URL
-      url.url = {x0 + semicolon + 1 + pos, end - 1 + pos}}
-      url.bytes = end - x0 + (*end == 0x1b) + 1;  // ST end is 1 more byte
+      const char * url_start = x0 + semicolon + 1
+      url.url = {url_start, end - url_start};
     }
   }
   return url;
@@ -638,8 +637,8 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
         (state.ctl & FANSI_CTL_URL)
       ) {
         // Possible URL
-        url = parse_url(state.string, state.pos_byte);
-        if(url.bytes) {
+        url = parse_url(state.string + state.pos_byte);
+        if(url.url) {
           osc_bytes = url.bytes;
           state.url = url;
         } else {

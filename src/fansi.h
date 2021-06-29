@@ -214,25 +214,26 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
     int font;
   };
+  struct FANSI_string {
+    const char * val;
+    int len;
+  };
   /*
    * OSC derived URL info; in theory could have lots of other params but only
    * retaining id for now
    */
   struct FANSI_url {
-    int url[2]; // start and end offsets of the url
-    int id[2];  // start and end offsets of the id if any (both zero if none)
-    int bytes;  // How many bytes in sequence including ']', 0 if failed.
-  }
+    struct FANSI_string url;
+    struct FANSI_string id;
+    int bytes;  // bytes of the entire OSC, excluding the initial ESC
+  };
   /*
-   * Captures the ANSI state at any particular position in a string.  Note this
-   * is only designed to capture SGR CSI codes (i.e. those of format
-   * "ESC[n;n;n;m") where "n" is a number.  This is a small subset of the
-   * possible ANSI escape codes.
-   *
-   * Note that the struct fields are ordered by size.
+   * Captures the SGR and OSC URL state at any particular position in a string.
    *
    * This object has gotten completely out of hand with how large it is.  We
-   * could change many of the fields to char, or even bitfields.
+   * could change many of the fields to char, or even bitfields and potentially
+   * create smaller structs to passs to-and-fro functions instead of this
+   * monster.
    */
 
   struct FANSI_state {
