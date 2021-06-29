@@ -61,12 +61,12 @@ static int normalize(
         struct FANSI_sgr to_close =
           FANSI_sgr_setdiff(state_int.sgr_prev, state_int.sgr);
 
-        len += FANSI_W_sgr_close(&buff_track, to_close, len, 1, i);
+        len += FANSI_W_CLOSE(&buff_track, to_close, len, 1, i);
 
         // Any newly open styles will need to be opened
         struct FANSI_sgr to_open =
           FANSI_sgr_setdiff(state_int.sgr, state_int.sgr_prev);
-        len += FANSI_W_sgr(&buff_track, to_open, len, 1, i);
+        len += FANSI_W_ACTIVE(&buff_track, to_open, len, 1, i);
 
         // Keep track of the last point we copied
         string_last = state_int.string + state_int.pos_byte;

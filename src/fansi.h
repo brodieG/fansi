@@ -481,6 +481,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP width, SEXP ctl, R_xlen_t i
   );
   int FANSI_sgr_active(struct FANSI_sgr sgr);
+  int FANSI_url_active(struct FANSI_url url);
+  // Function might be better, but growing increasingly concerned of cost of
+  // passing whole state by value; need to see how smart compilers are about it.
+  #define FANSI_ACTIVE(A) (FANSI_sgr_active((A)) || FANSI_url_active((A)))
 
   int FANSI_sgr_comp_color(struct FANSI_sgr target, struct FANSI_sgr current);
   struct FANSI_sgr FANSI_sgr_setdiff(struct FANSI_sgr old, struct FANSI_sgr new);
@@ -492,9 +496,22 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_W_sgr(
     char ** buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
   );
+  int FANSI_W_url(
+    char ** buff, struct FANSI_sgr sgr, int len, R_xlen_t i
+  );
+  #define FANSI_W_ACTIVE(A, B, C, D, E) \
+    (FANSI_W_sgr((A),(B),(C),(D),(E)) + FANSI_W_url((A),(B),(C),(E)))
+
   int FANSI_W_sgr_close(
     char ** buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
   );
+  int FANSI_W_url_close(
+    char ** buff, struct FANSI_sgr sgr, int len, R_xlen_t i
+  );
+  #define FANSI_W_CLOSE(A, B, C, D, E)         \
+    (FANSI_W_sgr_close((A),(B),(C),(D),(E)) + \
+     FANSI_W_url_close((A),(B),(C),(E)))
+
   int FANSI_W_copy(
     char ** buff, const char * tmp, int len, R_xlen_t i,
     const char * err_msg

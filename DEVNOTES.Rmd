@@ -4,8 +4,32 @@ These are internal developer notes.
 
 ## Todo
 
+* Do we treat a failed URL as a correct OSC and advance accordingly?
+
+* Do we allow for separate control of SGR / URL?  I.e. do the `_sgr` functions
+  parse URLs?  Probably yes, so maybe treat URL like a terminal capability?  And
+  note the capability is just whether OSCs can be parsed, not whether things are
+  displayed as links.  Ugh, this is a little overloaded, so not ideal.
+
+* This produces double warning: `substr_sgr('a\033[21lB', 2, 3)`.
+
+* This does not produce a warning: `substr_ctl('a\033[21lB', 2, 3, ctl='c0')`.
+
+* Make sure we have the warnings correctly set-up for OSC.
+    * Is there any SGR/CSI and URL/OSC correspondence?
+    * What is the severity hierarchy?  Do we just change the warnings to align
+      special stuff warnings vs other stuff?
+    * Maybe the SGR level errors provide a mechanism for handling C0s and other
+      limited capabilites in OS X terminal?
+
+* See OSC test notes in OSC section below.
+
+* Update `term.cap` for OSC/URL.
+
 * Add "all" `term.cap`.
 
+* Try to assess impact of large size of state object being re-used every
+  character read.
 
 * Rewrite the COPY/MCOPY macros to use the buffer origin to measure size instead
   of `len`?  That should be safer.
@@ -89,7 +113,6 @@ Removed .terminal.
     > substr_ctl("", 2, 4, carry = "\033[33m")
     [1] "\033[33m\033[0m"
 
-
 * Get rid of pos_width_target (seemingly only state_at_pos used it?).
 
 * How do we currently handle styles across elements?
@@ -161,6 +184,49 @@ unsigned one (I think).
 Currently takes STRSXP.  A little awkward though, but we did it that way because
 we had the index.
 
+## OSC / URL Parsing
+
+Do we want to parse all OSCs?  Originally resistant to it due to potential
+variability in what's considered and OSC.  E.g. do we support closing with BELL
+(xterm, osx term, and iterm2 all do)?
+
+More importantly, tested terminals seem to require pattern "ESC]num;" as the
+initiator, but the spec doesn't say anything about the "num;" part.  The
+implementations just seem to consume the first char past the ] of OSC and then
+give up (terminal, iterm2, xterm).
+
+We'll support the set of OSC that start with 'num;' and don't contain any C0s.
+
+It's also possible that we need multiple instances of the buffers alive
+simultaneously as we could have a _prev_, _bound_, etc. all active.  We could
+have one big buffer, but then we'd need to track when to release stuff.
+
+Instead, will just retain indices into the original string.  What if a link is
+split across two string elements?  Technically nl is allowed in OSC.  So if
+there is a string with `carry=TRUE` it is possible that the OSC gets split
+across two lines.  We're going to require that in order for OSC to be considered
+valid they much be complete within a line (it's not even clear that an NL inside
+an OSC is a NL anyway).
+
+Behavior of C0 in OSC is not consistent on mac terminal.  C0s contained
+therein are emitted.  Quartz xterm and iterm2 seem to support them properly.
+
+Todo:
+
+* Tests:
+    * more parameters
+    * colons and semicolons in bad places
+    * id actually captured (and re-output)?
+    * wrapping with plain oscs and urls
+* Implementing reading.
+* Implement writing.
+* Figure out if all the stuff like carry/terminate applies equally?
+    * It should; every special handling we have for each of those we'll have to
+      do for URLs too.
+    * What a PITA, probably no way to merge and use the same logic?  Well, some
+      of them we can.  E.g. close_sgr could be come close_state or some such.
+* HTML translation tests (note id shouldn't carry as semantics are different in
+  HTML vs OSC since ids may be duplicated in the latter).
 
 ## Wrap Strip Space
 

@@ -41,9 +41,13 @@
 #' _Control Sequences_ starting with ESC are assumed to be two characters
 #' long (including the ESC) unless they are of the CSI variety, in which case
 #' their length is computed as per the [ECMA-48 specification](https://www.ecma-international.org/publications-and-standards/standards/ecma-48/).
-#' There are non-CSI escape sequences that may be longer than two characters,
-#' but `fansi` will (incorrectly) treat them as if they were two characters
-#' long.
+#'
+#' `fansi` handles most common _Control Sequences_ in its parsing
+#' algorithms, but it is not a conforming implementation of ECMA-48.  For
+#' example, there are non-CSI escape sequences that may be longer than two
+#' characters, but `fansi` will (incorrectly) treat them as if they were
+#' two characters long.  There are many more unimplemented ECMA-48
+#' specifications.
 #'
 #' In theory it is possible to encode _Control Sequences_ with a single
 #' byte introducing character in the 0x40-0x5F range instead of the traditional

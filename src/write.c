@@ -485,6 +485,17 @@ int FANSI_W_sgr_close(
   }
   return len - len0;
 }
+/*
+ * End Active URL
+ */
+int FANSI_W_url_close(
+  char ** buff, struct FANSI_url url, int len, normalize, R_xlen_t i
+) {
+  int len0 = len;
+  const char * err_msg = "Generating URL end";
+  if(FANSI_url_active(url)) len += FANSI_W_COPY(buff, "\033\\");
+  return len - len0;
+}
 
 /*
  * Helper to make an SGR token, possibly full SGR if in normalize mode
@@ -663,3 +674,35 @@ int FANSI_W_sgr(
   else if(*buff) **buff = 0;  // for debugging, buff always should have 1 byte
   return len - len0;
 }
+/*
+ * Output an URL state as a string.
+ *
+ * Set buff to NULL to get size instead of writing.
+ *
+ * Return how many needed / written bytes.
+ */
+int FANSI_W_url(
+  char ** buff, struct FANSI_url url, int len, R_xlen_t i
+) {
+  /****************************************************\
+  | IMPORTANT:                                         |
+  | KEEP THIS ALIGNED WITH state_as_html               |
+  | See _W_sgr                                         |
+  \****************************************************/
+
+  int len0 = len;
+  const char * err_msg = "Writing URL"; // for FANSI_W_M?COPY
+  if(FANSI_url_active(url)) {
+    len += FANSI_W_COPY(buff, "\033]8;");
+    if(url.id.val) {
+      len += FANSI_W_COPY(buff, "id=");
+      len += FANSI_W_MCOPY(buff, url.id.val, url.id.len);
+    }
+    len += FANSI_W_COPY(buff, ";");
+    len += FANSI_W_MCOPY(buff, url.url.val, url.url.len);
+    len += FANSI_W_COPY(buff, "\033\\");
+  }
+  else if(*buff) **buff = 0;  // for debugging, buff always should have 1 byte
+  return len - len0;
+}
+

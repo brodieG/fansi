@@ -452,12 +452,10 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
   struct FANSI_url url_prev = state.url;
 
   // Consume all contiguous ESC sequences so long as they are all either
-  // completely SGR or completely not SGR.
+  // completely SGR/URL or completely not SGR/URL.
   //
-  // some complexity due to the addition of the requirement that we only
-  // actually interpret the ESC sequences if they are active via `ctl`, but the
-  // impossibility of knowing what type of ESC sequence we're dealing with until
-  // we've parsed it.
+  // We only interpet sequences if they are active per .ctl, but we need to read
+  // them in some cases to know what type they are to decide.
 
   while(state.string[state.pos_byte] == 27) {
     struct FANSI_state state_prev = state;
