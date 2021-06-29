@@ -631,27 +631,31 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       state.ctl & (FANSI_CTL_OSC | FANSI_CTL_URL)
     ) {
       // - Operating System Command --------------------------------------------
-
       int osc_bytes = 0;
-
       if(
         state.string[state.pos_byte + 2] == '8' &&
         state.string[state.pos_byte + 3] == ';' &&
         (state.ctl & FANSI_CTL_URL)
       ) {
         // Possible URL
-        url = parse_url(state.string[state.pos_byte]);
+        url = parse_url(state.string, state.pos_byte);
         if(url.bytes) {
           osc_bytes = url.bytes;
           state.url = url;
+        } else {
+          err_code = 5;
         }
-      } else {
+      } else if (state.ctl & FANSI_CTL_OSC) {
         // Other OSC
         osc_bytes = parse_osc(state.string + state.pos_byte);
+        if(!osc_bytes) err_code = 5;
+      } else {
+        // not URL and don't support OSC
+        err_code = 4;
       }
       if(osc_bytes) {
-        esc_types |= 2U;
         esc_recognized = 1;
+        esc_types |= 2U;
         state.pos_byte += osc_bytes;
       }
     } else if(!state.string[state.pos_byte]) {
@@ -680,7 +684,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       if(state.string[state.pos_byte] != 27)
         ++state.pos_byte;
     }
-    // Did we read mixed escapes? If so unwind the last read and break loop
+    // Did we read mixed special and non-special escapes?
     if(esc_types == (1U | 2U)) {
       state = state_prev;
       break;
@@ -720,7 +724,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
     } else if (err_code == 4) {
       state.err_msg = "a non-SGR CSI sequence";
     } else if (err_code == 5) {
-      state.err_msg = "a malformed CSI sequence";
+      state.err_msg = "a malformed CSI or OSC sequence";
     } else if (err_code == 6) {
       state.err_msg = "a non-CSI escape sequence";
     } else if (err_code == 7) {
