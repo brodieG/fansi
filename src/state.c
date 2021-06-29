@@ -162,7 +162,7 @@ struct FANSI_state FANSI_reset_pos(struct FANSI_state state) {
   state.pos_ansi = 0;
   state.pos_raw = 0;
   state.pos_width = 0;
-  state.last_sgr = 0;
+  state.last_special = 0;
   state.non_normalized = 0;
   return state;
 }
@@ -240,7 +240,7 @@ static struct FANSI_state_pair state_at_pos2(
     }
     // Set an anchor point to rewind to last read item, except if a trailing
     // SGR in terminate mode, as that would be immediately closed.
-    if(!(state.last_sgr && !is_start && terminate)) {
+    if(!(state.last_special && !is_start && terminate)) {
       if(pos_new <= pos) state_res = state;
     }
   }

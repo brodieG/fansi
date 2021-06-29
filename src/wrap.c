@@ -313,7 +313,7 @@ static SEXP strwrap(
           state_tmp = FANSI_read_next(state_bound, index);
           if(
             state_bound.string[state_bound.pos_byte] == 0x1b &&
-            !state_tmp.last_sgr
+            !state_tmp.last_special
           ) {
             state_bound.warn = state_tmp.warn;  // avoid double warnings
             break;
@@ -322,7 +322,7 @@ static SEXP strwrap(
         }
       } else if(state_bound.string[state_bound.pos_byte] == 0x1b) {
         state_tmp = FANSI_read_next(state_bound, index);
-        if(state_tmp.last_sgr) state_bound = state_tmp;
+        if(state_tmp.last_special) state_bound = state_tmp;
         else state_bound.warn = state_tmp.warn;  // avoid double warnings
       }
       has_boundary = 0;
@@ -351,7 +351,7 @@ static SEXP strwrap(
     // end).
 
     int strip_trail_sgr =
-      state.last_sgr && terminate &&
+      state.last_special && terminate &&
       (!(*pad_chr) || state.pos_width == width_tar);
 
     if(
@@ -455,7 +455,7 @@ static SEXP strwrap(
       // position.
       if(has_boundary && para_start) {
         do state_bound = FANSI_read_next(state_bound, index);
-        while (state_bound.last_sgr);
+        while (state_bound.last_special);
       } else if(!has_boundary) {
         state_bound = state;
       }

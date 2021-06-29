@@ -256,6 +256,115 @@ static struct FANSI_state parse_colors(
   return state;
 }
 /*
+ * Parse OSC Encoded URL as described by @egmontkob (Egmont Koblinger):
+ *
+ *   https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda
+ *
+ * @egmontkob appears very involved in terminal emulation discussions and is
+ * listed as an iterm2 contributor.  He frequently interacts with @gnachman
+ * (iterm2 primary developer) on a seeming peer basis, and does seem to know
+ * what he's talking about.
+ *
+ * Nonetheless, this isn't much of a formal spec.  The description is mostly
+ * about how iterm2 operates.
+ *
+ * Opening sequences is:
+ *
+ * OSC 8 ; params ; URL ST
+ *
+ * With OSC == ']' and params == 'key1=val1:key2=val2' with the only key that is
+ * being discussed as in use at all being 'id'.  Notwithstanding iterm2 doesn't
+ * seem to implement id (should connects multiple links into one).
+ *
+ * > For portability, the parameters and the URI must not contain any bytes
+ * > outside of the 32–126 range. If they do, the behavior is undefined. Bytes
+ * > outside of this range in the URI must be URI-encoded.
+ * >
+ * > Due to the syntax, additional parameter values cannot contain the : and ;
+ * > characters either.
+ *
+ *
+ *
+ */
+
+static struct FANSI_url parse_url(const char *x, int pos) {
+  x += pos;
+  const char *x0 = x;
+  struct FANSI_url url = {.bytes=0};
+
+  if(*x == ']' && *(x + 1) == '8' && *(x + 2) == ';') {
+    x += 3;
+    // Look for end of escape tracking position of first semi-colons (subsequent
+    // ones may be part of the URI
+    const char *end = x;
+    int semicolon = 0;
+
+    while(*end && (*end != '\a' || !(*end == 0x1b && *(end + 1) == '\\'))) {
+      if(!(*x >= 0x20 && *x <= 0x7e)) {
+        // Invalid string
+        end = x = x0;
+        break;
+      } else if (*x == 0x3b && !semicolon) {
+        semicolon = *x - *x0;
+      }
+    }
+    if(semicolon && end > x0) {
+      // Look for the id parameter
+      while(end - x >= 3 && memcmp(x, "id=", (size_t)3)) {
+        char * next = strchr(x, ':');
+        if(!next || next > *x0 + semicolon) break;
+        x = next + 1;
+      }
+      // And the end of the parameter
+      if(end - x >= 3 && !memcmp(x, "id=", (size_t)3)) {
+        char * y = x + 3;
+        while(y != ';' && y != ':') ++y;
+        url.id = {x + 3 + pos, y - 1 + pos};
+      }
+      // Record the URL
+      url.url = {x0 + semicolon + 1 + pos, end - 1 + pos}}
+      url.bytes = end - x0 + (*end == 0x1b) + 1;  // ST end is 1 more byte
+    }
+  }
+  return url;
+}
+/*
+ * Return OSC length excluding initial ESC (but including the '['), unless OSC
+ * is invalid in which case return 0.
+ *
+ * OSC may be terminated with either BEL or ST (BEL is not ECMA48 standard, but
+ * in common use for OSC based URL anchors).
+ *
+ * Support of non-ASCII inside OSC (i.e. 0x08-0x0d) does not work correctly on
+ * OS X terminal where they are emitted, and it is required that the start be
+ * num; and if not re-emitting starts at that point.
+ *
+ * see parse_url for the special case parsing for iterm2 spec OSC encoded URLs.
+ *
+ * Returns number of bytes in OSC excluding ESC
+ */
+
+static int parse_osc(const char * x) {
+  const char * x0 = x;
+  if(*x++ != ']') error("Internal Error: OSC must start with ']'."); // nocov
+  while(*x){
+    ++x;
+    if(*x == '\a') {
+      break;  // valid end in BELL
+    } else if(*x == 0x1b && *(x + 1) == "\\") {
+      ++x;
+      break;  // valid end in ST
+    } else if (!((*x >= 0x08 && *x <= 0x0d) || (*x >= 0x20 && *x <= 0x7e))) {
+      x = x0;
+      break;  // Invalid character
+    }
+    ++x;
+  }
+  // Input string can be at most INT_MAX long
+  return (int)(x - x0);
+}
+
+/*
  * Read a Character Off when we know it is an ascii char, this is so we have a
  * consistent way of advancing state.
  *
@@ -341,6 +450,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
   int non_normalized = 0;
   unsigned int esc_types = 0;          // 1 == normal, 2 == SGR
   struct FANSI_sgr sgr_prev = state.sgr;
+  struct FANSI_url url_prev = state.url;
 
   // Consume all contiguous ESC sequences so long as they are all either
   // completely SGR or completely not SGR.
@@ -356,37 +466,11 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
 
     ++state.pos_byte;  // advance ESC
 
-    if(!state.string[state.pos_byte]) {
-      // String ends in ESC
-      state.err_code = 7;
-      esc_recognized =
-        state.ctl & (FANSI_CTL_ESC | FANSI_CTL_CSI | FANSI_CTL_SGR);
-    } else if(
-      state.string[state.pos_byte] != '[' && state.ctl & FANSI_CTL_ESC
-    ) {
-      esc_types |= 1U;
-      esc_recognized = 1;
-
-      // Other ESC sequence; note there are technically multi character
-      // sequences but we ignore them here.  There is also the possibility that
-      // we mess up a utf-8 sequence if it starts right after the ESC, but oh
-      // well...
-
-      if(
-        state.string[state.pos_byte] >= 0x40 &&
-        state.string[state.pos_byte] <= 0x7E
-      )
-        state.err_code = 6;
-      else state.err_code = 7;
-
-      // Don't process additional ESC if it is there so we keep looping
-
-      if(state.string[state.pos_byte] != 27)
-        ++state.pos_byte;
-    } else if(
+    if(
+      state.string[state.pos_byte + 1] == '[' &&
       state.ctl & (FANSI_CTL_CSI | FANSI_CTL_SGR)
     ) {
-      // CSI sequence
+      // - CSI -----------------------------------------------------------------
 
       ++state.pos_byte;  // consume '['
       struct FANSI_tok_res tok_res = {.err_code = 0};
@@ -542,6 +626,59 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
         esc_recognized = 1;
         esc_types |= 2U;
       }
+    } else if(
+      state.string[state.pos_byte + 1] == ']' &&
+      state.ctl & (FANSI_CTL_OSC | FANSI_CTL_URL)
+    ) {
+      // - Operating System Command --------------------------------------------
+
+      int osc_bytes = 0;
+
+      if(
+        state.string[state.pos_byte + 2] == '8' &&
+        state.string[state.pos_byte + 3] == ';' &&
+        (state.ctl & FANSI_CTL_URL)
+      ) {
+        // Possible URL
+        url = parse_url(state.string[state.pos_byte]);
+        if(url.bytes) {
+          osc_bytes = url.bytes;
+          state.url = url;
+        }
+      } else {
+        // Other OSC
+        osc_bytes = parse_osc(state.string + state.pos_byte);
+      }
+      if(osc_bytes) {
+        esc_types |= 2U;
+        esc_recognized = 1;
+        state.pos_byte += osc_bytes;
+      }
+    } else if(!state.string[state.pos_byte]) {
+      // - String ends in ESC --------------------------------------------------
+      state.err_code = 7;
+      esc_recognized = state.ctl & FANSI_CTL_ALL;
+    } else if(state.ctl & FANSI_CTL_ESC) {
+      // -Two Byte ESC ---------------------------------------------------------
+      esc_types |= 1U;
+      esc_recognized = 1;
+
+      // Other ESC sequence; note there are technically multi character
+      // sequences but we ignore them here.  There is also the possibility that
+      // we mess up a utf-8 sequence if it starts right after the ESC, but oh
+      // well...
+
+      if(
+        state.string[state.pos_byte] >= 0x40 &&
+        state.string[state.pos_byte] <= 0x7E
+      )
+        state.err_code = 6;
+      else state.err_code = 7;
+
+      // Don't process additional ESC if it is there so we keep looping
+
+      if(state.string[state.pos_byte] != 27)
+        ++state.pos_byte;
     }
     // Did we read mixed escapes? If so unwind the last read and break loop
     if(esc_types == (1U | 2U)) {
@@ -557,10 +694,11 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       // Record other ancillary info here, we don't do it outside of the loop
       // as we want to be able reset to state_prev if things don't work out.
       state.sgr_prev = sgr_prev;
+      state.url_prev = url_prev;
       state.non_normalized |= non_normalized;
       if(esc_types & 2U) {
         state.pos_byte_sgr_start = seq_start;
-        state.last_sgr = 1;  // we  just read an SGR, but maybe invalid
+        state.last_special = 1;  // we  just read an SGR/URL, but maybe invalid
       }
     } else {
       state = state_prev;
@@ -593,7 +731,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       // nocov end
     }
   } else {
-    state.last_sgr = 1;
+    state.last_special = 1;
     state.err_msg = "";
   }
   return state;
@@ -740,7 +878,7 @@ onemoretime:
 
   // reset flags
   state.last_zwj = state.is_sgr = state.err_code = state.read_one_more =
-  state.last_sgr =  0;
+  state.last_special =  0;
   // this can only be one if the last thing read is a CSI
 
   int is_ascii = chr_val >= 0x20 && chr_val < 0x7F;

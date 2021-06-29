@@ -36,7 +36,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   #define FANSI_CTL_SGR 4
   #define FANSI_CTL_CSI 8
   #define FANSI_CTL_ESC 16
-  #define FANSI_CTL_ALL 31 // 1 + 2 + 4 + 8 + 16 == 2^0 + 2^1 + 2^2 + 2^3 + 2^4
+  #define FANSI_CTL_URL 32
+  #define FANSI_CTL_OSC 64
+
+  #define FANSI_CTL_ALL 127 // 1 + 2 + 4 + 8 + 16 == 2^0 + 2^1 + 2^2 + 2^3 + 2^4
 
   #define FANSI_STYLE_MAX 12 // 12 is double underline
 
@@ -112,6 +115,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   };
   /*
    * Encode Active SGR
+   *
+   * Many of the fields here could be made smaller.
    */
   struct FANSI_sgr {
     /*
@@ -209,19 +214,32 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
     int font;
   };
-
+  /*
+   * OSC derived URL info; in theory could have lots of other params but only
+   * retaining id for now
+   */
+  struct FANSI_url {
+    int url[2]; // start and end offsets of the url
+    int id[2];  // start and end offsets of the id if any (both zero if none)
+    int bytes;  // How many bytes in sequence including ']', 0 if failed.
+  }
   /*
    * Captures the ANSI state at any particular position in a string.  Note this
    * is only designed to capture SGR CSI codes (i.e. those of format
    * "ESC[n;n;n;m") where "n" is a number.  This is a small subset of the
    * possible ANSI escape codes.
    *
-   * Note that the struct fields are ordered by size
+   * Note that the struct fields are ordered by size.
+   *
+   * This object has gotten completely out of hand with how large it is.  We
+   * could change many of the fields to char, or even bitfields.
    */
 
   struct FANSI_state {
     struct FANSI_sgr sgr;
     struct FANSI_sgr sgr_prev;
+    struct FANSI_url url;
+    struct FANSI_url url_prev;
 
     const char * string;
     /*
@@ -229,8 +247,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      */
     const char * err_msg;
     /*
-     * Position markers (all zero index), we use int because these numbers
-     * need to make it back to R which doesn't have a `size_t` type.
+     * Position markers (all zero index).
      *
      * - pos_byte: the byte in the string
      * - pos_byte_sgr_start: the starting position of the last sgr read, really
@@ -245,8 +262,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      *   characters, etc., note in this case ASCII escape sequences are treated
      *   as zero chars.  Width is computed mostly with R_nchar.
      *
-     * Actually not clear if there is a difference b/w pos_raw and pos_ansi,
-     * might need to remove one
+     * So pos_raw is essentially the character count excluding escapes.
      */
 
     int pos_ansi;
@@ -261,10 +277,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     // Are there bytes outside of 0-127
     int has_utf8;
 
-    // Info on last character
+    // Info on last element read
     int last_zwj;         // was last a Zero Width Joiner
     int last_ri;          // was last an unpaired Regional Indicator
-    int last_sgr;         // was an sgr
+    int last_special;     // was an sgr or osc url
 
     // Need to read one more character before returning from read_next, used
     // right now just to avoid splitting RI flags.
