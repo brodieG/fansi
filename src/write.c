@@ -493,7 +493,7 @@ int FANSI_W_url_close(
 ) {
   int len0 = len;
   const char * err_msg = "Generating URL end";
-  if(FANSI_url_active(url)) len += FANSI_W_COPY(buff, "\033\\");
+  if(FANSI_url_active(url)) len += FANSI_W_COPY(buff, "\033]8;;\033\\");
   return len - len0;
 }
 
@@ -700,7 +700,7 @@ int FANSI_W_url(
     }
     len += FANSI_W_COPY(buff, ";");
     len += FANSI_W_MCOPY(buff, url.url.val, url.url.len);
-    len += FANSI_W_COPY(buff, "\033\\");
+    len += FANSI_W_COPY(buff, "\033\\");  // ST
   }
   else if(*buff) **buff = 0;  // for debugging, buff always should have 1 byte
   return len - len0;
