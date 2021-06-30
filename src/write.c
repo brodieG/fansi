@@ -489,7 +489,7 @@ int FANSI_W_sgr_close(
  * End Active URL
  */
 int FANSI_W_url_close(
-  char ** buff, struct FANSI_url url, int len, normalize, R_xlen_t i
+  char ** buff, struct FANSI_url url, int len, R_xlen_t i
 ) {
   int len0 = len;
   const char * err_msg = "Generating URL end";

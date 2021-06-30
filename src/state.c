@@ -286,10 +286,10 @@ char * FANSI_sgr_as_chr(
 ) {
   // First pass computes total size of tag
   char * buff_track = NULL;
-  int tag_len = FANSI_W_ACTIVE(&buff_track, sgr, 0, normalize, i);
+  int tag_len = FANSI_W_sgr(&buff_track, sgr, 0, normalize, i);
   FANSI_size_buff(buff, tag_len);
   buff_track = buff->buff;
-  FANSI_W_ACTIVE(&buff_track, sgr, 0, normalize, i);
+  FANSI_W_sgr(&buff_track, sgr, 0, normalize, i);
   return buff->buff;
 }
 /*
@@ -413,12 +413,16 @@ SEXP FANSI_sgr_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm) {
     }
     int len = 0;
     char * buff_track = NULL;
-    len = FANSI_W_CLOSE(&buff_track, state.sgr, len, normalize, i);
+    len += FANSI_W_sgr_close(&buff_track, state.sgr, len, normalize, i);
+    len += FANSI_W_url_close(&buff_track, state.url, len, i);
     if(len) {
       if(res == x) REPROTECT(res = duplicate(x), ipx);
       FANSI_size_buff(&buff, len);
       buff_track = buff.buff;
-      FANSI_W_CLOSE(&buff_track, state.sgr, len, normalize, i);
+
+      FANSI_W_sgr_close(&buff_track, state.sgr, 0, normalize, i);
+      FANSI_W_url_close(&buff_track, state.url, 0, i);
+
       cetype_t chr_type = getCharCE(x_chr);
       SEXP reschr =
         PROTECT(FANSI_mkChar(buff.buff, buff.buff + len, chr_type, i));

@@ -170,8 +170,10 @@ static SEXP writeline(
 
   // Check if we are in a CSI state b/c if we need extra room for
   // the closing state tag
-  int needs_start = FANSI_sgr_active(state_start.sgr);
-  int needs_close = terminate && FANSI_sgr_active(state_bound.sgr);
+  int needs_start =
+    FANSI_sgr_active(state_start.sgr) || FANSI_url_active(state_start.url);
+  int needs_close = terminate &&
+    (FANSI_sgr_active(state_bound.sgr) || FANSI_url_active(state_bound.url));
 
   // Measure/Write loop (see src/write.c)
   char * buff_track = NULL;
@@ -186,7 +188,8 @@ static SEXP writeline(
     }
     if(needs_start) {
       err_msg = "Adding initial SGR";
-      len += FANSI_W_ACTIVE(&buff_track, state_start.sgr, len, normalize, i);
+      len += FANSI_W_sgr(&buff_track, state_start.sgr, len, normalize, i);
+      len += FANSI_W_url(&buff_track, state_start.url, len, i);
     }
     // Apply indent/exdent prefix/initial
     if(pre_dat.bytes) {
@@ -204,10 +207,10 @@ static SEXP writeline(
     len += FANSI_W_FILL(&buff_track, *pad_chr, to_pad);
 
     // And turn off CSI styles if needed
-    if(needs_close)
-      len += FANSI_W_CLOSE(
-        &buff_track, state_bound.sgr, len, normalize, i
-      );
+    if(needs_close) {
+      len += FANSI_W_sgr_close(&buff_track, state_bound.sgr, len, normalize, i);
+      len += FANSI_W_url_close(&buff_track, state_bound.url, len, i);
+    }
   }
   if(buff_track && (buff_track - buff->buff) != len) {
     // nocov start

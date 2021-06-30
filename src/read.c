@@ -283,13 +283,11 @@ static struct FANSI_state parse_colors(
  * > Due to the syntax, additional parameter values cannot contain the : and ;
  * > characters either.
  *
- *
- *
  */
 
 static struct FANSI_url parse_url(const char *x) {
   const char *x0 = x;
-  struct FANSI_url url = {.url{val=NULL, .len=0}, .id{val=NULL, .len=0}};
+  struct FANSI_url url = {.url={.val=NULL, .len=0}, .id={.val=NULL, .len=0}};
 
   if(*x == ']' && *(x + 1) == '8' && *(x + 2) == ';') {
     x += 3;
@@ -299,31 +297,37 @@ static struct FANSI_url parse_url(const char *x) {
     int semicolon = 0;
 
     while(*end && (*end != '\a' || !(*end == 0x1b && *(end + 1) == '\\'))) {
-      if(!(*x >= 0x20 && *x <= 0x7e)) {
+      if(*end >= 0x20 && *end <= 0x7e) {
+        // All good
+        if (*end == 0x3b && !semicolon) semicolon = *end - *x0;
+      } else if (*end >= 0x08 && *end <= 0x0d) {
+        // Technically OSC, but not URL
+        continue;
+      } else {
         // Invalid string
         end = x = x0;
         break;
-      } else if (*x == 0x3b && !semicolon) {
-        semicolon = *x - *x0;
       }
+      ++end;
     }
-    if(semicolon && end > x0) {
+    if(semicolon) {
       // Look for the id parameter
       while(end - x >= 3 && memcmp(x, "id=", (size_t)3)) {
         char * next = strchr(x, ':');
-        if(!next || next > *x0 + semicolon) break;
+        if(!next || next > (x0 + semicolon)) break;
         x = next + 1;
       }
       // And the end of the parameter
       if(end - x >= 3 && !memcmp(x, "id=", (size_t)3)) {
-        char * y = x + 3;
-        while(y != ';' && y != ':') ++y;
-        url.id = {x + 3, (int) ((y - x) - 1)};
+        const char * y = x + 3;
+        while(*y != ';' && *y != ':') ++y;
+        url.id = (struct FANSI_string) {x + 3, (int) ((y - x) - 1)};
       }
       // Record the URL
-      const char * url_start = x0 + semicolon + 1
-      url.url = {url_start, end - url_start};
+      const char * url_start = x0 + semicolon + 1;
+      url.url = (struct FANSI_string) {url_start, end - url_start};
     }
+    if(end > x0) url.bytes = end - x0 + (*end == 0x1b);
   }
   return url;
 }
@@ -348,11 +352,11 @@ static int parse_osc(const char * x) {
   if(*x++ != ']') error("Internal Error: OSC must start with ']'."); // nocov
   while(*x){
     ++x;
-    if(*x == '\a') {
-      break;  // valid end in BELL
-    } else if(*x == 0x1b && *(x + 1) == "\\") {
+    if(*x == '\a') {                            // valid end in BELL
+      break;
+    } else if(*x == 0x1b && *(x + 1) == '\\') { // valid end in ST
       ++x;
-      break;  // valid end in ST
+      break;
     } else if (!((*x >= 0x08 && *x <= 0x0d) || (*x >= 0x20 && *x <= 0x7e))) {
       x = x0;
       break;  // Invalid character
@@ -452,7 +456,8 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
   struct FANSI_url url_prev = state.url;
 
   // Consume all contiguous ESC sequences so long as they are all either
-  // completely SGR/URL or completely not SGR/URL.
+  // completely SGR/URL or completely not SGR/URL so that the trailing/leading
+  // omission works correctly.
   //
   // We only interpet sequences if they are active per .ctl, but we need to read
   // them in some cases to know what type they are to decide.
@@ -635,17 +640,20 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
         (state.ctl & FANSI_CTL_URL)
       ) {
         // Possible URL
-        url = parse_url(state.string + state.pos_byte);
-        if(url.url) {
-          osc_bytes = url.bytes;
-          state.url = url;
-        } else {
-          err_code = 5;
-        }
+        Rprintf("ready\n");
+        struct FANSI_url url = parse_url(state.string + state.pos_byte);
+        Rprintf(
+          "url.start %d url.len %d bytes %d\n",
+          url.url.val - state.string, url.url.len, url.bytes
+        );
+        osc_bytes = url.bytes;
+        if(url.url.val) state.url = url;  // success
+        else if(osc_bytes) err_code = 4;  // malformed OSC URL
+        else err_code = 5;                // Illegal OSC
       } else if (state.ctl & FANSI_CTL_OSC) {
         // Other OSC
         osc_bytes = parse_osc(state.string + state.pos_byte);
-        if(!osc_bytes) err_code = 5;
+        if(!osc_bytes) err_code = 5;      // Illegal OSC
       } else {
         // not URL and don't support OSC
         err_code = 4;

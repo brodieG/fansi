@@ -35,4 +35,4 @@ VALID.TERM.CAP <- c('bright', '256', 'truecolor')
 ##
 ## REMEMBER TO UPDATE FANSI_CTL_ALL CONSTANT IF WE MODIFY THIS
 
-VALID.CTL <- c("all", "nl", "c0", "sgr", "csi", "esc")
+VALID.CTL <- c("all", "nl", "c0", "sgr", "csi", "esc", "url", "osc")
