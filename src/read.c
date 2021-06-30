@@ -25,10 +25,13 @@
  * * state.pos_byte is taken to be the first unread character.
  * * state.pos_byte will be the first unread character after a call to `read_*`
  * * It is assumed that the string pointed to by a state cannot be longer than
- *   INT_MAX, so we do not check for overflow (this is checked on state init).
- * * Except for width calculations, which we'll have to decided whether we want
- *   to check overflow on or not since in UTF8 currently widest string is 2 wide
- *   and no single byte characters are more than 1 wide.
+ *   INT_MAX, so we do not check for overflow (this is checked on state init)
+ *   except for width.
+ *
+ * Functions sometimes use the large `FANSI_state` object, but the hope is that
+ * with them static the compilers will do nice things and the overhead will be
+ * limited (but we have not checked).  It is a todo to see if this is a
+ * performance bottleneck.
  */
 
 // Can a byte be interpreted as ASCII number?
@@ -384,7 +387,7 @@ static struct FANSI_state read_ascii(struct FANSI_state state) {
 /*
  * Parses ESC sequences
  *
- * See GENERAL NOTES atop.
+ * See GENERAL NOTES atop, and notes for each parse_ function.
  *
  * In particular, special treatment for ANSI CSI SGR sequences.
  *
@@ -625,7 +628,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
           esc_recognized = 1;
         }
       } else if (state.ctl & FANSI_CTL_SGR) {
-        // SGR and SGR tracking enabled
+        // SGR tracking enabled
         esc_recognized = 1;
         esc_types |= 2U;
       }
@@ -673,7 +676,6 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       // sequences but we ignore them here.  There is also the possibility that
       // we mess up a utf-8 sequence if it starts right after the ESC, but oh
       // well...
-
       if(
         state.string[state.pos_byte] >= 0x40 &&
         state.string[state.pos_byte] <= 0x7E
@@ -682,7 +684,6 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       else state.err_code = 7;
 
       // Don't process additional ESC if it is there so we keep looping
-
       if(state.string[state.pos_byte] != 27)
         ++state.pos_byte;
     }
@@ -819,12 +820,10 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
 
     disp_size = 1;
   }
-  // We are guaranteed that any string here is at most INT_MAX bytes long, so
+  // We are guaranteed that strings here are at most INT_MAX bytes long, so
   // nothing should overflow, except maybe width if we ever add some width
-  // measures that could exceed byte count (like the 6 or 10 from '\u' or '\U'
-  // encoded versions of Unicode chars).  Shouldn't be an issue, but playing it
-  // safe.
-
+  // measures that exceed byte count (like the 6 or 10 from '\u' or '\U' encoded
+  // versions of Unicode chars).  Shouldn't be an issue, but playing it safe.
   if(disp_size == NA_INTEGER) {
     state.err_code = 9;
     state.err_msg = "a malformed UTF-8 sequence";
@@ -839,7 +838,7 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
       "String with display width greater than INT_MAX at index [%jd].",
       FANSI_ind(i)
     );
-  state.pos_width += disp_size;        // won't overflow if _target doesn't
+  state.pos_width += disp_size;
   state.has_utf8 = 1;
   return state;
 }
