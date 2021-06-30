@@ -289,12 +289,11 @@ static struct FANSI_state parse_colors(
  */
 
 static struct FANSI_url parse_url(const char *x) {
-  const char *x0 = x;
-  const char *end = x;
+  const char *end, *x0 = x;
   struct FANSI_url url = {.url={.val=NULL, .len=0}, .id={.val=NULL, .len=0}};
 
   if(*x == ']' && *(x + 1) == '8' && *(x + 2) == ';') {
-    x += 3;
+    end = x = x0 + 3;
     // Look for end of escape tracking position of first semi-colons (subsequent
     // ones may be part of the URI).
     int semicolon = 0;
@@ -302,7 +301,7 @@ static struct FANSI_url parse_url(const char *x) {
     while(*end && *end != '\a' && !(*end == 0x1b && *(end + 1) == '\\')) {
       if(*end >= 0x20 && *end <= 0x7e) { // URLs allowed narrower set of bytes
         // All good
-        if (*end == 0x3b && !semicolon) semicolon = end - x0;
+        if (*end == ';' && !semicolon) semicolon = end - x0;
       } else if (!(*end >= 0x08 && *end <= 0x0d)) {
         // Invalid string
         end = x = x0;
@@ -328,10 +327,9 @@ static struct FANSI_url parse_url(const char *x) {
       const char * url_start = x0 + semicolon + 1;
       url.url = (struct FANSI_string) {url_start, end - url_start};
     }
+    // Record bytes (without initial ESC), even if no semicolon (plain OSC)
+    if(end > x0) url.bytes = end - x0 + (*end == 0x1b) + 1;
   }
-  // Record bytes (without initial ESC), even if no semicolon (plain OSC)
-  if(end > x0) url.bytes = end - x0 + (*end == 0x1b) + 1;
-
   return url;
 }
 /*
@@ -648,6 +646,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
         if(url.url.val) state.url = url;  // success
         else if(osc_bytes) err_code = 4;  // malformed OSC URL
         else err_code = 5;                // Illegal OSC
+
       } else if (state.ctl & FANSI_CTL_OSC) {
         // Other OSC
         osc_bytes = parse_osc(state.string + state.pos_byte);
