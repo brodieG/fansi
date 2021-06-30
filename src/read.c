@@ -268,13 +268,16 @@ static struct FANSI_state parse_colors(
  * Nonetheless, this isn't much of a formal spec.  The description is mostly
  * about how iterm2 operates.
  *
- * Opening sequences is:
+ * Opening sequence is:
  *
  * OSC 8 ; params ; URL ST
  *
  * With OSC == ']' and params == 'key1=val1:key2=val2' with the only key that is
  * being discussed as in use at all being 'id'.  Notwithstanding iterm2 doesn't
  * seem to implement id (should connects multiple links into one).
+ *
+ * Technically there is no closing sequence, just an empty opening sequence acts
+ * like a closing sequence (what about non-empty params but empty URL?).
  *
  * > For portability, the parameters and the URI must not contain any bytes
  * > outside of the 32–126 range. If they do, the behavior is undefined. Bytes
@@ -287,29 +290,27 @@ static struct FANSI_state parse_colors(
 
 static struct FANSI_url parse_url(const char *x) {
   const char *x0 = x;
+  const char *end = x;
   struct FANSI_url url = {.url={.val=NULL, .len=0}, .id={.val=NULL, .len=0}};
 
   if(*x == ']' && *(x + 1) == '8' && *(x + 2) == ';') {
     x += 3;
     // Look for end of escape tracking position of first semi-colons (subsequent
-    // ones may be part of the URI
-    const char *end = x;
+    // ones may be part of the URI).
     int semicolon = 0;
 
     while(*end && *end != '\a' && !(*end == 0x1b && *(end + 1) == '\\')) {
-      if(*end >= 0x20 && *end <= 0x7e) {
+      if(*end >= 0x20 && *end <= 0x7e) { // URLs allowed narrower set of bytes
         // All good
         if (*end == 0x3b && !semicolon) semicolon = end - x0;
-      } else if (*end >= 0x08 && *end <= 0x0d) {
-        // Technically OSC, but not URL
-        continue;
-      } else {
+      } else if (!(*end >= 0x08 && *end <= 0x0d)) {
         // Invalid string
         end = x = x0;
         break;
       }
       ++end;
     }
+    // If semicolon is found, and string is not invalid, it's a URL
     if(semicolon) {
       // Look for the id parameter
       while(end - x >= 3 && memcmp(x, "id=", (size_t)3)) {
@@ -327,8 +328,10 @@ static struct FANSI_url parse_url(const char *x) {
       const char * url_start = x0 + semicolon + 1;
       url.url = (struct FANSI_string) {url_start, end - url_start};
     }
-    if(end > x0) url.bytes = end - x0 + (*end == 0x1b) + 1;
   }
+  // Record bytes (without initial ESC), even if no semicolon (plain OSC)
+  if(end > x0) url.bytes = end - x0 + (*end == 0x1b) + 1;
+
   return url;
 }
 /*
