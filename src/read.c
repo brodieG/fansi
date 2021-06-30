@@ -305,10 +305,6 @@ static struct FANSI_url parse_url(const char *x) {
         continue;
       } else {
         // Invalid string
-        Rprintf(
-          "Invalid %02x %02x ST %d\n", *end, *(end+1),
-          (*end == 0x1b && *(end + 1) == '\\')
-        );
         end = x = x0;
         break;
       }
@@ -325,15 +321,13 @@ static struct FANSI_url parse_url(const char *x) {
       if(end - x >= 3 && !memcmp(x, "id=", (size_t)3)) {
         const char * y = x + 3;
         while(*y != ';' && *y != ':') ++y;
-        url.id = (struct FANSI_string) {x + 3, (int) ((y - x) - 1)};
+        url.id = (struct FANSI_string) {x + 3, (int) (y - (x + 3))};
       }
       // Record the URL
       const char * url_start = x0 + semicolon + 1;
       url.url = (struct FANSI_string) {url_start, end - url_start};
     }
-    if(end > x0) url.bytes = end - x0 + (*end == 0x1b);
-
-    Rprintf("end %d x %d semic %d\n", end - x0, x - x0, semicolon);
+    if(end > x0) url.bytes = end - x0 + (*end == 0x1b) + 1;
   }
   return url;
 }
@@ -469,8 +463,6 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
   // them in some cases to know what type they are to decide.
 
   while(state.string[state.pos_byte] == 27) {
-    Rprintf("ESC%c %d\n", state.string[state.pos_byte + 1],
-        state.ctl & (FANSI_CTL_OSC | FANSI_CTL_URL));
     struct FANSI_state state_prev = state;
     int esc_recognized = 0;
 
@@ -640,7 +632,6 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       state.string[state.pos_byte] == ']' &&
       state.ctl & (FANSI_CTL_OSC | FANSI_CTL_URL)
     ) {
-      Rprintf("OSC\n");
       // - Operating System Command --------------------------------------------
       int osc_bytes = 0;
       if(
@@ -649,16 +640,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
         (state.ctl & FANSI_CTL_URL)
       ) {
         // Possible URL
-        Rprintf("ready\n");
         struct FANSI_url url = parse_url(state.string + state.pos_byte);
-        if(url.url.val) {
-          Rprintf(
-            "url.start %d url.len %d bytes %d\n",
-            url.url.val - state.string, url.url.len, url.bytes
-          );
-        } else {
-          Rprintf("url fail %d\n", url.bytes);
-        }
         osc_bytes = url.bytes;
         if(url.url.val) state.url = url;  // success
         else if(osc_bytes) err_code = 4;  // malformed OSC URL
