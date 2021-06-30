@@ -265,6 +265,8 @@ static SEXP strwrap(
   struct FANSI_state state = FANSI_state_init_full(
     x, warn, term_cap, R_true, R_true, R_one, ctl, index
   );
+  Rprintf("ctl %d\n", state.ctl);
+
   UNPROTECT(2);
 
   int width_1 = FANSI_ADD_INT(width, -pre_first.width);
