@@ -293,7 +293,8 @@ static struct FANSI_state parse_colors(
 
 static struct FANSI_url parse_url(const char *x) {
   const char *end, *x0 = x;
-  struct FANSI_url url = {.url={.val=NULL, .len=0}, .id={.val=NULL, .len=0}};
+  struct FANSI_url
+    url = {.url={.val=NULL, .len=0}, .params={.val=NULL, .len=0}};
 
   if(*x == ']' && *(x + 1) == '8' && *(x + 2) == ';') {
     end = x = x0 + 3;
@@ -314,20 +315,8 @@ static struct FANSI_url parse_url(const char *x) {
     }
     // If semicolon is found, and string is not invalid, it's a URL
     if(semicolon) {
-      // Look for the id parameter
-      while(end - x >= 3 && memcmp(x, "id=", (size_t)3)) {
-        char * next = strchr(x, ':');
-        if(!next || next > (x0 + semicolon)) break;
-        x = next + 1;
-      }
-      // And the end of the parameter
-      if(end - x >= 3 && !memcmp(x, "id=", (size_t)3)) {
-        const char * y = x + 3;
-        while(*y != ';' && *y != ':') ++y;
-        url.id = (struct FANSI_string) {x + 3, (int) (y - (x + 3))};
-      }
-      // Record the URL
       const char * url_start = x0 + semicolon + 1;
+      url.params = (struct FANSI_string) {x, (int) (url_start - x) - 1};
       url.url = (struct FANSI_string) {url_start, end - url_start};
     }
     // Record bytes (without initial ESC), even if no semicolon (plain OSC)

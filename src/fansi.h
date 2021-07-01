@@ -224,7 +224,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
    */
   struct FANSI_url {
     struct FANSI_string url;
-    struct FANSI_string id;
+    struct FANSI_string params;
     int bytes;  // bytes of the entire OSC, excluding the initial ESC
   };
   /*

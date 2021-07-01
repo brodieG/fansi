@@ -694,9 +694,8 @@ int FANSI_W_url(
   const char * err_msg = "Writing URL"; // for FANSI_W_M?COPY
   if(FANSI_url_active(url)) {
     len += FANSI_W_COPY(buff, "\033]8;");
-    if(url.id.val) {
-      len += FANSI_W_COPY(buff, "id=");
-      len += FANSI_W_MCOPY(buff, url.id.val, url.id.len);
+    if(url.params.val) {
+      len += FANSI_W_MCOPY(buff, url.params.val, url.params.len);
     }
     len += FANSI_W_COPY(buff, ";");
     len += FANSI_W_MCOPY(buff, url.url.val, url.url.len);
