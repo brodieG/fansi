@@ -330,9 +330,7 @@ static SEXP strwrap(
       }
       has_boundary = 0;
       state_bound.pos_width = 0;
-
-      state_prev = state;
-      state = state_start = state_bound;
+      state = state_prev = state_start = state_bound;
     }
     struct FANSI_state state_next;
     int end = !state.string[state.pos_byte];
