@@ -271,7 +271,7 @@ static struct FANSI_state parse_colors(
  * Nonetheless, this isn't much of a formal spec.  The description is mostly
  * about how iterm2 operates.
  *
- * Opening sequence is:
+ * Opening sequence is (spaces for clarity, not there in reality):
  *
  * OSC 8 ; params ; URL ST
  *
@@ -313,14 +313,17 @@ static struct FANSI_url parse_url(const char *x) {
       }
       ++end;
     }
-    // If semicolon is found, and string is not invalid, it's a URL
-    if(semicolon) {
-      const char * url_start = x0 + semicolon + 1;
-      url.params = (struct FANSI_string) {x, (int) (url_start - x) - 1};
-      url.url = (struct FANSI_string) {url_start, end - url_start};
+    // Ended sequence before string
+    if(*end) {
+      // If semicolon is found, and string is not invalid, it's a URL
+      if(*end && semicolon) {
+        const char * url_start = x0 + semicolon + 1;
+        url.params = (struct FANSI_string) {x, (int) (url_start - x) - 1};
+        url.url = (struct FANSI_string) {url_start, end - url_start};
+      }
+      // Record bytes (without initial ESC), even if no semicolon (plain OSC)
+      if(end > x0) url.bytes = end - x0 + (*end == 0x1b) + 1;
     }
-    // Record bytes (without initial ESC), even if no semicolon (plain OSC)
-    if(end > x0) url.bytes = end - x0 + (*end == 0x1b) + 1;
   }
   return url;
 }
@@ -714,7 +717,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
     } else if(err_code < 4) {
       state.err_msg = "a CSI SGR sequence with unknown substrings";
     } else if (err_code == 4) {
-      state.err_msg = "a non-SGR CSI sequence";
+      state.err_msg = "a non-SGR CSI sequence or a non-URL OSC sequence";
     } else if (err_code == 5) {
       state.err_msg = "a malformed CSI or OSC sequence";
     } else if (err_code == 6) {
