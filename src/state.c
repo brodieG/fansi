@@ -367,7 +367,7 @@ int FANSI_sgr_active(struct FANSI_sgr sgr) {
 }
 // Keep synchronized with `url_close`
 int FANSI_url_active(struct FANSI_url url) {
-  return url.bytes > 0;
+  return url.url.len > 0;
 }
 /*
  * For closing things for substr, so we don't need to automatically normalize
