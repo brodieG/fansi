@@ -214,17 +214,20 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
     int font;
   };
+  // val should always be initialized and never NULL.
   struct FANSI_string {
     const char * val;
     int len;
   };
   /*
-   * OSC derived URL info; in theory could have lots of other params but only
-   * retaining id for now
+   * OSC derived URL info.
+   *
+   * Failed url parses designated by bytes == 0.
    */
   struct FANSI_url {
     struct FANSI_string url;
-    struct FANSI_string params;
+    struct FANSI_string params;  // unparsed param string
+    struct FANSI_string id;      // parsed id
     int bytes;  // bytes of the entire OSC, excluding the initial ESC
   };
   /*
@@ -482,9 +485,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   );
   int FANSI_sgr_active(struct FANSI_sgr sgr);
   int FANSI_url_active(struct FANSI_url url);
-
   int FANSI_sgr_comp_color(struct FANSI_sgr target, struct FANSI_sgr current);
   struct FANSI_sgr FANSI_sgr_setdiff(struct FANSI_sgr old, struct FANSI_sgr new);
+  int FANSI_url_comp(struct FANSI_url target, struct FANSI_url current);
+
   struct FANSI_state FANSI_read_next(struct FANSI_state state, R_xlen_t i);
 
   int FANSI_add_int(int x, int y, const char * file, int line);

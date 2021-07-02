@@ -369,6 +369,21 @@ int FANSI_sgr_active(struct FANSI_sgr sgr) {
 int FANSI_url_active(struct FANSI_url url) {
   return url.url.len > 0;
 }
+// Return 0 if equal, 1 if different
+//
+// As per spec only the same if both url and id are the same, but iterm2 doesn't
+// even seem to respect that (i.e. two urls that meet requirement aren't
+// simultaneously highlighted on hover, at least as of 3.4.7beta2.
+//
+// Note, id must be teh same
+
+int FANSI_url_comp(struct FANSI_url target, struct FANSI_url current) {
+  int url_eq = target.url.len == current.url.len &&
+    (!target.url.len || !strcmp(target.url.val, current.url.val));
+  int id_eq = target.id.len == current.id.len &&
+    target.id.len && !strcmp(target.id.val, current.id.val);
+  return !(url_eq && id_eq);
+}
 /*
  * For closing things for substr, so we don't need to automatically normalize
  * every string if we just close with ESC[0m.

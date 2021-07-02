@@ -119,7 +119,10 @@ static struct FANSI_prefix_dat drop_pre_indent(struct FANSI_prefix_dat dat) {
  *
  * @param state_bound the point where the boundary is
  * @param state_start the starting point of the line
- * @param normalize currently only applies to the start and end SGR.
+ * @param normalize currently doesn't do anything since the normalization
+ *   happens as a second pass.  In the future we might decide to do the
+ *   normalization in the first pass so an external call to normalize_sgr is
+ *   unnecessary.
  */
 
 static SEXP writeline(
@@ -130,6 +133,10 @@ static SEXP writeline(
   R_xlen_t i,
   int normalize, int terminate
 ) {
+  // turn off C level normalize for now since it is incomplete and we just do it
+  // again at the R level.
+  normalize = 0;
+
   // First thing we need to do is check whether we need to pad as that affects
   // how we treat the boundary.
 

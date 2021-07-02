@@ -51,8 +51,10 @@ static int normalize(
     // We encountered an ESC
     if(*string && *string == 0x1b) {
       state_int = FANSI_read_next(state_int, i);
-      // Not all ESC sequences are SGR, and only non-normalized need re-writing
-      if(state_int.is_sgr && state_int.non_normalized) {
+      // Any special sequence will be re-written.  In some cases, we don't need
+      // to do so, but even when things are already normalized, the order of the
+      // elements may not be the same.
+      if(state_int.last_special) {
         any_to_exp = 1;
         // stuff prior to SGR
         len += FANSI_W_MCOPY(&buff_track, string_last, string - string_last);
@@ -67,6 +69,11 @@ static int normalize(
         struct FANSI_sgr to_open =
           FANSI_sgr_setdiff(state_int.sgr, state_int.sgr_prev);
         len += FANSI_W_sgr(&buff_track, to_open, len, 1, i);
+
+        // Any changed URLs will need to be written (empty URL acts as a closer
+        // so simpler than with SGR).
+        if(FANSI_url_comp(state_int.url, state_int.url_prev))
+          len += FANSI_W_url(&buff_track, state_int.url, len, i);
 
         // Keep track of the last point we copied
         string_last = state_int.string + state_int.pos_byte;

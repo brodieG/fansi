@@ -258,6 +258,41 @@ static struct FANSI_state parse_colors(
   } } }
   return state;
 }
+// DANGER: param must be known to be no longer than INT_MAX.
+//
+// This is going to be quadratic on params * strlen(params) so bad idea to
+// search for all params if there are many (there should not be).
+//
+// @params will be assumed to be colon delimited
+// @param param must include trailing =, e.g. "id="
+
+static struct FANSI_string get_url_param(
+  struct FANSI_string params, const char * param
+) {
+  // We don't check any params longer than 128 chars
+  struct FANSI_string res = {.val="", .len=0};
+  int len = 0;
+  while(len <= 128 && *(param + len)) ++len;
+  if(*(param + len))
+    error("Internal Error: max allowed param len 128 bytes.");
+  if(*(param + len - 1) != '=')
+    error("Internal Error: trailing param char must be '='.");
+
+  const char * start = params.val;
+  const char * end;
+  if(len <= params.len) {
+    while(*(start + len) && !memcmp(start, param, len)) ++start;
+    if(*(start + len)) {    // found match
+      start = start + len;  // param value start
+      end = strchr(start, ':');
+      if(end)
+        res = (struct FANSI_string) {start, end - start};
+      else
+        res = (struct FANSI_string) {start, params.len - (start - params.val)};
+    }
+  }
+  return res;
+}
 /*
  * Parse OSC Encoded URL as described by @egmontkob (Egmont Koblinger):
  *
@@ -294,7 +329,9 @@ static struct FANSI_state parse_colors(
 static struct FANSI_url parse_url(const char *x) {
   const char *end, *x0 = x;
   struct FANSI_url
-    url = {.url={.val=NULL, .len=0}, .params={.val=NULL, .len=0}};
+    url = {
+      .url={.val="", .len=0}, .params={.val="", .len=0}, .id={.val="", .len=0}
+    };
 
   if(*x == ']' && *(x + 1) == '8' && *(x + 2) == ';') {
     end = x = x0 + 3;
@@ -320,6 +357,7 @@ static struct FANSI_url parse_url(const char *x) {
         const char * url_start = x0 + semicolon + 1;
         url.params = (struct FANSI_string) {x, (int) (url_start - x) - 1};
         url.url = (struct FANSI_string) {url_start, end - url_start};
+        url.id = get_url_param(url.params, "id=");
       }
       // Record bytes (without initial ESC), even if no semicolon (plain OSC)
       if(end > x0) url.bytes = end - x0 + (*end == 0x1b) + 1;
@@ -638,7 +676,7 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
         // Possible URL
         struct FANSI_url url = parse_url(state.string + state.pos_byte);
         osc_bytes = url.bytes;
-        if(url.url.val) state.url = url;  // success
+        if(url.bytes) state.url = url;  // success
         else if(osc_bytes) err_code = 4;  // malformed OSC URL
         else err_code = 5;                // Illegal OSC
 
@@ -717,11 +755,11 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
     } else if(err_code < 4) {
       state.err_msg = "a CSI SGR sequence with unknown substrings";
     } else if (err_code == 4) {
-      state.err_msg = "a non-SGR CSI sequence or a non-URL OSC sequence";
+      state.err_msg = "a non-SGR CSI or a non-URL OSC sequence";
     } else if (err_code == 5) {
       state.err_msg = "a malformed CSI or OSC sequence";
     } else if (err_code == 6) {
-      state.err_msg = "a non-CSI escape sequence";
+      state.err_msg = "a non-CSI/OSC escape sequence";
     } else if (err_code == 7) {
       state.err_msg = "a malformed escape sequence";
     } else {
