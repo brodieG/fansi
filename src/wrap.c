@@ -375,30 +375,42 @@ static SEXP strwrap(
         state_bound = state;
       }
       has_boundary = prev_boundary = 1;
-    } else prev_boundary = 0;
+    } else {
+      if(!prev_boundary && state.pos_width == width_tar && strip_trail_sgr) {
+        state_bound = state_prev;
+      }
+      prev_boundary = 0;
+    }
 
-    // Write the line
+    // Write the line if
     if(
+      // 1. At end of string
       end ||
-      // newlines kept in strtrim mode
+      // 2. Newlines kept in strtrim mode
       (state.string[state.pos_byte] == '\n' && !first_only) ||
+      // 3. Overshot target width (but only if next char isn't zero width) and
+      //    there is a boundary or we're willing to hard break
       (
         (
           state.pos_width > width_tar ||
           (
-            // If exactly at width we need to keep going if the next char is
-            // zero width, otherwise we should write the string
             state.pos_width == width_tar &&
-            state_next.pos_width > state.pos_width
+            state_next.pos_width > state.pos_width  // check zero width for next
         ) ) &&
         (has_boundary || wrap_always)
       )
     ) {
+      // Adjust end point  RECONCILE WITH EARLIER CODE!
       if(end || (wrap_always && !has_boundary) || first_only) {
-        if(state.pos_width > width_tar && wrap_always) {
-          // wide char overshoot
-          state = state_prev;
-          end = 0;
+        if(wrap_always && !has_boundary) {
+          if(state.pos_width > width_tar){
+            // wide char overshoot
+            state = state_prev;
+            end = 0;
+          } else if (state.pos_width == width_tar && strip_trail_sgr) {
+            // hard break
+            state = state_prev;
+          }
         } else if (end && strip_trail_sgr) {
           // trailing SGR for end of string
           state = state_prev;
@@ -423,7 +435,6 @@ static SEXP strwrap(
       ) {
         state_bound = FANSI_read_next(state_bound, index);
       }
-
       // Write the string
       res_sxp = PROTECT(
         writeline(
