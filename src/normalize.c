@@ -56,7 +56,7 @@ static int normalize(
       // elements may not be the same.
       if(state_int.last_special) {
         any_to_exp = 1;
-        // stuff prior to SGR
+        // stuff prior to SGR/URL
         len += FANSI_W_MCOPY(&buff_track, string_last, string - string_last);
 
         // Any prior open styles not overriden by new one need to be closed
@@ -73,7 +73,7 @@ static int normalize(
         // Any changed URLs will need to be written (empty URL acts as a closer
         // so simpler than with SGR).
         if(FANSI_url_comp(state_int.url, state_int.url_prev))
-          len += FANSI_W_url(&buff_track, state_int.url, len, i);
+          len += FANSI_W_url(&buff_track, state_int.url, len, 1, i);
 
         // Keep track of the last point we copied
         string_last = state_int.string + state_int.pos_byte;
@@ -113,7 +113,7 @@ static SEXP normalize_sgr_int(
 
   SEXP ctl = PROTECT(ScalarInteger(1)); ++prt;  // "all"
   int do_carry = STRING_ELT(carry, 0) != NA_STRING;
-  struct FANSI_sgr sgr_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
+  struct FANSI_state state_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
 
   for(R_xlen_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i + index0);
@@ -123,11 +123,15 @@ static SEXP normalize_sgr_int(
     // Measure
     struct FANSI_state state_start, state;
     state = FANSI_state_init(x, warn, term_cap, i);
-    if(do_carry) state.sgr = sgr_carry;
+    if(do_carry) {
+      state.sgr = state_carry.sgr;
+      state.url = state_carry.url;
+    }
     state_start = state;
 
     int len = normalize(NULL, &state, i);
-    sgr_carry = state.sgr;
+    state_carry.sgr = state.sgr;
+    state_carry.url = state.url;
 
     if(len < 0) continue;
 

@@ -498,7 +498,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     char ** buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
   );
   int FANSI_W_url(
-    char ** buff, struct FANSI_url url, int len, R_xlen_t i
+    char ** buff, struct FANSI_url url, int len, int normalize, R_xlen_t i
   );
 
   int FANSI_W_sgr_close(
@@ -545,7 +545,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   char * FANSI_sgr_as_chr(
     struct FANSI_buff *buff, struct FANSI_sgr sgr, int normalize, R_xlen_t i
   );
-  struct FANSI_sgr FANSI_carry_init(
+  struct FANSI_state FANSI_carry_init(
     SEXP carry, SEXP warn, SEXP term_cap, SEXP ctl
   );
 

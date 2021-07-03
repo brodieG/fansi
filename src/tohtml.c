@@ -368,14 +368,15 @@ SEXP FANSI_esc_to_html(
 
   SEXP ctl = PROTECT(ScalarInteger(1));  // "all"
   int do_carry = STRING_ELT(carry, 0) != NA_STRING;
-  struct FANSI_sgr sgr_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
+  struct FANSI_state state_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
   UNPROTECT(1);
 
   R_xlen_t x_len = XLENGTH(x);
   struct FANSI_state state, state_prev, state_init;
   SEXP empty = PROTECT(mkString(""));
   state = FANSI_state_init(empty, warn, term_cap, (R_xlen_t) 0);
-  state.sgr = sgr_carry;
+  state.sgr = state_carry.sgr;
+  state.url = state_carry.url;
   state_prev = state_init = state;
   UNPROTECT(1);
 

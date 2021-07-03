@@ -282,15 +282,11 @@ static struct FANSI_string get_url_param(
   const char * end;
   if(len <= params.len) {
     while(*(start + len) && memcmp(start, param, len)) ++start;
-    if(*(start + len)) {    // found match
-      start = start + len;  // param value start
-      end = strchr(start, ':');
-      if(end) {
-        res = (struct FANSI_string) {start, end - start};
-      }
-      else {
-        res = (struct FANSI_string) {start, params.len - (start - params.val)};
-      }
+    if(*(start + len)) {          // found match
+      start = end = start + len;  // param value start
+      // Previously checked that there will be at least a ';'
+      while(*end && *end != ':' && *end != ';') ++end;
+      res = (struct FANSI_string) {start, end - start};
     }
   }
   return res;
@@ -678,9 +674,13 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
         // Possible URL
         struct FANSI_url url = parse_url(state.string + state.pos_byte);
         osc_bytes = url.bytes;
-        if(url.bytes) state.url = url;  // success
+        if(url.bytes) state.url = url;    // success
         else if(osc_bytes) err_code = 4;  // malformed OSC URL
         else err_code = 5;                // Illegal OSC
+
+        // Params other than id
+        if(url.params.len && url.id.len + 3 != url.params.len)
+          err_code = 2;
 
       } else if (state.ctl & FANSI_CTL_OSC) {
         // Other OSC
@@ -755,7 +755,8 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       state.err_msg =
         "a CSI SGR sequence with color codes not supported by terminal";
     } else if(err_code < 4) {
-      state.err_msg = "a CSI SGR sequence with unknown substrings";
+      state.err_msg =
+        "a CSI SGR sequence with unknown substrings or a OSC URL sequence with unsupported parameters";
     } else if (err_code == 4) {
       state.err_msg = "a non-SGR CSI or a non-URL OSC sequence";
     } else if (err_code == 5) {
