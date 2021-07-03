@@ -281,14 +281,16 @@ static struct FANSI_string get_url_param(
   const char * start = params.val;
   const char * end;
   if(len <= params.len) {
-    while(*(start + len) && !memcmp(start, param, len)) ++start;
+    while(*(start + len) && memcmp(start, param, len)) ++start;
     if(*(start + len)) {    // found match
       start = start + len;  // param value start
       end = strchr(start, ':');
-      if(end)
+      if(end) {
         res = (struct FANSI_string) {start, end - start};
-      else
+      }
+      else {
         res = (struct FANSI_string) {start, params.len - (start - params.val)};
+      }
     }
   }
   return res;
