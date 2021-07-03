@@ -375,7 +375,8 @@ int FANSI_url_active(struct FANSI_url url) {
 // even seem to respect that (i.e. two urls that meet requirement aren't
 // simultaneously highlighted on hover, at least as of 3.4.7beta2.
 //
-// Note, id must be teh same
+// Note, id must be the same, unless there is no URL in which case id may be
+// empty.
 
 int FANSI_url_comp(struct FANSI_url target, struct FANSI_url current) {
   int url_eq = target.url.len == current.url.len &&
@@ -384,7 +385,11 @@ int FANSI_url_comp(struct FANSI_url target, struct FANSI_url current) {
       !memcmp(target.url.val, current.url.val, target.url.len)
     );
   int id_eq = target.id.len == current.id.len &&
-    target.id.len && !memcmp(target.id.val, current.id.val, target.id.len);
+    (
+      (!target.url.len && !target.id.len) ||
+      (target.id.len && !memcmp(target.id.val, current.id.val, target.id.len))
+    );
+
   return !(url_eq && id_eq);
 }
 /*

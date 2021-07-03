@@ -385,7 +385,7 @@ static SEXP strwrap(
       }
       has_boundary = prev_boundary = 1;
     } else {
-      if(!prev_boundary && state.pos_width == width_tar && strip_trail_sgr) {
+      if(!has_boundary && state.pos_width == width_tar && strip_trail_sgr) {
         state_bound = state_prev;
       }
       prev_boundary = 0;
@@ -409,7 +409,7 @@ static SEXP strwrap(
         (has_boundary || wrap_always)
       )
     ) {
-      // Adjust end point  RECONCILE WITH EARLIER CODE!
+      // Adjust end point
       if(end || (wrap_always && !has_boundary) || first_only) {
         if(wrap_always && !has_boundary) {
           if(state.pos_width > width_tar){
