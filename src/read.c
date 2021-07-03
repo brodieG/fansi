@@ -299,7 +299,8 @@ static struct FANSI_string get_url_param(
  * @egmontkob appears very involved in terminal emulation discussions and is
  * listed as an iterm2 contributor.  He frequently interacts with @gnachman
  * (iterm2 primary developer) on a seeming peer basis, and does seem to know
- * what he's talking about.
+ * what he's talking about.  He appears to be a programmer with the Gnome
+ * project.
  *
  * Nonetheless, this isn't much of a formal spec.  The description is mostly
  * about how iterm2 operates.

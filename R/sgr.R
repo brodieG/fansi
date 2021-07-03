@@ -82,8 +82,8 @@ strip_sgr <- function(x, warn=getOption('fansi.warn')) {
 #' Checks for Presence of Control Sequences
 #'
 #' `has_ctl` checks for any _Control Sequence_, whereas `has_sgr` checks only
-#' for ANSI CSI SGR sequences.  You can check for different types of sequences
-#' with the `ctl` parameter.
+#' for CSI SGR and OSC-encoded URL sequences.  You can check for different types
+#' of sequences with the `ctl` parameter.
 #'
 #' @export
 #' @seealso [`?fansi`][fansi] for details on how _Control Sequences_ are
@@ -116,18 +116,18 @@ has_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), which) {
 #' @rdname has_ctl
 
 has_sgr <- function(x, warn=getOption('fansi.warn'))
-  has_ctl(x, ctl="sgr", warn=warn)
+  has_ctl(x, ctl=c("sgr", "url"), warn=warn)
 
 #' Utilities for Managing SGR In Strings
 #'
-#' `sgr_at_end` read input strings computing the accumulated SGR codes until the
-#' end of the string and outputs the active SGR code at the end of it.
-#' `close_sgr` produces the ANSI CSI SGR sequence that closes active SGR codes
-#' at the end of the input string.  If `normalize = FALSE` (default), it will
-#' issue the global closing SGR "ESC[0m", so it is only interesting if
-#' `normalize = TRUE`.  Unlike `sgr_at_end` and other functions `close_sgr` has
-#' no concept of `carry`: it will only close SGR codes activated within an
-#' element that are still active at the end of that element.
+#' `sgr_at_end` read input strings computing the accumulated SGR and OSC-encoded
+#' URLs until the end of the string and outputs the active state at the end of
+#' it.  `close_sgr` produces the sequence that closes active SGR and OSC-encoded
+#' URLs at the end of the input string.  If `normalize = FALSE` (default), it
+#' will close SGRs with the reset code "ESC[0m", so it is only interesting for
+#' closing SGRs if `normalize = TRUE`.  Unlike `sgr_at_end` and other functions
+#' `close_sgr` has no concept of `carry`: it will only close state activate
+#' within an element that is still active at the end of that element.
 #'
 #' @export
 #' @inheritParams substr_ctl

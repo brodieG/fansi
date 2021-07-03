@@ -52,14 +52,14 @@
 #' The `*_ctl` versions of the functions treat all _Control Sequences_ specially
 #' by default.  Special treatment is context dependent, and may include
 #' detecting them and/or computing their display/character width as zero.  For
-#' the SGR subset of the ANSI CSI sequences, `fansi` will also parse, interpret,
-#' and reapply the text styles they encode if needed.  You can modify whether a
-#' _Control Sequence_ is treated specially with the `ctl` parameter.  You can
-#' exclude a type of _Control Sequence_ from special treatment by combining
-#' "all" with that type of sequence (e.g. `ctl=c("all", "nl")` for special
-#' treatment of all _Control Sequences_ **but** newlines).  The `*_sgr` versions
-#' only treat ANSI CSI SGR sequences specially, and are equivalent to the
-#' `*_ctl` versions with the `ctl` parameter set to "sgr".
+#' the SGR subset of the ANSI CSI sequences, and OSC-encoded URLs, `fansi` will
+#' also parse, interpret, and reapply the sequences as needed.  You can modify
+#' whether a _Control Sequence_ is treated specially with the `ctl` parameter.
+#' You can exclude a type of _Control Sequence_ from special treatment by
+#' combining "all" with that type of sequence (e.g. `ctl=c("all", "nl")` for
+#' special treatment of all _Control Sequences_ **but** newlines).  The `*_sgr`
+#' versions only treat ANSI CSI SGR sequences specially, and are equivalent to
+#' the `*_ctl` versions with the `ctl` parameter set to `c("sgr", "url")`.
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work properly in R < 3.2.2.
@@ -69,8 +69,8 @@
 #' @seealso [`?fansi`][fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results,
 #'   [`normalize_sgr`] for more details on what the `normalize` parameter does,
-#'   [`sgr_at_end`] to compute active SGR at the end of strings, [`close_sgr`]
-#'   to compute the SGR required to close active SGR.
+#'   [`sgr_at_end`] to compute active state at the end of strings, [`close_sgr`]
+#'   to compute the sequence required to close active state.
 #' @param x a character vector or object that can be coerced to such.
 #' @param type character(1L) partial matching `c("chars", "width")`, although
 #'   `type="width"` only works correctly with R >= 3.2.2.  See
@@ -99,6 +99,8 @@
 #'     for newlines and the actual ESC (0x1B) character.
 #'   * "sgr": ANSI CSI SGR sequences.
 #'   * "csi": all non-SGR ANSI CSI sequences.
+#'   * "url": OSC Encoded URLs
+#'   * "osc": OSC sequences.
 #'   * "esc": all other escape sequences.
 #'   * "all": all of the above, except when used in combination with any of the
 #'     above, in which case it means "all but".
@@ -268,7 +270,7 @@ substr2_sgr <- function(
   substr2_ctl(
     x=x, start=start, stop=stop, type=type, round=round,
     tabs.as.spaces=tabs.as.spaces,
-    tab.stops=tab.stops, warn=warn, term.cap=term.cap, ctl='sgr',
+    tab.stops=tab.stops, warn=warn, term.cap=term.cap, ctl=c('sgr', 'url')
     normalize=normalize,
     carry=carry, terminate=terminate
   )
