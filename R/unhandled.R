@@ -45,9 +45,10 @@
 #'       them are.  This is because the latter are often misinterpreted by
 #'       terminals that do not support them, whereas the former are typically
 #'       silently ignored.
-#'     * special: SGR substring contains uncommon characters in ":<=>".
+#'     * special: SGR substring contains uncommon characters in ":<=>", or URL
+#'       contains otherwise valid OSC bytes in 0x08-0x0d.
 #'     * unknown: SGR substring with a value that does not correspond to a known
-#'       SGR code.
+#'       SGR code or URL with unsupported parameters.
 #'     * non-SGR/URL: a non-SGR CSI sequence, or non-URL OSC sequence.
 #'     * non-CSI/OSC: a non-CSI or non-OSC escape sequence, i.e. one where the
 #'       ESC is followed by something other than "[" or "]".  Since we assume
