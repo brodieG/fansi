@@ -34,6 +34,6 @@ html_esc("<SPAN>hello world</SPAN>")
 Other HTML functions: 
 \code{\link{in_html}()},
 \code{\link{make_styles}()},
-\code{\link{sgr_to_html}()}
+\code{\link{to_html}()}
 }
 \concept{HTML functions}

@@ -4,8 +4,8 @@
 
 ### Features
 
-* [#58](https://github.com/brodieG/fansi/issues/58) Add handling of OSC-anchored
-  URL.
+* [#58](https://github.com/brodieG/fansi/issues/58) Add support for OSC-anchored
+  URLs.
 * [#66](https://github.com/brodieG/fansi/issues/66) Improved handling of
   graphemes in `type="width"` mode.  Flags and well formed emoji sequences
   should have widths computed correctly in most common use cases.
@@ -26,6 +26,14 @@
   now more parsimonious (see "Behavior Changes" below).
 * More granular error messages for `unhandled_ctl` for adjacent _Control
   Sequences_.
+
+### Deprecated Functions
+
+* All the "sgr" functions (e.g., `substr_sgr`, `strwrap_sgr`) are deprecated.
+  They will likely live on indefinitely, but they are of limited usefulness and
+  with the added support for OSC-anchored URLs their name is misleading.
+* `sgr_to_html` is now `to_html`, although the old function remains as a wrapper
+  around the new one).
 
 ### Behavior Changes
 

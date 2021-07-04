@@ -49,6 +49,6 @@ in_html(html, css)
 Other HTML functions: 
 \code{\link{html_esc}()},
 \code{\link{make_styles}()},
-\code{\link{sgr_to_html}()}
+\code{\link{to_html}()}
 }
 \concept{HTML functions}

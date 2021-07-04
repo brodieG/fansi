@@ -14,7 +14,7 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-#' Convert ANSI CSI SGR Escape Sequence to HTML Equivalents
+#' Convert _Control Sequences_ to HTML Equivalents
 #'
 #' Interprets CSI SGR sequences and produces a string with equivalent
 #' formats applied with SPAN elements and inline CSS styles.  Optionally for
@@ -94,8 +94,8 @@
 #'   Additionally, `sgr_to_html` uses `carry = TRUE` by default, unlike other
 #'   `fansi` functions that share that parameter.
 #' @examples
-#' sgr_to_html("hello\033[31;42;1mworld\033[m")
-#' sgr_to_html("hello\033[31;42;1mworld\033[m", classes=TRUE)
+#' to_html("hello\033[31;42;1mworld\033[m")
+#' to_html("hello\033[31;42;1mworld\033[m", classes=TRUE)
 #'
 #' ## Input contains HTML special chars
 #' x <- "<hello \033[42m'there' \033[34m &amp;\033[m \"moon\"!"
@@ -103,8 +103,8 @@
 #' \dontrun{
 #' in_html(
 #'   c(
-#'     sgr_to_html(html_esc(x)),  # Good
-#'     sgr_to_html(x)             # Bad!
+#'     to_html(html_esc(x)),  # Good
+#'     to_html(x)             # Bad!
 #' ) )
 #' }
 #' ## Generate some class names for basic colors
@@ -117,7 +117,7 @@
 #' classes <- do.call(paste, c(classes, sep="-"))
 #' ## We only provide 16 classes, so Only basic colors are
 #' ## mapped to classes; others styled inline.
-#' sgr_to_html(
+#' to_html(
 #'   "\033[94mhello\033[m \033[31;42;1mworld\033[m",
 #'   classes=classes
 #' )
@@ -128,7 +128,7 @@
 #' writeLines(sgr.256[1:8]) # SGR formatting
 #'
 #' ## Convert to HTML using classes instead of inline styles:
-#' html.256 <- sgr_to_html(sgr.256, classes=class.256)
+#' html.256 <- to_html(sgr.256, classes=class.256)
 #' writeLines(html.256[1])  # No inline colors
 #'
 #' ## Generate different style sheets.  See `?make_styles` for details.
@@ -145,7 +145,7 @@
 #' in_html(html.256, css=desaturated) # desaturated CSS
 #' }
 
-sgr_to_html <- function(
+to_html <- function(
   x, warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap'),
   classes=FALSE,
@@ -163,6 +163,26 @@ sgr_to_html <- function(
 
   .Call(FANSI_esc_to_html, x, warn, term.cap.int, classes, carry)
 }
+#' Convert _Control Sequences_ to HTML Equivalents
+#'
+#' This function is a wrapper around [`to_html`] and is kept around for legacy
+#' reasons.  When we added capabilities for handling OSC-anchored URLs, the
+#' `sgr_` part of the name became an incomplete description of what the function
+#' does.
+#'
+#' @export
+#' @inheritParams to_html
+#' @inherit to_html return
+#' @keywords internal
+
+sgr_to_html <- function(
+  x, warn=getOption('fansi.warn'),
+  term.cap=getOption('fansi.term.cap'),
+  classes=FALSE,
+  carry=getOption('fansi.carry', TRUE)  # different from other functions
+)
+  to_html(x, warn=warn, term.cap=term.cap, classes=classes, carry=carry)
+
 #' Generate CSS Mapping Classes to Colors
 #'
 #' Given a set of class names, produce the CSS that maps them to the default
@@ -321,6 +341,7 @@ in_html <- function(x, css=character(), pre=TRUE, display=TRUE, clean=display) {
   }
   invisible(f)
 }
+
 
 FANSI.CLASSES <- do.call(
   paste,

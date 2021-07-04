@@ -72,6 +72,6 @@ in_html(html, css=c(css0, css2))
 Other HTML functions: 
 \code{\link{html_esc}()},
 \code{\link{in_html}()},
-\code{\link{sgr_to_html}()}
+\code{\link{to_html}()}
 }
 \concept{HTML functions}
