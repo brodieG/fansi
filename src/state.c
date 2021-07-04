@@ -287,11 +287,12 @@ char * FANSI_state_as_chr(
   char * buff_track = NULL;
   int tag_len = 0;
   tag_len += FANSI_W_sgr(&buff_track, state.sgr, 0, normalize, i);
-  tag_len += FANSI_W_url(&buff_track, state.url, 0, normalize, i);
+  if(state.url.url.len)
+    tag_len += FANSI_W_url(&buff_track, state.url, 0, normalize, i);
   FANSI_size_buff(buff, tag_len);
   buff_track = buff->buff;
   FANSI_W_sgr(&buff_track, state.sgr, 0, normalize, i);
-  FANSI_W_url(&buff_track, state.url, 0, normalize, i);
+  if(state.url.url.len) FANSI_W_url(&buff_track, state.url, 0, normalize, i);
   return buff->buff;
 }
 
