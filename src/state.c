@@ -225,7 +225,7 @@ static struct FANSI_state_pair state_at_pos2(
     (pos_new <= pos || pos_new == pos_restart) && state.string[state.pos_byte]
   ) {
     pos_restart = pos_new;
-    state = FANSI_read_next(state, i);
+    state = FANSI_read_next(state, i, 1);
     warn_max = warn_max < state.warn ? state.warn : warn_max;
     pos_new = type ? state.pos_width : state.pos_raw;
 
@@ -436,7 +436,7 @@ SEXP FANSI_state_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm) {
       x, warn, term_cap, R_true, R_true, R_zero, R_one, i
     );
     while(*(state.string + state.pos_byte)) {
-      state = FANSI_read_next(state, i);
+      state = FANSI_read_next(state, i, 1);
     }
     int len = 0;
     char * buff_track = NULL;

@@ -148,7 +148,7 @@ SEXP FANSI_tabs_as_spaces(
           // consume tab and advance
 
           state.warn = 0;
-          state = FANSI_read_next(state, i);
+          state = FANSI_read_next(state, i, 1);
           state.warn = warn_old;
           cur_chr = state.string[state.pos_byte];
           state = FANSI_inc_width(state, extra_spaces, i);
@@ -163,7 +163,7 @@ SEXP FANSI_tabs_as_spaces(
           }
           if(!cur_chr) *buff_track = 0;
         } else {
-          state = FANSI_read_next(state, i);
+          state = FANSI_read_next(state, i, 1);
         }
         if(!cur_chr) break;
       }
