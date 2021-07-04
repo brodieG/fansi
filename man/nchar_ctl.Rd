@@ -60,6 +60,8 @@ specially. See the "_ctl vs. _sgr" section for details.
 for newlines and the actual ESC (0x1B) character.
 \item "sgr": ANSI CSI SGR sequences.
 \item "csi": all non-SGR ANSI CSI sequences.
+\item "url": OSC Encoded URLs
+\item "osc": OSC sequences.
 \item "esc": all other escape sequences.
 \item "all": all of the above, except when used in combination with any of the
 above, in which case it means "all but".
@@ -98,14 +100,14 @@ the \code{keepNA} parameter is ignored for R < 3.2.2.
 The \verb{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
 by default.  Special treatment is context dependent, and may include
 detecting them and/or computing their display/character width as zero.  For
-the SGR subset of the ANSI CSI sequences, \code{fansi} will also parse, interpret,
-and reapply the text styles they encode if needed.  You can modify whether a
-\emph{Control Sequence} is treated specially with the \code{ctl} parameter.  You can
-exclude a type of \emph{Control Sequence} from special treatment by combining
-"all" with that type of sequence (e.g. \code{ctl=c("all", "nl")} for special
-treatment of all \emph{Control Sequences} \strong{but} newlines).  The \verb{*_sgr} versions
-only treat ANSI CSI SGR sequences specially, and are equivalent to the
-\verb{*_ctl} versions with the \code{ctl} parameter set to "sgr".
+the SGR subset of the ANSI CSI sequences, and OSC-encoded URLs, \code{fansi} will
+also parse, interpret, and reapply the sequences as needed.  You can modify
+whether a \emph{Control Sequence} is treated specially with the \code{ctl} parameter.
+You can exclude a type of \emph{Control Sequence} from special treatment by
+combining "all" with that type of sequence (e.g. \code{ctl=c("all", "nl")} for
+special treatment of all \emph{Control Sequences} \strong{but} newlines).  The \verb{*_sgr}
+versions only treat ANSI CSI SGR sequences specially, and are equivalent to
+the \verb{*_ctl} versions with the \code{ctl} parameter set to \code{c("sgr", "url")}.
 }
 
 \examples{
