@@ -688,9 +688,10 @@ static struct FANSI_state read_esc(struct FANSI_state state, int seq) {
         // Other OSC
         osc_bytes = parse_osc(state.string + state.pos_byte);
         if(!osc_bytes) err_code = 5;      // Illegal OSC
+        else err_code = 4;                // Not URL
       } else {
         // not URL and don't support OSC
-        err_code = 4;
+        err_code = 4;                     // Not URL
       }
       if(osc_bytes) {
         esc_recognized = 1;
