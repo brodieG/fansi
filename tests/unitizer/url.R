@@ -118,4 +118,18 @@ unitizer_sect('substr', {
   substr_ctl(u0, 6, 9, terminate=FALSE)
   substr_ctl("hello world", 3, 8, carry="\033]8;;a.b\033\\")
 })
+unitizer_sect('tohtml', {
+  to_html(u0)
+
+  to_html("A\033[44mB\033]8;;x.y\033\\C\033[33m\033]8;;\033\\D")
+  to_html("A\033[44mB\033]8;;x.y\033\\C\033[33m\033]8;;w.z\033\\D")
+
+  u23 <- c(
+    "A \033[44mB \033]8;;x.y\033\\C \033[33m\033]8;;w.z\033\\D",
+    "E \033]8;;www.z.com\033\\F \033[4mG",
+    "H \033]8;;\033\\\033[48;5;67m I"
+  )
+  to_html(u23)
+  to_html(strwrap_ctl(u23, 4))
+})
 

@@ -2,7 +2,7 @@
 % Please edit documentation in R/tohtml.R
 \name{sgr_to_html}
 \alias{sgr_to_html}
-\title{Convert ANSI CSI SGR Escape Sequence to HTML Equivalents}
+\title{Convert \emph{Control Sequences} to HTML Equivalents}
 \usage{
 sgr_to_html(
   x,
@@ -77,106 +77,9 @@ sequences removed and any basic ANSI CSI SGR escape sequences applied via
 SPAN HTML tags.
 }
 \description{
-Interprets CSI SGR sequences and produces a string with equivalent
-formats applied with SPAN elements and inline CSS styles.  Optionally for
-colors, the SPAN elements may be assigned classes instead of inline styles,
-in which case it is the user's responsibility to provide a style sheet.
-Input that contains special HTML characters ("<", ">", "&", "'", and "\""),
-particularly the first two, should be escaped with \code{\link{html_esc}}.
+This function is a wrapper around \code{\link{to_html}} and is kept around for legacy
+reasons.  When we added capabilities for handling OSC-anchored URLs, the
+\code{sgr_} part of the name became an incomplete description of what the function
+does.
 }
-\details{
-Only "observable" styles are translated.  These include colors,
-background-colors, and basic styles (CSI SGR codes 1-6, 8, 9).  Style 7, the
-"inverse" style, is implemented by explicitly switching foreground and
-background colors, if there are any.  Styles 5-6 (blink) are rendered as
-"text-decoration" but likely will do nothing in the browser.  Style 8
-(conceal) sets the color to transparent.
-
-Each element of the input vector is translated into a stand-alone valid HTML
-string.  In particular, any open SPAN tags are closed at the end of an
-element and re-opened on the subsequent element with the same style.  This
-allows safe combination of HTML translated strings, for example by
-\code{\link{paste}}ing them together.  The trade-off is that there may be redundant
-HTML produced.  To reduce redundancy you can first collapse the input vector
-into one string, being mindful that very large strings may exceed maximum
-string size when converted to HTML.
-
-Active SPAN tags are closed and new ones open anytime the "observable"
-state changes.  \code{sgr_to_html} never produces nested SPAN tags, even if at
-times that might produce more compact output.  This is because ANSI CSI SGR
-is a state based formatting system and is not constrained by the semantics of
-a nested one like HTML, so dealing with the complexity of nesting when it
-cannot reproduce all inputs anyway does not seem worthwhile.
-}
-\note{
-Non-ASCII strings are converted to and returned in UTF-8 encoding.
-
-Up to version 0.5.0, \code{html_esc} implicitly operated as if
-\code{carry = TRUE}.  This was different from other functions and was
-changed to be consistent with them after that version.
-
-\code{sgr_to_html} always terminates as not doing so produces
-invalid HTML.  If you wish for the last active SPAN to bleed into
-subsequent text you may do so with e.g. \code{sub("</span>$", "", x)}.
-Additionally, \code{sgr_to_html} uses \code{carry = TRUE} by default, unlike other
-\code{fansi} functions that share that parameter.
-}
-\examples{
-sgr_to_html("hello\033[31;42;1mworld\033[m")
-sgr_to_html("hello\033[31;42;1mworld\033[m", classes=TRUE)
-
-## Input contains HTML special chars
-x <- "<hello \033[42m'there' \033[34m &amp;\033[m \"moon\"!"
-writeLines(x)
-\dontrun{
-in_html(
-  c(
-    sgr_to_html(html_esc(x)),  # Good
-    sgr_to_html(x)             # Bad!
-) )
-}
-## Generate some class names for basic colors
-classes <- expand.grid(
-  "myclass",
-  c("fg", "bg"),
-  c("black", "red", "green", "yellow", "blue", "magenta", "cyan", "white")
-)
-classes  # order is important!
-classes <- do.call(paste, c(classes, sep="-"))
-## We only provide 16 classes, so Only basic colors are
-## mapped to classes; others styled inline.
-sgr_to_html(
-  "\033[94mhello\033[m \033[31;42;1mworld\033[m",
-  classes=classes
-)
-## Create a whole web page with a style sheet for 256 colors and
-## the colors shown in a table.
-class.256 <- do.call(paste, c(expand.grid(c("fg", "bg"), 0:255), sep="-"))
-sgr.256 <- sgr_256()     # A demo of all 256 colors
-writeLines(sgr.256[1:8]) # SGR formatting
-
-## Convert to HTML using classes instead of inline styles:
-html.256 <- sgr_to_html(sgr.256, classes=class.256)
-writeLines(html.256[1])  # No inline colors
-
-## Generate different style sheets.  See `?make_styles` for details.
-default <- make_styles(class.256)
-mix <- matrix(c(.6,.2,.2, .2,.6,.2, .2,.2,.6), 3)
-desaturated <- make_styles(class.256, mix)
-writeLines(default[1:4])
-writeLines(desaturated[1:4])
-
-## Embed in HTML page and diplay; only CSS changing
-\dontrun{
-in_html(html.256)                  # no CSS
-in_html(html.256, css=default)     # default CSS
-in_html(html.256, css=desaturated) # desaturated CSS
-}
-}
-\seealso{
-Other HTML functions: 
-\code{\link{html_esc}()},
-\code{\link{in_html}()},
-\code{\link{make_styles}()}
-}
-\concept{HTML functions}
+\keyword{internal}

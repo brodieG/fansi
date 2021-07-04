@@ -4,16 +4,7 @@ These are internal developer notes.
 
 ## Todo
 
-* Change `unhandled_ctl` to point out specific problem sequence (for when there
-  are many in a row?).  As simple as adding a mode to `read_next` that doesn't
-  read through adjacent control sequences.
-
-* Think through what should happen when we request to write an empty URL.
-  Problem is that empty URLs genuinely need to be written to close out open
-  anchors, but we don't want to be writing out empty anchors when e.g. we're
-  querying state with `state_as_char`.  Basically empty anchors should only be
-  written out if prior anchor was not empty.  But to do that we need the prior
-  URL, which means we have to pass the whole state object.
+* Deprecate the `_sgr` stuff.
 
 * Probably for 1.1, do normalize as part of first pass, will require rewriting
   every encountered SGR.
@@ -76,6 +67,20 @@ These are internal developer notes.
   check for unescaped '<', '>', and '&'?
 
 ## Done
+
+* Think through what should happen when we request to write an empty URL.
+  Problem is that empty URLs genuinely need to be written to close out open
+  anchors, but we don't want to be writing out empty anchors when e.g. we're
+  querying state with `state_as_char`.  Basically empty anchors should only be
+  written out if prior anchor was not empty.  But to do that we need the prior
+  URL, which means we have to pass the whole state object.
+
+We just hacked this by adding a special case to `state_as_chr`.  It's possible
+there are lurking bugs because of this.
+
+* Change `unhandled_ctl` to point out specific problem sequence (for when there
+  are many in a row?).  As simple as adding a mode to `read_next` that doesn't
+  read through adjacent control sequences.
 
 * Change OSC-encoded to OSC-anchored.
 
@@ -213,6 +218,11 @@ Currently takes STRSXP.  A little awkward though, but we did it that way because
 we had the index.
 
 ## OSC / URL Parsing
+
+If we have both spans and anchors going, we need to:
+
+* Always open/close both anytime state of either changes if state was active.
+* Always open link first span second? (and close LIFO?).
 
 The biggest remaining issue here is that it makes most sense to combine url and
 sgr into the `_sgr` functions, but if we do, we're committed.  We will not be

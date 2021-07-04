@@ -254,9 +254,8 @@ static char * oe_sgr_html_err = "Expanding SGR sequences to HTML";
  *
  * DANGER: this is a 'W' function, see 'src/write.c' for details.
  */
-static int W_sgr_as_html(
-  struct FANSI_sgr sgr,
-  struct FANSI_sgr sgr_prev,
+static int W_state_as_html(
+  struct FANSI_state state,
   char ** buff,
   SEXP color_classes, R_xlen_t i,
   int len
@@ -268,22 +267,34 @@ static int W_sgr_as_html(
 
   // Not all basic styles are html styles (e.g. invert), so sgr only changes
   // on invert when current or previous also has a color style
-  int has_cur_sgr = sgr_has_style_html(sgr);
-  int has_prev_sgr = sgr_has_style_html(sgr_prev);
-  int sgr_change = sgr_comp_html(sgr, sgr_prev);
+  int has_cur_sgr = sgr_has_style_html(state.sgr);
+  int has_prev_sgr = sgr_has_style_html(state.sgr_prev);
+  int sgr_change = sgr_comp_html(state.sgr, state.sgr_prev);
+
+  int has_cur_url = FANSI_url_active(state.url);
+  int has_prev_url = FANSI_url_active(state.url_prev);
+  int url_change = FANSI_url_comp(state.url, state.url_prev);
 
   const char * buff_start = *buff;
   int len0 = len;
   const char * err_msg = oe_sgr_html_err;
+  struct FANSI_sgr sgr = state.sgr;
 
   // FANSI_W_COPY requires variables len, i, and err_msg
 
-  if(sgr_change) {
-    if(!has_cur_sgr) len += FANSI_W_COPY(buff, "</span>");
-    else {
-      if (!has_prev_sgr)  len += FANSI_W_COPY(buff, "<span");
-      else len += FANSI_W_COPY(buff, "</span><span");
+  if(sgr_change || url_change) {
+    // Close previous
+    if(has_prev_sgr) len += FANSI_W_COPY(buff, "</span>");
+    if(has_prev_url) len += FANSI_W_COPY(buff, "</a>");
 
+    if(has_cur_url) {
+      // users responsibility to escape html special chars
+      len += FANSI_W_COPY(buff, "<a href='");
+      len += FANSI_W_MCOPY(buff, state.url.url.val, state.url.url.len);
+      len += FANSI_W_COPY(buff, "'>");
+    }
+    if(has_cur_sgr) {
+       len += FANSI_W_COPY(buff, "<span");
       // Styles
       int invert = sgr.style & (1U << 7U);
       int color = invert ? sgr.bg_color : sgr.color;
@@ -380,9 +391,6 @@ SEXP FANSI_esc_to_html(
   state_prev = state_init = state;
   UNPROTECT(1);
 
-  const char * span_end = "</span>";
-  int span_end_len = (int) strlen(span_end);
-
   SEXP res = x;
   // Reserve spot on protection stack
   PROTECT_INDEX ipx;
@@ -399,7 +407,7 @@ SEXP FANSI_esc_to_html(
     // Reset position info and string; rest of state info is preserved from
     // prior line so that the state can be continued on new line.
 
-    if(do_carry) state = FANSI_reset_pos(state_prev);
+    if(do_carry) state = state_prev;
     else state = state_init;
 
     state.string = string;
@@ -413,7 +421,8 @@ SEXP FANSI_esc_to_html(
     // an ESC from a prior element even if they have no ESCs.
     int has_esc = 0;
     int has_state = sgr_has_style_html(state.sgr);
-    int trail_span = 0;
+    int trail_span, trail_a;
+    trail_span = trail_a = 0;
 
     // We cheat by only using FANSI_read_next to read escape sequences as we
     // don't care about display width, etc.  Normally we would _read_next over
@@ -440,16 +449,21 @@ SEXP FANSI_esc_to_html(
       }
       // Leftover from prior element (only if can't be merged with new)
 
-      if(*string && *string != 0x1b && sgr_has_style_html(state.sgr)) {
-        len += W_sgr_as_html(
-          state.sgr, state_prev.sgr, &buff_track, color_classes, i, len
-        );
+      if(
+        *string && *string != 0x1b &&
+        (sgr_has_style_html(state.sgr) || FANSI_url_active(state.url))
+      ) {
+        // dirty hack, state.sgr_prev is not exaclty right at beginning
+        state.sgr_prev = state_prev.sgr;
+        state.url_prev = state_prev.url;
+        len += W_state_as_html(state, &buff_track, color_classes, i, len);
         state_prev = state;
       }
       // New in this element
       while(1) {
         const char * string_prev = string;
         trail_span = sgr_has_style_html(state_prev.sgr);
+        trail_a = FANSI_url_active(state_prev.url);
         string = strchr(string, 0x1b);
         if(!string) string = state.string + bytes_init;
         else {
@@ -465,17 +479,20 @@ SEXP FANSI_esc_to_html(
         if(*string) {
           state = FANSI_read_next(state, i, 1);
           string = state.string + state.pos_byte;
-          if(*string) {
-            len += W_sgr_as_html(
-              state.sgr, state_prev.sgr, &buff_track, color_classes, i, len
-            );
-          }
+          // dirty hack, state.sgr_prev is not exaclty right at beginning
+          state.sgr_prev = state_prev.sgr;
+          state.url_prev = state_prev.url;
+          if(*string)
+            len += W_state_as_html(state, &buff_track, color_classes, i, len);
+
           state_prev = state;
-          has_state |= sgr_has_style_html(state.sgr);
+          has_state |=
+            sgr_has_style_html(state.sgr) || FANSI_url_active(state.url);
           if(!*string) break; // nothing after state, so done
         } else break;
       }
-      if(trail_span) len += FANSI_W_MCOPY(&buff_track, span_end, span_end_len);
+      if(trail_span) len += FANSI_W_COPY(&buff_track, "</span>");
+      if(trail_a) len += FANSI_W_COPY(&buff_track, "</a>");
 
       if(buff_track) {  // only ever true if k > 0
         // Final check that we're not out of sync (recall buff.len includes NULL)
