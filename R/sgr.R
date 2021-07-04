@@ -14,13 +14,13 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-#' Strip ANSI Control Sequences
+#' Strip Control Sequences
 #'
 #' Removes _Control Sequences_ from strings.  By default it will
-#' strip all known _Control Sequences_, including ANSI CSI
-#' sequences, two character sequences starting with ESC, and all C0 control
-#' characters, including newlines.  You can fine tune this behavior with the
-#' `ctl` parameter.  `strip_sgr` only strips ANSI CSI SGR sequences.
+#' strip all known _Control Sequences_, including CSI/OSC sequences, two
+#' character sequences starting with ESC, and all C0 control characters,
+#' including newlines.  You can fine tune this behavior with the `ctl`
+#' parameter.  `strip_sgr` only strips CSI SGR sequences.
 #'
 #' The `ctl` value contains the names of **non-overlapping** subsets of the
 #' known _Control Sequences_ (e.g. "csi" does not contain "sgr", and "c0" does
@@ -82,8 +82,8 @@ strip_sgr <- function(x, warn=getOption('fansi.warn')) {
 #' Checks for Presence of Control Sequences
 #'
 #' `has_ctl` checks for any _Control Sequence_, whereas `has_sgr` checks only
-#' for ANSI CSI SGR sequences.  You can check for different types of sequences
-#' with the `ctl` parameter.
+#' for CSI SGR and OSC-anchored URL sequences.  You can check for different types
+#' of sequences with the `ctl` parameter.
 #'
 #' @export
 #' @seealso [`?fansi`][fansi] for details on how _Control Sequences_ are
@@ -116,18 +116,19 @@ has_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), which) {
 #' @rdname has_ctl
 
 has_sgr <- function(x, warn=getOption('fansi.warn'))
-  has_ctl(x, ctl="sgr", warn=warn)
+  has_ctl(x, ctl=c("sgr", "url"), warn=warn)
 
 #' Utilities for Managing SGR In Strings
 #'
-#' `sgr_at_end` read input strings computing the accumulated SGR codes until the
-#' end of the string and outputs the active SGR code at the end of it.
-#' `close_sgr` produces the ANSI CSI SGR sequence that closes active SGR codes
-#' at the end of the input string.  If `normalize = FALSE` (default), it will
-#' issue the global closing SGR "ESC[0m", so it is only interesting if
-#' `normalize = TRUE`.  Unlike `sgr_at_end` and other functions `close_sgr` has
-#' no concept of `carry`: it will only close SGR codes activated within an
-#' element that are still active at the end of that element.
+#' `state_at_end` read input strings computing the accumulated SGR and
+#' OSC-anchored URLs until the end of the string and outputs the active state at
+#' the end of it.  `close_state` produces the sequence that closes active SGR
+#' and OSC-anchored URLs at the end of the input string.  If `normalize = FALSE`
+#' (default), it will close SGRs with the reset code "ESC[0m", so it is only
+#' interesting for closing SGRs if `normalize = TRUE`.  Unlike `state_at_end`
+#' and other functions `close_state` has no concept of `carry`: it will only
+#' close state activate within an element that is still active at the end of
+#' that element.
 #'
 #' @export
 #' @inheritParams substr_ctl
@@ -135,12 +136,12 @@ has_sgr <- function(x, warn=getOption('fansi.warn'))
 #' @return character vector same length as `x`.
 #' @examples
 #' x <- c("\033[44mhello", "\033[33mworld")
-#' sgr_at_end(x)
-#' sgr_at_end(x, carry=TRUE)
-#' (close <- close_sgr(sgr_at_end(x, carry=TRUE), normalize=TRUE))
+#' state_at_end(x)
+#' state_at_end(x, carry=TRUE)
+#' (close <- close_state(state_at_end(x, carry=TRUE), normalize=TRUE))
 #' writeLines(paste0(x, close, " no style"))
 
-sgr_at_end <- function(
+state_at_end <- function(
   x,
   warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap'),
@@ -149,7 +150,7 @@ sgr_at_end <- function(
 ) {
   VAL_IN_ENV(x=x, ctl='sgr', warn=warn, term.cap=term.cap, carry=carry)
   .Call(
-    FANSI_sgr_at_end,
+    FANSI_state_at_end,
     x,
     0L,             # character type
     warn,
@@ -163,15 +164,15 @@ sgr_at_end <- function(
 # Given an SGR, compute the sequence that closes it
 
 #' @export
-#' @rdname sgr_at_end
+#' @rdname state_at_end
 
-close_sgr <- function(
+close_state <- function(
   x,
   warn=getOption('fansi.warn'),
   normalize=getOption('fansi.normalize', FALSE)
 ) {
   VAL_IN_ENV(x=x, warn=warn, normalize=normalize)
-  .Call(FANSI_close_sgr, x, warn, seq_along(VALID.TERM.CAP), normalize)
+  .Call(FANSI_close_state, x, warn, seq_along(VALID.TERM.CAP), normalize)
 }
 
 

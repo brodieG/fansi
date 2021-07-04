@@ -36,7 +36,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   #define FANSI_CTL_SGR 4
   #define FANSI_CTL_CSI 8
   #define FANSI_CTL_ESC 16
-  #define FANSI_CTL_ALL 31 // 1 + 2 + 4 + 8 + 16 == 2^0 + 2^1 + 2^2 + 2^3 + 2^4
+  #define FANSI_CTL_URL 32
+  #define FANSI_CTL_OSC 64
+
+  #define FANSI_CTL_ALL 127 // 1 + 2 + 4 + 8 + 16 == 2^0 + 2^1 + 2^2 + 2^3 + 2^4
 
   #define FANSI_STYLE_MAX 12 // 12 is double underline
 
@@ -112,6 +115,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   };
   /*
    * Encode Active SGR
+   *
+   * Many of the fields here could be made smaller.
    */
   struct FANSI_sgr {
     /*
@@ -209,19 +214,36 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
     int font;
   };
-
+  // val should always be initialized and never NULL.
+  struct FANSI_string {
+    const char * val;
+    int len;
+  };
   /*
-   * Captures the ANSI state at any particular position in a string.  Note this
-   * is only designed to capture SGR CSI codes (i.e. those of format
-   * "ESC[n;n;n;m") where "n" is a number.  This is a small subset of the
-   * possible ANSI escape codes.
+   * OSC derived URL info.
    *
-   * Note that the struct fields are ordered by size
+   * Failed url parses designated by bytes == 0.
+   */
+  struct FANSI_url {
+    struct FANSI_string url;
+    struct FANSI_string params;  // unparsed param string
+    struct FANSI_string id;      // parsed id
+    int bytes;  // bytes of the entire OSC, excluding the initial ESC
+  };
+  /*
+   * Captures the SGR and OSC URL state at any particular position in a string.
+   *
+   * This object has gotten completely out of hand with how large it is.  We
+   * could change many of the fields to char, or even bitfields and potentially
+   * create smaller structs to passs to-and-fro functions instead of this
+   * monster.
    */
 
   struct FANSI_state {
     struct FANSI_sgr sgr;
     struct FANSI_sgr sgr_prev;
+    struct FANSI_url url;
+    struct FANSI_url url_prev;
 
     const char * string;
     /*
@@ -229,8 +251,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      */
     const char * err_msg;
     /*
-     * Position markers (all zero index), we use int because these numbers
-     * need to make it back to R which doesn't have a `size_t` type.
+     * Position markers (all zero index).
      *
      * - pos_byte: the byte in the string
      * - pos_byte_sgr_start: the starting position of the last sgr read, really
@@ -245,8 +266,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      *   characters, etc., note in this case ASCII escape sequences are treated
      *   as zero chars.  Width is computed mostly with R_nchar.
      *
-     * Actually not clear if there is a difference b/w pos_raw and pos_ansi,
-     * might need to remove one
+     * So pos_raw is essentially the character count excluding escapes.
      */
 
     int pos_ansi;
@@ -261,10 +281,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     // Are there bytes outside of 0-127
     int has_utf8;
 
-    // Info on last character
+    // Info on last element read
     int last_zwj;         // was last a Zero Width Joiner
     int last_ri;          // was last an unpaired Regional Indicator
-    int last_sgr;         // was an sgr
+    int last_special;     // was an sgr or osc url
 
     // Need to read one more character before returning from read_next, used
     // right now just to avoid splitting RI flags.
@@ -401,10 +421,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_get_int_max();
   SEXP FANSI_esc_html(SEXP x, SEXP what);
 
-  SEXP FANSI_normalize_sgr_ext(
+  SEXP FANSI_normalize_state_ext(
     SEXP x, SEXP warn, SEXP term_cap, SEXP carry
   );
-  SEXP FANSI_normalize_sgr_list_ext(
+  SEXP FANSI_normalize_state_list_ext(
     SEXP x, SEXP warn, SEXP term_cap, SEXP carry
   );
 
@@ -414,8 +434,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_check_enc_ext(SEXP x, SEXP i);
   SEXP FANSI_ctl_as_int_ext(SEXP ctl);
 
-  SEXP FANSI_sgr_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm);
-  SEXP FANSI_sgr_at_end_ext(
+  SEXP FANSI_state_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm);
+  SEXP FANSI_state_at_end_ext(
     SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry
   );
   SEXP FANSI_utf8_to_cp_ext(SEXP x);
@@ -464,9 +484,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP width, SEXP ctl, R_xlen_t i
   );
   int FANSI_sgr_active(struct FANSI_sgr sgr);
-
+  int FANSI_url_active(struct FANSI_url url);
   int FANSI_sgr_comp_color(struct FANSI_sgr target, struct FANSI_sgr current);
   struct FANSI_sgr FANSI_sgr_setdiff(struct FANSI_sgr old, struct FANSI_sgr new);
+  int FANSI_url_comp(struct FANSI_url target, struct FANSI_url current);
+
   struct FANSI_state FANSI_read_next(struct FANSI_state state, R_xlen_t i);
 
   int FANSI_add_int(int x, int y, const char * file, int line);
@@ -475,8 +497,15 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_W_sgr(
     char ** buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
   );
+  int FANSI_W_url(
+    char ** buff, struct FANSI_url url, int len, int normalize, R_xlen_t i
+  );
+
   int FANSI_W_sgr_close(
     char ** buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
+  );
+  int FANSI_W_url_close(
+    char ** buff, struct FANSI_url url, int len, R_xlen_t i
   );
   int FANSI_W_copy(
     char ** buff, const char * tmp, int len, R_xlen_t i,
@@ -513,10 +542,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   void FANSI_check_append_err(const char * msg, R_xlen_t i);
 
   void FANSI_val_args(SEXP x, SEXP norm, SEXP carry);
-  char * FANSI_sgr_as_chr(
-    struct FANSI_buff *buff, struct FANSI_sgr sgr, int normalize, R_xlen_t i
+  char * FANSI_state_as_chr(
+    struct FANSI_buff *buff, struct FANSI_state state, int normalize, R_xlen_t i
   );
-  struct FANSI_sgr FANSI_carry_init(
+  struct FANSI_state FANSI_carry_init(
     SEXP carry, SEXP warn, SEXP term_cap, SEXP ctl
   );
 

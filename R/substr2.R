@@ -52,14 +52,14 @@
 #' The `*_ctl` versions of the functions treat all _Control Sequences_ specially
 #' by default.  Special treatment is context dependent, and may include
 #' detecting them and/or computing their display/character width as zero.  For
-#' the SGR subset of the ANSI CSI sequences, `fansi` will also parse, interpret,
-#' and reapply the text styles they encode if needed.  You can modify whether a
-#' _Control Sequence_ is treated specially with the `ctl` parameter.  You can
-#' exclude a type of _Control Sequence_ from special treatment by combining
-#' "all" with that type of sequence (e.g. `ctl=c("all", "nl")` for special
-#' treatment of all _Control Sequences_ **but** newlines).  The `*_sgr` versions
-#' only treat ANSI CSI SGR sequences specially, and are equivalent to the
-#' `*_ctl` versions with the `ctl` parameter set to "sgr".
+#' the SGR subset of the ANSI CSI sequences, and OSC-anchored URLs, `fansi` will
+#' also parse, interpret, and reapply the sequences as needed.  You can modify
+#' whether a _Control Sequence_ is treated specially with the `ctl` parameter.
+#' You can exclude a type of _Control Sequence_ from special treatment by
+#' combining "all" with that type of sequence (e.g. `ctl=c("all", "nl")` for
+#' special treatment of all _Control Sequences_ **but** newlines).  The `*_sgr`
+#' versions only treat ANSI CSI SGR sequences specially, and are equivalent to
+#' the `*_ctl` versions with the `ctl` parameter set to `c("sgr", "url")`.
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work properly in R < 3.2.2.
@@ -68,9 +68,9 @@
 #' @export
 #' @seealso [`?fansi`][fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results,
-#'   [`normalize_sgr`] for more details on what the `normalize` parameter does,
-#'   [`sgr_at_end`] to compute active SGR at the end of strings, [`close_sgr`]
-#'   to compute the SGR required to close active SGR.
+#'   [`normalize_state`] for more details on what the `normalize` parameter does,
+#'   [`state_at_end`] to compute active state at the end of strings, [`close_state`]
+#'   to compute the sequence required to close active state.
 #' @param x a character vector or object that can be coerced to such.
 #' @param type character(1L) partial matching `c("chars", "width")`, although
 #'   `type="width"` only works correctly with R >= 3.2.2.  See
@@ -99,6 +99,8 @@
 #'     for newlines and the actual ESC (0x1B) character.
 #'   * "sgr": ANSI CSI SGR sequences.
 #'   * "csi": all non-SGR ANSI CSI sequences.
+#'   * "url": OSC Encoded URLs
+#'   * "osc": OSC sequences.
 #'   * "esc": all other escape sequences.
 #'   * "all": all of the above, except when used in combination with any of the
 #'     above, in which case it means "all but".
@@ -123,15 +125,15 @@
 #' @param carry TRUE, FALSE, or a scalar string, controls whether active SGR
 #'   present at the end of an input vector element is carried into the next
 #'   vector element.  If FALSE each vector element is interpreted as if there
-#'   were no active SGR present when they begin.  If character, then the active
-#'   SGR at the end of the `carry` string is carried into the first element of
+#'   were no active state when they begin.  If character, then the active
+#'   state at the end of the `carry` string is carried into the first element of
 #'   `x`.  For every function except [`sgr_to_html`] this argument defaults to
-#'   FALSE.  See the "SGR Interactions" section of [`?fansi`][fansi] for
+#'   FALSE.  See the "State Interactions" section of [`?fansi`][fansi] for
 #'   details.
 #' @param terminate TRUE (default) or FALSE whether substrings should have
-#'   active SGR closed to avoid it bleeding into other strings they may be
-#'   prepended onto.  See the "SGR Interactions" section of [`?fansi`][fansi] for
-#'   details.
+#'   active state closed to avoid it bleeding into other strings they may be
+#'   prepended onto.  See the "State Interactions" section of [`?fansi`][fansi]
+#'   for details.
 #' @return a character vector of the same length and with the same attributes as
 #'   x (after possible coercion and re-encoding to UTF-8).
 #' @examples
@@ -268,7 +270,7 @@ substr2_sgr <- function(
   substr2_ctl(
     x=x, start=start, stop=stop, type=type, round=round,
     tabs.as.spaces=tabs.as.spaces,
-    tab.stops=tab.stops, warn=warn, term.cap=term.cap, ctl='sgr',
+    tab.stops=tab.stops, warn=warn, term.cap=term.cap, ctl=c('sgr', 'url'),
     normalize=normalize,
     carry=carry, terminate=terminate
   )
@@ -299,7 +301,7 @@ substr_ctl_internal <- function(
 
   if(!is.na(carry)) {
     ends <- .Call(
-      FANSI_sgr_at_end, x, warn, term.cap.int, ctl.int, normalize, carry
+      FANSI_state_at_end, x, warn, term.cap.int, ctl.int, normalize, carry
     )
     x <- paste0(c(carry, ends[-length(ends)]), x)
   }
@@ -361,17 +363,17 @@ substr_ctl_internal <- function(
     # Finalize real substrings
     full <- !empty.res & !empty.req
     if(any(full)) {
-      # if there is any ANSI CSI at end then add a terminating CSI, warnings
+      # if there is active state at end then add a terminating CSI, warnings
       # should have been issued on first read
       end.csi <-
-        if(terminate) close_sgr(stop.tag[full], warn=FALSE, normalize)
+        if(terminate) close_state(stop.tag[full], warn=FALSE, normalize)
         else ""
 
       substring <- substr(x.elems[full], start.ansi[full], stop.ansi[full])
       tmp <- paste0(start.tag[full], substring)
       term.cap <- VALID.TERM.CAP[term.cap.int]
       res[elems[full]] <- paste0(
-        if(normalize) normalize_sgr(tmp, warn=FALSE, term.cap=term.cap)
+        if(normalize) normalize_state(tmp, warn=FALSE, term.cap=term.cap)
         else tmp,
         end.csi
   ) } }

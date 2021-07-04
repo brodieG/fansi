@@ -4,6 +4,8 @@
 
 ### Features
 
+* [#58](https://github.com/brodieG/fansi/issues/58) Add handling of OSC-anchored
+  URL.
 * [#66](https://github.com/brodieG/fansi/issues/66) Improved handling of
   graphemes in `type="width"` mode.  Flags and well formed emoji sequences
   should have widths computed correctly in most common use cases.

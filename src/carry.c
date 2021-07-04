@@ -28,7 +28,7 @@ static struct FANSI_state state_at_end(
   return state;
 }
 
-SEXP FANSI_sgr_at_end_ext(
+SEXP FANSI_state_at_end_ext(
   SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry
 ) {
   FANSI_val_args(x, norm, carry);
@@ -67,7 +67,7 @@ SEXP FANSI_sgr_at_end_ext(
     if(do_carry) state.sgr = state_prev.sgr;
 
     state = state_at_end(state, i);
-    char * state_chr = FANSI_sgr_as_chr(&buff, state.sgr, normalize, i);
+    char * state_chr = FANSI_state_as_chr(&buff, state, normalize, i);
 
     SEXP reschr = PROTECT(
       FANSI_mkChar(state_chr, state_chr + strlen(state_chr), CE_NATIVE, i)
@@ -81,7 +81,7 @@ SEXP FANSI_sgr_at_end_ext(
   return res;
 }
 
-struct FANSI_sgr FANSI_carry_init(
+struct FANSI_state FANSI_carry_init(
   SEXP carry, SEXP warn, SEXP term_cap, SEXP ctl
 ) {
   int prt = 0;
@@ -103,7 +103,7 @@ struct FANSI_sgr FANSI_carry_init(
   );
   state_carry = state_at_end(state_carry, (R_xlen_t) 0);
   UNPROTECT(prt);
-  return state_carry.sgr;
+  return state_carry;
 }
 
 

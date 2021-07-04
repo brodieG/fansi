@@ -36,6 +36,13 @@
  * should also accept an 'int len' parameter that measures how many bytes have
  * (or will be) written by other functions.
  *
+ *   vvvvvvvv
+ * !> DANGER <!
+ *   ^^^^^^^^
+ *
+ * Utmost care must be taken in ensuring the **only** parameter changing between
+ * the measure and write runs is the write buffer.
+ *
  * Here is an example implementation that uses a loop to iterate between measure
  * and write mode.  Not all uses of write functions are in this form.
  *
@@ -67,10 +74,6 @@
  *
  * Writing functions move the buffer pointer to point to the byte after the last
  * non-NULL byte they've written (generally this will be a NULL).
- *
- *   vvvvvvvv
- * !> DANGER <!
- *   ^^^^^^^^
  *
  * This makes it simpler to code measure/write as a two iteration loop that uses
  * the same code for measuring and writing, except for allocating the buffer.
@@ -485,6 +488,17 @@ int FANSI_W_sgr_close(
   }
   return len - len0;
 }
+/*
+ * End Active URL
+ */
+int FANSI_W_url_close(
+  char ** buff, struct FANSI_url url, int len, R_xlen_t i
+) {
+  int len0 = len;
+  const char * err_msg = "Generating URL end";
+  if(FANSI_url_active(url)) len += FANSI_W_COPY(buff, "\033]8;;\033\\");
+  return len - len0;
+}
 
 /*
  * Helper to make an SGR token, possibly full SGR if in normalize mode
@@ -663,3 +677,34 @@ int FANSI_W_sgr(
   else if(*buff) **buff = 0;  // for debugging, buff always should have 1 byte
   return len - len0;
 }
+/*
+ * Output an URL state as a string.
+ *
+ * Set buff to NULL to get size instead of writing.
+ *
+ * Return how many needed / written bytes.
+ */
+int FANSI_W_url(
+  char ** buff, struct FANSI_url url, int len, int normalize, R_xlen_t i
+) {
+  /****************************************************\
+  | IMPORTANT:                                         |
+  | KEEP THIS ALIGNED WITH state_as_html               |
+  | See _W_sgr                                         |
+  \****************************************************/
+
+  int len0 = len;
+  const char * err_msg = "Writing URL"; // for FANSI_W_M?COPY
+  len += FANSI_W_COPY(buff, "\033]8;");
+  if(normalize) {
+    if(url.id.val)
+      len += FANSI_W_MCOPY(buff, url.id.val, url.id.len);
+  } else if(url.params.val) {
+    len += FANSI_W_MCOPY(buff, url.params.val, url.params.len);
+  }
+  len += FANSI_W_COPY(buff, ";");
+  len += FANSI_W_MCOPY(buff, url.url.val, url.url.len);
+  len += FANSI_W_COPY(buff, "\033\\");  // ST
+  return len - len0;
+}
+

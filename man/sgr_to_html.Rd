@@ -65,10 +65,10 @@ other 8-bit colors are mapped.
 \item{carry}{TRUE, FALSE, or a scalar string, controls whether active SGR
 present at the end of an input vector element is carried into the next
 vector element.  If FALSE each vector element is interpreted as if there
-were no active SGR present when they begin.  If character, then the active
-SGR at the end of the \code{carry} string is carried into the first element of
+were no active state when they begin.  If character, then the active
+state at the end of the \code{carry} string is carried into the first element of
 \code{x}.  For every function except \code{\link{sgr_to_html}} this argument defaults to
-FALSE.  See the "SGR Interactions" section of \code{\link[=fansi]{?fansi}} for
+FALSE.  See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for
 details.}
 }
 \value{

@@ -1,52 +1,52 @@
 library(fansi)
 
 unitizer_sect("no expansion", {
-  normalize_sgr("A\033[31mB")
-  normalize_sgr("\033[31mAB")
-  normalize_sgr("AB\033[31m")
-  normalize_sgr(c("A\033[31mB", "AB"))
-  normalize_sgr(c("\033[31mAB", "AB"))
-  normalize_sgr(c("AB\033[31m", "AB"))
+  normalize_state("A\033[31mB")
+  normalize_state("\033[31mAB")
+  normalize_state("AB\033[31m")
+  normalize_state(c("A\033[31mB", "AB"))
+  normalize_state(c("\033[31mAB", "AB"))
+  normalize_state(c("AB\033[31m", "AB"))
 })
 unitizer_sect("simple expansion", {
-  normalize_sgr(c("A\033[31;42mB", "AB"))
-  normalize_sgr(c("\033[31;42mAB", "AB"))
-  normalize_sgr(c("AB\033[31;42m", "AB"))
+  normalize_state(c("A\033[31;42mB", "AB"))
+  normalize_state(c("\033[31;42mAB", "AB"))
+  normalize_state(c("AB\033[31;42m", "AB"))
 
-  normalize_sgr(c("A\033[31;42mB", "A\033[39;4mB"))
-  normalize_sgr(c("A\033[31;42mB", "\033[39;4mAB"))
-  normalize_sgr(c("AB\033[31;42m", "A\033[39;4mB"))
-  normalize_sgr(c("AB\033[31;42m", "A\033[0;4mB"))
-  normalize_sgr(c("AB\033[31;42m", "AB\033[0;4m"))
-  normalize_sgr(c("AB\033[31;42m", "\033[0;4mAB"))
+  normalize_state(c("A\033[31;42mB", "A\033[39;4mB"))
+  normalize_state(c("A\033[31;42mB", "\033[39;4mAB"))
+  normalize_state(c("AB\033[31;42m", "A\033[39;4mB"))
+  normalize_state(c("AB\033[31;42m", "A\033[0;4mB"))
+  normalize_state(c("AB\033[31;42m", "AB\033[0;4m"))
+  normalize_state(c("AB\033[31;42m", "\033[0;4mAB"))
 })
 unitizer_sect("superflous codes", {
-  normalize_sgr(c("A\033[31;44;38;5;226;36mBC\033[mD"))
-  normalize_sgr(c("A\033[31;44;38;5;226;36m\033[0mBCD"))
+  normalize_state(c("A\033[31;44;38;5;226;36mBC\033[mD"))
+  normalize_state(c("A\033[31;44;38;5;226;36m\033[0mBCD"))
 })
 unitizer_sect("broad code test", {
-  normalize_sgr(c("A\033[33;44mB\033[1;3;4mCD\033[mE"))
-  normalize_sgr(
+  normalize_state(c("A\033[33;44mB\033[1;3;4mCD\033[mE"))
+  normalize_state(
     "A\033[33;44mB\033[1;2;3;4;5;6;7;8;9;11;21;26;51;52;53;60;61;62;63;64mC\033[m"
   )
   ## Are we somehow producing bad SGR (we did once)
   unhandled_ctl(
-    normalize_sgr(
+    normalize_state(
       "A\033[33;44mB\033[1;2;3;4;5;6;7;8;9;11;21;26;51;52;53;60;61;62;63;64mC\033[m"
   ) )
-  normalize_sgr(
+  normalize_state(
     "A\033[33;44mB\033[1;2;3;4;5;6;7;8;9;11;21;26;51;52;53;60;61;62;63;64m\033[mC"
   )
-  normalize_sgr(
+  normalize_state(
     "A\033[33;44mB\033[1;2;3;4;5;6;7;8;9;11;21;26;51;52;53;60;61;62;63;64mC\033[mD"
   )
 })
 unitizer_sect("errors and warnings", {
-  normalize_sgr(list(1, 2, 3))
+  normalize_state(list(1, 2, 3))
   x <- c("A\033[38;2;100;150;3;36mBC\033[mD")
-  normalize_sgr(x, term.cap=character())
+  normalize_state(x, term.cap=character())
   ## no warning
-  normalize_sgr(x, term.cap=c('bright', '256', 'truecolor'))
+  normalize_state(x, term.cap=c('bright', '256', 'truecolor'))
 })
 unitizer_sect("in functions", {
   string1 <- "hello \033[33;44mblue world"

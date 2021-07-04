@@ -119,7 +119,10 @@ static struct FANSI_prefix_dat drop_pre_indent(struct FANSI_prefix_dat dat) {
  *
  * @param state_bound the point where the boundary is
  * @param state_start the starting point of the line
- * @param normalize currently only applies to the start and end SGR.
+ * @param normalize currently doesn't do anything since the normalization
+ *   happens as a second pass.  In the future we might decide to do the
+ *   normalization in the first pass so an external call to normalize_state is
+ *   unnecessary.
  */
 
 static SEXP writeline(
@@ -130,6 +133,10 @@ static SEXP writeline(
   R_xlen_t i,
   int normalize, int terminate
 ) {
+  // turn off C level normalize for now since it is incomplete and we just do it
+  // again at the R level.
+  normalize = 0;
+
   // First thing we need to do is check whether we need to pad as that affects
   // how we treat the boundary.
 
@@ -168,10 +175,11 @@ static SEXP writeline(
   if(state_bound.pos_byte < state_start.pos_byte)
     error("Internal Error: negative line width.");  // nocov
 
-  // Check if we are in a CSI state b/c if we need extra room for
-  // the closing state tag
-  int needs_start = FANSI_sgr_active(state_start.sgr);
-  int needs_close = terminate && FANSI_sgr_active(state_bound.sgr);
+  // Do we need to open/close tags?
+  int needs_st_sgr = FANSI_sgr_active(state_start.sgr);
+  int needs_st_url = FANSI_url_active(state_start.url);
+  int needs_cl_sgr = terminate && FANSI_sgr_active(state_bound.sgr);
+  int needs_cl_url = terminate && FANSI_url_active(state_bound.url);
 
   // Measure/Write loop (see src/write.c)
   char * buff_track = NULL;
@@ -184,9 +192,13 @@ static SEXP writeline(
       buff_track = buff->buff;
       len = 0;  // reset len
     }
-    if(needs_start) {
+    if(needs_st_sgr) {
       err_msg = "Adding initial SGR";
       len += FANSI_W_sgr(&buff_track, state_start.sgr, len, normalize, i);
+    }
+    if(needs_st_url) {
+      err_msg = "Adding initial URL";
+      len += FANSI_W_url(&buff_track, state_start.url, len, normalize, i);
     }
     // Apply indent/exdent prefix/initial
     if(pre_dat.bytes) {
@@ -204,10 +216,14 @@ static SEXP writeline(
     len += FANSI_W_FILL(&buff_track, *pad_chr, to_pad);
 
     // And turn off CSI styles if needed
-    if(needs_close)
-      len += FANSI_W_sgr_close(
-        &buff_track, state_bound.sgr, len, normalize, i
-      );
+    if(needs_cl_sgr) {
+      err_msg = "Adding trailing SGR";
+      len += FANSI_W_sgr_close(&buff_track, state_bound.sgr, len, normalize, i);
+    }
+    if(needs_cl_url) {
+      err_msg = "Adding trailing URL";
+      len += FANSI_W_url_close(&buff_track, state_bound.url, len, i);
+    }
   }
   if(buff_track && (buff_track - buff->buff) != len) {
     // nocov start
@@ -254,7 +270,7 @@ static SEXP strwrap(
   R_xlen_t index,
   int normalize,
   int carry,
-  struct FANSI_sgr * sgr_carry,
+  struct FANSI_state * state_carry,
   int terminate
 ) {
   SEXP R_true = PROTECT(ScalarLogical(1));
@@ -295,7 +311,10 @@ static SEXP strwrap(
 
   // Need to keep track of where word boundaries start and end due to
   // possibility for multiple elements between words
-  if(carry) state.sgr = *sgr_carry;
+  if(carry) {
+    state.sgr = state_carry->sgr;
+    state.url = state_carry->url;
+  }
   struct FANSI_state state_start, state_bound, state_prev, state_tmp;
   state_start = state_bound = state_prev = state;
   R_xlen_t size = 0;
@@ -313,7 +332,7 @@ static SEXP strwrap(
           state_tmp = FANSI_read_next(state_bound, index);
           if(
             state_bound.string[state_bound.pos_byte] == 0x1b &&
-            !state_tmp.last_sgr
+            !state_tmp.last_special
           ) {
             state_bound.warn = state_tmp.warn;  // avoid double warnings
             break;
@@ -322,14 +341,12 @@ static SEXP strwrap(
         }
       } else if(state_bound.string[state_bound.pos_byte] == 0x1b) {
         state_tmp = FANSI_read_next(state_bound, index);
-        if(state_tmp.last_sgr) state_bound = state_tmp;
+        if(state_tmp.last_special) state_bound = state_tmp;
         else state_bound.warn = state_tmp.warn;  // avoid double warnings
       }
       has_boundary = 0;
       state_bound.pos_width = 0;
-
-      state_prev = state;
-      state = state_start = state_bound;
+      state = state_prev = state_start = state_bound;
     }
     struct FANSI_state state_next;
     int end = !state.string[state.pos_byte];
@@ -351,7 +368,7 @@ static SEXP strwrap(
     // end).
 
     int strip_trail_sgr =
-      state.last_sgr && terminate &&
+      state.last_special && terminate &&
       (!(*pad_chr) || state.pos_width == width_tar);
 
     if(
@@ -367,30 +384,42 @@ static SEXP strwrap(
         state_bound = state;
       }
       has_boundary = prev_boundary = 1;
-    } else prev_boundary = 0;
+    } else {
+      if(!has_boundary && state.pos_width == width_tar && strip_trail_sgr) {
+        state_bound = state_prev;
+      }
+      prev_boundary = 0;
+    }
 
-    // Write the line
+    // Write the line if
     if(
+      // 1. At end of string
       end ||
-      // newlines kept in strtrim mode
+      // 2. Newlines kept in strtrim mode
       (state.string[state.pos_byte] == '\n' && !first_only) ||
+      // 3. Overshot target width (but only if next char isn't zero width) and
+      //    there is a boundary or we're willing to hard break
       (
         (
           state.pos_width > width_tar ||
           (
-            // If exactly at width we need to keep going if the next char is
-            // zero width, otherwise we should write the string
             state.pos_width == width_tar &&
-            state_next.pos_width > state.pos_width
+            state_next.pos_width > state.pos_width  // check zero width for next
         ) ) &&
         (has_boundary || wrap_always)
       )
     ) {
+      // Adjust end point
       if(end || (wrap_always && !has_boundary) || first_only) {
-        if(state.pos_width > width_tar && wrap_always) {
-          // wide char overshoot
-          state = state_prev;
-          end = 0;
+        if(wrap_always && !has_boundary) {
+          if(state.pos_width > width_tar){
+            // wide char overshoot
+            state = state_prev;
+            end = 0;
+          } else if (state.pos_width == width_tar && strip_trail_sgr) {
+            // hard break
+            state = state_prev;
+          }
         } else if (end && strip_trail_sgr) {
           // trailing SGR for end of string
           state = state_prev;
@@ -415,7 +444,6 @@ static SEXP strwrap(
       ) {
         state_bound = FANSI_read_next(state_bound, index);
       }
-
       // Write the string
       res_sxp = PROTECT(
         writeline(
@@ -455,7 +483,7 @@ static SEXP strwrap(
       // position.
       if(has_boundary && para_start) {
         do state_bound = FANSI_read_next(state_bound, index);
-        while (state_bound.last_sgr);
+        while (state_bound.last_special);
       } else if(!has_boundary) {
         state_bound = state;
       }
@@ -488,7 +516,8 @@ static SEXP strwrap(
   }
 
   UNPROTECT(prt);
-  *sgr_carry = state.sgr;
+  state_carry->sgr = state.sgr;
+  state_carry->url = state.url;
   return res;
 }
 
@@ -622,7 +651,7 @@ SEXP FANSI_strwrap_ext(
 
   // Prep for carry
   int do_carry = STRING_ELT(carry, 0) != NA_STRING;
-  struct FANSI_sgr sgr_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
+  struct FANSI_state state_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
 
   // Could be a little faster avoiding this allocation if it turns out nothing
   // needs to be wrapped and we're in simplify=TRUE, but that seems like a lot
@@ -655,7 +684,7 @@ SEXP FANSI_strwrap_ext(
         first_only_int,
         ctl, i, normalize,
         do_carry,
-        &sgr_carry,
+        &state_carry,
         asLogical(terminate)
     ) );
     if(first_only_int) {

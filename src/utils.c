@@ -275,8 +275,8 @@ int FANSI_ctl_as_int(SEXP ctl) {
     // need to shift by 1 for the 0 index, and then by one more for the position
     // occupied by "all" that really means flip bits
     int ctl_val = INTEGER(ctl)[i] - 2;
-    if(ctl_val > 4)
-      error("Internal Error: max ctl value allowed is 4.");
+    if(ctl_val > 6)
+      error("Internal Error: max ctl value allowed is 6.");
     if(ctl_val < 0) flip_bits = 1;
     else ctl_int |= 1 << ctl_val;
   }

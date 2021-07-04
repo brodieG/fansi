@@ -128,6 +128,8 @@ specially. See the "_ctl vs. _sgr" section for details.
 for newlines and the actual ESC (0x1B) character.
 \item "sgr": ANSI CSI SGR sequences.
 \item "csi": all non-SGR ANSI CSI sequences.
+\item "url": OSC Encoded URLs
+\item "osc": OSC sequences.
 \item "esc": all other escape sequences.
 \item "all": all of the above, except when used in combination with any of the
 above, in which case it means "all but".
@@ -142,16 +144,16 @@ code will be in its own escape as \code{crayon} does.}
 \item{carry}{TRUE, FALSE, or a scalar string, controls whether active SGR
 present at the end of an input vector element is carried into the next
 vector element.  If FALSE each vector element is interpreted as if there
-were no active SGR present when they begin.  If character, then the active
-SGR at the end of the \code{carry} string is carried into the first element of
+were no active state when they begin.  If character, then the active
+state at the end of the \code{carry} string is carried into the first element of
 \code{x}.  For every function except \code{\link{sgr_to_html}} this argument defaults to
-FALSE.  See the "SGR Interactions" section of \code{\link[=fansi]{?fansi}} for
+FALSE.  See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for
 details.}
 
 \item{terminate}{TRUE (default) or FALSE whether substrings should have
-active SGR closed to avoid it bleeding into other strings they may be
-prepended onto.  See the "SGR Interactions" section of \code{\link[=fansi]{?fansi}} for
-details.}
+active state closed to avoid it bleeding into other strings they may be
+prepended onto.  See the "State Interactions" section of \code{\link[=fansi]{?fansi}}
+for details.}
 
 \item{wrap.always}{TRUE or FALSE (default), whether to hard wrap at requested
 width if no word breaks are detected within a line.  If set to TRUE then
@@ -211,14 +213,14 @@ lines even if \code{carry=FALSE}, but not across input vector elements).
 The \verb{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
 by default.  Special treatment is context dependent, and may include
 detecting them and/or computing their display/character width as zero.  For
-the SGR subset of the ANSI CSI sequences, \code{fansi} will also parse, interpret,
-and reapply the text styles they encode if needed.  You can modify whether a
-\emph{Control Sequence} is treated specially with the \code{ctl} parameter.  You can
-exclude a type of \emph{Control Sequence} from special treatment by combining
-"all" with that type of sequence (e.g. \code{ctl=c("all", "nl")} for special
-treatment of all \emph{Control Sequences} \strong{but} newlines).  The \verb{*_sgr} versions
-only treat ANSI CSI SGR sequences specially, and are equivalent to the
-\verb{*_ctl} versions with the \code{ctl} parameter set to "sgr".
+the SGR subset of the ANSI CSI sequences, and OSC-anchored URLs, \code{fansi} will
+also parse, interpret, and reapply the sequences as needed.  You can modify
+whether a \emph{Control Sequence} is treated specially with the \code{ctl} parameter.
+You can exclude a type of \emph{Control Sequence} from special treatment by
+combining "all" with that type of sequence (e.g. \code{ctl=c("all", "nl")} for
+special treatment of all \emph{Control Sequences} \strong{but} newlines).  The \verb{*_sgr}
+versions only treat ANSI CSI SGR sequences specially, and are equivalent to
+the \verb{*_ctl} versions with the \code{ctl} parameter set to \code{c("sgr", "url")}.
 }
 
 \examples{
@@ -264,7 +266,7 @@ writeLines(c("", paste(W[1:20], W[100:120], W[200:220]), ""))
 \seealso{
 \code{\link[=fansi]{?fansi}} for details on how \emph{Control Sequences} are
 interpreted, particularly if you are getting unexpected results,
-\code{\link{normalize_sgr}} for more details on what the \code{normalize} parameter does,
-\code{\link{sgr_at_end}} to compute active SGR at the end of strings, \code{\link{close_sgr}}
-to compute the SGR required to close active SGR.
+\code{\link{normalize_state}} for more details on what the \code{normalize} parameter does,
+\code{\link{state_at_end}} to compute active state at the end of strings, \code{\link{close_state}}
+to compute the sequence required to close active state.
 }

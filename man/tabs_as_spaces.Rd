@@ -37,6 +37,8 @@ specially. See the "_ctl vs. _sgr" section for details.
 for newlines and the actual ESC (0x1B) character.
 \item "sgr": ANSI CSI SGR sequences.
 \item "csi": all non-SGR ANSI CSI sequences.
+\item "url": OSC Encoded URLs
+\item "osc": OSC sequences.
 \item "esc": all other escape sequences.
 \item "all": all of the above, except when used in combination with any of the
 above, in which case it means "all but".

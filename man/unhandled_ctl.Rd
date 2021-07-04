@@ -25,8 +25,8 @@ problem.  See details.
 Will return position and types of unhandled \emph{Control Sequences} in a
 character vector.  Unhandled sequences may cause \code{fansi} to interpret strings
 in a way different to your display.  See \link{fansi} for details.  Functions that
-interpret SGR might omit bad SGR sequences in output substrings, particularly
-if they are leading or trailing.
+interpret SGR/OSC URLs might omit bad SGR/OSC URLs in sequences in output
+substrings, particularly if they are leading or trailing.
 }
 \details{
 To work around tabs present in input, you can use \code{\link{tabs_as_spaces}} or the
@@ -34,7 +34,8 @@ To work around tabs present in input, you can use \code{\link{tabs_as_spaces}} o
 function to remove the troublesome sequences.  Alternatively, you can use
 \code{warn=FALSE} to suppress the warnings.
 
-This is a debugging function that is not optimized for speed.
+This is a debugging function that is not optimized for speed and the precise
+output of which might change with \code{fansi} versions.
 
 The return value is a data frame with five columns:
 \itemize{
@@ -52,18 +53,19 @@ errors, whereas 256 or truecolor codes in terminals that do not support
 them are.  This is because the latter are often misinterpreted by
 terminals that do not support them, whereas the former are typically
 silently ignored.
-\item special: SGR substring contains uncommon characters in ":<=>".
+\item special: SGR substring contains uncommon characters in ":<=>", or URL
+contains otherwise valid OSC bytes in 0x08-0x0d.
 \item unknown: SGR substring with a value that does not correspond to a known
-SGR code.
-\item non-SGR: a non-SGR CSI sequence.
-\item non-CSI: a non-CSI escape sequence, i.e. one where the ESC is
-followed by something other than "[".  Since we assume all non-CSI
-sequences are only 2 characters long include the ESC, this type of
-sequence is the most likely to cause problems as many are not actually
-two characters long.
-\item malformed-CSI: a malformed CSI sequence.
-\item malformed-ESC: a malformed ESC sequence (i.e. one not ending in
-0x40-0x7e).
+SGR code or URL with unsupported parameters.
+\item non-SGR/URL: a non-SGR CSI sequence, or non-URL OSC sequence.
+\item non-CSI/OSC: a non-CSI or non-OSC escape sequence, i.e. one where the
+ESC is followed by something other than "\link{" or "}".  Since we assume
+all non-CSI sequences are only 2 characters long include the ESC, this
+type of sequence is the most likely to cause problems as some are not
+actually two characters long.
+\item malformed-CSI/OSC: a malformed CSI or OSC sequence.
+\item malformed-ESC: a malformed two byte ESC sequence (i.e. one not ending
+in 0x40-0x7e).
 \item C0: a "C0" control character (e.g. tab, bell, etc.).
 }
 \item translated: whether the string was translated to UTF-8, might be helpful in

@@ -97,8 +97,14 @@ unitizer_sect("Long Wrap", {
   # wrap.nrm <- strwrap(strip_ctl(lorem.r.thanks, "sgr"), 40)
   wrap.csi <- strwrap_ctl(lorem.r.thanks, 40)
 
-  # identical(wrap.nrm, strip_ctl(wrap.csi, "sgr"))
+  # # this would take forever under valgrind
+  # identical(
+  #   strwrap(strip_ctl(lorem.r.thanks, "sgr"), 40),
+  #   strip_ctl(strwrap_ctl(lorem.r.thanks, 40), "sgr")
+  # )
+  # If this changes run the `identical` check above!
   nchar(strip_ctl(wrap.csi, "sgr"))
+  # If this changes run the `identical` check above!
   nchar(wrap.csi)
 })
 unitizer_sect("Other Escapes", {
@@ -364,6 +370,16 @@ unitizer_sect("corner cases", {
 
   ## Combine Leading SGR without stripping spaces
   strwrap2_sgr("\033[43mAB \033[34mCD", strip.spaces=FALSE, 4)
+
+  ## Nothing bug sgrs
+  strwrap_ctl("\033[31m\033[43m", 5)
+
+  ## Hard wrap with trailing SGR
+  strwrap2_ctl("a\033[31mb", 2, wrap.always = TRUE)
+
+  ## Correctly strip trailing space
+  strwrap_ctl("A \033[31mB\033[39m", 3)
+
 })
 unitizer_sect("bad inputs", {
   strwrap_ctl(1:3)
