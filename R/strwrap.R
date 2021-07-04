@@ -125,10 +125,10 @@ strwrap_ctl <- function(
     carry, terminate
   )
   if(simplify) {
-    if(normalize) normalize_sgr(unlist(res), warn, term.cap)
+    if(normalize) normalize_state(unlist(res), warn, term.cap)
     else unlist(res)
   } else {
-    if(normalize) normalize_sgr_list(res, warn, term.cap.int) else res
+    if(normalize) normalize_state_list(res, warn, term.cap.int) else res
   }
 }
 #' @export
@@ -178,10 +178,10 @@ strwrap2_ctl <- function(
     carry, terminate
   )
   if(simplify) {
-    if(normalize) normalize_sgr(unlist(res), warn, term.cap)
+    if(normalize) normalize_state(unlist(res), warn, term.cap)
     else unlist(res)
   } else {
-    if(normalize) normalize_sgr_list(res, warn, term.cap.int) else res
+    if(normalize) normalize_state_list(res, warn, term.cap.int) else res
   }
 }
 #' @export

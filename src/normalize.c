@@ -97,7 +97,7 @@ static int normalize(
   return len;
 }
 
-static SEXP normalize_sgr_int(
+static SEXP normalize_state_int(
   SEXP x, SEXP warn, SEXP term_cap, SEXP carry,
   struct FANSI_buff *buff, R_xlen_t index0
 ) {
@@ -152,13 +152,13 @@ static SEXP normalize_sgr_int(
   return res;
 }
 
-SEXP FANSI_normalize_sgr_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP carry) {
+SEXP FANSI_normalize_state_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP carry) {
   if(TYPEOF(x) != STRSXP)
     error("Internal Error: `x` must be a character vector");  // nocov
 
   struct FANSI_buff buff;
   FANSI_INIT_BUFF(&buff);
-  SEXP res = PROTECT(normalize_sgr_int(x, warn, term_cap, carry, &buff, 0));
+  SEXP res = PROTECT(normalize_state_int(x, warn, term_cap, carry, &buff, 0));
   FANSI_release_buff(&buff, 1);
   UNPROTECT(1);
   return res;
@@ -166,7 +166,9 @@ SEXP FANSI_normalize_sgr_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP carry) {
 // List version to use with result of `strwrap_ctl(..., unlist=FALSE)`
 // Just a lower overhead version.
 
-SEXP FANSI_normalize_sgr_list_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP carry) {
+SEXP FANSI_normalize_state_list_ext(
+  SEXP x, SEXP warn, SEXP term_cap, SEXP carry
+) {
   if(TYPEOF(x) != VECSXP)
     error("Internal Error: `x` must be a list vector");  // nocov
 
@@ -183,7 +185,7 @@ SEXP FANSI_normalize_sgr_list_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP carry) 
     SEXP elt0 = VECTOR_ELT(x, i);
     if(i0 > FANSI_lim.lim_R_xlen_t.max - XLENGTH(elt0)) i0 = 0;
     SEXP elt1 = PROTECT(
-      normalize_sgr_int(elt0, warn, term_cap, carry, &buff, i0)
+      normalize_state_int(elt0, warn, term_cap, carry, &buff, i0)
     );
     // If unequal, normalization occurred
     if(elt0 != elt1) {

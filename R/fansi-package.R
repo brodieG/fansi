@@ -44,8 +44,8 @@
 #' long (including the ESC) unless they are of the CSI or OSC variety, in which
 #' case their length is computed as per the [ECMA-48
 #' specification](https://www.ecma-international.org/publications-and-standards/standards/ecma-48/),
-#' with the exception that OSC-encoded URLs may be terminated with BEL ("\a") in
-#' addition to ST ("ESC\").
+#' with the exception that OSC-encoded URLs may be terminated with BEL ("\\a")
+#' in addition to ST ("ESC\\").
 #'
 #' `fansi` handles most common _Control Sequences_ in its parsing
 #' algorithms, but it is not a conforming implementation of ECMA-48.  For
@@ -131,7 +131,7 @@
 #' While we try to minimize changes across `fansi` versions in how SGR sequences
 #' are output, we focus on minimizing the changes to rendered output, not
 #' necessarily the specific SGR sequences used to produce it.  To maximize the
-#' odds of getting stable SGR output use [`normalize_sgr`] and set `term.cap` to
+#' odds of getting stable SGR output use [`normalize_state`] and set `term.cap` to
 #' a specific set of capabilities.  In general it is likely best not to rely on
 #' the exact SGR encoding of `fansi` output.
 #'
@@ -179,10 +179,10 @@
 #' help the user get their desired outcome.  `state_at_end` computes the active
 #' state the end of a string, this can then be prepended onto the _input_ of
 #' `fansi` functions so that they are aware of the active style at the beginning
-#' of the string.  Alternatively, one could use `close_sgr(sgr_at_end(...))`
+#' of the string.  Alternatively, one could use `close_state(state_at_end(...))`
 #' and pre-pend that to the _output_ of `fansi` functions so they are unaffected
 #' by preceding SGR.  One could also just prepend "ESC[0m", but in some cases as
-#' described in [`?normalize_sgr`][normalize_sgr] that is sub-optimal.
+#' described in [`?normalize_state`][normalize_state] that is sub-optimal.
 #'
 #' @section Encodings / UTF-8:
 #'

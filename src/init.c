@@ -45,12 +45,12 @@ R_CallMethodDef callMethods[] = {
   {"ctl_as_int", (DL_FUNC) &FANSI_ctl_as_int_ext, 1},
   {"esc_html", (DL_FUNC) &FANSI_esc_html, 2},
   {"reset_limits", (DL_FUNC) &FANSI_reset_limits, 0},
-  {"normalize_sgr", (DL_FUNC) &FANSI_normalize_sgr_ext, 4},
-  {"normalize_sgr_list", (DL_FUNC) &FANSI_normalize_sgr_list_ext, 4},
-  {"close_sgr", (DL_FUNC) &FANSI_sgr_close_ext, 4},
+  {"normalize_state", (DL_FUNC) &FANSI_normalize_state_ext, 4},
+  {"normalize_state_list", (DL_FUNC) &FANSI_normalize_state_list_ext, 4},
+  {"close_state", (DL_FUNC) &FANSI_state_close_ext, 4},
   {"size_buff", (DL_FUNC) &FANSI_size_buff_ext, 1},
   {"size_buff_prot_test", (DL_FUNC) &FANSI_size_buff_prot_test, 0},
-  {"sgr_at_end", (DL_FUNC) &FANSI_sgr_at_end_ext, 6},
+  {"state_at_end", (DL_FUNC) &FANSI_state_at_end_ext, 6},
   {"utf8_to_cp", (DL_FUNC) &FANSI_utf8_to_cp_ext, 1},
   {NULL, NULL, 0}
 };

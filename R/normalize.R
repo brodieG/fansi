@@ -58,38 +58,38 @@
 #' @inherit has_ctl seealso
 #' @return `x`, with all SGRs normalized.
 #' @examples
-#' normalize_sgr("hello\033[42;33m world")
-#' normalize_sgr("hello\033[42;33m world\033[m")
-#' normalize_sgr("\033[4mhello\033[42;33m world\033[m")
+#' normalize_state("hello\033[42;33m world")
+#' normalize_state("hello\033[42;33m world\033[m")
+#' normalize_state("\033[4mhello\033[42;33m world\033[m")
 #'
 #' ## Superflous codes removed
-#' normalize_sgr("\033[31;32mhello\033[m")      # only last color prevails
-#' normalize_sgr("\033[31\033[32mhello\033[m")  # only last color prevails
-#' normalize_sgr("\033[31mhe\033[49mllo\033[m") # unused closing
+#' normalize_state("\033[31;32mhello\033[m")      # only last color prevails
+#' normalize_state("\033[31\033[32mhello\033[m")  # only last color prevails
+#' normalize_state("\033[31mhe\033[49mllo\033[m") # unused closing
 #'
 #' ## Equivalent normalized sequences compare identical
 #' identical(
-#'   normalize_sgr("\033[31;32mhello\033[m"),
-#'   normalize_sgr("\033[31mhe\033[49mllo\033[m")
+#'   normalize_state("\033[31;32mhello\033[m"),
+#'   normalize_state("\033[31mhe\033[49mllo\033[m")
 #' )
 #' ## External SGR will defeat normalization, unless we `carry` it
 #' red <- "\033[41m"
 #' writeLines(
 #'   c(
 #'     paste(red, "he\033[0mllo", "\033[0m"),
-#'     paste(red, normalize_sgr("he\033[0mllo"), "\033[0m")
-#'     paste(red, normalize_sgr("he\033[0mllo", carry=red), "\033[0m")
+#'     paste(red, normalize_state("he\033[0mllo"), "\033[0m")
+#'     paste(red, normalize_state("he\033[0mllo", carry=red), "\033[0m")
 #' ) )
 
-normalize_sgr <- function(
+normalize_state <- function(
   x, warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
   carry=getOption('fansi.carry', FALSE)
 ) {
   VAL_IN_ENV(x=x, warn=warn, term.cap=term.cap, carry=carry)
-  .Call(FANSI_normalize_sgr, x, warn, term.cap.int, carry)
+  .Call(FANSI_normalize_state, x, warn, term.cap.int, carry)
 }
 # To reduce overhead of applying this in `strwrap_ctl`
 
-normalize_sgr_list <- function(x, warn, term.cap.int, carry)
-  .Call(FANSI_normalize_sgr_list, x, warn, term.cap.int, carry)
+normalize_state_list <- function(x, warn, term.cap.int, carry)
+  .Call(FANSI_normalize_state_list, x, warn, term.cap.int, carry)
 

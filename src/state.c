@@ -278,20 +278,23 @@ int FANSI_color_size(int color, int * color_extra) {
   return size;
 }
 /*
- * Generate the ANSI tag corresponding to the state and write it out as a NULL
+ * Generate the tag corresponding to the state and write it out as a NULL
  * terminated string.
  */
-char * FANSI_sgr_as_chr(
-  struct FANSI_buff *buff, struct FANSI_sgr sgr, int normalize, R_xlen_t i
+char * FANSI_state_as_chr(
+  struct FANSI_buff *buff, struct FANSI_state state, int normalize, R_xlen_t i
 ) {
-  // First pass computes total size of tag
   char * buff_track = NULL;
-  int tag_len = FANSI_W_sgr(&buff_track, sgr, 0, normalize, i);
+  int tag_len = 0;
+  tag_len += FANSI_W_sgr(&buff_track, state.sgr, 0, normalize, i);
+  tag_len += FANSI_W_url(&buff_track, state.url, 0, normalize, i);
   FANSI_size_buff(buff, tag_len);
   buff_track = buff->buff;
-  FANSI_W_sgr(&buff_track, sgr, 0, normalize, i);
+  FANSI_W_sgr(&buff_track, state.sgr, 0, normalize, i);
+  FANSI_W_url(&buff_track, state.url, 0, normalize, i);
   return buff->buff;
 }
+
 /*
  * Determine whether two state structs have same style
  *
@@ -400,7 +403,7 @@ int FANSI_url_comp(struct FANSI_url target, struct FANSI_url current) {
  *
  * @param x should be a vector of active states at end of strings.
  */
-SEXP FANSI_sgr_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm) {
+SEXP FANSI_state_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm) {
 
   if(TYPEOF(x) != STRSXP)
     error("Argument `x` should be a character vector.");  // nocov
@@ -614,10 +617,13 @@ SEXP FANSI_state_at_pos_ext(
       res_mx_i[i * res_cols + 3] = state.pos_width;
 
       // Record color tag if state changed
-      if(FANSI_sgr_comp(state.sgr, state_prev.sgr)) {
+      if(
+        FANSI_sgr_comp(state.sgr, state_prev.sgr) ||
+        FANSI_url_comp(state.url, state_prev.url)
+      ) {
         // this computes length twice..., we know state_char can be at most
         // INT_MAX excluding NULL (and certainly will be much less).
-        char * state_chr = FANSI_sgr_as_chr(&buff, state.sgr, normalize, i);
+        char * state_chr = FANSI_state_as_chr(&buff, state, normalize, i);
         res_chr = PROTECT(
           FANSI_mkChar(
             state_chr, state_chr + strlen(state_chr), CE_NATIVE, i

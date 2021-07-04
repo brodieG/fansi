@@ -421,10 +421,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_get_int_max();
   SEXP FANSI_esc_html(SEXP x, SEXP what);
 
-  SEXP FANSI_normalize_sgr_ext(
+  SEXP FANSI_normalize_state_ext(
     SEXP x, SEXP warn, SEXP term_cap, SEXP carry
   );
-  SEXP FANSI_normalize_sgr_list_ext(
+  SEXP FANSI_normalize_state_list_ext(
     SEXP x, SEXP warn, SEXP term_cap, SEXP carry
   );
 
@@ -434,8 +434,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_check_enc_ext(SEXP x, SEXP i);
   SEXP FANSI_ctl_as_int_ext(SEXP ctl);
 
-  SEXP FANSI_sgr_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm);
-  SEXP FANSI_sgr_at_end_ext(
+  SEXP FANSI_state_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm);
+  SEXP FANSI_state_at_end_ext(
     SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry
   );
   SEXP FANSI_utf8_to_cp_ext(SEXP x);
@@ -542,8 +542,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   void FANSI_check_append_err(const char * msg, R_xlen_t i);
 
   void FANSI_val_args(SEXP x, SEXP norm, SEXP carry);
-  char * FANSI_sgr_as_chr(
-    struct FANSI_buff *buff, struct FANSI_sgr sgr, int normalize, R_xlen_t i
+  char * FANSI_state_as_chr(
+    struct FANSI_buff *buff, struct FANSI_state state, int normalize, R_xlen_t i
   );
   struct FANSI_state FANSI_carry_init(
     SEXP carry, SEXP warn, SEXP term_cap, SEXP ctl

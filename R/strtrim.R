@@ -70,7 +70,7 @@ strtrim_ctl <- function(
       carry,
       terminate
   )
-  if(normalize) normalize_sgr(res) else res
+  if(normalize) normalize_state(res) else res
 }
 #' @export
 #' @rdname strtrim_ctl
@@ -115,7 +115,7 @@ strtrim2_ctl <- function(
       ctl.int,
       normalize, carry, terminate
   )
-  if(normalize) normalize_sgr(res) else res
+  if(normalize) normalize_state(res) else res
 }
 #' @export
 #' @rdname strtrim_ctl

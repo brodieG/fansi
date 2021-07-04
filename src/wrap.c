@@ -121,7 +121,7 @@ static struct FANSI_prefix_dat drop_pre_indent(struct FANSI_prefix_dat dat) {
  * @param state_start the starting point of the line
  * @param normalize currently doesn't do anything since the normalization
  *   happens as a second pass.  In the future we might decide to do the
- *   normalization in the first pass so an external call to normalize_sgr is
+ *   normalization in the first pass so an external call to normalize_state is
  *   unnecessary.
  */
 

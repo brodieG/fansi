@@ -68,8 +68,8 @@
 #' @export
 #' @seealso [`?fansi`][fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results,
-#'   [`normalize_sgr`] for more details on what the `normalize` parameter does,
-#'   [`sgr_at_end`] to compute active state at the end of strings, [`close_sgr`]
+#'   [`normalize_state`] for more details on what the `normalize` parameter does,
+#'   [`state_at_end`] to compute active state at the end of strings, [`close_state`]
 #'   to compute the sequence required to close active state.
 #' @param x a character vector or object that can be coerced to such.
 #' @param type character(1L) partial matching `c("chars", "width")`, although
@@ -125,15 +125,15 @@
 #' @param carry TRUE, FALSE, or a scalar string, controls whether active SGR
 #'   present at the end of an input vector element is carried into the next
 #'   vector element.  If FALSE each vector element is interpreted as if there
-#'   were no active SGR present when they begin.  If character, then the active
-#'   SGR at the end of the `carry` string is carried into the first element of
+#'   were no active state when they begin.  If character, then the active
+#'   state at the end of the `carry` string is carried into the first element of
 #'   `x`.  For every function except [`sgr_to_html`] this argument defaults to
-#'   FALSE.  See the "SGR Interactions" section of [`?fansi`][fansi] for
+#'   FALSE.  See the "State Interactions" section of [`?fansi`][fansi] for
 #'   details.
 #' @param terminate TRUE (default) or FALSE whether substrings should have
-#'   active SGR closed to avoid it bleeding into other strings they may be
-#'   prepended onto.  See the "SGR Interactions" section of [`?fansi`][fansi] for
-#'   details.
+#'   active state closed to avoid it bleeding into other strings they may be
+#'   prepended onto.  See the "State Interactions" section of [`?fansi`][fansi]
+#'   for details.
 #' @return a character vector of the same length and with the same attributes as
 #'   x (after possible coercion and re-encoding to UTF-8).
 #' @examples
@@ -270,7 +270,7 @@ substr2_sgr <- function(
   substr2_ctl(
     x=x, start=start, stop=stop, type=type, round=round,
     tabs.as.spaces=tabs.as.spaces,
-    tab.stops=tab.stops, warn=warn, term.cap=term.cap, ctl=c('sgr', 'url')
+    tab.stops=tab.stops, warn=warn, term.cap=term.cap, ctl=c('sgr', 'url'),
     normalize=normalize,
     carry=carry, terminate=terminate
   )
@@ -301,7 +301,7 @@ substr_ctl_internal <- function(
 
   if(!is.na(carry)) {
     ends <- .Call(
-      FANSI_sgr_at_end, x, warn, term.cap.int, ctl.int, normalize, carry
+      FANSI_state_at_end, x, warn, term.cap.int, ctl.int, normalize, carry
     )
     x <- paste0(c(carry, ends[-length(ends)]), x)
   }
@@ -363,17 +363,17 @@ substr_ctl_internal <- function(
     # Finalize real substrings
     full <- !empty.res & !empty.req
     if(any(full)) {
-      # if there is any ANSI CSI at end then add a terminating CSI, warnings
+      # if there is active state at end then add a terminating CSI, warnings
       # should have been issued on first read
       end.csi <-
-        if(terminate) close_sgr(stop.tag[full], warn=FALSE, normalize)
+        if(terminate) close_state(stop.tag[full], warn=FALSE, normalize)
         else ""
 
       substring <- substr(x.elems[full], start.ansi[full], stop.ansi[full])
       tmp <- paste0(start.tag[full], substring)
       term.cap <- VALID.TERM.CAP[term.cap.int]
       res[elems[full]] <- paste0(
-        if(normalize) normalize_sgr(tmp, warn=FALSE, term.cap=term.cap)
+        if(normalize) normalize_state(tmp, warn=FALSE, term.cap=term.cap)
         else tmp,
         end.csi
   ) } }
