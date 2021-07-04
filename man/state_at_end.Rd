@@ -56,14 +56,15 @@ details.}
 character vector same length as \code{x}.
 }
 \description{
-\code{state_at_end} read input strings computing the accumulated SGR and OSC-encoded
-URLs until the end of the string and outputs the active state at the end of
-it.  \code{close_state} produces the sequence that closes active SGR and OSC-encoded
-URLs at the end of the input string.  If \code{normalize = FALSE} (default), it
-will close SGRs with the reset code "ESC[0m", so it is only interesting for
-closing SGRs if \code{normalize = TRUE}.  Unlike \code{state_at_end} and other functions
-\code{close_state} has no concept of \code{carry}: it will only close state activate
-within an element that is still active at the end of that element.
+\code{state_at_end} read input strings computing the accumulated SGR and
+OSC-anchored URLs until the end of the string and outputs the active state at
+the end of it.  \code{close_state} produces the sequence that closes active SGR
+and OSC-anchored URLs at the end of the input string.  If \code{normalize = FALSE}
+(default), it will close SGRs with the reset code "ESC[0m", so it is only
+interesting for closing SGRs if \code{normalize = TRUE}.  Unlike \code{state_at_end}
+and other functions \code{close_state} has no concept of \code{carry}: it will only
+close state activate within an element that is still active at the end of
+that element.
 }
 \examples{
 x <- c("\033[44mhello", "\033[33mworld")

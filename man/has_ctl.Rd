@@ -43,7 +43,7 @@ in return
 }
 \description{
 \code{has_ctl} checks for any \emph{Control Sequence}, whereas \code{has_sgr} checks only
-for CSI SGR and OSC-encoded URL sequences.  You can check for different types
+for CSI SGR and OSC-anchored URL sequences.  You can check for different types
 of sequences with the \code{ctl} parameter.
 }
 \section{_ctl vs. _sgr}{
@@ -52,7 +52,7 @@ of sequences with the \code{ctl} parameter.
 The \verb{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
 by default.  Special treatment is context dependent, and may include
 detecting them and/or computing their display/character width as zero.  For
-the SGR subset of the ANSI CSI sequences, and OSC-encoded URLs, \code{fansi} will
+the SGR subset of the ANSI CSI sequences, and OSC-anchored URLs, \code{fansi} will
 also parse, interpret, and reapply the sequences as needed.  You can modify
 whether a \emph{Control Sequence} is treated specially with the \code{ctl} parameter.
 You can exclude a type of \emph{Control Sequence} from special treatment by

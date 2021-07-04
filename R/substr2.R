@@ -52,7 +52,7 @@
 #' The `*_ctl` versions of the functions treat all _Control Sequences_ specially
 #' by default.  Special treatment is context dependent, and may include
 #' detecting them and/or computing their display/character width as zero.  For
-#' the SGR subset of the ANSI CSI sequences, and OSC-encoded URLs, `fansi` will
+#' the SGR subset of the ANSI CSI sequences, and OSC-anchored URLs, `fansi` will
 #' also parse, interpret, and reapply the sequences as needed.  You can modify
 #' whether a _Control Sequence_ is treated specially with the `ctl` parameter.
 #' You can exclude a type of _Control Sequence_ from special treatment by

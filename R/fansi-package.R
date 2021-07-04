@@ -44,7 +44,7 @@
 #' long (including the ESC) unless they are of the CSI or OSC variety, in which
 #' case their length is computed as per the [ECMA-48
 #' specification](https://www.ecma-international.org/publications-and-standards/standards/ecma-48/),
-#' with the exception that OSC-encoded URLs may be terminated with BEL ("\\a")
+#' with the exception that OSC-anchored URLs may be terminated with BEL ("\\a")
 #' in addition to ST ("ESC\\").
 #'
 #' `fansi` handles most common _Control Sequences_ in its parsing
@@ -61,7 +61,7 @@
 #'
 #' The special treatment of _Control Sequences_ is to compute their
 #' display/character width as zero.  For the SGR subset of the CSI sequences and
-#' OSC-encoded URLs,, `fansi` will also parse, interpret, and reapply the text
+#' OSC-anchored URLs,, `fansi` will also parse, interpret, and reapply the text
 #' the sequences as needed.  Whether a particular type of _Control Sequence_ is
 #' treated specially can be specified via the `ctl` parameter to the `fansi`
 #' functions that have it.
@@ -150,7 +150,7 @@
 #'
 #' @section State Interactions:
 #'
-#' The cumulative nature of state as specified by SGR or OSC-encoded URLs means
+#' The cumulative nature of state as specified by SGR or OSC-anchored URLs means
 #' that SGR in strings that are spliced will interact with each other.
 #' Additionally, a substring does not inherently contain all the information
 #' required to recreate its state as it appeared in the source string.

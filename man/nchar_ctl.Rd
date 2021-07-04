@@ -100,7 +100,7 @@ the \code{keepNA} parameter is ignored for R < 3.2.2.
 The \verb{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
 by default.  Special treatment is context dependent, and may include
 detecting them and/or computing their display/character width as zero.  For
-the SGR subset of the ANSI CSI sequences, and OSC-encoded URLs, \code{fansi} will
+the SGR subset of the ANSI CSI sequences, and OSC-anchored URLs, \code{fansi} will
 also parse, interpret, and reapply the sequences as needed.  You can modify
 whether a \emph{Control Sequence} is treated specially with the \code{ctl} parameter.
 You can exclude a type of \emph{Control Sequence} from special treatment by

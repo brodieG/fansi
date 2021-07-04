@@ -34,7 +34,7 @@ Commands (OSC).
 \emph{Control Sequences} starting with ESC are assumed to be two characters
 long (including the ESC) unless they are of the CSI or OSC variety, in which
 case their length is computed as per the \href{https://www.ecma-international.org/publications-and-standards/standards/ecma-48/}{ECMA-48 specification},
-with the exception that OSC-encoded URLs may be terminated with BEL ("\\a")
+with the exception that OSC-anchored URLs may be terminated with BEL ("\\a")
 in addition to ST ("ESC\\").
 
 \code{fansi} handles most common \emph{Control Sequences} in its parsing
@@ -51,7 +51,7 @@ does not support it.
 
 The special treatment of \emph{Control Sequences} is to compute their
 display/character width as zero.  For the SGR subset of the CSI sequences and
-OSC-encoded URLs,, \code{fansi} will also parse, interpret, and reapply the text
+OSC-anchored URLs,, \code{fansi} will also parse, interpret, and reapply the text
 the sequences as needed.  Whether a particular type of \emph{Control Sequence} is
 treated specially can be specified via the \code{ctl} parameter to the \code{fansi}
 functions that have it.
@@ -147,7 +147,7 @@ or terminates them as needed.
 \section{State Interactions}{
 
 
-The cumulative nature of state as specified by SGR or OSC-encoded URLs means
+The cumulative nature of state as specified by SGR or OSC-anchored URLs means
 that SGR in strings that are spliced will interact with each other.
 Additionally, a substring does not inherently contain all the information
 required to recreate its state as it appeared in the source string.
