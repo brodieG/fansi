@@ -283,22 +283,18 @@ static int W_state_as_html(
   // FANSI_W_COPY requires variables len, i, and err_msg
 
   if(sgr_change || url_change) {
-    // Close previous; feels like simpler logic should work here
-    if(sgr_change && !has_cur_sgr) len += FANSI_W_COPY(buff, "</span>");
-    if(url_change) {
-      if(has_prev_url) len += FANSI_W_COPY(buff, "</a>");
-      if(has_cur_url) {
-        if(!has_prev_url) len += FANSI_W_COPY(buff, "<a href='");
-        else len += FANSI_W_COPY(buff, "</a><a href='");
-        // Should we URL encode?
-        len += FANSI_W_MCOPY(buff, state.url.url.val, state.url.url.len);
-        len += FANSI_W_COPY(buff, "'>");
-      }
-    }
-    if(sgr_change && has_cur_sgr) {
-      if(!has_prev_sgr) len += FANSI_W_COPY(buff, "<span");
-      else len += FANSI_W_COPY(buff, "</span><span");
+    // Close previous
+    if(has_prev_sgr) len += FANSI_W_COPY(buff, "</span>");
+    if(has_prev_url) len += FANSI_W_COPY(buff, "</a>");
 
+    if(has_cur_url) {
+      // users responsibility to escape html special chars
+      len += FANSI_W_COPY(buff, "<a href='");
+      len += FANSI_W_MCOPY(buff, state.url.url.val, state.url.url.len);
+      len += FANSI_W_COPY(buff, "'>");
+    }
+    if(has_cur_sgr) {
+       len += FANSI_W_COPY(buff, "<span");
       // Styles
       int invert = sgr.style & (1U << 7U);
       int color = invert ? sgr.bg_color : sgr.color;
