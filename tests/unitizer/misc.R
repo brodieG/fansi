@@ -111,8 +111,8 @@ unitizer_sect("enc check", {
 unitizer_sect("what as int", {
   fansi:::ctl_as_int(c(1, 2, 3, 4, 5))
   fansi:::ctl_as_int(c(2, 3, 4, 5))
-  fansi:::ctl_as_int(c(1, 2, 3, 7))
-  fansi:::ctl_as_int(c(2, 3, 7))
+  fansi:::ctl_as_int(c(1, 2, 3, 9))
+  fansi:::ctl_as_int(c(2, 3, 9))
 })
 unitizer_sect("HTML helper", {
   html_esc(character())

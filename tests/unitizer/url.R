@@ -98,18 +98,24 @@ unitizer_sect("wrap", {
 unitizer_sect('normalize', {
   # Adjacent URLs with same ID should be merged
   u18 <- "A\033]8;id=a;x.yz\033\\B\033]8;id=a;x.yz\033\\C\033]8;;\033\\D"
-  normalize_sgr(u18)
+  normalize_state(u18)
   # Merge even when URL fully closed
   u18a <- "A\033]8;id=a;x.yz\033\\B\033]8;;\033\\\033]8;id=a;x.yz\033\\C\033]8;;\033\\D"
-  normalize_sgr(u18a)
+  normalize_state(u18a)
 
   # Abutting URLs with no intervening content: last wins
   u18b <- "A\033]8;id=a;x.yz\033\\\033]8;id=b;x.yz\033\\C\033]8;;\033\\D"
-  normalize_sgr(u18b)
+  normalize_state(u18b)
 
   # These two should not merge
   u19 <- "A\033]8;id=a;x.yz\033\\B\033]8;id=b;x.yz\033\\C\033]8;;\033\\D"
   u20 <- "A\033]8;id=a;x.yz\033\\B\033]8;id=a;w.yz\033\\C\033]8;;\033\\D"
-  normalize_sgr(u19)
-  normalize_sgr(u20)
+  normalize_state(u19)
+  normalize_state(u20)
 })
+unitizer_sect('substr', {
+  substr_ctl(u0, 6, 9)
+  substr_ctl(u0, 6, 9, terminate=FALSE)
+  substr_ctl("hello world", 3, 8, carry="\033]8;;a.b\033\\")
+})
+

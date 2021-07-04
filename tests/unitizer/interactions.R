@@ -44,12 +44,12 @@ unitizer_sect("wrap/trim", {
 
 unitizer_sect("normalize", {
   str.2 <- c("\033[44mhello", "wo\033[mrld", "barrow")
-  normalize_sgr(str.2)
-  normalize_sgr(str.2, carry=TRUE)
+  normalize_state(str.2)
+  normalize_state(str.2, carry=TRUE)
   # unlike substr/wrap normalize does not add the color from carry,
   # it just accounts for its presence from prior strings in e.g. computing
   # the close string.
-  normalize_sgr(str.2, carry="\033[33m")
+  normalize_state(str.2, carry="\033[33m")
 })
 
 unitizer_sect("carry corner cases", {
@@ -65,10 +65,10 @@ unitizer_sect("carry corner cases", {
   substr_ctl(str.0, 2, 4, carry=1)
   substr_ctl(str.0, 2, 4, carry=Inf)
 
-  normalize_sgr(str.2, carry=NA_character_)
-  normalize_sgr(str.2, carry=character())
-  normalize_sgr(str.2, carry=1)
-  normalize_sgr(str.2, carry=Inf)
+  normalize_state(str.2, carry=NA_character_)
+  normalize_state(str.2, carry=character())
+  normalize_state(str.2, carry=1)
+  normalize_state(str.2, carry=Inf)
 
   strwrap_ctl(wrp.0, 20, carry=NA_character_)
   strwrap_sgr(wrp.0, 20, carry=character())
