@@ -14,7 +14,7 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-#' ANSI Control Sequence Aware Version of substr
+#' Control Sequence Aware Version of substr
 #'
 #' `substr_ctl` is a drop-in replacement for `substr`.  Performance is
 #' slightly slower than `substr`.  ANSI CSI SGR sequences will be included in

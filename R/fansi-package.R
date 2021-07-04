@@ -160,9 +160,7 @@
 #' element in an input character vector is independent, but this is incorrect if
 #' the input is a single document with each element a line in it.  In that
 #' situation state from each line should bleed into subsequent ones.  Setting
-#' `carry = TRUE` enables the "single document" interpretation.  [`sgr_to_html`]
-#' is the exception as for legacy reasons it defaults to `carry
-#' = TRUE`.
+#' `carry = TRUE` enables the "single document" interpretation.
 #'
 #' Another form of interaction is when substrings produced by `fansi` are
 #' spliced with or into other substrings.  By default `fansi` automatically
