@@ -462,13 +462,15 @@ static struct FANSI_state read_ascii(struct FANSI_state state) {
  * interpreted as the C0 ESC sequences they are and then the parsing of the CSI
  * string continues uninterrupted.
  *
- * @input state must be set with .pos_byte pointing to the ESC that begins the
+ * @param state must be set with .pos_byte pointing to the ESC that begins the
  *   CSI sequence
+ * @param seq 1 to read all abutting special escapes in one pass, 0 to read each
+ *   one individually.
  * @return a state updated with the SGR sequence info and with pos_byte and
  *   other position info moved to the first char after the sequence.  See
  *   details for failure modes.
  */
-static struct FANSI_state read_esc(struct FANSI_state state) {
+static struct FANSI_state read_esc(struct FANSI_state state, int seq) {
   /***************************************************\
   | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_find_esc  |
   \***************************************************/
@@ -488,14 +490,13 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
   struct FANSI_sgr sgr_prev = state.sgr;
   struct FANSI_url url_prev = state.url;
 
-  // Consume all contiguous ESC sequences so long as they are all either
-  // completely SGR/URL or completely not SGR/URL so that the trailing/leading
-  // omission works correctly.
+  // Consume all contiguous ESC sequences, subject to some conditions (see while
+  // at the end)
   //
   // We only interpet sequences if they are active per .ctl, but we need to read
   // them in some cases to know what type they are to decide.
 
-  while(state.string[state.pos_byte] == 27) {
+  do {
     struct FANSI_state state_prev = state;
     int esc_recognized = 0;
 
@@ -687,9 +688,10 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
         // Other OSC
         osc_bytes = parse_osc(state.string + state.pos_byte);
         if(!osc_bytes) err_code = 5;      // Illegal OSC
+        else err_code = 4;                // Not URL
       } else {
         // not URL and don't support OSC
-        err_code = 4;
+        err_code = 4;                     // Not URL
       }
       if(osc_bytes) {
         esc_recognized = 1;
@@ -744,7 +746,8 @@ static struct FANSI_state read_esc(struct FANSI_state state) {
       state = state_prev;
       state = read_ascii(state);
     }
-  }
+  } while(state.string[state.pos_byte] == 0x1b && seq);
+
   // CAREFUL adding changing values to `state` after here.  State could
   // be the unwound state `state_prev`.
 
@@ -906,7 +909,7 @@ static struct FANSI_state read_c0(struct FANSI_state state) {
  * This can probably use some pretty serious optimization...
  */
 struct FANSI_state FANSI_read_next(
-  struct FANSI_state state, R_xlen_t i
+  struct FANSI_state state, R_xlen_t i, int seq
 ) {
   char chr_val;
 
@@ -928,7 +931,7 @@ onemoretime:
   // UTF8 characters (if chr_val is signed, then > 0x7f will be negative)
   else if (is_utf8) state = read_utf8(state, i);
   // ESC sequences
-  else if (chr_val == 0x1B) state = read_esc(state);
+  else if (chr_val == 0x1B) state = read_esc(state, seq);
   // C0 escapes (e.g. \t, \n, etc)
   else if(chr_val) state = read_c0(state);
 

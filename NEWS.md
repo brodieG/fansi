@@ -24,6 +24,8 @@
   SGR state.
 * [#71](https://github.com/brodieG/fansi/issues/71) Functions that write SGR are
   now more parsimonious (see "Behavior Changes" below).
+* More granular error messages for `unhandled_ctl` for adjacent _Control
+  Sequences_.
 
 ### Behavior Changes
 

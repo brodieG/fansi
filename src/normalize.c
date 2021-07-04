@@ -50,7 +50,7 @@ static int normalize(
 
     // We encountered an ESC
     if(*string && *string == 0x1b) {
-      state_int = FANSI_read_next(state_int, i);
+      state_int = FANSI_read_next(state_int, i, 1);
       // Any special sequence will be re-written.  In some cases, we don't need
       // to do so, but even when things are already normalized, the order of the
       // elements may not be the same.

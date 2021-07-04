@@ -463,7 +463,7 @@ SEXP FANSI_esc_to_html(
 
         // State as html, skip if at end of string
         if(*string) {
-          state = FANSI_read_next(state, i);
+          state = FANSI_read_next(state, i, 1);
           string = state.string + state.pos_byte;
           if(*string) {
             len += W_sgr_as_html(

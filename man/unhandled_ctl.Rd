@@ -59,10 +59,10 @@ contains otherwise valid OSC bytes in 0x08-0x0d.
 SGR code or URL with unsupported parameters.
 \item non-SGR/URL: a non-SGR CSI sequence, or non-URL OSC sequence.
 \item non-CSI/OSC: a non-CSI or non-OSC escape sequence, i.e. one where the
-ESC is followed by something other than "\link{" or "}".  Since we assume
-all non-CSI sequences are only 2 characters long include the ESC, this
-type of sequence is the most likely to cause problems as some are not
-actually two characters long.
+ESC is followed by something other than "[" or "]".  Since we
+assume all non-CSI sequences are only 2 characters long include the
+ESC, this type of sequence is the most likely to cause problems as some
+are not actually two characters long.
 \item malformed-CSI/OSC: a malformed CSI or OSC sequence.
 \item malformed-ESC: a malformed two byte ESC sequence (i.e. one not ending
 in 0x40-0x7e).

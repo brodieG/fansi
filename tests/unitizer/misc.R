@@ -43,6 +43,12 @@ unitizer_sect("unhandled", {
   unhandled_ctl("\033[38;2;10;20;30mworld\033[m", "bright")
   unhandled_ctl("\033[38;2;10;20;30mworld\033[m", "bri")
   unhandled_ctl("\033[38;2;10;20;30mworld\033[m", NULL)
+
+  # Malformed in sequences
+
+  unhandled_ctl("AB\033[34m\033]9\033\\\033[1m\033[2LCD")
+  unhandled_ctl("AB\033[34m\033]9\033[1m\033[2LCD")
+
 })
 unitizer_sect("strtrim", {
   strtrim_ctl(" hello world", 7)
