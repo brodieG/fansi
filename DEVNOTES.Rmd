@@ -4,25 +4,23 @@ These are internal developer notes.
 
 ## Todo
 
-* Do we treat a failed URL as a correct OSC and advance accordingly?
+* Change `unhandled_ctl` to point out specific problem sequence (for when there
+  are many in a row?).  As simple as adding a mode to `read_next` that doesn't
+  read through adjacent control sequences.
 
-* Do we allow for separate control of SGR / URL?  I.e. do the `_sgr` functions
-  parse URLs?  Probably yes, so maybe treat URL like a terminal capability?  And
-  note the capability is just whether OSCs can be parsed, not whether things are
-  displayed as links.  Ugh, this is a little overloaded, so not ideal.
+* Think through what should happen when we request to write an empty URL.
+  Problem is that empty URLs genuinely need to be written to close out open
+  anchors, but we don't want to be writing out empty anchors when e.g. we're
+  querying state with `state_as_char`.  Basically empty anchors should only be
+  written out if prior anchor was not empty.  But to do that we need the prior
+  URL, which means we have to pass the whole state object.
+
+* Probably for 1.1, do normalize as part of first pass, will require rewriting
+  every encountered SGR.
 
 * This produces double warning: `substr_sgr('a\033[21lB', 2, 3)`.
 
 * This does not produce a warning: `substr_ctl('a\033[21lB', 2, 3, ctl='c0')`.
-
-* Make sure we have the warnings correctly set-up for OSC.
-    * Is there any SGR/CSI and URL/OSC correspondence?
-    * What is the severity hierarchy?  Do we just change the warnings to align
-      special stuff warnings vs other stuff?
-    * Maybe the SGR level errors provide a mechanism for handling C0s and other
-      limited capabilites in OS X terminal?
-
-* See OSC test notes in OSC section below.
 
 * Update `term.cap` for OSC/URL.
 
@@ -32,7 +30,9 @@ These are internal developer notes.
   character read.
 
 * Rewrite the COPY/MCOPY macros to use the buffer origin to measure size instead
-  of `len`?  That should be safer.
+  of `len`?  That should be safer.  Additionally, by passing the full buffer we
+  can make sure we never write past the end of the buffer since we know the
+  length.
 
 * Confirm invalid UTF-8 assumptions (do we consume the lead byte count, just on
   byte?).  Right now we consume the lead byte bytes.
@@ -61,9 +61,6 @@ These are internal developer notes.
 
 * Delete unused code (e.g. FANSI_color_size, digits_in_int, etc.).
 
-* Change `unhandled_ctl` to point out specific problem sequence (for when there
-  are many in a row?).
-
 * Check double warnings in all functions doing the two pass reading.
 
 * Bunch of docs don't have @return tags, oddly (fixed some).
@@ -79,6 +76,37 @@ These are internal developer notes.
   check for unescaped '<', '>', and '&'?
 
 ## Done
+
+* Change OSC-encoded to OSC-anchored.
+
+* Do we allow for separate control of SGR / URL?  I.e. do the `_sgr` functions
+  parse URLs?  Probably yes, so maybe treat URL like a terminal capability?  And
+  note the capability is just whether OSCs can be parsed, not whether things are
+  displayed as links.  Ugh, this is a little overloaded, so not ideal.
+
+Deprecate `_sgr` functions.
+
+* Make sure we have the warnings correctly set-up for OSC.
+    * Is there any SGR/CSI and URL/OSC correspondence?
+    * What is the severity hierarchy?  Do we just change the warnings to align
+      special stuff warnings vs other stuff?
+    * Maybe the SGR level errors provide a mechanism for handling C0s and other
+      limited capabilites in OS X terminal?
+
+We combined the SGR and URL warnings.
+
+* Do we warn about unsupported URL parameters?  Or do we just copy them blindly?
+  Should be the latter.  No need to make it specifically about the id parameter.
+  The one possible issue is for conversion to HTML?  Just copy them directly?
+  All of them?  Why not?  Seems like that should work.
+
+* Do we treat a failed URL as a correct OSC and advance accordingly?
+
+* Track down license for URL feature test file.
+  https://gitlab.com/gnachman/iterm2/-/blob/master/tests/osc8.txt
+  iterm2 is gpl2.0
+
+* Normalize must explicitly close and reopen?  Probably no, as so long as at the
 
 * Make sure `strwrap` and others consume initial SGR (substr does so)?  It looks
   like stwrap doesn't: `strwrap_ctl(c("\033[31mhello world", "\033[42mgoodbye moon"), carry=TRUE, 10)`
@@ -186,40 +214,37 @@ we had the index.
 
 ## OSC / URL Parsing
 
-Do we want to parse all OSCs?  Originally resistant to it due to potential
-variability in what's considered and OSC.  E.g. do we support closing with BELL
-(xterm, osx term, and iterm2 all do)?
+The biggest remaining issue here is that it makes most sense to combine url and
+sgr into the `_sgr` functions, but if we do, we're committed.  We will not be
+able to in the future to go back and decide we want a `_url`.  A possible option
+is to add `_state` that treat as special both URL and SGR.
 
-More importantly, tested terminals seem to require pattern "ESC]num;" as the
-initiator, but the spec doesn't say anything about the "num;" part.  The
-implementations just seem to consume the first char past the ] of OSC and then
-give up (terminal, iterm2, xterm).
+We're about to add:
 
-We'll support the set of OSC that start with 'num;' and don't contain any C0s.
+* normalize_sgr
+* sgr_at_end
+* close_sgr
 
-It's also possible that we need multiple instances of the buffers alive
-simultaneously as we could have a _prev_, _bound_, etc. all active.  We could
-have one big buffer, but then we'd need to track when to release stuff.
+And we have the `_sgr` flavors of existing functions.  Is there really any value
+in the `_sgr` functions?  Pretty questionable.  That's pretty much the major
+question.  Do we just want to retire the `_sgr` functions?  The best reason to
+have them in would be if the `_ctl` functions did not warn when they encounter
+things that could affect display, but they do.
 
-Instead, will just retain indices into the original string.  What if a link is
-split across two string elements?  Technically nl is allowed in OSC.  So if
-there is a string with `carry=TRUE` it is possible that the OSC gets split
-across two lines.  We're going to require that in order for OSC to be considered
-valid they much be complete within a line (it's not even clear that an NL inside
-an OSC is a NL anyway).
+So, likely solution is to retire the functions, rename all the new `_sgr`
+functions `_state`, and leave it at that.
+
+What if a link is split across two string elements?  Technically nl is allowed
+in OSC.  So if there is a string with `carry=TRUE` it is possible that the OSC
+gets split across two lines.  We're going to require that in order for OSC to be
+considered valid they much be complete within a line (it's not even clear that
+an NL inside an OSC is a NL anyway).
 
 Behavior of C0 in OSC is not consistent on mac terminal.  C0s contained
 therein are emitted.  Quartz xterm and iterm2 seem to support them properly.
 
 Todo:
 
-* Tests:
-    * more parameters
-    * colons and semicolons in bad places
-    * id actually captured (and re-output)?
-    * wrapping with plain oscs and urls
-* Implementing reading.
-* Implement writing.
 * Figure out if all the stuff like carry/terminate applies equally?
     * It should; every special handling we have for each of those we'll have to
       do for URLs too.
