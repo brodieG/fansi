@@ -81,7 +81,7 @@ strip_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), strip) {
 
 strip_sgr <- function(x, warn=getOption('fansi.warn')) {
   VAL_IN_ENV(x=x, warn=warn)
-  ctl.int <- match(c("sgr", "ctl"), VALID.CTL)
+  ctl.int <- match(c("sgr", "url"), VALID.CTL)
   .Call(FANSI_strip_csi, x, ctl.int, warn)
 }
 
