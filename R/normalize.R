@@ -14,7 +14,7 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-#' Normalize CSI SGR Sequences
+#' Normalize CSI and OSC Sequences
 #'
 #' Re-encodes SGR and OSC encoded URL sequences into a unique decomposed form.
 #' Strings containing semantically identical SGR and OSC sequences that are

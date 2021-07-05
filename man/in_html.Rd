@@ -32,7 +32,7 @@ examples.
 \examples{
 txt <- "\033[31;42mHello \033[7mWorld\033[m"
 writeLines(txt)
-html <- sgr_to_html(txt)
+html <- to_html(txt)
 \dontrun{
 in_html(html) # spawns a browser window
 }

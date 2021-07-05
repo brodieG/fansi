@@ -14,7 +14,7 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-#' Identify Unhandled ANSI Control Sequences
+#' Identify Unhandled Control Sequences
 #'
 #' Will return position and types of unhandled _Control Sequences_ in a
 #' character vector.  Unhandled sequences may cause `fansi` to interpret strings

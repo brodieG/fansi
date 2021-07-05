@@ -2,10 +2,8 @@
 % Please edit documentation in R/nchar.R
 \name{nchar_ctl}
 \alias{nchar_ctl}
-\alias{nchar_sgr}
 \alias{nzchar_ctl}
-\alias{nzchar_sgr}
-\title{ANSI Control Sequence Aware Version of nchar}
+\title{Control Sequence Aware Version of nchar}
 \usage{
 nchar_ctl(
   x,
@@ -17,17 +15,7 @@ nchar_ctl(
   strip
 )
 
-nchar_sgr(
-  x,
-  type = "chars",
-  allowNA = FALSE,
-  keepNA = NA,
-  warn = getOption("fansi.warn")
-)
-
 nzchar_ctl(x, keepNA = NA, ctl = "all", warn = getOption("fansi.warn"))
-
-nzchar_sgr(x, keepNA = NA, warn = getOption("fansi.warn"))
 }
 \arguments{
 \item{x}{a character vector or object that can be coerced to such.}
@@ -53,15 +41,20 @@ and this may change in the future.}
   unless \code{type} is \code{"width"}.}
 
 \item{ctl}{character, which \emph{Control Sequences} should be treated
-specially. See the "_ctl vs. _sgr" section for details.
+specially.  Special treatment is context dependent, and may include
+detecting them and/or computing their display/character width as zero.  For
+the SGR subset of the ANSI CSI sequences, and OSC-anchored URLs, \code{fansi}
+will also parse, interpret, and reapply the sequences as needed.  You can
+modify whether a \emph{Control Sequence} is treated specially with the \code{ctl}
+parameter.
 \itemize{
 \item "nl": newlines.
 \item "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except
 for newlines and the actual ESC (0x1B) character.
 \item "sgr": ANSI CSI SGR sequences.
 \item "csi": all non-SGR ANSI CSI sequences.
-\item "url": OSC Encoded URLs
-\item "osc": OSC sequences.
+\item "url": OSC-anchored URLs
+\item "osc": all non-OSC-anchored URL OSC sequences.
 \item "esc": all other escape sequences.
 \item "all": all of the above, except when used in combination with any of the
 above, in which case it means "all but".
@@ -94,22 +87,6 @@ encountered, as these may be incorrectly interpreted.
 \note{
 the \code{keepNA} parameter is ignored for R < 3.2.2.
 }
-\section{_ctl vs. _sgr}{
-
-
-The \verb{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
-by default.  Special treatment is context dependent, and may include
-detecting them and/or computing their display/character width as zero.  For
-the SGR subset of the ANSI CSI sequences, and OSC-anchored URLs, \code{fansi} will
-also parse, interpret, and reapply the sequences as needed.  You can modify
-whether a \emph{Control Sequence} is treated specially with the \code{ctl} parameter.
-You can exclude a type of \emph{Control Sequence} from special treatment by
-combining "all" with that type of sequence (e.g. \code{ctl=c("all", "nl")} for
-special treatment of all \emph{Control Sequences} \strong{but} newlines).  The \verb{*_sgr}
-versions only treat ANSI CSI SGR sequences specially, and are equivalent to
-the \verb{*_ctl} versions with the \code{ctl} parameter set to \code{c("sgr", "url")}.
-}
-
 \examples{
 nchar_ctl("\033[31m123\a\r")
 ## with some wide characters

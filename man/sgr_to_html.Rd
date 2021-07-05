@@ -2,7 +2,7 @@
 % Please edit documentation in R/tohtml.R
 \name{sgr_to_html}
 \alias{sgr_to_html}
-\title{Convert \emph{Control Sequences} to HTML Equivalents}
+\title{Convert Control Sequences to HTML Equivalents}
 \usage{
 sgr_to_html(
   x,
@@ -67,8 +67,7 @@ present at the end of an input vector element is carried into the next
 vector element.  If FALSE each vector element is interpreted as if there
 were no active state when they begin.  If character, then the active
 state at the end of the \code{carry} string is carried into the first element of
-\code{x}.  For every function except \code{\link{sgr_to_html}} this argument defaults to
-FALSE.  See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for
+\code{x}.  See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for
 details.}
 }
 \value{
@@ -81,5 +80,8 @@ This function is a wrapper around \code{\link{to_html}} and is kept around for l
 reasons.  When we added capabilities for handling OSC-anchored URLs, the
 \code{sgr_} part of the name became an incomplete description of what the function
 does.
+}
+\note{
+Unlike other functions, including \code{\link{to_html}}, the default is \code{carry = TRUE} for compatibility with semantics of prior versions of \code{fansi}.
 }
 \keyword{internal}

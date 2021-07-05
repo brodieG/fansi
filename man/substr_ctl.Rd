@@ -3,9 +3,7 @@
 \name{substr_ctl}
 \alias{substr_ctl}
 \alias{substr2_ctl}
-\alias{substr_sgr}
-\alias{substr2_sgr}
-\title{ANSI Control Sequence Aware Version of substr}
+\title{Control Sequence Aware Version of substr}
 \usage{
 substr_ctl(
   x,
@@ -34,32 +32,6 @@ substr2_ctl(
   carry = getOption("fansi.carry", FALSE),
   terminate = getOption("fansi.terminate", TRUE)
 )
-
-substr_sgr(
-  x,
-  start,
-  stop,
-  warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"),
-  normalize = getOption("fansi.normalize", FALSE),
-  carry = getOption("fansi.carry", FALSE),
-  terminate = getOption("fansi.terminate", TRUE)
-)
-
-substr2_sgr(
-  x,
-  start,
-  stop,
-  type = "chars",
-  round = "start",
-  tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
-  tab.stops = getOption("fansi.tab.stops"),
-  warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"),
-  normalize = getOption("fansi.normalize", FALSE),
-  carry = getOption("fansi.carry", FALSE),
-  terminate = getOption("fansi.terminate", TRUE)
-)
 }
 \arguments{
 \item{x}{a character vector or object that can be coerced to such.}
@@ -84,15 +56,20 @@ interprets escape sequences, so you should ensure that it matches your
 terminal capabilities. See \code{\link{term_cap_test}} for details.}
 
 \item{ctl}{character, which \emph{Control Sequences} should be treated
-specially. See the "_ctl vs. _sgr" section for details.
+specially.  Special treatment is context dependent, and may include
+detecting them and/or computing their display/character width as zero.  For
+the SGR subset of the ANSI CSI sequences, and OSC-anchored URLs, \code{fansi}
+will also parse, interpret, and reapply the sequences as needed.  You can
+modify whether a \emph{Control Sequence} is treated specially with the \code{ctl}
+parameter.
 \itemize{
 \item "nl": newlines.
 \item "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except
 for newlines and the actual ESC (0x1B) character.
 \item "sgr": ANSI CSI SGR sequences.
 \item "csi": all non-SGR ANSI CSI sequences.
-\item "url": OSC Encoded URLs
-\item "osc": OSC sequences.
+\item "url": OSC-anchored URLs
+\item "osc": all non-OSC-anchored URL OSC sequences.
 \item "esc": all other escape sequences.
 \item "all": all of the above, except when used in combination with any of the
 above, in which case it means "all but".
@@ -109,8 +86,7 @@ present at the end of an input vector element is carried into the next
 vector element.  If FALSE each vector element is interpreted as if there
 were no active state when they begin.  If character, then the active
 state at the end of the \code{carry} string is carried into the first element of
-\code{x}.  For every function except \code{\link{sgr_to_html}} this argument defaults to
-FALSE.  See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for
+\code{x}.  See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for
 details.}
 
 \item{terminate}{TRUE (default) or FALSE whether substrings should have
@@ -147,16 +123,16 @@ x (after possible coercion and re-encoding to UTF-8).
 }
 \description{
 \code{substr_ctl} is a drop-in replacement for \code{substr}.  Performance is
-slightly slower than \code{substr}.  ANSI CSI SGR sequences will be included in
-the substrings to reflect the format of the substring when it was embedded in
+slightly slower than \code{substr}.  CSI SGR sequences will be included in the
+substrings to reflect the format of the substring when it was embedded in
 the source string.  Additionally, other \emph{Control Sequences} specified in
 \code{ctl} are treated as zero-width.
 }
 \details{
-\code{substr2_ctl} and \code{substr2_sgr} add the ability to retrieve substrings based
-on display width, and byte width in addition to the normal character width.
-\code{substr2_ctl} also provides the option to convert tabs to spaces with
-\code{\link{tabs_as_spaces}} prior to taking substrings.
+\code{substr2_ctl} adds the ability to retrieve substrings based on display width
+in addition to the normal character width.  \code{substr2_ctl} also provides the
+option to convert tabs to spaces with \code{\link{tabs_as_spaces}} prior to taking
+substrings.
 
 Because exact substrings on anything other than character width cannot be
 guaranteed (e.g. as a result of multi-byte encodings, or double display-width
@@ -172,11 +148,11 @@ use "stop" as the \code{round} value.  "neither" would cause all partial
 characters to be dropped irrespective whether they correspond to \code{start} or
 \code{stop}, and "both" could cause all of them to be included.
 
-These functions map string lengths accounting for ANSI CSI SGR sequence
-semantics to the naive length calculations, and then use the mapping in
-conjunction with \code{\link[base:substr]{base::substr()}} to extract the string.  This concept is
-borrowed directly from Gábor Csárdi's \code{crayon} package, although the
-implementation of the calculation is different.
+These functions map string lengths accounting for CSI SGR sequence semantics
+to the naive length calculations, and then use the mapping in conjunction
+with \code{\link[base:substr]{base::substr()}} to extract the string.  This concept is borrowed
+directly from Gábor Csárdi's \code{crayon} package, although the implementation of
+the calculation is different.
 }
 \note{
 Non-ASCII strings are converted to and returned in UTF-8 encoding.
@@ -184,22 +160,6 @@ Width calculations will not work properly in R < 3.2.2.
 
 If \code{stop} < \code{start}, the return value is always an empty string.
 }
-\section{_ctl vs. _sgr}{
-
-
-The \verb{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
-by default.  Special treatment is context dependent, and may include
-detecting them and/or computing their display/character width as zero.  For
-the SGR subset of the ANSI CSI sequences, and OSC-anchored URLs, \code{fansi} will
-also parse, interpret, and reapply the sequences as needed.  You can modify
-whether a \emph{Control Sequence} is treated specially with the \code{ctl} parameter.
-You can exclude a type of \emph{Control Sequence} from special treatment by
-combining "all" with that type of sequence (e.g. \code{ctl=c("all", "nl")} for
-special treatment of all \emph{Control Sequences} \strong{but} newlines).  The \verb{*_sgr}
-versions only treat ANSI CSI SGR sequences specially, and are equivalent to
-the \verb{*_ctl} versions with the \code{ctl} parameter set to \code{c("sgr", "url")}.
-}
-
 \examples{
 substr_ctl("\033[42mhello\033[m world", 1, 9)
 substr_ctl("\033[42mhello\033[m world", 3, 9)
@@ -213,19 +173,17 @@ substr2_ctl(cn.string, 2, 3, type='width', round='both')
 substr2_ctl(cn.string, 2, 3, type='width', round='start')
 substr2_ctl(cn.string, 2, 3, type='width', round='stop')
 
-## the _sgr variety only treat as special CSI SGR,
-## compare the following:
-substr_sgr("\033[31mhello\tworld", 1, 6)
-substr_ctl("\033[31mhello\tworld", 1, 6)
+## We can specify which escapes are considered special:
+substr_ctl("\033[31mhello\tworld", 1, 6, ctl='sgr')
 substr_ctl("\033[31mhello\tworld", 1, 6, ctl=c('all', 'c0'))
 
 ## `carry` allows SGR to carry from one element to the next
-substr_sgr(c("\033[33mhello", "world"), 1, 3)
-substr_sgr(c("\033[33mhello", "world"), 1, 3, carry=TRUE)
-substr_sgr(c("\033[33mhello", "world"), 1, 3, carry="\033[44m")
+substr_ctl(c("\033[33mhello", "world"), 1, 3)
+substr_ctl(c("\033[33mhello", "world"), 1, 3, carry=TRUE)
+substr_ctl(c("\033[33mhello", "world"), 1, 3, carry="\033[44m")
 
 ## We can omit the termination
-bleed <- substr_sgr(c("\033[41hello", "world"), 1, 3, terminate=FALSE)
+bleed <- substr_ctl(c("\033[41hello", "world"), 1, 3, terminate=FALSE)
 \dontrun{writeLines(bleed)} # Style will bleed out of string
 writeLines("\033[m")        # Stop bleeding if needed
 }
@@ -233,6 +191,6 @@ writeLines("\033[m")        # Stop bleeding if needed
 \code{\link[=fansi]{?fansi}} for details on how \emph{Control Sequences} are
 interpreted, particularly if you are getting unexpected results,
 \code{\link{normalize_state}} for more details on what the \code{normalize} parameter does,
-\code{\link{state_at_end}} to compute active state at the end of strings, \code{\link{close_state}}
-to compute the sequence required to close active state.
+\code{\link{state_at_end}} to compute active state at the end of strings,
+\code{\link{close_state}} to compute the sequence required to close active state.
 }

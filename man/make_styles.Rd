@@ -9,10 +9,10 @@ make_styles(classes, rgb.mix = diag(3))
 \arguments{
 \item{classes}{a character vector of either 16, 32, or 512 class names, or a
 scalar integer with value 8, 16, or 256.  The character vectors are
-described in \code{\link{sgr_to_html}}.  The scalar integers will cause this function
+described in \code{\link{to_html}}.  The scalar integers will cause this function
 to generate classes for the basic colors (8), basic + bright (16), or all
 256 8-bit colors (256), with class names in "fansi-color-###" (or
-"fansi-bgcol-###" for background colors), which is what \code{\link{sgr_to_html}}
+"fansi-bgcol-###" for background colors), which is what \code{\link{to_html}}
 generates when-user defined classes are not provided.  TRUE is also a valid
 input and is equivalent to 256.}
 
@@ -45,7 +45,7 @@ writeLines(css1[1:4])
 
 ## Generate SGR-derived HTML, mapping to classes
 string <- "\033[43mYellow\033[m\n\033[45mMagenta\033[m\n\033[46mCyan\033[m"
-html <- sgr_to_html(string, classes=classes)
+html <- to_html(string, classes=classes)
 writeLines(html)
 
 ## Combine in a page with styles and display in browser

@@ -89,11 +89,10 @@
 #' @return A character vector of the same length as `x` with all escape
 #'   sequences removed and any basic ANSI CSI SGR escape sequences applied via
 #'   SPAN HTML tags.
-#' @note `sgr_to_html` always terminates as not doing so produces
+#' @note `to_html` always terminates as not doing so produces
 #'   invalid HTML.  If you wish for the last active SPAN to bleed into
-#'   subsequent text you may do so with e.g. `sub("</span>$", "", x)`.
-#'   Additionally, `sgr_to_html` uses `carry = TRUE` by default, unlike other
-#'   `fansi` functions that share that parameter.
+#'   subsequent text you may do so with e.g. `sub("</span>(?:</a>)?$", "", x)`
+#'   or similar.
 #' @examples
 #' to_html("hello\033[31;42;1mworld\033[m")
 #' to_html("hello\033[31;42;1mworld\033[m", classes=TRUE)
@@ -199,10 +198,10 @@ sgr_to_html <- function(
 #' @export
 #' @param classes a character vector of either 16, 32, or 512 class names, or a
 #'   scalar integer with value 8, 16, or 256.  The character vectors are
-#'   described in [`sgr_to_html`].  The scalar integers will cause this function
+#'   described in [`to_html`].  The scalar integers will cause this function
 #'   to generate classes for the basic colors (8), basic + bright (16), or all
 #'   256 8-bit colors (256), with class names in "fansi-color-###" (or
-#'   "fansi-bgcol-###" for background colors), which is what [`sgr_to_html`]
+#'   "fansi-bgcol-###" for background colors), which is what [`to_html`]
 #'   generates when-user defined classes are not provided.  TRUE is also a valid
 #'   input and is equivalent to 256.
 #' @param rgb.mix 3 x 3 numeric matrix to remix color channels.  Given a N x 3
@@ -224,7 +223,7 @@ sgr_to_html <- function(
 #'
 #' ## Generate SGR-derived HTML, mapping to classes
 #' string <- "\033[43mYellow\033[m\n\033[45mMagenta\033[m\n\033[46mCyan\033[m"
-#' html <- sgr_to_html(string, classes=classes)
+#' html <- to_html(string, classes=classes)
 #' writeLines(html)
 #'
 #' ## Combine in a page with styles and display in browser
@@ -313,7 +312,7 @@ check_classes <- function(classes) {
 #' @examples
 #' txt <- "\033[31;42mHello \033[7mWorld\033[m"
 #' writeLines(txt)
-#' html <- sgr_to_html(txt)
+#' html <- to_html(txt)
 #' \dontrun{
 #' in_html(html) # spawns a browser window
 #' }

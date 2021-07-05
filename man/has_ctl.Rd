@@ -2,26 +2,28 @@
 % Please edit documentation in R/sgr.R
 \name{has_ctl}
 \alias{has_ctl}
-\alias{has_sgr}
-\title{Checks for Presence of Control Sequences}
+\title{Check for Presence of Control Sequences}
 \usage{
 has_ctl(x, ctl = "all", warn = getOption("fansi.warn"), which)
-
-has_sgr(x, warn = getOption("fansi.warn"))
 }
 \arguments{
 \item{x}{a character vector or object that can be coerced to such.}
 
 \item{ctl}{character, which \emph{Control Sequences} should be treated
-specially. See the "_ctl vs. _sgr" section for details.
+specially.  Special treatment is context dependent, and may include
+detecting them and/or computing their display/character width as zero.  For
+the SGR subset of the ANSI CSI sequences, and OSC-anchored URLs, \code{fansi}
+will also parse, interpret, and reapply the sequences as needed.  You can
+modify whether a \emph{Control Sequence} is treated specially with the \code{ctl}
+parameter.
 \itemize{
 \item "nl": newlines.
 \item "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except
 for newlines and the actual ESC (0x1B) character.
 \item "sgr": ANSI CSI SGR sequences.
 \item "csi": all non-SGR ANSI CSI sequences.
-\item "url": OSC Encoded URLs
-\item "osc": OSC sequences.
+\item "url": OSC-anchored URLs
+\item "osc": all non-OSC-anchored URL OSC sequences.
 \item "esc": all other escape sequences.
 \item "all": all of the above, except when used in combination with any of the
 above, in which case it means "all but".
@@ -46,22 +48,6 @@ in return
 for CSI SGR and OSC-anchored URL sequences.  You can check for different types
 of sequences with the \code{ctl} parameter.
 }
-\section{_ctl vs. _sgr}{
-
-
-The \verb{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
-by default.  Special treatment is context dependent, and may include
-detecting them and/or computing their display/character width as zero.  For
-the SGR subset of the ANSI CSI sequences, and OSC-anchored URLs, \code{fansi} will
-also parse, interpret, and reapply the sequences as needed.  You can modify
-whether a \emph{Control Sequence} is treated specially with the \code{ctl} parameter.
-You can exclude a type of \emph{Control Sequence} from special treatment by
-combining "all" with that type of sequence (e.g. \code{ctl=c("all", "nl")} for
-special treatment of all \emph{Control Sequences} \strong{but} newlines).  The \verb{*_sgr}
-versions only treat ANSI CSI SGR sequences specially, and are equivalent to
-the \verb{*_ctl} versions with the \code{ctl} parameter set to \code{c("sgr", "url")}.
-}
-
 \examples{
 has_ctl("hello world")
 has_ctl("hello\nworld")

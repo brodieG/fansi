@@ -96,7 +96,7 @@ We have prioritized convenience and safety over raw speed in the C code.
 ## HTML Translation
 
 You can translate ANSI CSI SGR formatted strings into their HTML counterparts
-with `sgr_to_html`:
+with `to_html`:
 ```{r echo=FALSE, eval=FALSE}
 N <- readLines(file.path(R.home('doc'), 'NEWS'))
 N <- fansi_lines(N, step=2)                             # color each line
@@ -106,7 +106,7 @@ N <- c("", paste(N[1:15], N[100:115], N[200:215]), "")  # make 3 cols
 writeLines(N)
 
 f <- tempfile()
-writeLines(c("<html><pre>", sgr_to_html(N), "</pre></html>"), f)
+writeLines(c("<html><pre>", to_html(N), "</pre></html>"), f)
 browseURL(f)
 ```
 ![translate to html](https://raw.githubusercontent.com/brodieG/fansi/master/extra/images/sgr_to_html.png)

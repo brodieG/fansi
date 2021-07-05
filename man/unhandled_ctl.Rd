@@ -2,7 +2,7 @@
 % Please edit documentation in R/unhandled.R
 \name{unhandled_ctl}
 \alias{unhandled_ctl}
-\title{Identify Unhandled ANSI Control Sequences}
+\title{Identify Unhandled Control Sequences}
 \usage{
 unhandled_ctl(x, term.cap = getOption("fansi.term.cap"))
 }

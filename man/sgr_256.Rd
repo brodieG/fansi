@@ -2,7 +2,7 @@
 % Please edit documentation in R/misc.R
 \name{sgr_256}
 \alias{sgr_256}
-\title{Show 8 Bit ANSI CSI SGR Colors}
+\title{Show 8 Bit CSI SGR Colors}
 \usage{
 sgr_256()
 }

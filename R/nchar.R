@@ -14,7 +14,7 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-#' ANSI Control Sequence Aware Version of nchar
+#' Control Sequence Aware Version of nchar
 #'
 #' `nchar_ctl` counts all non _Control Sequence_ characters.
 #' `nzchar_ctl` returns TRUE for each input vector element that has non _Control
@@ -31,7 +31,6 @@
 #' @inheritParams substr_ctl
 #' @inheritParams base::nchar
 #' @inheritParams strip_ctl
-#' @inheritSection substr_ctl _ctl vs. _sgr
 #' @note the `keepNA` parameter is ignored for R < 3.2.2.
 #' @export
 #' @inherit has_ctl seealso
@@ -92,16 +91,6 @@ nchar_ctl <- function(
 #' @export
 #' @rdname nchar_ctl
 
-nchar_sgr <- function(
-  x, type='chars', allowNA=FALSE, keepNA=NA, warn=getOption('fansi.warn')
-)
-  nchar_ctl(
-    x=x, type=type, allowNA=allowNA, keepNA=keepNA, warn=warn, ctl='sgr'
-  )
-
-#' @export
-#' @rdname nchar_ctl
-
 nzchar_ctl <- function(x, keepNA=NA, ctl='all', warn=getOption('fansi.warn')) {
   VAL_IN_ENV(x=x, ctl=ctl, warn=warn)
   if(!is.logical(keepNA)) keepNA <- as.logical(keepNA)
@@ -111,8 +100,24 @@ nzchar_ctl <- function(x, keepNA=NA, ctl='all', warn=getOption('fansi.warn')) {
   term.cap.int <- seq_along(VALID.TERM.CAP)
   .Call(FANSI_nzchar_esc, x, keepNA, warn, term.cap.int, ctl.int)
 }
+#' Control Sequence Aware Version of nchar
+#'
+#' These functions are deprecated in favor of the [`_ctl` flavors][nchar_ctl].
+#'
+#' @inheritParams nchar_ctl
+#' @inherit nchar_ctl return
+#' @keywords internal
 #' @export
-#' @rdname nchar_ctl
+
+nchar_sgr <- function(
+  x, type='chars', allowNA=FALSE, keepNA=NA, warn=getOption('fansi.warn')
+)
+  nchar_ctl(
+    x=x, type=type, allowNA=allowNA, keepNA=keepNA, warn=warn, ctl='sgr'
+  )
+
+#' @export
+#' @rdname nchar_sgr
 
 nzchar_sgr <- function(x, keepNA=NA, warn=getOption('fansi.warn'))
   nzchar_ctl(x=x, keepNA=keepNA, warn=warn, ctl='sgr')
