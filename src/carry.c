@@ -67,11 +67,9 @@ SEXP FANSI_state_at_end_ext(
     if(do_carry) state.sgr = state_prev.sgr;
 
     state = state_at_end(state, i);
-    char * state_chr = FANSI_state_as_chr(&buff, state, normalize, i);
+    FANSI_state_as_chr(&buff, state, normalize, i);
 
-    SEXP reschr = PROTECT(
-      FANSI_mkChar(state_chr, state_chr + strlen(state_chr), CE_NATIVE, i)
-    );
+    SEXP reschr = PROTECT(FANSI_mkChar(buff, CE_NATIVE, i));
     SET_STRING_ELT(res, i, reschr);
     UNPROTECT(1);
     state_prev = state;

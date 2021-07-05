@@ -256,7 +256,7 @@ static char * oe_sgr_html_err = "Expanding SGR sequences to HTML";
  */
 static int W_state_as_html(
   struct FANSI_state state,
-  char ** buff,
+  struct FANSI_buff * buff,
   SEXP color_classes, R_xlen_t i,
   int len
 ) {
@@ -275,8 +275,6 @@ static int W_state_as_html(
   int has_prev_url = FANSI_url_active(state.url_prev);
   int url_change = FANSI_url_comp(state.url, state.url_prev);
 
-  const char * buff_start = *buff;
-  int len0 = len;
   const char * err_msg = oe_sgr_html_err;
   struct FANSI_sgr sgr = state.sgr;
 
@@ -284,17 +282,17 @@ static int W_state_as_html(
 
   if(sgr_change || url_change) {
     // Close previous
-    if(has_prev_sgr) len += FANSI_W_COPY(buff, "</span>");
-    if(has_prev_url) len += FANSI_W_COPY(buff, "</a>");
+    if(has_prev_sgr) FANSI_W_COPY(buff, "</span>");
+    if(has_prev_url) FANSI_W_COPY(buff, "</a>");
 
     if(has_cur_url) {
       // users responsibility to escape html special chars
-      len += FANSI_W_COPY(buff, "<a href='");
-      len += FANSI_W_MCOPY(buff, state.url.url.val, state.url.url.len);
-      len += FANSI_W_COPY(buff, "'>");
+      FANSI_W_COPY(buff, "<a href='");
+      FANSI_W_MCOPY(buff, state.url.url.val, state.url.url.len);
+      FANSI_W_COPY(buff, "'>");
     }
     if(has_cur_sgr) {
-       len += FANSI_W_COPY(buff, "<span");
+       FANSI_W_COPY(buff, "<span");
       // Styles
       int invert = sgr.style & (1U << 7U);
       int color = invert ? sgr.bg_color : sgr.color;
@@ -312,11 +310,11 @@ static int W_state_as_html(
       // Brights remapped to 8-15
 
       if(color_class || bgcol_class) {
-        len += FANSI_W_COPY(buff, " class='");
-        if(color_class) len += FANSI_W_COPY(buff, color_class);
-        if(color_class && bgcol_class) len += FANSI_W_COPY(buff, " ");
-        if(bgcol_class) len += FANSI_W_COPY(buff, bgcol_class);
-        len += FANSI_W_COPY(buff, "'");
+        FANSI_W_COPY(buff, " class='");
+        if(color_class) FANSI_W_COPY(buff, color_class);
+        if(color_class && bgcol_class) FANSI_W_COPY(buff, " ");
+        if(bgcol_class) FANSI_W_COPY(buff, bgcol_class);
+        FANSI_W_COPY(buff, "'");
       }
       // inline style and/or colors
       if(
@@ -328,15 +326,13 @@ static int W_state_as_html(
         int len_start = len;
         char color_tmp[8];
         if(color >= 0 && (!color_class)) {
-          len += FANSI_W_COPY(buff, "color: ");
-          len += FANSI_W_COPY(
-            buff, color_to_html(color, color_extra, color_tmp)
-          );
+          FANSI_W_COPY(buff, "color: ");
+          FANSI_W_COPY(buff, color_to_html(color, color_extra, color_tmp));
         }
         if(bg_color >= 0 && (!bgcol_class)) {
           if(len_start < len) len += FANSI_W_COPY(buff, "; ");
-          len += FANSI_W_COPY(buff,  "background-color: ");
-          len += FANSI_W_COPY(
+          FANSI_W_COPY(buff,  "background-color: ");
+          FANSI_W_COPY(
             buff, color_to_html(bg_color, bg_color_extra, color_tmp)
           );
         }
@@ -344,24 +340,15 @@ static int W_state_as_html(
         for(unsigned int i = 1U; i < 10U; ++i)
           if(sgr.style & style_html_mask() & (1U << i)) {
             if(len_start < len) len += FANSI_W_COPY(buff, "; ");
-            len += FANSI_W_COPY(buff, css_style[i - 1].css);
+            FANSI_W_COPY(buff, css_style[i - 1].css);
           }
-        len += FANSI_W_COPY(buff, ";'");
+        FANSI_W_COPY(buff, ";'");
       }
-      len += FANSI_W_COPY(buff, ">");
+      FANSI_W_COPY(buff, ">");
   } }
-  if(*buff) {
-    if(*buff - buff_start != len - len0)
-      // nocov start
-      error(
-        "Internal Error: buffer length mismatch in html generation (%d vs %td).",
-        len - len0, *buff - buff_start
-      );
-      // nocov end
-  }
   // We've checked len at every step, so it cannot overflow INT_MAX.
 
-  return len - len0;
+  return buff->len;
 }
 /*
  * Convert SGR Encoded Strings to their HTML equivalents
@@ -438,14 +425,14 @@ SEXP FANSI_esc_to_html(
           // Allocate target vector if it hasn't been yet
           if(res == x) REPROTECT(res = duplicate(x), ipx);
           // Allocate buffer and reset states for second pass
-          FANSI_size_buff(&buff, len);
-          buff_track = buff.buff;
-          len = 0;
+          FANSI_size_buff(&buff);
           string = state.string;  // always points to first byte
           state_start.warn = state.warn;
           state = state_start;
           state_prev = state_init;
         } else break;
+      } else {
+        FANSI_reset_buff(&buff);
       }
       // Leftover from prior element (only if can't be merged with new)
 
@@ -456,7 +443,7 @@ SEXP FANSI_esc_to_html(
         // dirty hack, state.sgr_prev is not exaclty right at beginning
         state.sgr_prev = state_prev.sgr;
         state.url_prev = state_prev.url;
-        len += W_state_as_html(state, &buff_track, color_classes, i, len);
+        W_state_as_html(state, &buff, color_classes, i, len);
         state_prev = state;
       }
       // New in this element
@@ -472,7 +459,7 @@ SEXP FANSI_esc_to_html(
         }
         // Intervening bytes before next state
         int bytes_prev = string - string_prev;  // cannot overflow int
-        len += FANSI_W_MCOPY(&buff_track, string_prev, bytes_prev);
+        FANSI_W_MCOPY(&buff, string_prev, bytes_prev);
         state.pos_byte = (string - state.string);
 
         // State as html, skip if at end of string
@@ -482,8 +469,7 @@ SEXP FANSI_esc_to_html(
           // dirty hack, state.sgr_prev is not exaclty right at beginning
           state.sgr_prev = state_prev.sgr;
           state.url_prev = state_prev.url;
-          if(*string)
-            len += W_state_as_html(state, &buff_track, color_classes, i, len);
+          if(*string) W_state_as_html(state, &buff, color_classes, i, len);
 
           state_prev = state;
           has_state |=
@@ -491,24 +477,14 @@ SEXP FANSI_esc_to_html(
           if(!*string) break; // nothing after state, so done
         } else break;
       }
-      if(trail_span) len += FANSI_W_COPY(&buff_track, "</span>");
-      if(trail_a) len += FANSI_W_COPY(&buff_track, "</a>");
+      if(trail_span) FANSI_W_COPY(&buff, "</span>");
+      if(trail_a) FANSI_W_COPY(&buff, "</a>");
 
       if(buff_track) {  // only ever true if k > 0
-        // Final check that we're not out of sync (recall buff.len includes NULL)
-        if(buff_track - buff.buff != len)
-        // nocov start
-        error(
-          "Internal Error: %s (%td vs %d).",
-          "buffer length mismatch in html generation (2)",
-          buff_track - buff.buff, len
-        );
-        // nocov end
-
         // Now create the charsxp with the original encoding.  Since we're only
         // removing SGR and adding FANSI, it should be okay.
         cetype_t chr_type = getCharCE(chrsxp);
-        SEXP chrsxp = PROTECT(FANSI_mkChar(buff.buff, buff_track, chr_type, i));
+        SEXP chrsxp = PROTECT(FANSI_mkChar(buff, chr_type, i));
         SET_STRING_ELT(res, i, chrsxp);
         UNPROTECT(1);
       }
@@ -535,7 +511,7 @@ SEXP FANSI_color_to_html_ext(SEXP x) {
 
   struct FANSI_buff buff;
   FANSI_INIT_BUFF(&buff);
-  FANSI_size_buff(&buff, 7);
+  FANSI_size_buff0(&buff, 7);
 
   int * x_int = INTEGER(x);
 
@@ -615,46 +591,45 @@ SEXP FANSI_esc_html(SEXP x, SEXP what) {
       string = CHAR(chrsxp);
 
       if(k && len > LENGTH(chrsxp)) {
-        FANSI_size_buff(&buff, len);
+        FANSI_size_buff0(&buff, len);
         len = LENGTH(chrsxp); // reset so we don't unecessary overflow
         // Allocate result vector if it hasn't been yet
         if(res == x) REPROTECT(res = duplicate(x), ipx);
       }
       // No second pass if no incremental chars
       else if (k) break;
-
-      char * buff_track = buff.buff;
+      else FANSI_reset_buff(&buff);
 
       while(*string) {
         // Skip chars that can't be specials
         if(*string > '>') {
-          if(buff_track) *(buff_track++) = *string;
+          if(buff.buff) *(buff.buff++) = *string;
           ++string;
           continue;
         }
         --len;    // we're replacing one char, so don't count it
         if(*string == '&' &&       what_val & 1U << 0U)
-          len += FANSI_W_COPY(&buff_track, "&amp;");
+          len += FANSI_W_COPY(&buff, "&amp;");
         else if(*string == '"' &&  what_val & 1U << 1U)
-          len += FANSI_W_COPY(&buff_track, "&quot;");
+          len += FANSI_W_COPY(&buff, "&quot;");
         else if(*string == '\'' && what_val & 1U << 2U)
-          len += FANSI_W_COPY(&buff_track, "&#039;");
+          len += FANSI_W_COPY(&buff, "&#039;");
         else if(*string == '<' &&  what_val & 1U << 3U)
-          len += FANSI_W_COPY(&buff_track, "&lt;");
+          len += FANSI_W_COPY(&buff, "&lt;");
         else if(*string == '>' &&  what_val & 1U << 4U)
-          len += FANSI_W_COPY(&buff_track, "&gt;");
+          len += FANSI_W_COPY(&buff, "&gt;");
         // Just advance copy string otherwse
         else {
           ++len;  // we didn't actually replace the char
-          if(buff_track) *(buff_track++) = *string;
+          if(buff.buff) *(buff.buff++) = *string;
         }
         ++string;
       }
       // Only get here in second pass if we've written
-      if(k && buff_track) {
-        *buff_track = 0;
+      if(k && buff.buff) {
+        *(buff.buff) = 0;
         cetype_t chr_type = getCharCE(chrsxp);
-        SEXP reschr = PROTECT(FANSI_mkChar(buff.buff, buff_track, chr_type, i));
+        SEXP reschr = PROTECT(FANSI_mkChar(buff, chr_type, i));
         SET_STRING_ELT(res, i, reschr);
         UNPROTECT(1);
       }

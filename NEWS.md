@@ -61,11 +61,13 @@ finicky C string manipulation code.
 
 ### Internal Changes
 
-* More aggressive UTF-8 validation, also, invalid UTF-8 now advance only one
-  byte instead of their putative width based on a valid initial byte.
+* More aggressive UTF-8 validation, also, invalid UTF-8 code points now advance
+  only one byte instead of their putative width based on the initial byte.
 * Reduce peak memory usage by making some intermediate buffers eligible for
   garbage collection prior to native code returning to R.
-* Reworked internals to simplify buffer computation and synchronization.
+* Reworked internals to simplify buffer size computation and synchronization, in
+  some cases this might cause slightly reduced performance.  Please report any
+  significant performance regressions.
 
 ## v0.5.0
 

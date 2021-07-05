@@ -22,13 +22,20 @@
 
 #include "fansi.h"
 
-int FANSI_has_int(SEXP x, int ctl) {
-  if(TYPEOF(x) != CHARSXP) error("Argument `x` must be CHRSXP.");
-  if(x == NA_STRING) return NA_LOGICAL;
-  else {
-    struct FANSI_csi_pos pos = FANSI_find_esc(CHAR(x), ctl);
-    return (pos.valid ? 1 : -1) * (pos.len != 0);
+int FANSI_has_int(SEXP x, int warn, SEXP ctl, R_xlen_t i) {
+  if(TYPEOF(x) != STRSXP) error("Argument `x` must be CHRSXP.");
+  int res = 0;
+  const char * xc = CHAR(STRING_ELT(x, i));
+  int off_init = FANSI_seek_ctl(xc);
+  if(xc + off_init) {
+    SEXP R_false = PROTECT(ScalarLogical(0));
+    struct FANSI_state state = FANSI_state_init_ctl(x, R_false, ctl, i);
+    UNPROTECT(1);
+    state.pos_byte = off_init;
+    struct FANSI_ctl_pos pos = FANSI_find_ctl(state, warn, i);
+    res = pos.len > 0;
   }
+  return res;
 }
 /*
  * Check if a CHARSXP contains ANSI esc sequences
@@ -42,24 +49,12 @@ SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn) {
   int * res_int = LOGICAL(res);
   int warn_int = asLogical(warn);
 
-  int ctl_int = FANSI_ctl_as_int(ctl);
-
   for(R_xlen_t i = 0; i < len; ++i) {
     FANSI_interrupt(i);
     SEXP chrsxp = STRING_ELT(x, i);
     FANSI_check_chrsxp(chrsxp, i);
-    int res_tmp = FANSI_has_int(chrsxp, ctl_int);
-    // no great, but need to watch out for NA_LOGICAL == INT_MIN
-    if(res_tmp == -1 && warn_int) {
-      res_tmp = -res_tmp;
-      warning(
-        "Encountered invalid ESC sequence at index [%jd], %s%s",
-        FANSI_ind(i),
-        "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
-        "off these warnings."
-      );
-    }
-    res_int[i] = res_tmp;
+    if(chrsxp == NA_STRING) res_int[i] = NA_LOGICAL;
+    else res_int[i] = FANSI_has_int(chrsxp, warn_int, ctl, i);
   }
   UNPROTECT(1);
   return res;

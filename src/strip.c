@@ -28,7 +28,8 @@
  * @param warn normally TRUE or FALSE, but internally we allow it to be an
  *   integer so that we can use a special mode where if == 2 then we return the
  *   fact that there was a warning as an attached attributed, as opposed to
- *   actually throwing the warning
+ *   actually throwing the warning, used by e.g. make_pre and other internal
+ *   functions.
  */
 
 SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
@@ -46,9 +47,6 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
   if(warn_int < 0 || warn_int > 2)
     error("Argument `warn` must be between 0 and 2 if an integer.");  // nocov
 
-  // Compress `ctl` into a single integer using bit flags
-
-  int ctl_int = FANSI_ctl_as_int(ctl);
   R_xlen_t i, len = xlength(x);
   SEXP res_fin = x;
 
@@ -58,8 +56,6 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
 
   int any_ansi = 0;
   R_len_t mem_req = 0;          // how much memory we need for each ansi
-
-  struct FANSI_csi_pos csi;
 
   // Compute longest char element, we'll assume this is the required size of our
   // string buffer.  This is potentially wastful if there is one very large
@@ -75,8 +71,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     if(chr_len > mem_req) mem_req = chr_len;
   }
   // Now strip
-  int invalid_ansi = 0;
-  R_xlen_t invalid_idx = 0;
+  int warn_attrib = 0;
   char * chr_buff;
 
   for(i = 0; i < len; ++i) {
@@ -97,38 +92,32 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
 
     res_start = res_track = chr_buff;
 
+    // Check whether there anything that could plausibly pass for an escape
+    // before doing a proper (more expensive) check
+    int off_init = FANSI_seek_ctl(chr);
+    if(!*(chr + off_init)) continue;
+
+    // Now full check
+    SEXP R_false = PROTECT(ScalarLogical(0));
+    struct FANSI_state state = FANSI_state_init_ctl(x, R_false, ctl, i);
+    UNPROTECT(1);
+    state.pos_byte = off_init;
+    struct FANSI_ctl_pos pos_prev = {0, 0, 0};
+
     while(1) {
-      csi = FANSI_find_esc(chr_track, ctl_int);
-      // Currently we can't know for sure if a ESC seq that isn't a CSI is only
-      // two long so we should warn if we hit one, or otherwise and invalid seq
-      if(
-        !invalid_ansi && (
-          !csi.valid ||
-          ((csi.ctl & FANSI_CTL_ESC) & ctl_int)
-        )
-      ) {
-        invalid_ansi = 1;
-        invalid_idx = i;
-      }
-      if(csi.len) {
+      // warn can be 2
+      struct FANSI_ctl_pos pos = FANSI_find_ctl(state, warn_int == 1, i);
+      warn_attrib = warn_attrib || pos.warn;
+      if(pos.len) {
         has_ansi = 1;
-        if(csi.start - chr > FANSI_lim.lim_int.max - csi.len)
-          // nocov start
-          error(
-            "%s%s",
-            "Internal Error: string longer than INT_MAX encountered, should ",
-            "not be possible."
-          );
-          // nocov end
 
         // As soon as we encounter ansi in any of the character vector elements,
         // allocate vector to track what has ansi
-
         if(!any_ansi) {
           any_ansi = 1;
 
           // We need to allocate a result vector since we'll be stripping ANSI
-          // CSI, and also the buffer we'll use to re-write the CSI less strings
+          // pos, and also the buffer we'll use to re-write the pos less strings
 
           REPROTECT(res_fin = duplicate(x), ipx);
 
@@ -142,13 +131,16 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
           chr_buff = (char *) R_alloc(((size_t) mem_req) + 1, sizeof(char));
           res_start = res_track = chr_buff;
         }
-        // Is memcpy going to cause problems again by reading past end of
-        // block?  Didn't in first valgrind check.
-
-        memcpy(res_track, chr_track, csi.start - chr_track);
-        res_track += csi.start - chr_track;
-        chr_track = csi.start + csi.len;
-      } else break;
+        memcpy(
+          res_track, chr_track, pos.offset - pos_prev.offset
+        );
+        res_track += pos.offset - pos_prev.offset;
+        state.pos_byte += pos.offset + pos.len;
+        chr_track = state.string + state.pos_byte;
+        pos_prev = pos;
+      } else {
+        break;
+      }
     }
     // Update string
 
@@ -156,7 +148,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
       // Copy final chunk if it exists because above we only memcpy when we
       // encounter the tag
 
-      if(*chr_track) {
+      if(chr_track) {
         const char * chr_end = chr + LENGTH(x_chr);
         if(!chr_end) {
           // nocov start
@@ -166,7 +158,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
             "contact maintainer."
           );
           // nocov end
-        } else if(chr_end > chr_track) {
+        } else if(chr_end > state.string + state.pos_byte) {
           memcpy(res_track, chr_track, chr_end - chr_track);
           res_track += chr_end - chr_track;
       } }
@@ -174,30 +166,17 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
 
       FANSI_check_chr_size(res_start, res_track, i);
       SEXP chr_sexp = PROTECT(
-        FANSI_mkChar(res_start, res_track, getCharCE(x_chr), i)
+        FANSI_mkChar0(res_start, res_track, getCharCE(x_chr), i)
       );
       SET_STRING_ELT(res_fin, i, chr_sexp);
       UNPROTECT(1);
     }
   }
-  if(invalid_ansi) {
-    switch(warn_int) {
-      case 1: {
-        warning(
-          "Encountered %s index [%jd], %s%s",
-          "invalid or possibly incorreclty handled ESC sequence at ",
-          FANSI_ind(invalid_idx),
-          "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
-          "off these warnings."
-        );
-        break;
-      }
-      case 2: {
-        SEXP attrib_val = PROTECT(ScalarLogical(1));
-        setAttrib(res_fin, FANSI_warn_sym, attrib_val);
-        UNPROTECT(1);
-        break;
-  } } }
+  if(warn_attrib) {
+    SEXP attrib_val = PROTECT(ScalarLogical(1));
+    setAttrib(res_fin, FANSI_warn_sym, attrib_val);
+    UNPROTECT(1);
+  }
   UNPROTECT(1);
   return res_fin;
 }
@@ -242,7 +221,6 @@ SEXP FANSI_process(
     );
     const char * string = state.string;
     const char * string_start = string;
-    char * buff_track;
 
     int len_j = LENGTH(STRING_ELT(input, i)); // R_len_t checked to fit in int
     int strip_this, to_strip, to_strip_nl, punct_prev, punct_prev_prev,
@@ -342,15 +320,14 @@ SEXP FANSI_process(
         }
         // Make sure buffer is big enough
         if(!strip_this) {
-          FANSI_size_buff(buff, len_j);
-          buff_track = buff->buff;
+          FANSI_size_buff0(buff, len_j);
           strip_this = 1;
         }
         // newlines normally act as spaces, but if there are two or more in a
         // sequence of tabs/spaces then they behave like a paragraph break
         // so we will replace that sequence with two newlines;
 
-        char spc_chr = ' ';
+        const char * spc_chr = " ";
         int copy_to = j;
         int to_strip0 = to_strip;
 
@@ -358,7 +335,7 @@ SEXP FANSI_process(
           copy_to = newlines_start;
           space_start = 2;
           to_strip = to_strip_nl; // how many chars to strip by first newline
-          spc_chr = '\n';
+          spc_chr = "\n";
         }
         // Copy the portion up to the point we know should be copied, will add
         // back spaces and/or newlines as needed
@@ -371,14 +348,13 @@ SEXP FANSI_process(
          // Rprintf("  copy_bytes %d copy_to %d strip %d\n", copy_bytes, copy_to, to_strip0);
         if(copy_bytes) {
           // Rprintf("  woff %d roff %d bytes %d\n", buff_track - buff->buff, string_start - string, copy_bytes);
-          int len = buff_track - buff->buff; // for W_MCOPY
-          FANSI_W_MCOPY(&buff_track, string_start, copy_bytes);
+          FANSI_W_MCOPY(buff, string_start, copy_bytes);
         }
         // Instead of all the trailing spaces etc we skip, write one or two
         // spaces or newlines as needed.
         if(!line_end) {
-          if(space_start) *(buff_track++) = spc_chr;
-          if(space_start > 1) *(buff_track++) = spc_chr;
+          if(space_start) FANSI_W_COPY(buff, spc_chr);
+          if(space_start > 1) FANSI_W_COPY(buff, spc_chr);
         }
         // Anything that is not a space/tab/nl that was considered non-breaking
         // with respect to trailing white space should be copied at end
@@ -393,8 +369,7 @@ SEXP FANSI_process(
             int bytes = state.pos_byte - k;
             // Rprintf("  pos %d k %d bytes %d\n", state.pos_byte, k, bytes);
             // Rprintf("  s woff %d roff %d bytes %d\n", buff_track - buff->buff, string_start - string + k, bytes);
-            int len = buff_track - buff->buff; // for W_MCOPY
-            FANSI_W_MCOPY(&buff_track, string + k, bytes);
+            FANSI_W_MCOPY(buff, string + k, bytes);
             k += bytes - 1;
           }
         }
@@ -434,10 +409,8 @@ SEXP FANSI_process(
         );
     }
     if(strip_this) {
-      *(buff_track) = 0;
-      SEXP chrsxp = PROTECT(
-        FANSI_mkChar(buff->buff, buff_track, getCharCE(STRING_ELT(input, i)), i)
-      );
+      SEXP chrsxp =
+        PROTECT(FANSI_mkChar2(*buff, getCharCE(STRING_ELT(input, i)), i));
       SET_STRING_ELT(res, i, chrsxp);
       UNPROTECT(1);
     }

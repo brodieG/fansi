@@ -33,12 +33,11 @@ SEXP FANSI_nzchar(
   int keepNA_int = asInteger(keepNA);
   int warn_int = asInteger(warn);
   int warned = 0;
-  int ctl_int = FANSI_ctl_as_int(ctl);
-  int ctl_not_ctl = 0;
 
   R_xlen_t x_len = XLENGTH(x);
 
   SEXP res = PROTECT(allocVector(LGLSXP, x_len));
+  int * resl = LOGICAL(res);
 
   for(R_xlen_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
@@ -47,38 +46,32 @@ SEXP FANSI_nzchar(
 
     if(string_elt == R_NaString) {
       if(keepNA_int == 1) {
-        LOGICAL(res)[i] = NA_LOGICAL;
-      } else LOGICAL(res)[i] = 1;
+        resl[i] = NA_LOGICAL;
+      } else resl[i] = 1;
     } else {
-      // Don't bother converting to UTF8
-
       const char * string = CHAR(string_elt);
+      // Read through any leading controls
+      resl[i] = 0;
+      if(FANSI_maybe_ctl(*string)) {
+        // could be a control
+        SEXP R_false = PROTECT(ScalarLogical(0));
+        struct FANSI_state state = FANSI_state_init_ctl(x, R_false, ctl, i);
+        UNPROTECT(1);
 
-      while((*string > 0 && *string < 32) || *string == 127) {
-        struct FANSI_csi_pos pos = FANSI_find_esc(string, FANSI_CTL_ALL);
-        if(
-          warn_int && !warned && (!pos.valid || (pos.ctl & FANSI_CTL_ESC))
-        ) {
-          warned = 1;
-          warning(
-            "Encountered %s ESC sequence at index [%jd], %s%s",
-            !pos.valid ? "invalid" : "possibly incorrectly handled",
-            FANSI_ind(i),
-            "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
-            "off these warnings."
-          );
+        while(FANSI_maybe_ctl(*string)) {
+          struct FANSI_ctl_pos pos =
+            FANSI_find_ctl(state, warn_int && !warned, i);
+
+          warned = warned || pos.warn;
+          if(!pos.len) {  // Not an escape
+            resl[i] = 1;
+            break;
+          }
+          state.pos_byte = pos.offset + pos.len;
+          string = state.string + state.pos_byte;
         }
-        string = pos.start + pos.len;
-
-        // found something not considered a control sequence, so means there is
-        // at least one character to count
-
-        ctl_not_ctl = (pos.ctl ^ ctl_int) & pos.ctl;
-        if(ctl_not_ctl) break;
       }
-      // If string doesn't end at this point, or has ctrl sequences that are not
-      // considered control sequences, then there is at least one char
-      LOGICAL(res)[i] = *string != (0 || ctl_not_ctl);
+      if(*string) resl[i] = 1;  // at least one non-esc bytes
   } }
   UNPROTECT(1);
   return res;

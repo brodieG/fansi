@@ -182,62 +182,48 @@ static SEXP writeline(
   int needs_cl_url = terminate && FANSI_url_active(state_bound.url);
 
   // Measure/Write loop (see src/write.c)
-  char * buff_track = NULL;
-  int len = 0;
   const char * err_msg = "Writing line";
 
   for(int k = 0; k < 2; ++k) {
-    if(k) {
-      FANSI_size_buff(buff, len);
-      buff_track = buff->buff;
-      len = 0;  // reset len
-    }
+    if(k) FANSI_size_buff(buff);
     if(needs_st_sgr) {
       err_msg = "Adding initial SGR";
-      len += FANSI_W_sgr(&buff_track, state_start.sgr, len, normalize, i);
+      FANSI_W_sgr(buff, state_start.sgr, normalize, i);
     }
     if(needs_st_url) {
       err_msg = "Adding initial URL";
-      len += FANSI_W_url(&buff_track, state_start.url, len, normalize, i);
+      FANSI_W_url(buff, state_start.url, normalize, i);
     }
     // Apply indent/exdent prefix/initial
     if(pre_dat.bytes) {
       err_msg = "Adding prefix characters";
-      len += FANSI_W_MCOPY(&buff_track, pre_dat.string, pre_dat.bytes);
+      FANSI_W_MCOPY(buff, pre_dat.string, pre_dat.bytes);
     }
     // Actual string, remember state_bound.pos_byte is one past what we need
     const char * string = state_start.string + state_start.pos_byte;
     int bytes = state_bound.pos_byte - state_start.pos_byte;
-    len += FANSI_W_MCOPY(&buff_track, string, bytes);
+    FANSI_W_MCOPY(buff, string, bytes);
 
     // Add padding if needed
     err_msg = "Adding padding";
     int to_pad = target_pad;
-    len += FANSI_W_FILL(&buff_track, *pad_chr, to_pad);
+    FANSI_W_FILL(buff, *pad_chr, to_pad);
 
     // And turn off CSI styles if needed
     if(needs_cl_sgr) {
       err_msg = "Adding trailing SGR";
-      len += FANSI_W_sgr_close(&buff_track, state_bound.sgr, len, normalize, i);
+      FANSI_W_sgr_close(buff, state_bound.sgr, normalize, i);
     }
     if(needs_cl_url) {
       err_msg = "Adding trailing URL";
-      len += FANSI_W_url_close(&buff_track, state_bound.url, len, i);
+      FANSI_W_url_close(buff, state_bound.url, i);
     }
-  }
-  if(buff_track && (buff_track - buff->buff) != len) {
-    // nocov start
-    error(
-      "Internal Error: line buffer size mismatch (%jd vs %d) at index [%jd].",
-      buff_track - buff->buff, len, FANSI_ind(i)
-    );
-    // nocov end
   }
   // Now create the charsxp and append to the list, start by determining
   // what encoding to use.
   cetype_t chr_type = CE_NATIVE;
   if((state_bound.has_utf8 || pre_dat.has_utf8)) chr_type = CE_UTF8;
-  return FANSI_mkChar(buff->buff, buff_track, chr_type, i);
+  return FANSI_mkChar(*buff, chr_type, i);
 }
 /*
  * All input strings are expected to be in UTF8 compatible format (i.e. either

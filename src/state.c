@@ -82,27 +82,12 @@ struct FANSI_state FANSI_state_init_full(
 
   // nocov end
 
-  int * term_int = INTEGER(term_cap);
-  int warn_int = asInteger(warn);
-  int term_cap_int = 0;
-
-  R_xlen_t i_len = XLENGTH(term_cap);
-  for(R_xlen_t i = 0; i < i_len; ++i) {
-    // we limit term cap to 31 to avoid potential bit shift issues with a signed
-    // int.  In practice we shouldn't get anywhere close to this anwyay.
-    if(term_int[i] > 31 || term_int[i] < 1)
-      // nocov start
-      error("Internal Error: bit flag value for term_cap illegal.");
-      // nocov end
-
-    term_cap_int |= 1 << (term_int[i] - 1);
-  }
   return (struct FANSI_state) {
     .sgr = (struct FANSI_sgr) {.color = -1, .bg_color = -1},
     .sgr_prev = (struct FANSI_sgr) {.color = -1, .bg_color = -1},
     .string = string,
-    .warn = warn_int,
-    .term_cap = term_cap_int,
+    .warn = asLogical(warn),
+    .term_cap = FANSI_term_cap_as_int(term_cap),
     .allowNA = asLogical(allowNA),
     .keepNA = asLogical(keepNA),
     .use_nchar = asInteger(width),  // 0 for chars, 1 for width
@@ -126,6 +111,29 @@ struct FANSI_state FANSI_state_init(
     R_false, // keepNA
     R_zero,  // Don't use width by default
     R_one,   // Treat all escapes as special by default (wrong prior to v1.0)
+    i
+  );
+  UNPROTECT(prt);
+  return res;
+}
+// We only care to specify ctl;
+// means, we only really care about SGR since all CSI does is affect width calc).
+
+struct FANSI_state FANSI_state_init_ctl(
+  SEXP strsxp, SEXP warn, SEXP ctl, R_xlen_t i
+) {
+  int prt = 0;
+  SEXP R_false = PROTECT(ScalarLogical(0)); ++prt;
+  SEXP R_true = PROTECT(ScalarLogical(1)); ++prt;
+  SEXP R_zero = PROTECT(ScalarInteger(0)); ++prt;
+  SEXP R_one = PROTECT(ScalarInteger(1)); ++prt;
+  struct FANSI_state res = FANSI_state_init_full(
+    strsxp, warn,
+    R_one,   // all term_cap
+    R_true,  // allowNA for invalid multibyte
+    R_false, // keepNA
+    R_zero,  // Don't use width by default
+    ctl,     // Which sequences are recognized
     i
   );
   UNPROTECT(prt);
@@ -284,15 +292,13 @@ int FANSI_color_size(int color, int * color_extra) {
 char * FANSI_state_as_chr(
   struct FANSI_buff *buff, struct FANSI_state state, int normalize, R_xlen_t i
 ) {
-  char * buff_track = NULL;
-  int tag_len = 0;
-  tag_len += FANSI_W_sgr(&buff_track, state.sgr, 0, normalize, i);
-  if(state.url.url.len)
-    tag_len += FANSI_W_url(&buff_track, state.url, 0, normalize, i);
-  FANSI_size_buff(buff, tag_len);
-  buff_track = buff->buff;
-  FANSI_W_sgr(&buff_track, state.sgr, 0, normalize, i);
-  if(state.url.url.len) FANSI_W_url(&buff_track, state.url, 0, normalize, i);
+  FANSI_reset_buff(buff);
+  FANSI_W_sgr(buff, state.sgr, normalize, i);
+  if(state.url.url.len) FANSI_W_url(buff, state.url, normalize, i);
+
+  FANSI_size_buff(buff);
+  FANSI_W_sgr(buff, state.sgr, normalize, i);
+  if(state.url.url.len) FANSI_W_url(buff, state.url, normalize, i);
   return buff->buff;
 }
 
@@ -438,21 +444,18 @@ SEXP FANSI_state_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm) {
     while(*(state.string + state.pos_byte)) {
       state = FANSI_read_next(state, i, 1);
     }
-    int len = 0;
-    char * buff_track = NULL;
-    len += FANSI_W_sgr_close(&buff_track, state.sgr, len, normalize, i);
-    len += FANSI_W_url_close(&buff_track, state.url, len, i);
-    if(len) {
-      if(res == x) REPROTECT(res = duplicate(x), ipx);
-      FANSI_size_buff(&buff, len);
-      buff_track = buff.buff;
+    FANSI_reset_buff(&buff);
+    FANSI_W_sgr_close(&buff, state.sgr, normalize, i);
+    FANSI_W_url_close(&buff, state.url, i);
 
-      FANSI_W_sgr_close(&buff_track, state.sgr, 0, normalize, i);
-      FANSI_W_url_close(&buff_track, state.url, 0, i);
+    if(buff.len) {
+      if(res == x) REPROTECT(res = duplicate(x), ipx);
+      FANSI_size_buff(&buff);
+      FANSI_W_sgr_close(&buff, state.sgr, normalize, i);
+      FANSI_W_url_close(&buff, state.url, i);
 
       cetype_t chr_type = getCharCE(x_chr);
-      SEXP reschr =
-        PROTECT(FANSI_mkChar(buff.buff, buff.buff + len, chr_type, i));
+      SEXP reschr = PROTECT(FANSI_mkChar(buff, chr_type, i));
       SET_STRING_ELT(res, i, reschr);
       UNPROTECT(1);
     }
@@ -530,7 +533,7 @@ SEXP FANSI_state_at_pos_ext(
   for(int i = 0; i < res_cols; i++) {
     SET_STRING_ELT(
       res_rn, i,
-      FANSI_mkChar(
+      FANSI_mkChar0(
         rownames[i], rownames[i] + strlen(rownames[i]),
         CE_NATIVE, (R_xlen_t) 0
     ) );
@@ -553,7 +556,7 @@ SEXP FANSI_state_at_pos_ext(
   SEXP res_str = PROTECT(allocVector(STRSXP, len)); ++prt;
   const char * empty = "";
   SEXP res_chr, res_chr_prev =
-    PROTECT(FANSI_mkChar(empty, empty, CE_NATIVE, (R_xlen_t) 0)); ++prt;
+    PROTECT(FANSI_mkChar0(empty, empty, CE_NATIVE, (R_xlen_t) 0)); ++prt;
   struct FANSI_state state = FANSI_state_init_full(
     x, warn, term_cap, R_true, R_true, type, ctl, (R_xlen_t) 0
   );
@@ -624,11 +627,8 @@ SEXP FANSI_state_at_pos_ext(
       ) {
         // this computes length twice..., we know state_char can be at most
         // INT_MAX excluding NULL (and certainly will be much less).
-        char * state_chr = FANSI_state_as_chr(&buff, state, normalize, i);
-        res_chr = PROTECT(
-          FANSI_mkChar(
-            state_chr, state_chr + strlen(state_chr), CE_NATIVE, i
-        ) );
+        FANSI_state_as_chr(&buff, state, normalize, i);
+        res_chr = PROTECT(FANSI_mkChar(buff, CE_NATIVE, i));
       } else {
         res_chr = PROTECT(res_chr_prev);
       }

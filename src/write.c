@@ -123,13 +123,42 @@
 void FANSI_init_buff(struct FANSI_buff * buff, const char * fun) {
   *buff = (struct FANSI_buff) {
     .buff=NULL,
+    .buff0=NULL,
     .len=0,
+    .len_alloc=0,
     .vheap_self=NULL,
     .vheap_prev=NULL,
     .fun=fun,
     .warned=0
   };
 }
+// Strict requires that the buff be used exactly and completely, otherwise okay
+// to under-use (but not over use, of course).  We explicitly check against
+// target len, not allocated len to avoid missing overruns hidden by a generous
+// allocation.
+
+void FANSI_check_buff(struct FANSI_buff buff, R_xlen_t i, int strict) {
+  if(buff.buff < buff.buff0)
+    // nocov start
+    error(
+      "Internal Error: buffer reversed at index[%jd] (allocated by %s).",
+      FANSI_ind(i), buff.fun
+    );
+    // nocov end
+
+  if(
+    (strict && buff.buff - buff.buff0 != buff.len) ||
+    (buff.buff - buff.buff0 > buff.len)
+  )
+    // nocov start
+    error(
+      "%s[%jd](%td vs %d alloc'ed by %s).",
+      "Internal Error: buffer not of specified length at index",
+      FANSI_ind(i), buff.buff - buff.buff0, buff.len, buff.fun
+    );
+    // nocov end
+}
+
 /*
  * Attempts to remove a buffer from the R_alloc protection stack.
  *
@@ -151,7 +180,10 @@ void FANSI_init_buff(struct FANSI_buff * buff, const char * fun) {
  */
 int FANSI_release_buff(struct FANSI_buff * buff, int warn) {
   int failure = 0;
-  if(buff->buff) {
+  if(buff->buff0) {
+    if(buff->buff - buff->buff0 != buff->len)
+      error("Internal Error: buffer incompletely used.");
+
     if(buff->vheap_self == vmaxget()) vmaxset(buff->vheap_prev);
     else {
       if(warn && !buff->warned)
@@ -167,7 +199,9 @@ int FANSI_release_buff(struct FANSI_buff * buff, int warn) {
     buff->vheap_prev = NULL;
     buff->vheap_self = NULL;
     buff->buff = NULL;
+    buff->buff0 = NULL;
     buff->len = 0;
+    buff->len_alloc = 0;
   }
   return failure;
 }
@@ -182,9 +216,9 @@ int FANSI_release_buff(struct FANSI_buff * buff, int warn) {
  * terminator.
  *
  * Every call to FANSI_size_buff "zeroes" the buffer by setting the first byte
- * to 0.
+ * to 0 and the `.buff` member to point to the beginning of the buffer.
  */
-size_t FANSI_size_buff(struct FANSI_buff * buff, int size) {
+size_t FANSI_size_buff0(struct FANSI_buff * buff, int size) {
   if(size < 0) error("Internal Error: negative buffer allocations disallowed.");
   // assumptions check that SIZE_T fits INT_MAX + 1
   size_t buff_max = (size_t)FANSI_lim.lim_int.max + 1;
@@ -196,8 +230,8 @@ size_t FANSI_size_buff(struct FANSI_buff * buff, int size) {
       "Internal Error: max allowed buffer size is INT_MAX + 1.", size_req
     );
 
-  if(size_req > buff->len) {
-    if(!buff->len) {
+  if(size_req > buff->len_alloc) {
+    if(!buff->len_alloc) {
       // in theory little penalty to ask this minimum
       if(size_req < 128 && FANSI_lim.lim_int.max >= 127)
         size_alloc = 128;
@@ -205,15 +239,15 @@ size_t FANSI_size_buff(struct FANSI_buff * buff, int size) {
         size_alloc = size_req;
     } else {
       // More generic case
-      if(buff->len > buff_max - buff->len) {
+      if(buff->len_alloc > buff_max - buff->len_alloc) {
         // can't double size
         size_alloc = buff_max;
-      } else if (size_req > buff->len + buff->len) {
+      } else if (size_req > buff->len_alloc + buff->len_alloc) {
         // doubling not enough
         size_alloc = size_req;
       } else {
         // double size
-        size_alloc = buff->len + buff->len;
+        size_alloc = buff->len_alloc + buff->len_alloc;
       }
     }
     if(size_alloc < size_req)
@@ -227,13 +261,26 @@ size_t FANSI_size_buff(struct FANSI_buff * buff, int size) {
     FANSI_release_buff(buff, 1);
     // Keep this in sync with FANSI_release_buff!
     buff->vheap_prev = vmaxget();
-    buff->len = size_alloc;
-    buff->buff = R_alloc(buff->len, sizeof(char));
+    buff->len_alloc = size_alloc;
+    buff->buff0 = buff->buff = R_alloc(buff->len_alloc, sizeof(char));
     buff->vheap_self = vmaxget();
+  } else {
+    buff->buff = buff->buff0;
   }
   if(!buff->buff) error("Internal Error: buffer not allocated.");// nocov
+  buff->len = size;
   *(buff->buff) = 0;  // Always reset the string, guaranteed one byte.
-  return buff->len;
+  return buff->len_alloc;
+}
+size_t FANSI_size_buff(struct FANSI_buff * buff) {
+  return FANSI_size_buff0(buff, buff->len);
+}
+/*
+ * Prepare the buffer for the measure pass
+ */
+void FANSI_reset_buff(struct FANSI_buff * buff) {
+  buff->len = 0;
+  buff->buff = NULL;
 }
 
 /*
@@ -245,7 +292,7 @@ static void prot_test_help(
   int size, const char * lbl, struct FANSI_buff * buff, SEXP res, R_xlen_t i
 ) {
   char tmp[256];
-  FANSI_size_buff(buff, size);
+  FANSI_size_buff0(buff, size);
   INTEGER(VECTOR_ELT(res, 1))[i] = buff->len;
   SET_STRING_ELT(VECTOR_ELT(res, 0), i, mkChar(lbl));
   sprintf(tmp, "%p", buff->vheap_self);
@@ -313,7 +360,7 @@ SEXP FANSI_size_buff_ext(SEXP x) {
   struct FANSI_buff buff = {.len=0};
 
   for(i = 0; i < len; ++i) {
-    size_t size = FANSI_size_buff(&buff, INTEGER(x)[i]);
+    size_t size = FANSI_size_buff0(&buff, INTEGER(x)[i]);
     REAL(res)[i] = (double) size;
   }
   UNPROTECT(1);
@@ -328,32 +375,39 @@ SEXP FANSI_size_buff_ext(SEXP x) {
  * @err_msg overflow error message
  */
 int FANSI_W_copy(
-  char ** buff, const char * tmp, int len, R_xlen_t i,
-  const char * err_msg
+  struct FANSI_buff * buff, const char * tmp, R_xlen_t i, const char * err_msg
 ) {
   size_t tmp_len = strlen(tmp);  // tmp must be NULL terminated
   if(tmp_len > (size_t) FANSI_lim.lim_int.max)
     FANSI_check_append_err(err_msg, i);
 
-  FANSI_check_append(len, tmp_len, err_msg, i);
-  if(*buff) {
-    strcpy(*buff, tmp); // strcpy copies the terminating NULL
-    *buff += tmp_len;
+  if(buff->buff) {
+    if((buff->buff - buff->buff0) + (int)tmp_len > buff->len)
+      error("Internal Error: exceeded target buffer size in _copy.");
+    strcpy(buff->buff, tmp); // strcpy copies the terminating NULL
+    buff->buff += tmp_len;
+  } else {
+    FANSI_check_append(buff->len, tmp_len, err_msg, i);
+    buff->len += tmp_len;
   }
-  return tmp_len;
+  return (int) tmp_len;
 }
 /*
  * Like FANSI_w_copy, but uses memcpy and a known length to copy.
  */
 int FANSI_W_mcopy(
-  char ** buff, const char * tmp, int tmp_len, int len, R_xlen_t i,
+  struct FANSI_buff * buff, const char * tmp, int tmp_len, R_xlen_t i,
   const char * err_msg
 ) {
-  FANSI_check_append(len, tmp_len, err_msg, i);
-  if(*buff) {
-    memcpy(*buff, tmp, (size_t) tmp_len);
-    *buff += tmp_len;
-    **buff = 0;  // not necessary, but helps to debug
+  if(buff->buff) {
+    if(buff->buff - buff->buff0 + tmp_len > buff->len)
+      error("Internal Error: exceeded target buffer size in _mcopy.");
+    memcpy(buff->buff, tmp, (size_t) tmp_len);
+    buff->buff += tmp_len;
+    *(buff->buff) = 0;  // not necessary, but helps to debug
+  } else {
+    FANSI_check_append(buff->len, tmp_len, err_msg, i);
+    buff->len += tmp_len;
   }
   return tmp_len;
 }
@@ -361,16 +415,20 @@ int FANSI_W_mcopy(
  * Fill an array by repeating a charater
  */
 
-int FANSI_W_fill(
-  char ** buff, const char tmp, int times,
-  int len, R_xlen_t i, const char * err_msg
+void FANSI_W_fill(
+  struct FANSI_buff * buff, const char tmp, int times,
+  R_xlen_t i, const char * err_msg
 ) {
-  FANSI_check_append(len, times, err_msg, i);
-  if(*buff) {
-    for(int i = 0; i < times; ++i) *(*buff)++ = tmp;
-    **buff = 0;  // not necessary, but helps to debug
+  if(buff->buff) {
+    if(buff->buff - buff->buff0 + times > buff->len)
+      error("Internal Error: exceeded allocated buffer in _fill.");
+
+    for(int i = 0; i < times; ++i) *(buff->buff)++ = tmp;
+    *(buff->buff) = 0;  // not necessary, but helps to debug
+  } else {
+    FANSI_check_append(buff->len, times, err_msg, i);
+    buff->len += times;
   }
-  return times;
 }
 
 /*
@@ -381,7 +439,7 @@ int FANSI_W_fill(
  *
  * Intended for compatibility with crayon.
  *
- * If buff is NULL, then only the required size of the buffer is returned.
+ * If buff is unallocated, how many bytes are required is computed.
  *
  * Ideally we would store all the styles in e.g. 2 uint64_t, and then maybe each
  * style would have an associated 2 uint64_t of what they turn on and off, and
@@ -392,10 +450,9 @@ int FANSI_W_fill(
  * So instead we hard-code everything and hope we keep it in sync.
  */
 
-int FANSI_W_sgr_close(
-  char ** buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
+void FANSI_W_sgr_close(
+  struct FANSI_buff * buff, struct FANSI_sgr sgr, int normalize, R_xlen_t i
 ) {
-  int len0 = len;
   const char * err_msg = "Generating closing SGR";
 
   if(FANSI_sgr_active(sgr)) {
@@ -406,7 +463,7 @@ int FANSI_W_sgr_close(
 
       if(sgr.font) {
         sgr.font = 0;
-        len += FANSI_W_COPY(buff, "\033[10m");
+        FANSI_W_COPY(buff, "\033[10m");
       }
       unsigned int s_boldfaint = (1U << 1U | 1U << 2U);
       unsigned int s_frakital = (1U << 3U | 1U << 10U);
@@ -419,59 +476,59 @@ int FANSI_W_sgr_close(
 
       if(sgr.style & s_boldfaint) {
         sgr.style &= ~s_boldfaint;
-        len += FANSI_W_COPY(buff, "\033[22m");
+        FANSI_W_COPY(buff, "\033[22m");
       }
       if(sgr.style & s_frakital) {
         sgr.style &= ~s_frakital;
-        len += FANSI_W_COPY(buff, "\033[23m");
+        FANSI_W_COPY(buff, "\033[23m");
       }
       if(sgr.style & s_underline) {
         sgr.style &= ~s_underline;
-        len += FANSI_W_COPY(buff, "\033[24m");
+        FANSI_W_COPY(buff, "\033[24m");
       }
       if(sgr.style & s_blink) {
         sgr.style &= ~s_blink;
-        len += FANSI_W_COPY(buff, "\033[25m");
+        FANSI_W_COPY(buff, "\033[25m");
       }
       // 26 is opening prop spacing (50 to close)
       if(sgr.style & s_inverse) {
         sgr.style &= ~s_inverse;
-        len += FANSI_W_COPY(buff, "\033[27m");
+        FANSI_W_COPY(buff, "\033[27m");
       }
       if(sgr.style & s_conceal) {
         sgr.style &= ~s_conceal;
-        len += FANSI_W_COPY(buff, "\033[28m");
+        FANSI_W_COPY(buff, "\033[28m");
       }
       if(sgr.style & s_strikethrough) {
         sgr.style &= ~s_strikethrough;
-        len += FANSI_W_COPY(buff, "\033[29m");
+        FANSI_W_COPY(buff, "\033[29m");
       }
       // Colors
       if(sgr.color >= 0) {
         sgr.color = -1;
-        len += FANSI_W_COPY(buff, "\033[39m");
+        FANSI_W_COPY(buff, "\033[39m");
       }
       if(sgr.bg_color >= 0) {
         sgr.bg_color = -1;
-        len += FANSI_W_COPY(buff, "\033[49m");
+        FANSI_W_COPY(buff, "\033[49m");
       }
       // Prop spacing
       if(sgr.style & s_propspc) {
         sgr.style &= ~s_propspc;
-        len += FANSI_W_COPY(buff, "\033[50m");
+        FANSI_W_COPY(buff, "\033[50m");
       }
       // Border and ideogram
       if(sgr.border & (1U << 1U | 1U << 2U)) {
         sgr.border &= ~(1U << 1U | 1U << 2U);
-        len += FANSI_W_COPY(buff, "\033[54m");
+        FANSI_W_COPY(buff, "\033[54m");
       }
       if(sgr.border & (1U << 3U)) {
         sgr.border &= ~(1U << 3U);
-        len += FANSI_W_COPY(buff, "\033[55m");
+        FANSI_W_COPY(buff, "\033[55m");
       }
       if(sgr.ideogram > 0U) {
         for(unsigned int k = 0; k < 5; ++k) sgr.ideogram &= ~(1U << k);
-        len += FANSI_W_COPY(buff, "\033[65m");
+        FANSI_W_COPY(buff, "\033[65m");
       }
 
       // Make sure we're not out of sync with has_style
@@ -483,21 +540,18 @@ int FANSI_W_sgr_close(
         );
     } else {
       // Full close
-      len += FANSI_W_COPY(buff, "\033[0m");
+      FANSI_W_COPY(buff, "\033[0m");
     }
   }
-  return len - len0;
 }
 /*
  * End Active URL
  */
-int FANSI_W_url_close(
-  char ** buff, struct FANSI_url url, int len, R_xlen_t i
+void FANSI_W_url_close(
+  struct FANSI_buff * buff, struct FANSI_url url, R_xlen_t i
 ) {
-  int len0 = len;
   const char * err_msg = "Generating URL end";
-  if(FANSI_url_active(url)) len += FANSI_W_COPY(buff, "\033]8;;\033\\");
-  return len - len0;
+  if(FANSI_url_active(url)) FANSI_W_COPY(buff, "\033]8;;\033\\");
 }
 
 /*
@@ -580,8 +634,8 @@ static char * color_token(
  *
  * Return how many needed / written bytes.
  */
-int FANSI_W_sgr(
-  char ** buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
+void FANSI_W_sgr(
+  struct FANSI_buff * buff, struct FANSI_sgr sgr, int normalize, R_xlen_t i
 ) {
   /****************************************************\
   | IMPORTANT:                                         |
@@ -593,47 +647,45 @@ int FANSI_W_sgr(
   | and now we're stuck.                               |
   \****************************************************/
 
-  int len0 = len;
   const char * err_msg = "Writing SGR tokens"; // for FANSI_W_COPY
   // biggest would be "\033[XXm" + NULL, won't fit e.g bright color codes
   // CAREFUL if we modify code to use `tmp` for other purposes.
   char tmp[6] = {0};
-  char * buff_anchor = * buff;
 
   if(FANSI_sgr_active(sgr)) {
-    if(!normalize) len += FANSI_W_COPY(buff, "\033[");
+    if(!normalize) FANSI_W_COPY(buff, "\033[");
     // styles
     char tokval[2] = {0};
     for(unsigned int i = 1; i < 10; i++) {
       if((1U << i) & sgr.style) {
         *tokval = '0' + (char) i;
-        len += FANSI_W_COPY(buff, make_token(tmp, tokval, normalize));
+        FANSI_W_COPY(buff, make_token(tmp, tokval, normalize));
     } }
     // styles outside 0-9
 
     if(sgr.style & (1 << 10)) {
       // fraktur
-      len += FANSI_W_COPY(buff, make_token(tmp, "20", normalize));
+      FANSI_W_COPY(buff, make_token(tmp, "20", normalize));
     }
     if(sgr.style & (1 << 11)) {
       // double underline
-      len += FANSI_W_COPY(buff, make_token(tmp, "21", normalize));
+      FANSI_W_COPY(buff, make_token(tmp, "21", normalize));
     }
     if(sgr.style & (1 << 12)) {
       // prop spacing
-      len += FANSI_W_COPY(buff, make_token(tmp, "26", normalize));
+      FANSI_W_COPY(buff, make_token(tmp, "26", normalize));
     }
     // colors
     if(sgr.color > -1) {
       char tokval[17] = {0};  // largest: "38;2;255;255;255", 16 chars + NULL
-      len += FANSI_W_COPY(
+      FANSI_W_COPY(
         buff,
         color_token(tokval, sgr.color, sgr.color_extra, 3, normalize)
       );
     }
     if(sgr.bg_color > -1) {
       char tokval[17] = {0};
-      len += FANSI_W_COPY(
+      FANSI_W_COPY(
         buff,
         color_token(tokval, sgr.bg_color, sgr.bg_color_extra, 4, normalize)
       );
@@ -644,7 +696,7 @@ int FANSI_W_sgr(
       for(int i = 1; i < 4; ++i) {
         if((1 << i) & sgr.border) {
           tokval[1] = '0' + i;
-          len += FANSI_W_COPY(buff, make_token(tmp, tokval, normalize));
+          FANSI_W_COPY(buff, make_token(tmp, tokval, normalize));
     } } }
     // Ideogram
     if(sgr.ideogram) {
@@ -652,30 +704,21 @@ int FANSI_W_sgr(
       for(int i = 0; i < 5; ++i){
         if((1 << i) & sgr.ideogram) {
           tokval[1] = '0' + i;
-          len += FANSI_W_COPY(buff, make_token(tmp, tokval, normalize));
+          FANSI_W_COPY(buff, make_token(tmp, tokval, normalize));
     } } }
     // font
     if(sgr.font) {
       char tokval[3] = {'1', '0'};
       tokval[1] = '0' + (sgr.font % 10);
-      len += FANSI_W_COPY(buff, make_token(tmp, tokval, normalize));
+      FANSI_W_COPY(buff, make_token(tmp, tokval, normalize));
     }
     // Finalize (replace trailing ';' with 'm')
-    if(*buff) {
-      *((*buff) - 1) = 'm';
-      // nocov start
-      if(*buff - buff_anchor != len - len0)
-        // nocov start
-        error(
-          "Internal Error: %s (%td vs %d).",
-          "buffer length mismatch in writing SGR generation (2)",
-          *buff - buff_anchor, len - len0
-        );
-      // nocov end
+    if(buff->buff) {
+      *((buff->buff) - 1) = 'm';
     }
   }
-  else if(*buff) **buff = 0;  // for debugging, buff always should have 1 byte
-  return len - len0;
+  // for debugging, buff always should have 1 byte
+  else if(buff->buff) *(buff->buff) = 0;
 }
 /*
  * Output an URL state as a string.
@@ -684,8 +727,8 @@ int FANSI_W_sgr(
  *
  * Return how many needed / written bytes.
  */
-int FANSI_W_url(
-  char ** buff, struct FANSI_url url, int len, int normalize, R_xlen_t i
+void FANSI_W_url(
+  struct FANSI_buff * buff, struct FANSI_url url, int normalize, R_xlen_t i
 ) {
   /****************************************************\
   | IMPORTANT:                                         |
@@ -693,18 +736,16 @@ int FANSI_W_url(
   | See _W_sgr                                         |
   \****************************************************/
 
-  int len0 = len;
   const char * err_msg = "Writing URL"; // for FANSI_W_M?COPY
-  len += FANSI_W_COPY(buff, "\033]8;");
+  FANSI_W_COPY(buff, "\033]8;");
   if(normalize) {
     if(url.id.val)
-      len += FANSI_W_MCOPY(buff, url.id.val, url.id.len);
+      FANSI_W_MCOPY(buff, url.id.val, url.id.len);
   } else if(url.params.val) {
-    len += FANSI_W_MCOPY(buff, url.params.val, url.params.len);
+    FANSI_W_MCOPY(buff, url.params.val, url.params.len);
   }
-  len += FANSI_W_COPY(buff, ";");
-  len += FANSI_W_MCOPY(buff, url.url.val, url.url.len);
-  len += FANSI_W_COPY(buff, "\033\\");  // ST
-  return len - len0;
+  FANSI_W_COPY(buff, ";");
+  FANSI_W_MCOPY(buff, url.url.val, url.url.len);
+  FANSI_W_COPY(buff, "\033\\");  // ST
 }
 

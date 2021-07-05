@@ -4,7 +4,16 @@ These are internal developer notes.
 
 ## Todo
 
-* Deprecate the `_sgr` stuff.
+* Check we're using `reset_buff` everywhere.
+
+* Is it okay to let `has_ctl` re-encode to UTF-8?  Might be weird if it doesn't
+  but `strip_ctl` does.  Is it possible that after re-encoding something that
+  wasn't an escape becomes one or vice versa?  Yes, illegal bytes could get
+  turned by R into e.g. "<80>", which could be valid inside an escape, whereas
+  0x80 would not be.  The reverse might not be possible if no escapes allow
+  greater than 0x80 in them.  For now we'll just translate for consistency.
+  Note this is only an issue if we have random invalid high bytes in an already
+  UTF-8 or ASCII string.
 
 * Probably for 1.1, do normalize as part of first pass, will require rewriting
   every encountered SGR.
@@ -23,7 +32,12 @@ These are internal developer notes.
 * Rewrite the COPY/MCOPY macros to use the buffer origin to measure size instead
   of `len`?  That should be safer.  Additionally, by passing the full buffer we
   can make sure we never write past the end of the buffer since we know the
-  length.
+  length.  But we can't do this in the first pass?  If the buffer is null,
+  increase len.  If the buffer is not null, check against len for overflow.
+  Track buffer origin?  So we need a new struct with origin, write pointer, and
+  len.  So we will not need to keep track of len separately.  This way we can
+  keep the origin always, and probably also need an alloc_len to know what size
+  the previously allocated buffer is.
 
 * Confirm invalid UTF-8 assumptions (do we consume the lead byte count, just on
   byte?).  Right now we consume the lead byte bytes.
@@ -67,6 +81,8 @@ These are internal developer notes.
   check for unescaped '<', '>', and '&'?
 
 ## Done
+
+* Deprecate the `_sgr` stuff.
 
 * Think through what should happen when we request to write an empty URL.
   Problem is that empty URLs genuinely need to be written to close out open
@@ -217,51 +233,20 @@ unsigned one (I think).
 Currently takes STRSXP.  A little awkward though, but we did it that way because
 we had the index.
 
-## OSC / URL Parsing
+## `find_esc`
 
-If we have both spans and anchors going, we need to:
+We want something that: 
 
-* Always open/close both anytime state of either changes if state was active.
-* Always open link first span second? (and close LIFO?).
+* finds the start of the escape
+* attempts to read it
+* warns if it is a malformed illegal one
+* returns the number of bytes in the escape
 
-The biggest remaining issue here is that it makes most sense to combine url and
-sgr into the `_sgr` functions, but if we do, we're committed.  We will not be
-able to in the future to go back and decide we want a `_url`.  A possible option
-is to add `_state` that treat as special both URL and SGR.
+Then,
 
-We're about to add:
-
-* normalize_sgr
-* sgr_at_end
-* close_sgr
-
-And we have the `_sgr` flavors of existing functions.  Is there really any value
-in the `_sgr` functions?  Pretty questionable.  That's pretty much the major
-question.  Do we just want to retire the `_sgr` functions?  The best reason to
-have them in would be if the `_ctl` functions did not warn when they encounter
-things that could affect display, but they do.
-
-So, likely solution is to retire the functions, rename all the new `_sgr`
-functions `_state`, and leave it at that.
-
-What if a link is split across two string elements?  Technically nl is allowed
-in OSC.  So if there is a string with `carry=TRUE` it is possible that the OSC
-gets split across two lines.  We're going to require that in order for OSC to be
-considered valid they much be complete within a line (it's not even clear that
-an NL inside an OSC is a NL anyway).
-
-Behavior of C0 in OSC is not consistent on mac terminal.  C0s contained
-therein are emitted.  Quartz xterm and iterm2 seem to support them properly.
-
-Todo:
-
-* Figure out if all the stuff like carry/terminate applies equally?
-    * It should; every special handling we have for each of those we'll have to
-      do for URLs too.
-    * What a PITA, probably no way to merge and use the same logic?  Well, some
-      of them we can.  E.g. close_sgr could be come close_state or some such.
-* HTML translation tests (note id shouldn't carry as semantics are different in
-  HTML vs OSC since ids may be duplicated in the latter).
+* has_ctl reports whether there was one.
+* strip_ctl strips it.
+* nzchar_ctl keeps looking for characters.
 
 ## Wrap Strip Space
 

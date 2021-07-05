@@ -87,9 +87,8 @@ strip_sgr <- function(x, warn=getOption('fansi.warn')) {
 
 #' Check for Presence of Control Sequences
 #'
-#' `has_ctl` checks for any _Control Sequence_, whereas `has_sgr` checks only
-#' for CSI SGR and OSC-anchored URL sequences.  You can check for different types
-#' of sequences with the `ctl` parameter.
+#' `has_ctl` checks for any _Control Sequence_.  You can check for different
+#' types of sequences with the `ctl` parameter.
 #'
 #' @export
 #' @seealso [`?fansi`][fansi] for details on how _Control Sequences_ are
@@ -104,8 +103,6 @@ strip_sgr <- function(x, warn=getOption('fansi.warn')) {
 #' has_ctl("hello\nworld")
 #' has_ctl("hello\nworld", "sgr")
 #' has_ctl("hello\033[31mworld\033[m", "sgr")
-#' has_sgr("hello\033[31mworld\033[m")
-#' has_sgr("hello\nworld")
 
 has_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), which) {
   if(!missing(which)) {
