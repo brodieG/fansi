@@ -102,11 +102,15 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     struct FANSI_state state = FANSI_state_init_ctl(x, R_false, ctl, i);
     UNPROTECT(1);
     state.pos_byte = off_init;
+    // Rprintf("init %d\n", off_init);
     struct FANSI_ctl_pos pos_prev = {0, 0, 0};
 
     while(1) {
+      // Rprintf("start pos %d\n", state.pos_byte);
       // warn can be 2
       struct FANSI_ctl_pos pos = FANSI_find_ctl(state, warn_int == 1, i);
+      // Rprintf("found off %d len %d d prev_off %d prev_len %d\n", 
+      //     pos.offset, pos.len, pos_prev.offset, pos_prev.len);
       warn_attrib = warn_attrib || pos.warn;
       if(pos.len) {
         has_ansi = 1;
@@ -131,11 +135,10 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
           chr_buff = (char *) R_alloc(((size_t) mem_req) + 1, sizeof(char));
           res_start = res_track = chr_buff;
         }
-        memcpy(
-          res_track, chr_track, pos.offset - pos_prev.offset
-        );
-        res_track += pos.offset - pos_prev.offset;
-        state.pos_byte += pos.offset + pos.len;
+        int w_len = pos.offset - (pos_prev.offset + pos_prev.len);
+        memcpy(res_track, chr_track, w_len);
+        res_track += w_len;
+        state.pos_byte = pos.offset + pos.len;
         chr_track = state.string + state.pos_byte;
         pos_prev = pos;
       } else {
@@ -172,7 +175,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
       UNPROTECT(1);
     }
   }
-  if(warn_attrib) {
+  if(warn_attrib && warn_int == 2) {
     SEXP attrib_val = PROTECT(ScalarLogical(1));
     setAttrib(res_fin, FANSI_warn_sym, attrib_val);
     UNPROTECT(1);
