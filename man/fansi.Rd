@@ -157,8 +157,7 @@ One form of interaction to consider is how a character vector provided to
 element in an input character vector is independent, but this is incorrect if
 the input is a single document with each element a line in it.  In that
 situation state from each line should bleed into subsequent ones.  Setting
-\code{carry = TRUE} enables the "single document" interpretation.  \code{\link{sgr_to_html}}
-is the exception as for legacy reasons it defaults to \code{carry = TRUE}.
+\code{carry = TRUE} enables the "single document" interpretation.
 
 Another form of interaction is when substrings produced by \code{fansi} are
 spliced with or into other substrings.  By default \code{fansi} automatically

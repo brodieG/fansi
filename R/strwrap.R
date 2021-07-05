@@ -14,7 +14,7 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-#' ANSI Control Sequence Aware Version of strwrap
+#' Control Sequence Aware Version of strwrap
 #'
 #' Wraps strings to a specified width accounting for zero display width _Control
 #' Sequences_.  `strwrap_ctl` is intended to emulate `strwrap` exactly except
@@ -36,7 +36,6 @@
 #' @inheritParams base::strwrap
 #' @inheritParams tabs_as_spaces
 #' @inheritParams substr_ctl
-#' @inheritSection substr_ctl _ctl vs. _sgr
 #' @inherit substr_ctl seealso
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work properly in R < 3.2.2.
@@ -184,8 +183,14 @@ strwrap2_ctl <- function(
     if(normalize) normalize_state_list(res, warn, term.cap.int) else res
   }
 }
+#' Control Sequence Aware Version of strwrap
+#'
+#' These functions are deprecated in favor of the [`_ctl` flavors][strwrap_ctl].
+#'
+#' @inheritParams strwrap_ctl
+#' @inherit strwrap_ctl return
+#' @keywords internal
 #' @export
-#' @rdname strwrap_ctl
 
 strwrap_sgr <- function(
   x, width = 0.9 * getOption("width"), indent = 0,
@@ -202,7 +207,7 @@ strwrap_sgr <- function(
     carry=carry, terminate=terminate
   )
 #' @export
-#' @rdname strwrap_ctl
+#' @rdname strwrap_sgr
 
 strwrap2_sgr <- function(
   x, width = 0.9 * getOption("width"), indent = 0,
@@ -286,5 +291,3 @@ VAL_WRAP_IN_ENV <- function(
     env
   )
 }
-
-

@@ -3,7 +3,7 @@
 \name{state_at_end}
 \alias{state_at_end}
 \alias{close_state}
-\title{Utilities for Managing SGR In Strings}
+\title{Utilities for Managing CSI and OSC State  In Strings}
 \usage{
 state_at_end(
   x,
@@ -48,8 +48,7 @@ present at the end of an input vector element is carried into the next
 vector element.  If FALSE each vector element is interpreted as if there
 were no active state when they begin.  If character, then the active
 state at the end of the \code{carry} string is carried into the first element of
-\code{x}.  For every function except \code{\link{sgr_to_html}} this argument defaults to
-FALSE.  See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for
+\code{x}.  See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for
 details.}
 }
 \value{

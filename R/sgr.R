@@ -20,7 +20,7 @@
 #' strip all known _Control Sequences_, including CSI/OSC sequences, two
 #' character sequences starting with ESC, and all C0 control characters,
 #' including newlines.  You can fine tune this behavior with the `ctl`
-#' parameter.  `strip_sgr` only strips CSI SGR sequences.
+#' parameter.
 #'
 #' The `ctl` value contains the names of **non-overlapping** subsets of the
 #' known _Control Sequences_ (e.g. "csi" does not contain "sgr", and "c0" does
@@ -30,7 +30,6 @@
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @inheritParams substr_ctl
-#' @inheritSection substr_ctl _ctl vs. _sgr
 #' @inherit has_ctl seealso
 #' @export
 #' @param ctl character, any combination of the following values (see details):
@@ -56,9 +55,6 @@
 #' ## in addition to "c0" since "nl" is not part of "c0"
 #' ## as far as the `strip` argument is concerned
 #' strip_ctl(string, c("all", "nl", "c0"))
-#'
-#' ## convenience function, same as `strip_ctl(ctl='sgr')`
-#' strip_sgr(string)
 
 strip_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), strip) {
   if(!missing(strip)) {
@@ -70,16 +66,26 @@ strip_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), strip) {
   if(length(ctl)) .Call(FANSI_strip_csi, enc2utf8(x), ctl.int, warn)
   else x
 }
+#' Strip Control Sequences
+#'
+#' This function is deprecated in favor of the [`_ctl` flavor][strip_ctl].  It
+#' strips for CSI SGR and OSC-anchored URL sequences.
+#'
+#' @inheritParams strip_ctl
+#' @inherit strip_ctl return
+#' @keywords internal
 #' @export
-#' @rdname strip_ctl
+#' @examples
+#' ## convenience function, same as `strip_ctl(ctl=c('sgr', 'url'))`
+#' strip_sgr(string)
 
 strip_sgr <- function(x, warn=getOption('fansi.warn')) {
   VAL_IN_ENV(x=x, warn=warn)
-  ctl.int <- match("sgr", VALID.CTL)
+  ctl.int <- match(c("sgr", "ctl"), VALID.CTL)
   .Call(FANSI_strip_csi, x, ctl.int, warn)
 }
 
-#' Checks for Presence of Control Sequences
+#' Check for Presence of Control Sequences
 #'
 #' `has_ctl` checks for any _Control Sequence_, whereas `has_sgr` checks only
 #' for CSI SGR and OSC-anchored URL sequences.  You can check for different types
@@ -90,7 +96,6 @@ strip_sgr <- function(x, warn=getOption('fansi.warn')) {
 #'   interpreted, particularly if you are getting unexpected results.
 #' @inheritParams substr_ctl
 #' @inheritParams strip_ctl
-#' @inheritSection substr_ctl _ctl vs. _sgr
 #' @param which character, deprecated in favor of `ctl`.
 #' @return logical of same length as `x`; NA values in `x` result in NA values
 #'   in return
@@ -112,13 +117,20 @@ has_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), which) {
     .Call(FANSI_has_csi, x, ctl.int, warn)
   } else rep(FALSE, length(x))
 }
+#' Check for Presence of Control Sequences
+#'
+#' This function is deprecated in favor of the [`_ctl` flavor][has_ctl].  It
+#' checks for CSI SGR and OSC-anchored URL sequences.
+#'
+#' @inheritParams has_ctl
+#' @inherit has_ctl return
+#' @keywords internal
 #' @export
-#' @rdname has_ctl
 
 has_sgr <- function(x, warn=getOption('fansi.warn'))
   has_ctl(x, ctl=c("sgr", "url"), warn=warn)
 
-#' Utilities for Managing SGR In Strings
+#' Utilities for Managing CSI and OSC State  In Strings
 #'
 #' `state_at_end` read input strings computing the accumulated SGR and
 #' OSC-anchored URLs until the end of the string and outputs the active state at

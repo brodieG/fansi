@@ -14,7 +14,7 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-#' ANSI Control Sequence Aware Version of strsplit
+#' Control Sequence Aware Version of strsplit
 #'
 #' A drop-in replacement for [`base::strsplit`].  It will be noticeably slower,
 #' but should otherwise behave the same way except for _Control Sequence_
@@ -38,14 +38,13 @@
 #' @inherit substr_ctl seealso
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work properly in R < 3.2.2.
-#' @inheritSection substr_ctl _ctl vs. _sgr
 #' @inherit base::strsplit return
 #' @examples
-#' strsplit_sgr("\033[31mhello\033[42m world!", " ")
+#' strsplit_ctl("\033[31mhello\033[42m world!", " ")
 #'
-#' ## Next two examples allow splitting by newlines, which
-#' ## normally doesn't work as newlines are _Control Sequences_
-#' strsplit_sgr("\033[31mhello\033[42m\nworld!", "\n")
+#' ## Splitting by newlines does now work as they are _Control
+#' ## Sequences_, but we can use `ctl` to treat them as ordinary
+#' strsplit_ctl("\033[31mhello\033[42m\nworld!", "\n")
 #' strsplit_ctl("\033[31mhello\033[42m\nworld!", "\n", ctl=c("all", "nl"))
 
 strsplit_ctl <- function(
@@ -142,7 +141,13 @@ strsplit_ctl <- function(
   res[x.na] <- list(NA_character_)
   res
 }
-#' @rdname strsplit_ctl
+#' Check for Presence of Control Sequences
+#'
+#' This function is deprecated in favor of the [`_ctl` flavor][strsplit_ctl].
+#'
+#' @inheritParams strsplit_ctl
+#' @inherit strsplit_ctl return
+#' @keywords internal
 #' @export
 
 strsplit_sgr <- function(
@@ -157,19 +162,3 @@ strsplit_sgr <- function(
     warn=warn, term.cap=term.cap, ctl='sgr', normalize=normalize,
     carry=carry, terminate=terminate
   )
-
-# # old interface to split happening directly in C code
-# strsplit_ctl <- function(
-#   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
-#   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
-# ) {
-#   x.split <- strsplit(x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE)
-#   if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
-#     stop(
-#       "Argument `term.cap` may only contain values in ",
-#       deparse(VALID.TERM.CAP)
-#     )
-#   .Call(FANSI_strsplit, x.split, warn, term.cap.int)
-# }
-
-

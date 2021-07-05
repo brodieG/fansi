@@ -14,7 +14,7 @@
 ##
 ## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
-#' ANSI Control Sequence Aware Version of strtrim
+#' Control Sequence Aware Version of strtrim
 #'
 #' One difference with [`base::strtrim`] is that all C0 control characters such
 #' as newlines, carriage returns, etc., are always treated as zero width,
@@ -26,7 +26,6 @@
 #' @export
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work properly in R < 3.2.2.
-#' @inheritSection substr_ctl _ctl vs. _sgr
 #' @inheritParams base::strtrim
 #' @inheritParams strwrap_ctl
 #' @inherit substr_ctl seealso
@@ -117,8 +116,14 @@ strtrim2_ctl <- function(
   )
   if(normalize) normalize_state(res) else res
 }
+#' Control Sequence Aware Version of strtrim
+#'
+#' These functions are deprecated in favor of the [`_ctl` flavors][substr_ctl].
+#'
+#' @inheritParams strtrim_ctl
+#' @inherit strtrim_ctl return
+#' @keywords internal
 #' @export
-#' @rdname strtrim_ctl
 
 strtrim_sgr <- function(
   x, width, warn=getOption('fansi.warn'),
@@ -132,7 +137,7 @@ strtrim_sgr <- function(
   )
 
 #' @export
-#' @rdname strtrim_ctl
+#' @rdname strtrim_sgr
 
 strtrim2_sgr <- function(x, width, warn=getOption('fansi.warn'),
   tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
