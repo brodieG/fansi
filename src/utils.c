@@ -54,14 +54,6 @@ SEXP FANSI_reset_limits() {
   return ScalarLogical(1);
 }
 void FANSI_check_limits() {
-  // Rprintf(
-  //   "%jd %jd\n%jd %jd\n%jd %jd\n%ju %ju",
-  //   FANSI_lim.lim_int.max, FANSI_lim.lim_int.min,
-  //   FANSI_lim.lim_R_len_t.max, FANSI_lim.lim_R_len_t.min,
-  //   FANSI_lim.lim_R_xlen_t.max, FANSI_lim.lim_R_xlen_t.min,
-  //   // Unsigned
-  //   FANSI_lim.lim_size_t.max, FANSI_lim.lim_size_t.min
-  // );
   if(
     // Signed
     FANSI_lim.lim_int.max < 1 || FANSI_lim.lim_int.min > -1 ||
@@ -134,7 +126,7 @@ struct FANSI_ctl_pos FANSI_find_ctl(
 
   while(state.string[state.pos_byte]) {
     raw_prev = state.pos_raw;
-    pos_prev = state.pos_raw;
+    pos_prev = state.pos_byte;
     state = FANSI_read_next(state, i, 1);
 
     // Known control read
@@ -172,7 +164,7 @@ int FANSI_maybe_ctl(const char x) {
 
 int FANSI_seek_ctl(const char * x) {
   const char * x0 = x;
-  while(FANSI_maybe_ctl(*x++));
+  while(*x && !FANSI_maybe_ctl(*x)) x++;
   if(x - x0 > FANSI_lim.lim_int.max)
     error("Internal error: sought past INT_MAX, should not happen.");  // nocov
   return (x - x0);
