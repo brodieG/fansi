@@ -26,22 +26,14 @@
  * starting with "W_" in other files) operate in measure and write modes.  The
  * pattern is:
  *
+ * 0. Reset the FANSI_buff object.
  * 1. Run in measure mode to get 'len'.
- * 2. Allocate 'len + 1' ('len' does not include terminating NULL).
+ * 2. Allocate the buffer with FANSI_size
  * 3. Re-run in write mode to write the buffer.
  *
- * The functions take a pointer a to a pointer to the first character in a
- * buffer (i.e. char ** buff).  If that points to NULL, then the function runs
- * in measure mode.  Otherwise, it runs in write mode.  The writing functions
- * should also accept an 'int len' parameter that measures how many bytes have
- * (or will be) written by other functions.
- *
- *   vvvvvvvv
- * !> DANGER <!
- *   ^^^^^^^^
- *
- * Utmost care must be taken in ensuring the **only** parameter changing between
- * the measure and write runs is the write buffer.
+ * The functions accept a  pointer to a FANSI_struct object.  If the `.buff`
+ * member points to NULL, the functions ru in measure mode Otherwise, it runs in
+ * write mode.
  *
  * Here is an example implementation that uses a loop to iterate between measure
  * and write mode.  Not all uses of write functions are in this form.
@@ -49,22 +41,15 @@
  *     struct FANSI_buff buff;
  *     FANSI_INIT_BUFF(&buff);
  *
- *     char * buff_track = buff.buff;
- *     int len = 0;
- *
  *     for(int k = 0; k < 2; ++k) {
- *       if(k) {
- *         // Write Mode
- *         FANSI_size_buff(&buff, len); # buff.buff is allocated
- *         buff_track = buff.buff;
- *         len = 0;  // reset len
- *       }
- *       len += FANSI_W_fun1(&(buff_track), len, ...);
- *       len += FANSI_W_fun2(&(buff_track), len, ...);
+ *       if(!k) FANSI_reset_buff(&buff);  // Read mode
+ *       else   FANSI_size_buff(&buff);   // Write Mode
+ *
+ *       FANSI_W_fun1(&buff, ...);
+ *       FANSI_W_fun2(&buff, ...);
  *     }
- *     // Check
- *     if(buff_track - buff.buff != len)
- *       error("Out of sync - something bad happened!.");
+ *     // Do stuff
+ *     ...
  *
  *     FANSI_release_buff(&buff, 1);
  *
@@ -78,11 +63,14 @@
  * This makes it simpler to code measure/write as a two iteration loop that uses
  * the same code for measuring and writing, except for allocating the buffer.
  *
- * These functions return how many bytes are/will be written, and should also
- * check whether adding those bytes to the 'len' input would cause an 'int'
- * overflow.  Typically the functions will accept an error message and an
- * R-level input index so that they can provide a bit more guidnce as to what
- * happened during and overflow.
+ * These functions generally return void, but some return how many bytes
+ * are/will be written.  They typically will check for overflow of int in the
+ * measure part, and then for overflow or underuse of the allocated buffer on
+ * the second pass.  Ideally functions will internally use FANSI_W_MCOPY, which
+ * do the overflow checks.
+ *
+ * FANSI_release_buff and the FANSI_mkChar* functions also check that any
+ * provided buffer has had written the expected number of bytes.
  *
  * There is a performance trade-off in using the exact same code to measure the
  * buffer size and to write it.  Many of the measurments are knowable ahead of
