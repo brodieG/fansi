@@ -107,15 +107,14 @@ static struct FANSI_tok_res parse_token(const char * string) {
     ++string;
     ++len;
   }
-  // check for for intermediate bytes, we allow 'infinite' here even though in
-  // practice more than one is likely a bad outcome
-
+  // check for for intermediate bytes, we allow 'infinite' here as per
+  // ECMA48, although they note 1 byte is likely sufficient.
   while(*string >= 0x20 && *string <= 0x2F) {
     ++string;
     ++len_intermediate;
   }
-  // check for final byte
 
+  // check for final byte
   is_sgr = 0;
   last = 1;
   if((*string == ';' || *string == 'm') && !len_intermediate) {
@@ -127,7 +126,8 @@ static struct FANSI_tok_res parse_token(const char * string) {
     // the err_code value, it's cleaner to just explicitly determine whether
     // sequence is actually sgr.
     if(*string == 'm') is_sgr = 1;
-  } else if(*string >= 0x40 && *string <= 0x7E && len_intermediate <= 1) {
+  } else if(*string >= 0x40 && *string <= 0x7E) {
+  // } else if(*string >= 0x40 && *string <= 0x7E && len_intermediate <= 1) {
     // valid final byte
     err_code = 4;
   } else {
