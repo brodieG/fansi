@@ -372,10 +372,11 @@ SEXP FANSI_esc_to_html(
   struct FANSI_state state, state_prev, state_init;
   SEXP empty = PROTECT(mkString(""));
   state = FANSI_state_init(empty, warn, term_cap, (R_xlen_t) 0);
-  state.sgr = state_carry.sgr;
-  state.url = state_carry.url;
-  state_prev = state_init = state;
   UNPROTECT(1);
+
+  state_prev = state_init = state;
+  state_prev.sgr = state_carry.sgr;
+  state_prev.url = state_carry.url;
 
   SEXP res = x;
   // Reserve spot on protection stack
@@ -392,7 +393,6 @@ SEXP FANSI_esc_to_html(
 
     // Reset position info and string; rest of state info is preserved from
     // prior line so that the state can be continued on new line.
-
     if(do_carry) state = state_prev;
     else state = state_init;
 
@@ -405,7 +405,8 @@ SEXP FANSI_esc_to_html(
     // Some ESCs may not produce any HTML, and some strings may gain HTML from
     // an ESC from a prior element even if they have no ESCs.
     int has_esc = 0;
-    int has_state = sgr_has_style_html(state.sgr);
+    int has_state = 
+      sgr_has_style_html(state.sgr) || FANSI_url_active(state.url);
     int trail_span, trail_a;
     trail_span = trail_a = 0;
 
