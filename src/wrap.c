@@ -185,7 +185,8 @@ static SEXP writeline(
   const char * err_msg = "Writing line";
 
   for(int k = 0; k < 2; ++k) {
-    if(k) FANSI_size_buff(buff);
+    if(!k) FANSI_reset_buff(buff);
+    else   FANSI_size_buff(buff);
     if(needs_st_sgr) {
       err_msg = "Adding initial SGR";
       FANSI_W_sgr(buff, state_start.sgr, normalize, i);

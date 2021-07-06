@@ -257,8 +257,7 @@ static char * oe_sgr_html_err = "Expanding SGR sequences to HTML";
 static int W_state_as_html(
   struct FANSI_state state,
   struct FANSI_buff * buff,
-  SEXP color_classes, R_xlen_t i,
-  int len
+  SEXP color_classes, R_xlen_t i
 ) {
   /****************************************************\
   | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_csi_write  |
@@ -322,15 +321,15 @@ static int W_state_as_html(
         (color >= 0 && (!color_class)) ||
         (bg_color >= 0 && (!bgcol_class))
       ) {
-        len += FANSI_W_COPY(buff, " style='");
-        int len_start = len;
+        FANSI_W_COPY(buff, " style='");
+        int has_style = 0;
         char color_tmp[8];
         if(color >= 0 && (!color_class)) {
-          FANSI_W_COPY(buff, "color: ");
+          has_style += FANSI_W_COPY(buff, "color: ");
           FANSI_W_COPY(buff, color_to_html(color, color_extra, color_tmp));
         }
         if(bg_color >= 0 && (!bgcol_class)) {
-          if(len_start < len) len += FANSI_W_COPY(buff, "; ");
+          if(has_style) has_style += FANSI_W_COPY(buff, "; ");
           FANSI_W_COPY(buff,  "background-color: ");
           FANSI_W_COPY(
             buff, color_to_html(bg_color, bg_color_extra, color_tmp)
@@ -339,7 +338,7 @@ static int W_state_as_html(
         // Styles (need to go after color for transparent to work)
         for(unsigned int i = 1U; i < 10U; ++i)
           if(sgr.style & style_html_mask() & (1U << i)) {
-            if(len_start < len) len += FANSI_W_COPY(buff, "; ");
+            if(has_style) FANSI_W_COPY(buff, "; ");
             FANSI_W_COPY(buff, css_style[i - 1].css);
           }
         FANSI_W_COPY(buff, ";'");
@@ -402,7 +401,6 @@ SEXP FANSI_esc_to_html(
     state_prev = state_init;  // but there are no styles in the string yet
 
     int bytes_init = (int) LENGTH(chrsxp);
-    int len = 0;
 
     // Some ESCs may not produce any HTML, and some strings may gain HTML from
     // an ESC from a prior element even if they have no ESCs.
@@ -415,7 +413,6 @@ SEXP FANSI_esc_to_html(
     // don't care about display width, etc.  Normally we would _read_next over
     // all characters, not just skip from ESC to ESC.
 
-    char * buff_track = NULL;
     const char * err_msg = oe_sgr_html_err;
 
     // Measure / Write loop
@@ -443,7 +440,7 @@ SEXP FANSI_esc_to_html(
         // dirty hack, state.sgr_prev is not exaclty right at beginning
         state.sgr_prev = state_prev.sgr;
         state.url_prev = state_prev.url;
-        W_state_as_html(state, &buff, color_classes, i, len);
+        W_state_as_html(state, &buff, color_classes, i);
         state_prev = state;
       }
       // New in this element
@@ -469,7 +466,7 @@ SEXP FANSI_esc_to_html(
           // dirty hack, state.sgr_prev is not exaclty right at beginning
           state.sgr_prev = state_prev.sgr;
           state.url_prev = state_prev.url;
-          if(*string) W_state_as_html(state, &buff, color_classes, i, len);
+          if(*string) W_state_as_html(state, &buff, color_classes, i);
 
           state_prev = state;
           has_state |=
@@ -480,7 +477,7 @@ SEXP FANSI_esc_to_html(
       if(trail_span) FANSI_W_COPY(&buff, "</span>");
       if(trail_a) FANSI_W_COPY(&buff, "</a>");
 
-      if(buff_track) {  // only ever true if k > 0
+      if(buff.buff) {  // only ever true if k > 0
         // Now create the charsxp with the original encoding.  Since we're only
         // removing SGR and adding FANSI, it should be okay.
         cetype_t chr_type = getCharCE(chrsxp);
