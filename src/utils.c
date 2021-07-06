@@ -121,26 +121,28 @@ SEXP FANSI_add_int_ext(SEXP x, SEXP y) {
 struct FANSI_ctl_pos FANSI_find_ctl(
   struct FANSI_state state, int warn, R_xlen_t i
 ) {
-  int raw_prev, pos_prev, found;
+  int raw_prev, pos_prev, found, err_prev;
+  int warned = 0;
   found = 0;
 
   while(state.string[state.pos_byte]) {
     raw_prev = state.pos_raw;
     pos_prev = state.pos_byte;
+    err_prev = state.err_code;
     state = FANSI_read_next(state, i, 1);
-
+    if(
+      warn && !warned && (state.err_code == 5 || state.err_code == 7)
+    ) {
+      warned = 1;
+      warning(
+        "Encountered %s at index [%jd], %s%s",
+        state.err_msg, FANSI_ind(i),
+        "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
+        "off these warnings."
+      );
+    }
     // Known control read
     if(state.pos_raw == raw_prev) {
-      // Encoding error, produce warning; this is probably not right, a full on
-      // failure is not going to backup and only read one char
-      if(warn && (state.err_code == 5 || state.err_code == 7)) {
-        warning(
-          "Encountered %s at index [%jd], %s%s",
-          state.err_msg, FANSI_ind(i),
-          "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
-          "off these warnings."
-        );
-      }
       found = 1;
       break;
     }
@@ -150,7 +152,7 @@ struct FANSI_ctl_pos FANSI_find_ctl(
   if(found) res = state.pos_byte - pos_prev;
   return (struct FANSI_ctl_pos) {
     .offset = pos_prev, .len = res,
-    .warn = (state.err_code == 5 || state.err_code == 7)
+    .warn = warned
   };
 }
 int FANSI_maybe_ctl(const char x) {

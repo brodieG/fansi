@@ -69,8 +69,9 @@
  * the second pass.  Ideally functions will internally use FANSI_W_MCOPY, which
  * do the overflow checks.
  *
- * FANSI_release_buff and the FANSI_mkChar* functions also check that any
- * provided buffer has had written the expected number of bytes.
+ * The `FANSI_mkChar*` functions also check that any provided buffer has had
+ * written the expected number of bytes.  If a buffer is not written out with
+ * `FANSI_mkChar*` the buffer should be checked with `FANSI_check_buff`.
  *
  * There is a performance trade-off in using the exact same code to measure the
  * buffer size and to write it.  Many of the measurments are knowable ahead of
@@ -169,9 +170,6 @@ void FANSI_check_buff(struct FANSI_buff buff, R_xlen_t i, int strict) {
 int FANSI_release_buff(struct FANSI_buff * buff, int warn) {
   int failure = 0;
   if(buff->buff0) {
-    if(buff->buff - buff->buff0 != buff->len)
-      error("Internal Error: buffer incompletely used.");
-
     if(buff->vheap_self == vmaxget()) vmaxset(buff->vheap_prev);
     else {
       if(warn && !buff->warned)

@@ -73,6 +73,8 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
   // Now strip
   int warn_attrib = 0;
   char * chr_buff;
+  // warn can be 2
+  int warn2 = warn_int == 1;
 
   for(i = 0; i < len; ++i) {
     FANSI_interrupt(i);
@@ -106,12 +108,9 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     struct FANSI_ctl_pos pos_prev = {0, 0, 0};
 
     while(1) {
-      // Rprintf("start pos %d\n", state.pos_byte);
-      // warn can be 2
-      struct FANSI_ctl_pos pos = FANSI_find_ctl(state, warn_int == 1, i);
-      // Rprintf("found off %d len %d d prev_off %d prev_len %d\n", 
-      //     pos.offset, pos.len, pos_prev.offset, pos_prev.len);
+      struct FANSI_ctl_pos pos = FANSI_find_ctl(state, warn2, i);
       warn_attrib = warn_attrib || pos.warn;
+      if(pos.warn) warn2 = 0;
       if(pos.len) {
         has_ansi = 1;
 
@@ -321,7 +320,7 @@ SEXP FANSI_process(
           REPROTECT(res = duplicate(input), ipx);
           strip_any = 1;
         }
-        // Make sure buffer is big enough
+        // Make sure buffer is big enough (could be too big)
         if(!strip_this) {
           FANSI_size_buff0(buff, len_j);
           strip_this = 1;
@@ -412,8 +411,10 @@ SEXP FANSI_process(
         );
     }
     if(strip_this) {
-      SEXP chrsxp =
-        PROTECT(FANSI_mkChar2(*buff, getCharCE(STRING_ELT(input, i)), i));
+      SEXP chrsxp = PROTECT(
+        FANSI_mkChar0(
+          buff->buff0, buff->buff, getCharCE(STRING_ELT(input, i)), i
+      ) );
       SET_STRING_ELT(res, i, chrsxp);
       UNPROTECT(1);
     }

@@ -22,7 +22,7 @@
 
 #include "fansi.h"
 
-int FANSI_has_int(SEXP x, int warn, SEXP ctl, R_xlen_t i) {
+int FANSI_has_int(SEXP x, int * warn, SEXP ctl, R_xlen_t i) {
   if(TYPEOF(x) != STRSXP) error("Argument `x` must be CHRSXP.");
   int res = 0;
   const char * xc = CHAR(STRING_ELT(x, i));
@@ -32,8 +32,9 @@ int FANSI_has_int(SEXP x, int warn, SEXP ctl, R_xlen_t i) {
     struct FANSI_state state = FANSI_state_init_ctl(x, R_false, ctl, i);
     UNPROTECT(1);
     state.pos_byte = off_init;
-    struct FANSI_ctl_pos pos = FANSI_find_ctl(state, warn, i);
+    struct FANSI_ctl_pos pos = FANSI_find_ctl(state, *warn, i);
     res = pos.len > 0;
+    if(pos.warn) *warn = 0;
   }
   return res;
 }
@@ -54,7 +55,7 @@ SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn) {
     SEXP chrsxp = STRING_ELT(x, i);
     FANSI_check_chrsxp(chrsxp, i);
     if(chrsxp == NA_STRING) res_int[i] = NA_LOGICAL;
-    else res_int[i] = FANSI_has_int(chrsxp, warn_int, ctl, i);
+    else res_int[i] = FANSI_has_int(chrsxp, &warn_int, ctl, i);
   }
   UNPROTECT(1);
   return res;
