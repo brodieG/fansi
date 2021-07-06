@@ -99,27 +99,14 @@ SEXP FANSI_add_int_ext(SEXP x, SEXP y) {
   return ScalarInteger(FANSI_ADD_INT(asInteger(x), asInteger(y)));
 }
 /*
- * Compute Location and Size of Next ANSI Sequences
+ * Compute Location and Size of Next Control Sequences
  *
- * This used to be an independent version of the logic in read_next for speed,
- * but we kept forgetting to keep it in sync and that just seemed too dangerous.
- * Instead, now we just use the read_ functions internally.
- *
- * Validity here means striclty that all the contained escape sequences were
- * valid CSI sequences as per the strict definition.
- *
- * We report the length of invalid sequnces, but you really can't trust them.
- * The true length may actually be different depending on your terminal,
- * (e.g. OSX terminal spits out illegal characters to screen but keeps
- * processing the sequence).
- *
- * @param ctl is a bit flag to line up against VALID.WHAT index values, so
- *   (ctl & (1 << 0)) is newlines, (ctl & (1 << 1)) is C0, etc, though note
- *   this does not act
+ * @param one_only give up after a single failed attempt, otherwise keep going
+ *   until a recognized control sequence is found.
  */
 
 struct FANSI_ctl_pos FANSI_find_ctl(
-  struct FANSI_state state, int warn, R_xlen_t i
+  struct FANSI_state state, int warn, R_xlen_t i, int one_only
 ) {
   int raw_prev, pos_prev, found, err_prev;
   int warned = 0;
@@ -144,6 +131,8 @@ struct FANSI_ctl_pos FANSI_find_ctl(
     // Known control read
     if(state.pos_raw == raw_prev) {
       found = 1;
+      break;
+    } else if (one_only) {
       break;
     }
     state.pos_byte += FANSI_seek_ctl(state.string + state.pos_byte);

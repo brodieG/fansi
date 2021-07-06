@@ -212,8 +212,9 @@ size_t FANSI_size_buff0(struct FANSI_buff * buff, int size) {
   size_t size_alloc = 0;
   if(size_req > buff_max)
     error(
-      "%s  Requesting %zu.",
-      "Internal Error: max allowed buffer size is INT_MAX + 1.", size_req
+      "%s (req: %zu vs lim: %zu), in %s.",
+      "Internal Error: max allowed buffer size is INT_MAX + 1.",
+      size_req, buff_max, buff->fun
     );
 
   if(size_req > buff->len_alloc) {
@@ -239,8 +240,8 @@ size_t FANSI_size_buff0(struct FANSI_buff * buff, int size) {
     if(size_alloc < size_req)
       // nocov start
       error(
-        "Internal Error: buffer size computation error (%zu vs %zu).",
-        size_alloc, size_req
+        "Internal Error: buffer size computation error (%zu vs %zu) in %s.",
+        size_alloc, size_req, buff->fun
       );
       // nocov end
 
@@ -253,7 +254,8 @@ size_t FANSI_size_buff0(struct FANSI_buff * buff, int size) {
   } else {
     buff->buff = buff->buff0;
   }
-  if(!buff->buff) error("Internal Error: buffer not allocated.");// nocov
+  if(!buff->buff)
+    error("Internal Error: buffer not allocated in %s.", buff->fun);// nocov
   buff->len = size;
   *(buff->buff) = 0;  // Always reset the string, guaranteed one byte.
   return buff->len_alloc;
@@ -279,7 +281,7 @@ static void prot_test_help(
 ) {
   char tmp[256];
   FANSI_size_buff0(buff, size);
-  INTEGER(VECTOR_ELT(res, 1))[i] = buff->len;
+  INTEGER(VECTOR_ELT(res, 1))[i] = buff->len_alloc;
   SET_STRING_ELT(VECTOR_ELT(res, 0), i, mkChar(lbl));
   sprintf(tmp, "%p", buff->vheap_self);
   SET_STRING_ELT(VECTOR_ELT(res, 3), i, mkChar(tmp));
@@ -343,12 +345,14 @@ SEXP FANSI_size_buff_ext(SEXP x) {
 
   R_xlen_t i, len = XLENGTH(x);
   SEXP res = PROTECT(allocVector(REALSXP, len));
-  struct FANSI_buff buff = {.len=0};
+  struct FANSI_buff buff;
+  FANSI_INIT_BUFF(&buff);
 
   for(i = 0; i < len; ++i) {
     size_t size = FANSI_size_buff0(&buff, INTEGER(x)[i]);
     REAL(res)[i] = (double) size;
   }
+  FANSI_release_buff(&buff, 1);
   UNPROTECT(1);
   return res;
 }

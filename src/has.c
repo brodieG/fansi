@@ -32,7 +32,7 @@ static int has_int(SEXP x, int * warn, SEXP ctl, R_xlen_t i) {
     struct FANSI_state state = FANSI_state_init_ctl(x, R_false, ctl, i);
     UNPROTECT(1);
     state.pos_byte = off_init;
-    struct FANSI_ctl_pos pos = FANSI_find_ctl(state, *warn, i);
+    struct FANSI_ctl_pos pos = FANSI_find_ctl(state, *warn, i, 0);
     res = pos.len > 0;
     if(pos.warn) *warn = 0;
   }

@@ -60,7 +60,7 @@ SEXP FANSI_nzchar(
 
         while(FANSI_maybe_ctl(*string)) {
           struct FANSI_ctl_pos pos =
-            FANSI_find_ctl(state, warn_int && !warned, i);
+            FANSI_find_ctl(state, warn_int && !warned, i, 1);
 
           warned = warned || pos.warn;
           if(!pos.len) {  // Not an escape

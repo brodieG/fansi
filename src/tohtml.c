@@ -583,7 +583,7 @@ SEXP FANSI_esc_html(SEXP x, SEXP what) {
     len = LENGTH(chrsxp);
 
     // Two passes (k), first one compute incremental length of string, second
-    // actually write to the buffer (signal is for buffer to be non-NULL.
+    // actually write to the buffer
     for(int k = 0; k < 2; ++k) {
       string = CHAR(chrsxp);
 
