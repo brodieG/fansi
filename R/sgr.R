@@ -181,7 +181,7 @@ close_state <- function(
   normalize=getOption('fansi.normalize', FALSE)
 ) {
   VAL_IN_ENV(x=x, warn=warn, normalize=normalize)
-  .Call(FANSI_close_state, x, warn, seq_along(VALID.TERM.CAP), normalize)
+  .Call(FANSI_close_state, x, warn, 1L, normalize)
 }
 
 
@@ -191,6 +191,6 @@ close_state <- function(
 
 process <- function(x, ctl="all")
   .Call(
-    FANSI_process, enc2utf8(x), seq_along(VALID.TERM.CAP), match(ctl, VALID.CTL)
+    FANSI_process, enc2utf8(x), 1L, match(ctl, VALID.CTL)
   )
 

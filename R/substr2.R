@@ -394,7 +394,7 @@ state_at_pos <- function(
     is.start,  # keep if is.start
     is.start,  # indicate that it's a start
     warn,
-    seq_along(VALID.TERM.CAP),
+    1L,        # term.cap="all"
     1L,        # ctl="all"
     normalize,
     terminate,
