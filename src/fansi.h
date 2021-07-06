@@ -97,6 +97,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int len;           // Size target
     const char * fun;  // Function that initialized the buffer.
     int warned;        // Whether a warning was issued already.
+    int reset;         // Indicate the buffer was reset as required.
   };
   struct FANSI_string_as_utf8 {
     const char * string;  // buffer

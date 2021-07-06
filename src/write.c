@@ -36,7 +36,7 @@
  * write mode.
  *
  * Here is an example implementation that uses a loop to iterate between measure
- * and write mode.  Not all uses of write functions are in this form.
+ * and write mode:
  *
  *     struct FANSI_buff buff;
  *     FANSI_INIT_BUFF(&buff);
@@ -52,6 +52,15 @@
  *     ...
  *
  *     FANSI_release_buff(&buff, 1);
+ *
+ * Buffers must be reset prior to the measure pass.  Use FANSI_size_buff0 if you
+ * know the size ahead of time and don't need the two pass measure/write
+ * approach.
+ *
+ * The key workhorses are the macros FANSI_W_COPY and FANSI_W_MCOPY which
+ * roughly mimic the semantics of `strcpy` and `memcpy` respectively.  Functions
+ * that only use these functions to write to the buffer and accept the buffer by
+ * reference Ban then be used as `FANSI_W_fun1/2` are used above.
  *
  *   vvvvvvvv
  * !> DANGER <!
@@ -86,6 +95,11 @@
  * must be called at least one to actually allocate memory (init does not do
  * this), and may be called repeatedly to resize the buffer.
  *
+ * Internally, the same buffer is used if it is big enough to accomodate a new
+ * `FANSI_size_buff` request, but semantically it is as if a fresh buffer is
+ * requested each time (i.e. this is not a buffer designed to accomodate
+ * variable length data).
+ *
  * Each time the buffer is grown, we attempt to release the prior buffer to make
  * it eligible for garbage collection.  If only one buffer is ever in use at a
  * time, this will always work.  If multiple buffers are active (e.g. because a
@@ -93,15 +107,20 @@
  * resized and released LIFO, e.g.:
  *
  *     // Bad
- *     FANSI_size(&buff1);
- *     FANSI_size(&buff2);
- *     FANSI_size(&buff1);              // warning ...
+ *     FANSI_size_buff(&buff1);
+ *     FANSI_size_buff(&buff2);
+ *     FANSI_size_buff(&buff1);              // warning ...
  *
  *     // Okay
- *     FANSI_size(&buff1);
- *     FANSI_size(&buff2);
- *     FANSI_release_buff(&buff2, 1);   // no warning
- *     FANSI_size(&buff1);              // no warning
+ *     FANSI_size_buff(&buff1);
+ *     FANSI_size_buff(&buff2);
+ *     FANSI_release_buff(&buff2, 1);        // no warning
+ *     FANSI_size_buff(&buff1);              // no warning
+ *
+ * Avoid using `R_alloc` inside _W_ functions or their children unless you reset
+ * the `vmax` values before existing.  Failure to do so (e.g. if you allocate a
+ * buffer and don't release it before return) will prevent FANSI_release_buff
+ * from freeing it's own buffers.
  *
  * - Testing -------------------------------------------------------------------
  *
@@ -118,7 +137,8 @@ void FANSI_init_buff(struct FANSI_buff * buff, const char * fun) {
     .vheap_self=NULL,
     .vheap_prev=NULL,
     .fun=fun,
-    .warned=0
+    .warned=0,
+    .reset=0            // init does not reset
   };
 }
 // Strict requires that the buff be used exactly and completely, otherwise okay
@@ -203,9 +223,16 @@ int FANSI_release_buff(struct FANSI_buff * buff, int warn) {
  *
  * Every call to FANSI_size_buff "zeroes" the buffer by setting the first byte
  * to 0 and the `.buff` member to point to the beginning of the buffer.
+ *
+ * The _buff0 version is when the size does not need to be measured explicitly.
  */
 size_t FANSI_size_buff0(struct FANSI_buff * buff, int size) {
-  if(size < 0) error("Internal Error: negative buffer allocations disallowed.");
+  if(size < 0)
+    error(
+      "Internal Error: negative buffer allocations disallowed in %s.", buff->fun
+    );
+  buff->reset = 0;
+
   // assumptions check that SIZE_T fits INT_MAX + 1
   size_t buff_max = (size_t)FANSI_lim.lim_int.max + 1;
   size_t size_req = (size_t)size + 1;
@@ -261,6 +288,8 @@ size_t FANSI_size_buff0(struct FANSI_buff * buff, int size) {
   return buff->len_alloc;
 }
 size_t FANSI_size_buff(struct FANSI_buff * buff) {
+  if(!buff->reset)
+    error("Internal Error: attempt to size buffer w/o reset in %s.", buff->fun);
   return FANSI_size_buff0(buff, buff->len);
 }
 /*
@@ -269,6 +298,7 @@ size_t FANSI_size_buff(struct FANSI_buff * buff) {
 void FANSI_reset_buff(struct FANSI_buff * buff) {
   buff->len = 0;
   buff->buff = NULL;
+  buff->reset = 1;
 }
 
 /*
