@@ -97,7 +97,7 @@ nzchar_ctl <- function(x, keepNA=NA, ctl='all', warn=getOption('fansi.warn')) {
   if(length(keepNA) != 1L)
     stop("Argument `keepNA` must be a scalar logical.")
 
-  term.cap.int <- seq_along(VALID.TERM.CAP)
+  term.cap.int <- 1L
   .Call(FANSI_nzchar_esc, x, keepNA, warn, term.cap.int, ctl.int)
 }
 #' Control Sequence Aware Version of nchar

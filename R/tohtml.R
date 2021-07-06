@@ -149,7 +149,7 @@ to_html <- function(
   x, warn=getOption('fansi.warn'),
   term.cap=getOption('fansi.term.cap'),
   classes=FALSE,
-  carry=getOption('fansi.carry', FALSE)  # different from other functions
+  carry=getOption('fansi.carry', TRUE)  # different from other functions
 ) {
   VAL_IN_ENV(x=x, warn=warn, term.cap=term.cap, carry=carry)
   classes <- if(isTRUE(classes)) {

@@ -41,6 +41,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   #define FANSI_CTL_ALL 127 // 1 + 2 + 4 + 8 + 16 == 2^0 + 2^1 + 2^2 + 2^3 + 2^4
 
+  #define FANSI_TERM_CAP_ALL 7 // 1 + 2 + 4
+
   #define FANSI_STYLE_MAX 12 // 12 is double underline
 
   #define FANSI_TERM_BRIGHT 1
@@ -87,12 +89,15 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
    * sufficiently large to write what we want.
    */
   struct FANSI_buff {
-    char * buff;       // Buffer
+    char * buff0;      // Buffer start
+    char * buff;       // Buffer last written
     void * vheap_self; // Pointer to self on the heap protection stack
     void * vheap_prev; // Pointer to what was previously on top of prot stack
-    size_t len;        // Bytes allocated, includes trailing NULL.
+    size_t len_alloc;  // Bytes allocated, includes trailing NULL.
+    int len;           // Size target
     const char * fun;  // Function that initialized the buffer.
     int warned;        // Whether a warning was issued already.
+    int reset;         // Indicate the buffer was reset as required.
   };
   struct FANSI_string_as_utf8 {
     const char * string;  // buffer
@@ -103,15 +108,15 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
    * Used when computing position and size of ANSI tag with FANSI_loc
    */
 
-  struct FANSI_csi_pos {
-    // Pointer to the first ESC, or NULL, if it is not found
-    const char * start;
+  struct FANSI_ctl_pos {
+    // Byte offset to first recognized control sequence
+    int offset;
     // how many characters to the end of the sequnce
     int len;
-    // whether the sequnce is complete or not
-    int valid;
-    // what types of control sequences were found, seel also FANSI_state.ctl
-    int ctl;
+    // Whethaer a warning was issued (or would have been issued)
+    int warn;
+    // Max warning encountered, whether issued or not
+    int warn_max;
   };
   /*
    * Encode Active SGR
@@ -347,9 +352,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int keepNA;
     // invalid multi-byte char, a bit of duplication with err_code = 9;
     int nchar_err;
-    // what types of Control Sequences should have special treatment.  This
-    // mirrors the `ctl` parameter for `FANSI_find_esc`.  See `FANSI_ctl_as_int`
-    // for the encoding.
+    // what types of Control Sequences should have special treatment.  See
+    // `FANSI_ctl_as_int` for the encoding.
     int ctl;
   };
   /*
@@ -450,7 +454,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP term_cap, SEXP ctl
   );
 
-  struct FANSI_csi_pos FANSI_find_esc(const char * x, int ctl);
+  struct FANSI_ctl_pos FANSI_find_ctl(
+    struct FANSI_state state, int warn, R_xlen_t i, int one_only
+  );
+
   struct FANSI_state FANSI_inc_width(
     struct FANSI_state state, int inc, R_xlen_t i
   );
@@ -459,12 +466,16 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   void FANSI_check_chrsxp(SEXP x, R_xlen_t i);
 
+  int FANSI_term_cap_as_int(SEXP term_cap);
   int FANSI_ctl_as_int(SEXP ctl);
 
   void FANSI_init_buff(struct FANSI_buff * buff, const char * fun);
   #define FANSI_INIT_BUFF(A) FANSI_init_buff((A), __func__)
-  size_t FANSI_size_buff(struct FANSI_buff * buff, int size);
+  size_t FANSI_size_buff0(struct FANSI_buff * buff, int size);
+  size_t FANSI_size_buff(struct FANSI_buff * buff);
   int FANSI_release_buff(struct FANSI_buff * buff, int warn);
+  void FANSI_check_buff(struct FANSI_buff buff, R_xlen_t i, int strict);
+  void FANSI_reset_buff(struct FANSI_buff * buff);
 
   int FANSI_pmatch(
     SEXP x, const char ** choices, int choice_count, const char * arg_name
@@ -483,6 +494,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP strsxp, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
     SEXP width, SEXP ctl, R_xlen_t i
   );
+  struct FANSI_state FANSI_state_init_ctl(
+    SEXP strsxp, SEXP warn, SEXP ctl, R_xlen_t i
+  );
   int FANSI_sgr_active(struct FANSI_sgr sgr);
   int FANSI_url_active(struct FANSI_url url);
   int FANSI_sgr_comp_color(struct FANSI_sgr target, struct FANSI_sgr current);
@@ -495,47 +509,48 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_add_int(int x, int y, const char * file, int line);
 
   // "Writing" functions
-  int FANSI_W_sgr(
-    char ** buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
+  void FANSI_W_sgr(
+    struct FANSI_buff * buff, struct FANSI_sgr sgr, int normalize, R_xlen_t i
   );
-  int FANSI_W_url(
-    char ** buff, struct FANSI_url url, int len, int normalize, R_xlen_t i
+  void FANSI_W_url(
+    struct FANSI_buff * buff, struct FANSI_url url, int normalize, R_xlen_t i
   );
 
-  int FANSI_W_sgr_close(
-    char ** buff, struct FANSI_sgr sgr, int len, int normalize, R_xlen_t i
+  void FANSI_W_sgr_close(
+    struct FANSI_buff * buff, struct FANSI_sgr sgr, int normalize, R_xlen_t i
   );
-  int FANSI_W_url_close(
-    char ** buff, struct FANSI_url url, int len, R_xlen_t i
+  void FANSI_W_url_close(
+    struct FANSI_buff * buff, struct FANSI_url url, R_xlen_t i
   );
   int FANSI_W_copy(
-    char ** buff, const char * tmp, int len, R_xlen_t i,
-    const char * err_msg
+    struct FANSI_buff * buff, const char * tmp, R_xlen_t i, const char * err_msg
   );
   int FANSI_W_mcopy(
-    char ** buff, const char * tmp, int tmp_len, int len, R_xlen_t i,
+    struct FANSI_buff * buff, const char * tmp, int tmp_len, R_xlen_t i,
     const char * err_msg
   );
-  int FANSI_W_fill(
-    char ** buff, const char tmp, int times,
-    int len, R_xlen_t i, const char * err_msg
+  void FANSI_W_fill(
+    struct FANSI_buff * buff, const char tmp, int times,
+    R_xlen_t i, const char * err_msg
   );
   // Macro versions require `len`, `i`, and `err_msg` defined in scope.
-  #define FANSI_W_COPY(A, B) FANSI_W_copy((A), (B), len, i, err_msg)
+  #define FANSI_W_COPY(A, B) FANSI_W_copy((A), (B), i, err_msg)
   #define FANSI_W_MCOPY(A, B, C) FANSI_W_mcopy(\
-    (A), (B), (C), len, i, err_msg)
+    (A), (B), (C), i, err_msg)
   #define FANSI_W_FILL(A, B, C) FANSI_W_fill(\
-    (A), (B), (C), len, i, err_msg)
+    (A), (B), (C), i, err_msg)
 
   // Utilities
+  int FANSI_seek_ctl(const char * x);
+  int FANSI_maybe_ctl(const char x);
   void FANSI_print(char * x);
   int FANSI_has_utf8(const char * x);
   void FANSI_interrupt(R_xlen_t i);
   intmax_t FANSI_ind(R_xlen_t i);
   void FANSI_check_chr_size(char * start, char * end, R_xlen_t i);
-  SEXP FANSI_mkChar(
-    const char * start, const char * end, cetype_t enc, R_xlen_t i
-  );
+  SEXP FANSI_mkChar0(char * start, char * end, cetype_t enc, R_xlen_t i);
+  SEXP FANSI_mkChar(struct FANSI_buff buff, cetype_t enc, R_xlen_t i);
+  SEXP FANSI_mkChar2(struct FANSI_buff buff, cetype_t enc, R_xlen_t i);
   SEXP FANSI_reset_limits();
   void FANSI_check_limits();
 

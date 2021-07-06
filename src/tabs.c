@@ -65,6 +65,7 @@ SEXP FANSI_tabs_as_spaces(
     if(tab_stops_i[j] < 1)
       error("Internal Error: stop size less than 1.");  // nocov
   }
+  const char * err_msg = "Converting tabs to spaces";
   const char * source;
   int tabs_in_str = 0;
 
@@ -91,7 +92,7 @@ SEXP FANSI_tabs_as_spaces(
     }
     if(tab_count) {
       // Figure out possible size of buffer, allowing max_tab_stop for every
-      // tab, which should over-allocate
+      // tab, which should over-allocate but is faster
 
       FANSI_check_chrsxp(chr, i);
       int new_buff_size = (int)LENGTH(chr);
@@ -106,7 +107,9 @@ SEXP FANSI_tabs_as_spaces(
           );
         new_buff_size += tab_extra;
       }
-      FANSI_size_buff(buff, new_buff_size);
+      // Note: this does not use the measure - write approach; we just
+      // overallocate knowing the upper bound of tab space usage.
+      FANSI_size_buff0(buff, new_buff_size);
 
       SEXP R_true = PROTECT(ScalarLogical(1));
       SEXP R_one = PROTECT(ScalarInteger(1));
@@ -116,9 +119,6 @@ SEXP FANSI_tabs_as_spaces(
       UNPROTECT(2);
 
       char cur_chr;
-
-      char * buff_track, * buff_start;
-      buff_track = buff_start = buff->buff;
 
       int last_byte = state.pos_byte;
       int warn_old = state.warn;
@@ -139,14 +139,11 @@ SEXP FANSI_tabs_as_spaces(
           tab_stop = 0;
         }
         // Write string
-
         if(cur_chr == '\t' || !cur_chr) {
           int write_bytes = state.pos_byte - last_byte;
-          memcpy(buff_track, state.string + last_byte, write_bytes);
-          buff_track += write_bytes;
+          FANSI_W_MCOPY(buff, state.string + last_byte, write_bytes);
 
           // consume tab and advance
-
           state.warn = 0;
           state = FANSI_read_next(state, i, 1);
           state.warn = warn_old;
@@ -155,13 +152,7 @@ SEXP FANSI_tabs_as_spaces(
           last_byte = state.pos_byte;
 
           // actually write the extra spaces
-
-          while(extra_spaces) {
-            --extra_spaces;
-            *buff_track = ' ';
-            ++buff_track;
-          }
-          if(!cur_chr) *buff_track = 0;
+          FANSI_W_FILL(buff, ' ', extra_spaces);
         } else {
           state = FANSI_read_next(state, i, 1);
         }
@@ -171,7 +162,8 @@ SEXP FANSI_tabs_as_spaces(
 
       cetype_t chr_type = CE_NATIVE;
       if(state.has_utf8) chr_type = CE_UTF8;
-      SEXP chr_sxp = PROTECT(FANSI_mkChar(buff_start, buff_track, chr_type, i));
+      SEXP chr_sxp =
+        PROTECT(FANSI_mkChar0(buff->buff0, buff->buff, chr_type, i));
       SET_STRING_ELT(res_sxp, i, chr_sxp);
       UNPROTECT(1);
     }

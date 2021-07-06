@@ -29,14 +29,12 @@
  */
 
 static int normalize(
-  char * buff, struct FANSI_state *state, R_xlen_t i
+  struct FANSI_buff * buff, struct FANSI_state *state, R_xlen_t i
 ) {
   struct FANSI_state state_int = *state;
   const char * string, * string_prev, * string_last;
   string_prev = string_last = string = state_int.string + state_int.pos_byte;
-  int len = 0;        // output
   int any_to_exp = 0;
-  char * buff_track = buff;
 
   const char * err_msg = "Normalizing SGR";
 
@@ -57,23 +55,23 @@ static int normalize(
       if(state_int.last_special) {
         any_to_exp = 1;
         // stuff prior to SGR/URL
-        len += FANSI_W_MCOPY(&buff_track, string_last, string - string_last);
+        FANSI_W_MCOPY(buff, string_last, string - string_last);
 
         // Any prior open styles not overriden by new one need to be closed
         struct FANSI_sgr to_close =
           FANSI_sgr_setdiff(state_int.sgr_prev, state_int.sgr);
 
-        len += FANSI_W_sgr_close(&buff_track, to_close, len, 1, i);
+        FANSI_W_sgr_close(buff, to_close, 1, i);
 
         // Any newly open styles will need to be opened
         struct FANSI_sgr to_open =
           FANSI_sgr_setdiff(state_int.sgr, state_int.sgr_prev);
-        len += FANSI_W_sgr(&buff_track, to_open, len, 1, i);
+        FANSI_W_sgr(buff, to_open, 1, i);
 
         // Any changed URLs will need to be written (empty URL acts as a closer
         // so simpler than with SGR).
         if(FANSI_url_comp(state_int.url, state_int.url_prev))
-          len += FANSI_W_url(&buff_track, state_int.url, len, 1, i);
+          FANSI_W_url(buff, state_int.url, 1, i);
 
         // Keep track of the last point we copied
         string_last = state_int.string + state_int.pos_byte;
@@ -82,19 +80,15 @@ static int normalize(
     }
     else if (*string == 0) {
       if(any_to_exp) {
-        len += FANSI_W_MCOPY(&buff_track, string_last, string - string_last);
-      } else {
-        len = -1;  // No need to write out.
+        FANSI_W_MCOPY(buff, string_last, string - string_last);
       }
       break;
     }
     else error("Internal Error: logic error HDFAJJH."); // nocov
     string_prev = string;
   }
-  if(buff && (buff_track - buff != len))
-    error("Internal Error: buffer sync mismatch in normalize SGR."); // nocov
   *state = state_int;
-  return len;
+  return any_to_exp ? buff->len : -1;
 }
 
 static SEXP normalize_state_int(
@@ -129,7 +123,8 @@ static SEXP normalize_state_int(
     }
     state_start = state;
 
-    int len = normalize(NULL, &state, i);
+    FANSI_reset_buff(buff);
+    int len = normalize(buff, &state, i);
     state_carry.sgr = state.sgr;
     state_carry.url = state.url;
 
@@ -137,14 +132,13 @@ static SEXP normalize_state_int(
 
     // Write
     if(res == x) REPROTECT(res = duplicate(x), ipx);
-    FANSI_size_buff(buff, len);
+    FANSI_size_buff(buff);
     state = state_start;
     state.warn = 0;  // avoid double warnings
-    normalize(buff->buff, &state, i);
+    normalize(buff, &state, i);
 
     cetype_t chr_type = getCharCE(chrsxp);
-    SEXP reschr =
-      PROTECT(FANSI_mkChar(buff->buff, buff->buff + len, chr_type, i));
+    SEXP reschr = PROTECT(FANSI_mkChar(*buff, chr_type, i));
     SET_STRING_ELT(res, i, reschr);
     UNPROTECT(1);
   }

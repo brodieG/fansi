@@ -81,15 +81,14 @@ strip_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), strip) {
 
 strip_sgr <- function(x, warn=getOption('fansi.warn')) {
   VAL_IN_ENV(x=x, warn=warn)
-  ctl.int <- match(c("sgr", "ctl"), VALID.CTL)
+  ctl.int <- match(c("sgr", "url"), VALID.CTL)
   .Call(FANSI_strip_csi, x, ctl.int, warn)
 }
 
 #' Check for Presence of Control Sequences
 #'
-#' `has_ctl` checks for any _Control Sequence_, whereas `has_sgr` checks only
-#' for CSI SGR and OSC-anchored URL sequences.  You can check for different types
-#' of sequences with the `ctl` parameter.
+#' `has_ctl` checks for any _Control Sequence_.  You can check for different
+#' types of sequences with the `ctl` parameter.
 #'
 #' @export
 #' @seealso [`?fansi`][fansi] for details on how _Control Sequences_ are
@@ -104,8 +103,6 @@ strip_sgr <- function(x, warn=getOption('fansi.warn')) {
 #' has_ctl("hello\nworld")
 #' has_ctl("hello\nworld", "sgr")
 #' has_ctl("hello\033[31mworld\033[m", "sgr")
-#' has_sgr("hello\033[31mworld\033[m")
-#' has_sgr("hello\nworld")
 
 has_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), which) {
   if(!missing(which)) {
@@ -184,7 +181,7 @@ close_state <- function(
   normalize=getOption('fansi.normalize', FALSE)
 ) {
   VAL_IN_ENV(x=x, warn=warn, normalize=normalize)
-  .Call(FANSI_close_state, x, warn, seq_along(VALID.TERM.CAP), normalize)
+  .Call(FANSI_close_state, x, warn, 1L, normalize)
 }
 
 
@@ -194,6 +191,6 @@ close_state <- function(
 
 process <- function(x, ctl="all")
   .Call(
-    FANSI_process, enc2utf8(x), seq_along(VALID.TERM.CAP), match(ctl, VALID.CTL)
+    FANSI_process, enc2utf8(x), 1L, match(ctl, VALID.CTL)
   )
 

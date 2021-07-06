@@ -50,7 +50,7 @@ strtrim_ctl <- function(
   width <- as.integer(width)
   # can assume all term cap available for these purposes
 
-  term.cap.int <- seq_along(VALID.TERM.CAP)
+  term.cap.int <- 1L
 
   # a bit inefficient to rely on strwrap, but oh well
 
@@ -96,7 +96,7 @@ strtrim2_ctl <- function(
   width <- as.integer(width)
 
   # can assume all term cap available for these purposes
-  term.cap.int <- seq_along(VALID.TERM.CAP)
+  term.cap.int <- 1L
   width <- as.integer(width)
   tab.stops <- as.integer(tab.stops)
 

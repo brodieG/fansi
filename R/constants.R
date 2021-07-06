@@ -19,7 +19,7 @@
 
 ## Valid values for the `term.cap` argument
 
-VALID.TERM.CAP <- c('bright', '256', 'truecolor')
+VALID.TERM.CAP <- c('all', 'bright', '256', 'truecolor')
 
 ## Valid values for the `ctl` argument,
 ##

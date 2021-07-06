@@ -54,14 +54,6 @@ SEXP FANSI_reset_limits() {
   return ScalarLogical(1);
 }
 void FANSI_check_limits() {
-  // Rprintf(
-  //   "%jd %jd\n%jd %jd\n%jd %jd\n%ju %ju",
-  //   FANSI_lim.lim_int.max, FANSI_lim.lim_int.min,
-  //   FANSI_lim.lim_R_len_t.max, FANSI_lim.lim_R_len_t.min,
-  //   FANSI_lim.lim_R_xlen_t.max, FANSI_lim.lim_R_xlen_t.min,
-  //   // Unsigned
-  //   FANSI_lim.lim_size_t.max, FANSI_lim.lim_size_t.min
-  // );
   if(
     // Signed
     FANSI_lim.lim_int.max < 1 || FANSI_lim.lim_int.min > -1 ||
@@ -107,134 +99,71 @@ SEXP FANSI_add_int_ext(SEXP x, SEXP y) {
   return ScalarInteger(FANSI_ADD_INT(asInteger(x), asInteger(y)));
 }
 /*
- * Compute Location and Size of Next ANSI Sequences
+ * Compute Location and Size of Next Control Sequences
  *
- * See FANSI_parse_esc as well, where there is similar logic, although we keep
- * it separated here for speed since we don't try to interpret the string.
- *
- * Length includes the ESC and [, and start point is the ESC.
- *
- * Validity here means striclty that all the contained escape sequences were
- * valid CSI sequences as per the strict definition.
- *
- * We report the length of invalid sequnces, but you really can't trust them.
- * The true length may actually be different depending on your terminal,
- * (e.g. OSX terminal spits out illegal characters to screen but keeps
- * processing the sequence).
- *
- * @param ctl is a bit flag to line up against VALID.WHAT index values, so
- *   (ctl & (1 << 0)) is newlines, (ctl & (1 << 1)) is C0, etc, though note
- *   this does not act
+ * @param one_only give up after a single failed attempt, otherwise keep going
+ *   until a recognized control sequence is found.
  */
 
-struct FANSI_csi_pos FANSI_find_esc(const char * x, int ctl) {
-  /***************************************************\
-  | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_read_esc  |
-  | although now this also deals with c0              |
-  \***************************************************/
-  int valid = 1;
-  int found = 0;
-  int found_ctl = 0;
-  const char * x_track = x;
-  const char * x_found_start;
-  const char * x_found_end;
+struct FANSI_ctl_pos FANSI_find_ctl(
+  struct FANSI_state state, int warn, R_xlen_t i, int one_only
+) {
+  int raw_prev, pos_prev, found, err_prev;
+  int warned = 0;
+  int warn_max = 0;
+  found = 0;
 
-  struct FANSI_csi_pos res;
-
-  while(*x_track) {
-    const char x_val = *(x_track++);
-    // use found & found_this in conjunction so that we can allow multiple
-    // adjacent elements to be found in one go
-
-    int found_this = 0;
-
-    // If not normal ASCII or UTF8, examine whether we need to found
-    if(!((x_val > 31 && x_val < 127) || x_val < 0 || x_val > 127)) {
-      if(!found) {
-        // Keep resetting strip start point until we find something we want to
-        // mark
-        x_found_start = x_found_end = x_track - 1;
-      }
-      found_this = 0;
-      if(x_val == 27) {
-        if(*x_track == '[') {
-          // This is a CSI sequence, so it has multiple characters that we
-          // need to skip.  The final character is processed outside of here
-          // since it has the same logic for CSI and non CSI sequences
-
-          // skip [
-
-          ++x_track;
-
-          // Skip all the valid parameters tokens
-
-          while(*x_track >= 0x30 && *x_track <= 0x3F) ++x_track;
-
-          // And all the valid intermediates
-
-          int intermediate = 0;
-          while(*x_track >= 0x20 && *x_track <= 0x2F) {
-            if(!intermediate) intermediate = 1;
-            ++x_track;
-          }
-          // Check validity
-
-          int valid_tmp = *x_track >= 0x40 && *x_track <= 0x7E;
-
-          // If not valid, consume all subsequent parameter tokens  as that
-          // seems to be terminal.osx and iterm behavior (though terminal.osx
-          // seems pretty picky about what it considers intermediate or even
-          // parameter characters).
-
-          if(!valid_tmp)
-            while(*x_track >= 0x20 && *x_track <= 0x3F) ++x_track;
-
-          valid = valid && valid_tmp;
-
-          // CSI SGR only found if ends in m and no intermediate
-
-          int sgr = !intermediate && *x_track == 'm';
-          found_ctl |= sgr ? FANSI_CTL_SGR & ctl : FANSI_CTL_CSI & ctl;
-          found_this =
-            (sgr && (ctl & FANSI_CTL_SGR)) ||  // SGR
-            (!sgr && (ctl & FANSI_CTL_CSI));      // CSI
-        } else {
-          // Includes both the C1 set and "controls strings"
-          found_this = ctl & FANSI_CTL_ESC;
-          found_ctl |= ctl & FANSI_CTL_ESC;
-          valid = valid && (*x_track >= 0x40 && *x_track <= 0x7E);
-        }
-        // Advance unless next char is ESC, in which case we want to keep
-        // looping
-
-        if(*x_track && *x_track != 27) x_track++;
-      } else {
-        // x01-x1F, x7F, all the C0 codes
-
-        found_ctl |= (x_val == '\n' ? ctl & FANSI_CTL_NL : ctl & FANSI_CTL_C0);
-        found_this =
-          (x_val == '\n' && (ctl & FANSI_CTL_NL)) ||
-          (x_val != '\n' && (ctl & FANSI_CTL_C0));
-      }
-      if(found_this) {
-        x_found_end = x_track;
-        if(!found) found = 1;
-      }
+  while(state.string[state.pos_byte]) {
+    raw_prev = state.pos_raw;
+    pos_prev = state.pos_byte;
+    err_prev = state.err_code;
+    state = FANSI_read_next(state, i, 1);
+    warn_max = state.err_code > warn_max ? state.err_code : warn_max;
+    if(
+      warn && !warned && (state.err_code == 5 || state.err_code == 7)
+    ) {
+      warned = 1;
+      warning(
+        "Encountered %s at index [%jd], %s%s",
+        state.err_msg, FANSI_ind(i),
+        "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
+        "off these warnings."
+      );
     }
-    if(found && !found_this) break;
+    // Known control read
+    if(state.pos_raw == raw_prev) {
+      found = 1;
+      break;
+    } else if (one_only) {
+      break;
+    }
+    state.pos_byte += FANSI_seek_ctl(state.string + state.pos_byte);
   }
-  if(found) {
-    res = (struct FANSI_csi_pos){
-      .start=x_found_start, .len=(x_found_end - x_found_start),
-      .valid=valid, .ctl=found_ctl
-    };
-  } else {
-    res = (struct FANSI_csi_pos){
-      .start=x, .len=0, .valid=valid, ctl=found_ctl
-    };
-  }
-  return res;
+  int res = 0;
+  if(found) res = state.pos_byte - pos_prev;
+  return (struct FANSI_ctl_pos) {
+    .offset = pos_prev, .len = res,
+    .warn = warned, .warn_max=warn_max
+  };
 }
+int FANSI_maybe_ctl(const char x) {
+  // Controls range from 0000 0001 (0x01) to 0001 1111 (0x1F), plus 0x7F;
+  return x && (!(x & (~0x1F)) || x == 0x7F);
+}
+/*
+ * Searches for start of next possible control character, if there is one,
+ * and returns the offset from the current point
+ */
+
+int FANSI_seek_ctl(const char * x) {
+  const char * x0 = x;
+  while(*x && !FANSI_maybe_ctl(*x)) x++;
+  if(x - x0 > FANSI_lim.lim_int.max)
+    error("Internal error: sought past INT_MAX, should not happen.");  // nocov
+  return (x - x0);
+}
+
+
 /*
  * Compute how many digits are in a number
  *
@@ -286,6 +215,26 @@ int FANSI_ctl_as_int(SEXP ctl) {
 SEXP FANSI_ctl_as_int_ext(SEXP ctl) {
   return ScalarInteger(FANSI_ctl_as_int(ctl));
 }
+// See ctl_as_int for explanation
+
+int FANSI_term_cap_as_int(SEXP term_cap) {
+  int term_cap_int = 0;
+  int flip_bits = 0;
+  for(R_xlen_t i = 0; i < XLENGTH(term_cap); ++i) {
+    int term_cap_val = INTEGER(term_cap)[i] - 2;
+    if(term_cap_val > 2)
+      error("Internal Error: max term_cap value allowed is 2.");
+    if(term_cap_val < 0) flip_bits = 1;
+    else term_cap_int |= 1 << term_cap_val;
+  }
+  if(flip_bits) term_cap_int ^= FANSI_TERM_CAP_ALL;
+  return term_cap_int;
+}
+SEXP FANSI_term_cap_as_int_ext(SEXP term_cap) {
+  return ScalarInteger(FANSI_term_cap_as_int(term_cap));
+}
+
+
 /*
  * Partial match a single string byte by byte
  *
@@ -549,19 +498,15 @@ int FANSI_check_append(
  *   length of the strings directly as in most "write" scenarios we have a
  *   pointer at the end of the buffer.
  */
-SEXP FANSI_mkChar(
-  const char * start,
-  const char * end,
-  cetype_t enc, R_xlen_t i
+static SEXP mkChar_core(
+  struct FANSI_buff buff, cetype_t enc, R_xlen_t i, int strict
 ) {
-  if(end < start)
-    error("Internal Error: buffer reversed; contact maintainer."); // nocov
+  FANSI_check_buff(buff, i, strict);
 
   // PTRDIFF_MAX known to be >= INT_MAX (assumptions), and string should not
   // be longer than INT_MAX, so no overflow possible here.
-  ptrdiff_t len = end - start;
 
-  if(len > FANSI_lim.lim_R_len_t.max)
+  if(buff.len > FANSI_lim.lim_R_len_t.max)
     error(
       "%s at index [%jd].",
       "Attempting to create CHARSXP longer than R_LEN_T_MAX",
@@ -570,15 +515,34 @@ SEXP FANSI_mkChar(
 
   // Annoyingly mkCharLenCE accepts int parameter instead of R_len_t, so we need
   // to check that too.
-  if(end - start > FANSI_lim.lim_int.max)
+  if(buff.len > FANSI_lim.lim_int.max)
     error(
       "%s at index [%jd].",
       "Attempting to create CHARSXP longer than INT_MAX",
       FANSI_ind(i)
     );
 
-  return mkCharLenCE(start, len, enc);
+  return mkCharLenCE(buff.buff0, buff.len, enc);
+
 }
+// Original mkChar taking star and end points
+
+SEXP FANSI_mkChar0(
+  char * start, char * end, cetype_t enc, R_xlen_t i
+) {
+  // dummy buff
+  struct FANSI_buff buff = {.buff0=start, .buff=end, .len=end - start};
+  return mkChar_core(buff, enc, i, 0);
+}
+
+SEXP FANSI_mkChar(struct FANSI_buff buff, cetype_t enc, R_xlen_t i) {
+  return mkChar_core(buff, enc, i, 1);
+}
+// Unstrict check, for use with tabs_as_spaces that over-allocs.
+SEXP FANSI_mkChar2(struct FANSI_buff buff, cetype_t enc, R_xlen_t i) {
+  return mkChar_core(buff, enc, i, 0);
+}
+
 static int is_tf(SEXP x) {
   return TYPEOF(x) != LGLSXP || XLENGTH(x) != 1 ||
     LOGICAL(x)[0] != NA_LOGICAL;

@@ -76,7 +76,7 @@ tabs_as_spaces <- function(
         deparse(VALID.CTL), "`"
       )
   }
-  term.cap.int <- seq_along(VALID.TERM.CAP)
+  term.cap.int <- 1L
   .Call(
     FANSI_tabs_as_spaces, enc2utf8(x), as.integer(tab.stops), warn,
     term.cap.int, ctl.int

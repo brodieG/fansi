@@ -107,15 +107,14 @@ static struct FANSI_tok_res parse_token(const char * string) {
     ++string;
     ++len;
   }
-  // check for for intermediate bytes, we allow 'infinite' here even though in
-  // practice more than one is likely a bad outcome
-
+  // check for for intermediate bytes, we allow 'infinite' here as per
+  // ECMA48, although they note 1 byte is likely sufficient.
   while(*string >= 0x20 && *string <= 0x2F) {
     ++string;
     ++len_intermediate;
   }
-  // check for final byte
 
+  // check for final byte
   is_sgr = 0;
   last = 1;
   if((*string == ';' || *string == 'm') && !len_intermediate) {
@@ -127,7 +126,8 @@ static struct FANSI_tok_res parse_token(const char * string) {
     // the err_code value, it's cleaner to just explicitly determine whether
     // sequence is actually sgr.
     if(*string == 'm') is_sgr = 1;
-  } else if(*string >= 0x40 && *string <= 0x7E && len_intermediate <= 1) {
+  } else if(*string >= 0x40 && *string <= 0x7E) {
+  // } else if(*string >= 0x40 && *string <= 0x7E && len_intermediate <= 1) {
     // valid final byte
     err_code = 4;
   } else {
@@ -471,9 +471,6 @@ static struct FANSI_state read_ascii(struct FANSI_state state) {
  *   details for failure modes.
  */
 static struct FANSI_state read_esc(struct FANSI_state state, int seq) {
-  /***************************************************\
-  | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_find_esc  |
-  \***************************************************/
   if(state.string[state.pos_byte] != 27)
     // nocov start
     error(
@@ -754,6 +751,10 @@ static struct FANSI_state read_esc(struct FANSI_state state, int seq) {
   if(err_code) {
     // All errors are zero width; there should not be any errors if
     // !esc_recognized.
+    // CARFUL: we rely on specific meaning of codes elsewhere, i.e. 5 && 7 are
+    // genuine encoding errors, whereas the others are more warnings.  If we add
+    // more error levels, we'll need to clean this up and e.g. have different
+    // types of errors.
     state.err_code = err_code;  // b/c we want the worst err code
     if(err_code == 3) {
       state.err_msg =

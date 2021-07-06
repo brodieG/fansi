@@ -115,6 +115,7 @@ unitizer_sect("Selective stripping", {
   strip_ctl(string.0, "sgr")
   strip_ctl(string.0, c("nl", "c0", "sgr", "csi", "esc"))
   strip_ctl(string.0, "all")  # equivalently
+  # this breaks CSIs
   strip_ctl(string.0, c("c0", "esc"))
   strip_ctl(string.0, c("nl"))
 
