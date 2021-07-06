@@ -330,7 +330,7 @@ static int W_state_as_html(
         }
         if(bg_color >= 0 && (!bgcol_class)) {
           if(has_style) has_style += FANSI_W_COPY(buff, "; ");
-          FANSI_W_COPY(buff,  "background-color: ");
+          has_style += FANSI_W_COPY(buff,  "background-color: ");
           FANSI_W_COPY(
             buff, color_to_html(bg_color, bg_color_extra, color_tmp)
           );
@@ -339,7 +339,7 @@ static int W_state_as_html(
         for(unsigned int i = 1U; i < 10U; ++i)
           if(sgr.style & style_html_mask() & (1U << i)) {
             if(has_style) FANSI_W_COPY(buff, "; ");
-            FANSI_W_COPY(buff, css_style[i - 1].css);
+            has_style += FANSI_W_COPY(buff, css_style[i - 1].css);
           }
         FANSI_W_COPY(buff, ";'");
       }

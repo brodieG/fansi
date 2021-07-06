@@ -526,7 +526,7 @@ SEXP FANSI_state_at_pos_ext(
   // structures are likely to be much slower.  We could encode most color values
   // into one int but it would be a little annoying to retrieve them
 
-  const char * rownames[4] = { // make sure lines up with res_cols
+  char * rownames[4] = { // make sure lines up with res_cols
     "pos.byte", "pos.raw", "pos.ansi", "pos.width"
   };
   SEXP res_rn = PROTECT(allocVector(STRSXP, res_cols)); ++prt;
@@ -554,7 +554,7 @@ SEXP FANSI_state_at_pos_ext(
   setAttrib(res_mx, R_DimNamesSymbol, dim_names);
 
   SEXP res_str = PROTECT(allocVector(STRSXP, len)); ++prt;
-  const char * empty = "";
+  char * empty = "";
   SEXP res_chr, res_chr_prev =
     PROTECT(FANSI_mkChar0(empty, empty, CE_NATIVE, (R_xlen_t) 0)); ++prt;
   struct FANSI_state state = FANSI_state_init_full(
