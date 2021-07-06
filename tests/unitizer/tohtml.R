@@ -204,3 +204,11 @@ unitizer_sect("helpers", {
   unlink(f)
   in_html(html, css="span {background-color: #CCC;}", display=FALSE, clean=TRUE)
 })
+unitizer_sect("carry", {
+  string.2 <- c("A\33[44m", "B\033[49m", "C", "\033[39mD")
+
+  to_html(string.2)
+  to_html(string.2, carry=FALSE)
+  to_html(string.2, carry="\033[33m")
+  to_html(string.2, carry="\033[33m\033]8;;https://w.z\033\\")
+})

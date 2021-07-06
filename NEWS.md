@@ -26,6 +26,7 @@
   now more parsimonious (see "Behavior Changes" below).
 * More granular error messages for `unhandled_ctl` for adjacent _Control
   Sequences_.
+* `term.cap` parameter now accepts "all" as value, like the `ctl` parameter.
 
 ### Deprecated Functions
 
@@ -53,6 +54,15 @@ Normally output consistency alone would not be a reason to change behavior, but
 in this case the changes should be almost always undetectable in the
 **rendered** output, and maintaining old behavior would further complicate
 finicky C string manipulation code.
+
+Other changes:
+
+* CSI sequences with more than one "intermediate" byte are now considered valid,
+  even though they are likely to be very rare.
+* `strip_ctl` only warns with malformed CSI and OSC if they are reported as
+  supported via the `ctl` parameter.  If CSI and OSC are indicated as not
+  supported, but two byte escapes are, the two initial bytes of CSI and OSCs
+  will be stripped.
 
 ### Bug Fixes
 

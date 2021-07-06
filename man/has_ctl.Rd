@@ -44,17 +44,14 @@ logical of same length as \code{x}; NA values in \code{x} result in NA values
 in return
 }
 \description{
-\code{has_ctl} checks for any \emph{Control Sequence}, whereas \code{has_sgr} checks only
-for CSI SGR and OSC-anchored URL sequences.  You can check for different types
-of sequences with the \code{ctl} parameter.
+\code{has_ctl} checks for any \emph{Control Sequence}.  You can check for different
+types of sequences with the \code{ctl} parameter.
 }
 \examples{
 has_ctl("hello world")
 has_ctl("hello\nworld")
 has_ctl("hello\nworld", "sgr")
 has_ctl("hello\033[31mworld\033[m", "sgr")
-has_sgr("hello\033[31mworld\033[m")
-has_sgr("hello\nworld")
 }
 \seealso{
 \code{\link[=fansi]{?fansi}} for details on how \emph{Control Sequences} are

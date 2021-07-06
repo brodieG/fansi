@@ -4,16 +4,7 @@ These are internal developer notes.
 
 ## Todo
 
-* Check we're using `reset_buff` everywhere.
-
-* Is it okay to let `has_ctl` re-encode to UTF-8?  Might be weird if it doesn't
-  but `strip_ctl` does.  Is it possible that after re-encoding something that
-  wasn't an escape becomes one or vice versa?  Yes, illegal bytes could get
-  turned by R into e.g. "<80>", which could be valid inside an escape, whereas
-  0x80 would not be.  The reverse might not be possible if no escapes allow
-  greater than 0x80 in them.  For now we'll just translate for consistency.
-  Note this is only an issue if we have random invalid high bytes in an already
-  UTF-8 or ASCII string.
+* Get rid of all the Rprintf.
 
 * Probably for 1.1, do normalize as part of first pass, will require rewriting
   every encountered SGR.
@@ -21,10 +12,6 @@ These are internal developer notes.
 * This produces double warning: `substr_sgr('a\033[21lB', 2, 3)`.
 
 * This does not produce a warning: `substr_ctl('a\033[21lB', 2, 3, ctl='c0')`.
-
-* Update `term.cap` for OSC/URL.
-
-* Add "all" `term.cap`.
 
 * Try to assess impact of large size of state object being re-used every
   character read.
@@ -81,6 +68,31 @@ These are internal developer notes.
   check for unescaped '<', '>', and '&'?
 
 ## Done
+
+* Is it okay to let `has_ctl` re-encode to UTF-8?  Might be weird if it doesn't
+  but `strip_ctl` does.  Is it possible that after re-encoding something that
+  wasn't an escape becomes one or vice versa?  Yes, illegal bytes could get
+  turned by R into e.g. "<80>", which could be valid inside an escape, whereas
+  0x80 would not be.  The reverse might not be possible if no escapes allow
+  greater than 0x80 in them.  For now we'll just translate for consistency.
+  Note this is only an issue if we have random invalid high bytes in an already
+  UTF-8 or ASCII string.
+
+We'll live with this.
+
+* Check we're using `reset_buff` everywhere.  Done.  Is there a way to make sure
+  this always happens?  Maybe a `size_buff` call undoes the reset state of the
+  buffer, and init and reset set it, so that if we get a size_buff call without
+  reset we'll know?
+
+It is no longer possible to use `size_buff` without first using `reset`.
+
+* Update `term.cap` for OSC/URL.
+
+Not necessary as terminals that don't support it are fine so long as they
+support OSC.
+
+* Add "all" `term.cap`.
 
 * Deprecate the `_sgr` stuff.
 

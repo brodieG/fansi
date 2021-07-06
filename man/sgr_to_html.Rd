@@ -25,10 +25,12 @@ turn the tabs to spaces and resolve the warning that way.}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
-starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
-"38;2" or "48;2"). Changing this parameter changes how \code{fansi}
+starting with "38;5" or "48;5"), "truecolor" (SGR codes starting with
+"38;2" or "48;2"), and "all". Changing this parameter changes how \code{fansi}
 interprets escape sequences, so you should ensure that it matches your
-terminal capabilities. See \code{\link{term_cap_test}} for details.}
+terminal capabilities. See \code{\link{term_cap_test}} for details.  "all" behaves as
+it does for the \code{ctl} parameter: "all" combined with any other value means
+all terminal capabilities except that one.}
 
 \item{classes}{FALSE (default), TRUE, or character vector of either 16,
 32, or 512 class names.  Character strings may only contain ASCII
