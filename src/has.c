@@ -22,8 +22,8 @@
 
 #include "fansi.h"
 
-int FANSI_has_int(SEXP x, int * warn, SEXP ctl, R_xlen_t i) {
-  if(TYPEOF(x) != STRSXP) error("Argument `x` must be CHRSXP.");
+static int has_int(SEXP x, int * warn, SEXP ctl, R_xlen_t i) {
+  if(TYPEOF(x) != STRSXP) error("Argument `x` must be STRSXP.");
   int res = 0;
   const char * xc = CHAR(STRING_ELT(x, i));
   int off_init = FANSI_seek_ctl(xc);
@@ -55,7 +55,7 @@ SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn) {
     SEXP chrsxp = STRING_ELT(x, i);
     FANSI_check_chrsxp(chrsxp, i);
     if(chrsxp == NA_STRING) res_int[i] = NA_LOGICAL;
-    else res_int[i] = FANSI_has_int(chrsxp, &warn_int, ctl, i);
+    else res_int[i] = has_int(x, &warn_int, ctl, i);
   }
   UNPROTECT(1);
   return res;
