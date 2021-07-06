@@ -114,6 +114,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int len;
     // Whethaer a warning was issued (or would have been issued)
     int warn;
+    // Max warning encountered, whether issued or not
+    int warn_max;
   };
   /*
    * Encode Active SGR

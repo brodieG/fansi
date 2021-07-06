@@ -110,6 +110,7 @@ struct FANSI_ctl_pos FANSI_find_ctl(
 ) {
   int raw_prev, pos_prev, found, err_prev;
   int warned = 0;
+  int warn_max = 0;
   found = 0;
 
   while(state.string[state.pos_byte]) {
@@ -117,6 +118,7 @@ struct FANSI_ctl_pos FANSI_find_ctl(
     pos_prev = state.pos_byte;
     err_prev = state.err_code;
     state = FANSI_read_next(state, i, 1);
+    warn_max = state.err_code > warn_max ? state.err_code : warn_max;
     if(
       warn && !warned && (state.err_code == 5 || state.err_code == 7)
     ) {
@@ -141,7 +143,7 @@ struct FANSI_ctl_pos FANSI_find_ctl(
   if(found) res = state.pos_byte - pos_prev;
   return (struct FANSI_ctl_pos) {
     .offset = pos_prev, .len = res,
-    .warn = warned
+    .warn = warned, .warn_max=warn_max
   };
 }
 int FANSI_maybe_ctl(const char x) {
