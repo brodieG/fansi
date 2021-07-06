@@ -104,10 +104,12 @@
 #'   turn the tabs to spaces and resolve the warning that way.
 #' @param term.cap character a vector of the capabilities of the terminal, can
 #'   be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
-#'   starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
-#'   "38;2" or "48;2"). Changing this parameter changes how `fansi`
+#'   starting with "38;5" or "48;5"), "truecolor" (SGR codes starting with
+#'   "38;2" or "48;2"), and "all". Changing this parameter changes how `fansi`
 #'   interprets escape sequences, so you should ensure that it matches your
-#'   terminal capabilities. See [`term_cap_test`] for details.
+#'   terminal capabilities. See [`term_cap_test`] for details.  "all" behaves as
+#'   it does for the `ctl` parameter: "all" combined with any other value means
+#'   all terminal capabilities except that one.
 #' @param normalize TRUE or FALSE (default) whether SGR sequence should be
 #'   normalized out such that there is one distinct sequence for each SGR code.
 #'   normalized strings will occupy more space (e.g. "\033[31;42m" becomes
