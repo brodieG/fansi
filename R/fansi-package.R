@@ -165,7 +165,7 @@
 #' Another form of interaction is when substrings produced by `fansi` are
 #' spliced with or into other substrings.  By default `fansi` automatically
 #' terminates substrings it produces if they contain active formats or URLs.
-#' This prevents the state to bleed into external strings, which is useful e.g.
+#' This prevents the state bleeding into external strings, which is useful e.g.
 #' when arranging text in columns.  We can allow the state to bleed into
 #' appended strings by setting `terminate = FALSE`.  `carry` is unaffected by
 #' `terminate` as `fansi` records the ending SGR state prior to termination
