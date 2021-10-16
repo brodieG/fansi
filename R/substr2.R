@@ -126,6 +126,7 @@
 #'   active state closed to avoid it bleeding into other strings they may be
 #'   prepended onto.  See the "State Interactions" section of [`?fansi`][fansi]
 #'   for details.
+#' @param value a character vector or object that can be coerced to such.
 #' @return a character vector of the same length and with the same attributes as
 #'   x (after possible coercion and re-encoding to UTF-8).
 #' @examples
@@ -181,28 +182,11 @@ substr2_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
-  VAL_IN_ENV(
+  VAL_IN_ENV(  ## modifies / creates NEW VARS in fun env
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
     carry=carry, terminate=terminate, tab.stops=tab.stops,
     tabs.as.spaces=tabs.as.spaces
   )
-  valid.round <- c('start', 'stop', 'both', 'neither')
-  if(
-    !is.character(round) || length(round) != 1 ||
-    is.na(round.int <- pmatch(round, valid.round))
-  )
-    stop("Argument `round` must partial match one of ", deparse(valid.round))
-
-  round <- valid.round[round.int]
-
-  valid.types <- c('chars', 'width')
-  if(
-    !is.character(type) || length(type) != 1 ||
-    is.na(type.int <- pmatch(type, valid.types))
-  )
-    stop("Argument `type` must partial match one of ", deparse(valid.types))
-
-  type.m <- type.int - 1L
   x.len <- length(x)
 
   # Silently recycle start/stop like substr does
@@ -216,19 +200,79 @@ substr2_ctl <- function(
 
   res[no.na] <- substr_ctl_internal(
     x[no.na], start=start[no.na], stop=stop[no.na],
-    type.int=type.m,
+    type.int=type.int,
     tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
     term.cap.int=term.cap.int,
     round.start=round == 'start' || round == 'both',
     round.stop=round == 'stop' || round == 'both',
-    x.len=length(x),
+    x.len=x.len,
     ctl.int=ctl.int, normalize=normalize,
     carry=carry, terminate=terminate
   )
   res[!no.na] <- NA_character_
   res
 }
+#' @rdname substr_ctl
+#' @export
 
+`substr_ctl<-` <- function(
+  x, start, stop, value,
+  warn=getOption('fansi.warn'),
+  term.cap=getOption('fansi.term.cap'),
+  ctl='all', normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
+) {
+  substr2_ctl(
+    x=x, start=start, stop=stop, warn=warn, term.cap=term.cap, ctl=ctl,
+    normalize=normalize, carry=carry, terminate=terminate
+  ) <- value
+  x
+}
+#' @rdname substr_ctl
+#' @export
+
+`substr2_ctl<-` <- function(
+  x, start, stop, value, type='chars', round='start',
+  tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
+  tab.stops=getOption('fansi.tab.stops'),
+  warn=getOption('fansi.warn'),
+  term.cap=getOption('fansi.term.cap'),
+  ctl='all', normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
+) {
+  VAL_IN_ENV(  ## modifies / creates NEW VARS in fun env
+    x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
+    carry=carry, terminate=terminate, tab.stops=tab.stops,
+    tabs.as.spaces=tabs.as.spaces, round=round
+  )
+  # Need to translate start/stop and remap round
+  round.a <- switch(
+    round, start='stop', stop='start', both='neither', neither='both'
+  )
+  round.b <- round
+
+  # Handle value termination
+  value <- enc2utf8(as.character(value))
+
+  x[] <- paste0(
+    substr_ctl_internal(
+      x, 1L, start - 1L, type.int=type.int, round=round.a,
+      tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
+      term.cap=term.cap.int, ctl.int=ctl.int, normalize=normalize,
+      carry=carry, terminate=terminate
+    ),
+    rep(value, length.out=length(x)),
+    substr_ctl_internal(
+      x, stop + 1L, .Machine[['integer.max']], type=type, round=round.b,
+      tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
+      term.cap=term.cap, ctl=ctl, normalize=normalize, carry=carry,
+      terminate=terminate
+    )
+  )
+  x
+}
 #' SGR Control Sequence Aware Version of substr
 #'
 #' These functions are deprecated in favor of the [`_ctl` flavors][substr_ctl].
