@@ -254,8 +254,10 @@ substr2_ctl <- function(
   )
   round.b <- round
 
-  # Handle value termination, this is not very efficient due to manual carry,
-  # etc.
+  # Adjust `stop` to be no longer than end of string
+  nc <- nchar_ctl(x, type=type, ctl=ctl, warn=warn)
+  stop <- pmin(stop, nc)
+
   value <- enc2utf8(as.character(value))
   if(terminate) {
     value <- carry_internal(
