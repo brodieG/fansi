@@ -162,7 +162,7 @@ situation state from each line should bleed into subsequent ones.  Setting
 Another form of interaction is when substrings produced by \code{fansi} are
 spliced with or into other substrings.  By default \code{fansi} automatically
 terminates substrings it produces if they contain active formats or URLs.
-This prevents the state to bleed into external strings, which is useful e.g.
+This prevents the state bleeding into external strings, which is useful e.g.
 when arranging text in columns.  We can allow the state to bleed into
 appended strings by setting \code{terminate = FALSE}.  \code{carry} is unaffected by
 \code{terminate} as \code{fansi} records the ending SGR state prior to termination

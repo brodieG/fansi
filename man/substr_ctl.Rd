@@ -3,6 +3,8 @@
 \name{substr_ctl}
 \alias{substr_ctl}
 \alias{substr2_ctl}
+\alias{substr_ctl<-}
+\alias{substr2_ctl<-}
 \title{Control Sequence Aware Version of substr}
 \usage{
 substr_ctl(
@@ -32,6 +34,34 @@ substr2_ctl(
   carry = getOption("fansi.carry", FALSE),
   terminate = getOption("fansi.terminate", TRUE)
 )
+
+substr_ctl(
+  x,
+  start,
+  stop,
+  warn = getOption("fansi.warn"),
+  term.cap = getOption("fansi.term.cap"),
+  ctl = "all",
+  normalize = getOption("fansi.normalize", FALSE),
+  carry = getOption("fansi.carry", FALSE),
+  terminate = getOption("fansi.terminate", TRUE)
+) <- value
+
+substr2_ctl(
+  x,
+  start,
+  stop,
+  type = "chars",
+  round = "start",
+  tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
+  tab.stops = getOption("fansi.tab.stops"),
+  warn = getOption("fansi.warn"),
+  term.cap = getOption("fansi.term.cap"),
+  ctl = "all",
+  normalize = getOption("fansi.normalize", FALSE),
+  carry = getOption("fansi.carry", FALSE),
+  terminate = getOption("fansi.terminate", TRUE)
+) <- value
 }
 \arguments{
 \item{x}{a character vector or object that can be coerced to such.}
@@ -118,6 +148,8 @@ when converting tabs to spaces.  If there are more tabs in a line than
 defined tab stops the last tab stop is re-used.  For the purposes of
 applying tab stops, each input line is considered a line and the character
 count begins from the beginning of the input line.}
+
+\item{value}{a character vector or object that can be coerced to such.}
 }
 \value{
 a character vector of the same length and with the same attributes as
@@ -155,6 +187,11 @@ to the naive length calculations, and then use the mapping in conjunction
 with \code{\link[base:substr]{base::substr()}} to extract the string.  This concept is borrowed
 directly from Gábor Csárdi's \code{crayon} package, although the implementation of
 the calculation is different.
+
+Replacement functions are implemented as two substring operations to select
+the beginning and end of the final string, and a \code{paste} operation to stick
+all the pieces back together.  The \code{carry} parameter is applied separately to
+the \code{value} and to the \code{x} parameter.
 }
 \note{
 Non-ASCII strings are converted to and returned in UTF-8 encoding.
