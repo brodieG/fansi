@@ -26,9 +26,6 @@ These are internal developer notes.
   keep the origin always, and probably also need an alloc_len to know what size
   the previously allocated buffer is.
 
-* Confirm invalid UTF-8 assumptions (do we consume the lead byte count, just on
-  byte?).  Right now we consume the lead byte bytes.
-
 * Add test that confirms were not messing up the integer overflow check
   for the start indices.  Not sure how to do this.
 
@@ -68,6 +65,12 @@ These are internal developer notes.
   check for unescaped '<', '>', and '&'?
 
 ## Done
+
+* Confirm invalid UTF-8 assumptions (do we consume the lead byte count, just on
+  byte?).  Right now we consume the lead byte bytes.
+
+We checked way after the fact.  Claim in logs this was done in 8ee665a, and code
+seems to back it up.
 
 * Is it okay to let `has_ctl` re-encode to UTF-8?  Might be weird if it doesn't
   but `strip_ctl` does.  Is it possible that after re-encoding something that
@@ -142,7 +145,8 @@ We combined the SGR and URL warnings.
 * Normalize must explicitly close and reopen?  Probably no, as so long as at the
 
 * Make sure `strwrap` and others consume initial SGR (substr does so)?  It looks
-  like stwrap doesn't: `strwrap_ctl(c("\033[31mhello world", "\033[42mgoodbye moon"), carry=TRUE, 10)`
+  like stwrap doesn't: `strwrap_ctl(c("\033[31mhello world", "\033[42mgoodbye
+  moon"), carry=TRUE, 10)`
 
 Now they do.
 
@@ -245,162 +249,16 @@ unsigned one (I think).
 Currently takes STRSXP.  A little awkward though, but we did it that way because
 we had the index.
 
-## `find_esc`
+## `substr<-`
 
-We want something that: 
+Main question here is whether leading and trailing SGR are selected in the
+replacement:
 
-* finds the start of the escape
-* attempts to read it
-* warns if it is a malformed illegal one
-* returns the number of bytes in the escape
+    substr_ctl("A\033[31mhello\033[42mB", 2, 6) <- "\033[32mgoodbye\033[0m"
 
-Then,
-
-* has_ctl reports whether there was one.
-* strip_ctl strips it.
-* nzchar_ctl keeps looking for characters.
-
-## Wrap Strip Space
-
-I think the logic needed right now is to make sure that sequences of
-tabs/spaces/newlines are replaced correctly:
-
-* "    "         -> " "
-* ".  "          -> ".  "
-* "   \n  "      -> " "
-* "   \n  \n  "  -> "\n\n"
-
-So what do we do if an escape interrupts?
-
-* If another non-white space after escape?
-    * Nothing, everything is fine
-* If another white space sequence after escape?
-    * Scan forward until find the first non-SGR non-whitespace (be sure to
-      read ESC with `FANSI_read_next`, accumulting any SGR ESC).
-    * Compute correct continuation as currently, and write it along with the
-      rest of the beginning of the string.
-    * Write out the SGR
-    * Other CTLs will not get moved, this should be documented.
-
-Odd cases to think about:
-
-* SGR between two spaces following a periods.
-* SGR between first and last newline.
-
-Special cases are:
-
-* Two spaces after a period
-    * ESC between two spaces, stays there, otherwise at end.
-* `n` newlines
-    * After first stays after first
-    * After second stays at end
-
-If there are different ESCs at different spots, then apply above rules to each.
-
-The above is too complicated, just put it at very end in all cases.
-
-## Grapheme Boundaries
-
-So we need to modify `readUTF8` to know when to continue reading when the next
-char being zero width doesn't do it.
-
-* RI flags (even odd) (what about england/wales/scotland?)
-
-Exploring whether we can get away with a cheap implementation.
-
-Country flags are fine since each Regional Indicator (RI) on its own is 1 width,
-but together they are two (ah, but we can't break in the middle).
-
-Prepend we probably can't handle, as they too are zero width (some are anyway).
-
-Do not break before extending characters.
-
-* Grapheme extend (non spacing and enclosing marks, ZWNJ)
-* Emoji modifier
-
-Do not break before modifiers:
-
-* Emoji component 1F9B0..1F9B3 hair type
-* Emoji modifier 1F3FB..1F3FF skin color
-
-Do no break within emoji modifier sequences
-
-In practice, I think this means:
-
-* Treat modifier/component as width zero
-* Treat anything after a ZWJ as width zero
-* Handle RI/flags  U+1F1E6...U+1F1FF
-
-This should be usually right so long as the sequences are well formed.
-
-The pain is flags because we don't want to let substring in width mode cut in
-the middle.  But maybe that's okay?  All the rounding business should work if we
-just force the advance.  We just need to check whether the next thing is as flag
-and just advance extra.
-
-## Crayon Compatibility
-
-### Updating Crayon
-
-We could modify the code to add in addition to `st$open` and `st$close` a
-`st$closedby`, where the last would be transformed into a regex that matches any
-closing sequence.  This will work even nested as in e.g.
-
-red('hello ', red('wor\033[0mld') , ' yo')
-
-Result would be:
-
-    \033[32mhello \033[31mwo\033[0\033[32m\033[31mld\033[39m\033[32m yo\033[39m
-
-What happens is that the inner step is done first, adding its color after
-`\033[0m`, but then the outer step happens, and adds its color in between the
-`\033[0m` and the `\033[31m` just added, so the inner step dominates, which is
-exactly what we want.
-
-Issue are:
-
-* We need to use regular expressions, not fixed, so might be a little slower.
-* It will not deal with things like "\033[1;31m".
-
-## Interaction
-
-Is this the desired outcome:
-
-    > strwrap_ctl("hello world\033[31m", 12)
-    [1] "hello world"
-
-Yes, if "isolate" is true, but if not we should emit the ending style.
-
-What was the issue with recycling carry?  That you have to pick whether to wrap
-your own carry, or whether take the external one?  Indeed, what's the right
-answer there?  Ah, that's the ambiguity, carry and inherit are really distinct
-but potentially mutually exclusive (where inherit means take a previously known
-state).  Inherit matters also beyond normalized mode as e.g. when we take
-substrings we start the string with all the known states.
-
-Inherit doesn't really make sense for `strwrap`? I guess it does to begin, and
-then carry does the rest (although `strwrap` always auto-carries per element, so
-that's a different type of carry).
-
-So:
-
-* Inherit, a recycled vector of starting styles.
-* Carry, TRUE or FALSE, or a single style string to start with.
-    * Mutually exclusive with inherit.
-* Isolate, "start", "end", "both", "none/neither".
-    * Orthogonal to all the others.
-    * Both Carry and Inherit will be emitted?  Or is inherit just so we know
-      what to close with isolate in normalized mode?
-
-Leaning more and more on it being user responsibility to handle interactions
-with external strings by pre-pasting either the style-at-end of other strings,
-or the required closing tags.
-
-Does `isolate` then just become `terminate`?  What if we change our mind in the
-future about wanting to terminate the beginning?
-
-So we're left with just `carry` and terminate, and instructions on how to do
-things manually.
+First reaction is that all the leading SGR should be consumed.  The tricky
+business starts when we have other zero width stuff, like an accent, or an emoji
+ZWJ sequence with a color change in the middle.
 
 ## Consumption of Zero Width
 
@@ -695,6 +553,57 @@ So we will walk the string until we pass all the cut points.
     * Char length in bytes (use 0 for sub-elements of UTF8 sequences)?
     * Display width (0 for ANSI, and 0 for sub-elements)
 
+## substr_ctl<- (replace)
+
+Replacement seek should include all zero width leading?
+
+What about when `type=width`.
+
+* Leading: include all zero width.
+* Trailing: include all zero width up to first CSI?
+
+Follow the round parameter when substrings requested in middle.
+
+Do we need to reconcile the behavior of `substr` and `substr<-`.  Currently the
+behavior is to include the CTLs in both
+
+    x <- sprintf("he\033[31mllo%s\033[42m world", "\u0301")
+    substr2_ctl(x, 3, 5, terminate=FALSE, type='width')
+    y <- sprintf("he\033[31m%sllo%s\033[42m world", "\u200c", "\u0301")
+    substr2_ctl(y, 3, 5, terminate=FALSE, type='width')
+
+Ah, but it's as bit tricky to interpret because active styles will naturally be
+copied over into the output so it's hard to tell exactly what's going on.
+
+The most natural thing to do is use the same logic in both ends, keep accruing
+all the zero widths.  But if we do that and the insert, we lose the format
+potentially affecting the rest of the string?
+
+    x <-  sprintf("ab\033[31m%sc", "\u200C")
+    substr(x, 2, 2) <- y
+
+Versus:
+
+    y <- 'X'
+    paste0(
+      substr2_ctl(x, 1, 1, type='width'),
+      y,
+      substr2_ctl(x, 3, nchar(x), type='width')
+    )
+
+What happens if we have "ab\033[31m\u200Cc"?
+
+In that case the zero widths get consumed.  More generally, how do you treat the
+prevailing styles?  Do we need a terminate parameter?  Probably, and that's
+perhaps the way we do this.  By default, the semantics are to terminate, for
+better or worse.  In the terminated case, styles just end and resume on other
+side of insertion.  But what if we don't terminate?  Styles will bleed through
+on the beginning.  What about styles that change in what is being inserted?
+Are those completely lost?  Or is that handled with carry?
+
+Maybe we just implement as the paste business?
+
+
 ## Benchmarks
 
 ### Strip
@@ -814,3 +723,153 @@ microbenchmark(times=1,
 ```
 
 Just doesn't seem worth the hassle even if we could get better.
+
+# Old notes for reference
+
+Just so we can remember what we were thinking back in the day.  Many of the docs
+above should probably be moved into this section.
+
+## Interaction
+
+Is this the desired outcome:
+
+    > strwrap_ctl("hello world\033[31m", 12)
+    [1] "hello world"
+
+Yes, if "isolate" is true, but if not we should emit the ending style.
+
+What was the issue with recycling carry?  That you have to pick whether to wrap
+your own carry, or whether take the external one?  Indeed, what's the right
+answer there?  Ah, that's the ambiguity, carry and inherit are really distinct
+but potentially mutually exclusive (where inherit means take a previously known
+state).  Inherit matters also beyond normalized mode as e.g. when we take
+substrings we start the string with all the known states.
+
+Inherit doesn't really make sense for `strwrap`? I guess it does to begin, and
+then carry does the rest (although `strwrap` always auto-carries per element, so
+that's a different type of carry).
+
+So:
+
+* Inherit, a recycled vector of starting styles.
+* Carry, TRUE or FALSE, or a single style string to start with.
+    * Mutually exclusive with inherit.
+* Isolate, "start", "end", "both", "none/neither".
+    * Orthogonal to all the others.
+    * Both Carry and Inherit will be emitted?  Or is inherit just so we know
+      what to close with isolate in normalized mode?
+
+Leaning more and more on it being user responsibility to handle interactions
+with external strings by pre-pasting either the style-at-end of other strings,
+or the required closing tags.
+
+Does `isolate` then just become `terminate`?  What if we change our mind in the
+future about wanting to terminate the beginning?
+
+So we're left with just `carry` and terminate, and instructions on how to do
+things manually.
+
+
+## Wrap Strip Space
+
+I think the logic needed right now is to make sure that sequences of
+tabs/spaces/newlines are replaced correctly:
+
+* "    "         -> " "
+* ".  "          -> ".  "
+* "   \n  "      -> " "
+* "   \n  \n  "  -> "\n\n"
+
+So what do we do if an escape interrupts?
+
+* If another non-white space after escape?
+    * Nothing, everything is fine
+* If another white space sequence after escape?
+    * Scan forward until find the first non-SGR non-whitespace (be sure to
+      read ESC with `FANSI_read_next`, accumulting any SGR ESC).
+    * Compute correct continuation as currently, and write it along with the
+      rest of the beginning of the string.
+    * Write out the SGR
+    * Other CTLs will not get moved, this should be documented.
+
+Odd cases to think about:
+
+* SGR between two spaces following a periods.
+* SGR between first and last newline.
+
+Special cases are:
+
+* Two spaces after a period
+    * ESC between two spaces, stays there, otherwise at end.
+* `n` newlines
+    * After first stays after first
+    * After second stays at end
+
+If there are different ESCs at different spots, then apply above rules to each.
+
+The above is too complicated, just put it at very end in all cases.
+
+## Grapheme Boundaries
+
+So we need to modify `readUTF8` to know when to continue reading when the next
+char being zero width doesn't do it.
+
+* RI flags (even odd) (what about england/wales/scotland?)
+
+Exploring whether we can get away with a cheap implementation.
+
+Country flags are fine since each Regional Indicator (RI) on its own is 1 width,
+but together they are two (ah, but we can't break in the middle).
+
+Prepend we probably can't handle, as they too are zero width (some are anyway).
+
+Do not break before extending characters.
+
+* Grapheme extend (non spacing and enclosing marks, ZWNJ)
+* Emoji modifier
+
+Do not break before modifiers:
+
+* Emoji component 1F9B0..1F9B3 hair type
+* Emoji modifier 1F3FB..1F3FF skin color
+
+Do no break within emoji modifier sequences
+
+In practice, I think this means:
+
+* Treat modifier/component as width zero
+* Treat anything after a ZWJ as width zero
+* Handle RI/flags  U+1F1E6...U+1F1FF
+
+This should be usually right so long as the sequences are well formed.
+
+The pain is flags because we don't want to let substring in width mode cut in
+the middle.  But maybe that's okay?  All the rounding business should work if we
+just force the advance.  We just need to check whether the next thing is as flag
+and just advance extra.
+
+## Crayon Compatibility
+
+### Updating Crayon
+
+We could modify the code to add in addition to `st$open` and `st$close` a
+`st$closedby`, where the last would be transformed into a regex that matches any
+closing sequence.  This will work even nested as in e.g.
+
+red('hello ', red('wor\033[0mld') , ' yo')
+
+Result would be:
+
+    \033[32mhello \033[31mwo\033[0\033[32m\033[31mld\033[39m\033[32m yo\033[39m
+
+What happens is that the inner step is done first, adding its color after
+`\033[0m`, but then the outer step happens, and adds its color in between the
+`\033[0m` and the `\033[31m` just added, so the inner step dominates, which is
+exactly what we want.
+
+Issue are:
+
+* We need to use regular expressions, not fixed, so might be a little slower.
+* It will not deal with things like "\033[1;31m".
+
+
