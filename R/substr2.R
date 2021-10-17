@@ -47,6 +47,13 @@
 #' directly from Gábor Csárdi's `crayon` package, although the implementation of
 #' the calculation is different.
 #'
+#' Replacement functions are implemented as two substring operations to select
+#' the beginning and end of the final string, and a `paste` operation to stick
+#' all the pieces back together.  The `carry` parameter is applied separately to
+#' the `value` and to the `x` parameter.  Styles in `value` will only carry to
+#' substrings in the result that were originally part of `value`, and vice
+#' versa.
+#'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work properly in R < 3.2.2.
 #' @note If `stop` < `start`, the return value is always an empty string.
@@ -118,7 +125,7 @@
 #' @param carry TRUE, FALSE, or a scalar string, controls whether active SGR
 #'   present at the end of an input vector element is carried into the next
 #'   vector element.  If FALSE each vector element is interpreted as if there
-#'   were no active state when they begin.  If character, then the active
+#'   were no active state when it begins.  If character, then the active
 #'   state at the end of the `carry` string is carried into the first element of
 #'   `x`.  See the "State Interactions" section of [`?fansi`][fansi] for
 #'   details.
@@ -185,16 +192,9 @@ substr2_ctl <- function(
   VAL_IN_ENV(  ## modifies / creates NEW VARS in fun env
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
     carry=carry, terminate=terminate, tab.stops=tab.stops,
-    tabs.as.spaces=tabs.as.spaces
+    tabs.as.spaces=tabs.as.spaces, type=type, round=round,
+    start=start, stop=stop
   )
-  x.len <- length(x)
-
-  # Silently recycle start/stop like substr does
-
-  start <- rep(as.integer(start), length.out=x.len)
-  stop <- rep(as.integer(stop), length.out=x.len)
-  start[start < 1L] <- 1L
-
   res <- x
   no.na <- !(is.na(x) | is.na(start & stop))
 
@@ -245,7 +245,8 @@ substr2_ctl <- function(
   VAL_IN_ENV(  ## modifies / creates NEW VARS in fun env
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
     carry=carry, terminate=terminate, tab.stops=tab.stops,
-    tabs.as.spaces=tabs.as.spaces, round=round
+    tabs.as.spaces=tabs.as.spaces, round=round, start=start, stop=stop,
+    type=type
   )
   # Need to translate start/stop and remap round
   round.a <- switch(
@@ -253,22 +254,37 @@ substr2_ctl <- function(
   )
   round.b <- round
 
-  # Handle value termination
+  # Handle value termination, this is not very efficient due to manual carry,
+  # etc.
   value <- enc2utf8(as.character(value))
-
+  if(terminate) {
+    value <- carry_internal(
+      value, warn=warn, term.cap.int=term.cap.int, ctl.int=ctl.int,
+      normalize=normalize, carry=carry
+    )
+    value <- paste0(
+      value,
+      close_state(state_at_end(value), normalize=normalize)
+    )
+  }
+  # Actual replacement operation as substr/paste
   x[] <- paste0(
     substr_ctl_internal(
-      x, 1L, start - 1L, type.int=type.int, round=round.a,
+      x, 1L, start - 1L, type.int=type.int,
+      round.start=round.a == 'start' || round.a == 'both',
+      round.stop=round.a == 'stop' || round.a == 'both',
       tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
-      term.cap=term.cap.int, ctl.int=ctl.int, normalize=normalize,
+      term.cap.int=term.cap.int, ctl.int=ctl.int, normalize=normalize,
       carry=carry, terminate=terminate
     ),
     rep(value, length.out=length(x)),
     substr_ctl_internal(
-      x, stop + 1L, .Machine[['integer.max']], type=type, round=round.b,
+      x, stop + 1L, .Machine[['integer.max']], type.int=type.int,
+      round.start=round.b == 'start' || round.b == 'both',
+      round.stop=round.b == 'stop' || round.b == 'both',
       tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
-      term.cap=term.cap, ctl=ctl, normalize=normalize, carry=carry,
-      terminate=terminate
+      term.cap.int=term.cap.int, ctl.int=ctl.int, normalize=normalize, 
+      carry=carry, terminate=terminate
     )
   )
   x
@@ -333,19 +349,17 @@ substr_ctl_internal <- function(
   if(tabs.as.spaces)
     x <- .Call(FANSI_tabs_as_spaces, x, tab.stops, warn, term.cap.int, ctl.int)
 
-  res <- character(x.len)
+  res <- character(length(x))
   s.s.valid <- stop >= start & stop
 
   # If we want to carry, we'll do this manually as too much work to try to do it
   # in C given the current structure using ordered indices into each string.
   # Do before `unique` as this to equal strings may become different.
 
-  if(!is.na(carry)) {
-    ends <- .Call(
-      FANSI_state_at_end, x, warn, term.cap.int, ctl.int, normalize, carry
-    )
-    x <- paste0(c(carry, ends[-length(ends)]), x)
-  }
+  ends <- carry_internal(
+    x, warn=warn, term.cap.int=term.cap.int, ctl.int=ctl.int,
+    normalize=normalize, carry=carry
+  )
   # We compute style at each start and stop position by getting all those
   # positions into a vector and then ordering them by position, keeping track of
   # original order and whether they are starting or ending positions (affects

@@ -74,7 +74,8 @@ VAL_IN_ENV <- function(...) {
       argnm %in%
       c(
         'x', 'warn', 'term.cap', 'ctl', 'normalize', 'carry', 'terminate',
-        'tab.stops', 'tabs.as.spaces', 'strip.spaces', 'round'
+        'tab.stops', 'tabs.as.spaces', 'strip.spaces', 'round', 'type',
+        'start', 'stop'
   ) ) )
     stop("Internal Error: some arguments to validate unknown")
 
@@ -176,13 +177,14 @@ VAL_IN_ENV <- function(...) {
       stop2("Argument `strip.spaces` must be TRUE or FALSE.")
     args[['strip.spaces']] <- strip.spaces
   }
-  if('round', %in% argnm) {
+  if('round' %in% argnm) {
     valid.round <- c('start', 'stop', 'both', 'neither')
+    round <- args[['round']]
     if(
       !is.character(round) || length(round) != 1 ||
       is.na(round.int <- pmatch(round, valid.round))
     )
-      stop("Argument `round` must partial match one of ", deparse(valid.round))
+      stop2("Argument `round` must partial match one of ", deparse(valid.round))
     args[['round']] <- valid.round['round.int']
     args[['round.int']] <- round.int
   }
@@ -193,12 +195,21 @@ VAL_IN_ENV <- function(...) {
       !is.character(type) || length(type) != 1 ||
       is.na(type.int <- pmatch(type, valid.types))
     )
-      stop("Argument `type` must partial match one of ", deparse(valid.types))
+      stop2("Argument `type` must partial match one of ", deparse(valid.types))
 
     args[['type']] <- valid.types[type.int]
     args[['type.int']] <- type.int - 1L
   }
-
+  if('start' %in% argnm || 'stop' %in% argnm) {
+    x.len <- length(args[['x']])
+    # Silently recycle start/stop like substr does
+    start <- rep(as.integer(args[['start']]), length.out=x.len)
+    stop <- rep(as.integer(args[['stop']]), length.out=x.len)
+    start[start < 1L] <- 1L
+    args[['start']] <- start
+    args[['stop']] <- stop
+    args[['x.lane']] <- x.len
+  }
   # we might not have validated all, so we should be careful
   list2env(args, par.env)
 }
