@@ -259,16 +259,7 @@ substr2_ctl <- function(
   stop <- pmin(stop, nc)
 
   value <- enc2utf8(as.character(value))
-  if(terminate) {
-    value <- carry_internal(
-      value, warn=warn, term.cap.int=term.cap.int, ctl.int=ctl.int,
-      normalize=normalize, carry=carry
-    )
-    value <- paste0(
-      value,
-      close_state(state_at_end(value), normalize=normalize)
-    )
-  }
+
   # Actual replacement operation as substr/paste
   x[] <- paste0(
     substr_ctl_internal(
@@ -279,13 +270,21 @@ substr2_ctl <- function(
       term.cap.int=term.cap.int, ctl.int=ctl.int, normalize=normalize,
       carry=carry, terminate=terminate
     ),
-    rep(value, length.out=length(x)),
+    substr_ctl_internal(
+      rep(value, length.out=length(x)), 1L, stop - start + 1L,
+      type.int=type.int,
+      round.start=round == 'start' || round == 'both',
+      round.stop=round == 'stop' || round == 'both',
+      tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
+      term.cap.int=term.cap.int, ctl.int=ctl.int, normalize=normalize,
+      carry=carry, terminate=terminate
+    ),
     substr_ctl_internal(
       x, stop + 1L, .Machine[['integer.max']], type.int=type.int,
       round.start=round.b == 'start' || round.b == 'both',
       round.stop=round.b == 'stop' || round.b == 'both',
       tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
-      term.cap.int=term.cap.int, ctl.int=ctl.int, normalize=normalize, 
+      term.cap.int=term.cap.int, ctl.int=ctl.int, normalize=normalize,
       carry=carry, terminate=terminate
     )
   )
