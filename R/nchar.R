@@ -82,7 +82,7 @@ nchar_ctl <- function(
 
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(x=x, ctl=ctl, warn=warn)
-  type <- valid.types[TYPE.INT]
+  type <- valid.types[type.int]
   stripped <- strip_ctl(x, ctl=ctl, warn=warn)
 
   R.ver.gte.3.2.2 <- R.ver.gte.3.2.2 # "import" symbol from namespace
