@@ -256,11 +256,12 @@ substr2_ctl <- function(
   )
   round.b <- round
 
-  # Adjust `stop` to be no longer than end of string
+  # Adjust `stop` to be no longer than end of string, also need to make sure the
+  # overall string length is unchanged.
   nc <- nchar_ctl(x, type=type, ctl=ctl, warn=warn)
   stop <- pmin(stop, nc)
-
   value <- rep_len(enc2utf8(as.character(value)), X.LEN)
+  ncv <- nchar_ctl(value, type=type, ctl=ctl, warn=warn)
 
   # Actual replacement operation as substr/paste
   x[] <- paste0(
@@ -282,7 +283,8 @@ substr2_ctl <- function(
       carry=carry, terminate=terminate
     ),
     substr_ctl_internal(
-      x, stop + 1L, rep(.Machine[['integer.max']], X.LEN), type.int=TYPE.INT,
+      x, pmin(stop + 1L, start + ncv),
+      rep(.Machine[['integer.max']], X.LEN), type.int=TYPE.INT,
       round.start=round.b == 'start' || round.b == 'both',
       round.stop=round.b == 'stop' || round.b == 'both',
       tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
