@@ -85,8 +85,9 @@ normalize_state <- function(
   x, warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
   carry=getOption('fansi.carry', FALSE)
 ) {
+  ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(x=x, warn=warn, term.cap=term.cap, carry=carry)
-  .Call(FANSI_normalize_state, x, warn, term.cap.int, carry)
+  .Call(FANSI_normalize_state, x, warn, TERM.CAP.INT, carry)
 }
 # To reduce overhead of applying this in `strwrap_ctl`
 

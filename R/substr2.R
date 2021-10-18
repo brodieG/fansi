@@ -189,7 +189,8 @@ substr2_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
-  VAL_IN_ENV(  ## modifies / creates NEW VARS in fun env
+  ## modifies / creates NEW VARS in fun env
+  VAL_IN_ENV(
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
     carry=carry, terminate=terminate, tab.stops=tab.stops,
     tabs.as.spaces=tabs.as.spaces, type=type, round=round,
@@ -200,13 +201,13 @@ substr2_ctl <- function(
 
   res[no.na] <- substr_ctl_internal(
     x[no.na], start=start[no.na], stop=stop[no.na],
-    type.int=type.int,
+    type.int=TYPE.INT,
     tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
-    term.cap.int=term.cap.int,
+    term.cap.int=TERM.CAP.INT,
     round.start=round == 'start' || round == 'both',
     round.stop=round == 'stop' || round == 'both',
-    x.len=x.len,
-    ctl.int=ctl.int, normalize=normalize,
+    x.len=X.LEN,
+    ctl.int=CTL.INT, normalize=normalize,
     carry=carry, terminate=terminate
   )
   res[!no.na] <- NA_character_
@@ -242,7 +243,8 @@ substr2_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
-  VAL_IN_ENV(  ## modifies / creates NEW VARS in fun env
+  ## modifies / creates NEW VARS in fun env
+  VAL_IN_ENV(
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
     carry=carry, terminate=terminate, tab.stops=tab.stops,
     tabs.as.spaces=tabs.as.spaces, round=round, start=start, stop=stop,
@@ -258,33 +260,33 @@ substr2_ctl <- function(
   nc <- nchar_ctl(x, type=type, ctl=ctl, warn=warn)
   stop <- pmin(stop, nc)
 
-  value <- enc2utf8(as.character(value))
+  value <- rep_len(enc2utf8(as.character(value)), X.LEN)
 
   # Actual replacement operation as substr/paste
   x[] <- paste0(
     substr_ctl_internal(
-      x, 1L, start - 1L, type.int=type.int,
+      x, 1L, start - 1L, type.int=TYPE.INT,
       round.start=round.a == 'start' || round.a == 'both',
       round.stop=round.a == 'stop' || round.a == 'both',
       tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
-      term.cap.int=term.cap.int, ctl.int=ctl.int, normalize=normalize,
+      term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
       carry=carry, terminate=terminate
     ),
     substr_ctl_internal(
       rep(value, length.out=length(x)), 1L, stop - start + 1L,
-      type.int=type.int,
+      type.int=TYPE.INT,
       round.start=round == 'start' || round == 'both',
       round.stop=round == 'stop' || round == 'both',
       tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
-      term.cap.int=term.cap.int, ctl.int=ctl.int, normalize=normalize,
+      term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
       carry=carry, terminate=terminate
     ),
     substr_ctl_internal(
-      x, stop + 1L, .Machine[['integer.max']], type.int=type.int,
+      x, stop + 1L, .Machine[['integer.max']], type.int=TYPE.INT,
       round.start=round.b == 'start' || round.b == 'both',
       round.stop=round.b == 'stop' || round.b == 'both',
       tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
-      term.cap.int=term.cap.int, ctl.int=ctl.int, normalize=normalize,
+      term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
       carry=carry, terminate=terminate
     )
   )

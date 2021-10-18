@@ -61,9 +61,10 @@ strip_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), strip) {
     message("Parameter `strip` has been deprecated; use `ctl` instead.")
     ctl <- strip
   }
+  ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(x=x, ctl=ctl, warn=warn)
 
-  if(length(ctl)) .Call(FANSI_strip_csi, enc2utf8(x), ctl.int, warn)
+  if(length(ctl)) .Call(FANSI_strip_csi, enc2utf8(x), CTL.INT, warn)
   else x
 }
 #' Strip Control Sequences
@@ -80,6 +81,7 @@ strip_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), strip) {
 #' strip_sgr(string)
 
 strip_sgr <- function(x, warn=getOption('fansi.warn')) {
+  ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(x=x, warn=warn)
   ctl.int <- match(c("sgr", "url"), VALID.CTL)
   .Call(FANSI_strip_csi, x, ctl.int, warn)
@@ -109,9 +111,10 @@ has_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), which) {
     message("Parameter `which` has been deprecated; use `ctl` instead.")
     ctl <- which
   }
+  ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(x=x, ctl=ctl, warn=warn)
   if(length(ctl.int)) {
-    .Call(FANSI_has_csi, x, ctl.int, warn)
+    .Call(FANSI_has_csi, x, CTL.INT, warn)
   } else rep(FALSE, length(x))
 }
 #' Check for Presence of Control Sequences
@@ -157,13 +160,14 @@ state_at_end <- function(
   normalize=getOption('fansi.normalize', FALSE),
   carry=getOption('fansi.carry', FALSE)
 ) {
+  ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(x=x, ctl='sgr', warn=warn, term.cap=term.cap, carry=carry)
   .Call(
     FANSI_state_at_end,
     x,
     warn,
-    term.cap.int,
-    ctl.int,
+    TERM.CAP.INT,
+    CTL.INT,
     normalize,
     carry
   )
@@ -191,6 +195,7 @@ close_state <- function(
   warn=getOption('fansi.warn'),
   normalize=getOption('fansi.normalize', FALSE)
 ) {
+  ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(x=x, warn=warn, normalize=normalize)
   .Call(FANSI_close_state, x, warn, 1L, normalize)
 }

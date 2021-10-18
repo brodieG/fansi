@@ -61,7 +61,7 @@ ctl_as_int <- function(x) .Call(FANSI_ctl_as_int, as.integer(x))
 ## Converts common arguments to standardized forms if needed.
 ##
 ## DANGER: will modify values in calling environment!  Also may add variables
-## ending in `.int` like `ctl.int`, `term.cap.int`, and others to them.
+## such as CTL.INT, X.LEN, etc. (these should all be in caps).
 
 VAL_IN_ENV <- function(...) {
   call <- sys.call(-1)
@@ -117,7 +117,7 @@ VAL_IN_ENV <- function(...) {
         "Argument `term.cap` may only contain values in ",
         deparse(VALID.TERM.CAP)
       )
-    args[['term.cap.int']] <- term.cap.int
+    args[['TERM.CAP.INT']] <- term.cap.int
   }
   if('ctl' %in% argnm) {
     ctl <- args[['ctl']]
@@ -131,7 +131,7 @@ VAL_IN_ENV <- function(...) {
           "Argument `ctl` may contain only values in `", deparse(VALID.CTL), "`"
         )
     }
-    args[['ctl.int']] <- ctl.int
+    args[['CTL.INT']] <- ctl.int
   }
   if('carry' %in% argnm) {
     carry <- args[['carry']]
@@ -185,8 +185,8 @@ VAL_IN_ENV <- function(...) {
       is.na(round.int <- pmatch(round, valid.round))
     )
       stop2("Argument `round` must partial match one of ", deparse(valid.round))
-    args[['round']] <- valid.round['round.int']
-    args[['round.int']] <- round.int
+    args[['round']] <- valid.round[round.int]
+    args[['ROUND.INT']] <- round.int
   }
   if('type' %in% argnm) {
     valid.types <- c('chars', 'width')
@@ -198,7 +198,7 @@ VAL_IN_ENV <- function(...) {
       stop2("Argument `type` must partial match one of ", deparse(valid.types))
 
     args[['type']] <- valid.types[type.int]
-    args[['type.int']] <- type.int - 1L
+    args[['TYPE.INT']] <- type.int - 1L
   }
   if('start' %in% argnm || 'stop' %in% argnm) {
     x.len <- length(args[['x']])
@@ -208,7 +208,7 @@ VAL_IN_ENV <- function(...) {
     start[start < 1L] <- 1L
     args[['start']] <- start
     args[['stop']] <- stop
-    args[['x.lane']] <- x.len
+    args[['X.LEN']] <- x.len
   }
   # we might not have validated all, so we should be careful
   list2env(args, par.env)
