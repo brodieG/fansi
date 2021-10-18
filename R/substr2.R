@@ -265,7 +265,7 @@ substr2_ctl <- function(
   # Actual replacement operation as substr/paste
   x[] <- paste0(
     substr_ctl_internal(
-      x, 1L, start - 1L, type.int=TYPE.INT,
+      x, rep(1L, X.LEN), start - 1L, type.int=TYPE.INT,
       round.start=round.a == 'start' || round.a == 'both',
       round.stop=round.a == 'stop' || round.a == 'both',
       tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
@@ -273,7 +273,7 @@ substr2_ctl <- function(
       carry=carry, terminate=terminate
     ),
     substr_ctl_internal(
-      rep(value, length.out=length(x)), 1L, stop - start + 1L,
+      value, rep(1L, X.LEN), stop - start + 1L,
       type.int=TYPE.INT,
       round.start=round == 'start' || round == 'both',
       round.stop=round == 'stop' || round == 'both',
@@ -282,7 +282,7 @@ substr2_ctl <- function(
       carry=carry, terminate=terminate
     ),
     substr_ctl_internal(
-      x, stop + 1L, .Machine[['integer.max']], type.int=TYPE.INT,
+      x, stop + 1L, rep(.Machine[['integer.max']], X.LEN), type.int=TYPE.INT,
       round.start=round.b == 'start' || round.b == 'both',
       round.stop=round.b == 'stop' || round.b == 'both',
       tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
