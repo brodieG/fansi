@@ -361,10 +361,14 @@ substr_ctl_internal <- function(
   # in C given the current structure using ordered indices into each string.
   # Do before `unique` as this to equal strings may become different.
 
-  ends <- carry_internal(
-    x, warn=warn, term.cap.int=term.cap.int, ctl.int=ctl.int,
-    normalize=normalize, carry=carry
-  )
+  x.carry <- character(X.LEN)
+  if(!is.na(carry)) {
+    ends <- .Call(
+      FANSI_state_at_end, x, warn, term.cap.int, ctl.int, normalize, carry
+    )
+    x.carry <- c(carry, ends[-length(ends)])
+    x <- paste0(x.carry, x)
+  }
   # We compute style at each start and stop position by getting all those
   # positions into a vector and then ordering them by position, keeping track of
   # original order and whether they are starting or ending positions (affects

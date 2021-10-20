@@ -172,19 +172,6 @@ state_at_end <- function(
     carry
   )
 }
-## R-level carry for functions that do not implement it internally in C
-##
-## Arguments should already have been processed by VAL_IN_ENV
-
-carry_internal <- function(x, warn, term.cap.int, ctl.int, normalize, carry) {
-  if(!is.na(carry)) {
-    ends <- .Call(
-      FANSI_state_at_end, x, warn, term.cap.int, ctl.int, normalize, carry
-    )
-    x <- paste0(c(carry, ends[-length(ends)]), x)
-  }
-  x
-}
 # Given an SGR, compute the sequence that closes it
 
 #' @export
