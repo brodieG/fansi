@@ -105,3 +105,90 @@ struct FANSI_state FANSI_carry_init(
 }
 
 
+/*
+ * Compute Sequences to Transition from `end` to `restart`
+ *
+ * Very similar logic to used in `normalize`, intended to  handle the
+ * `substr_ctl(..., carry=TRUE, terminate=FALSE)` case.
+ */
+
+static int bridge(
+  struct FANSI_buff * buff,
+  struct FANSI_state end,
+  struct FANSI_state restart,
+  R_xlen_t i
+) {
+  struct FANSI_sgr to_close = FANSI_sgr_setdiff(end.sgr, restart.sgr);
+
+  // Any prior open styles not overriden by new one need to be closed
+  FANSI_W_sgr_close(buff, to_close, 1, i);
+
+  // Any newly open styles will need to be opened
+  struct FANSI_sgr to_open = FANSI_sgr_setdiff(restart.sgr, end.sgr);
+  FANSI_W_sgr(buff, to_open, 1, i);
+
+  // Any changed URLs will need to be written (empty URL acts as a closer
+  // so simpler than with SGR).
+  if(FANSI_url_comp(end.url, restart.url))
+    FANSI_W_url(buff, restart.url, 1, i);
+
+  return buff->len;
+}
+
+SEXP FANSI_bridge_state_ext(SEXP end, SEXP restart, SEXP term_cap) {
+  if(TYPEOF(end) != STRSXP)
+    error("Internal Error: `end` must be character vector");  // nocov
+  if(TYPEOF(restart) != STRSXP)
+    error("Internal Error: `restart` must be character vector");  // nocov
+  if(XLENGTH(end) != XLENGTH(restart))
+    error("Internal Error: `end` and `restart` unequal lengths");  // nocov
+
+  struct FANSI_buff buff;
+  FANSI_INIT_BUFF(&buff);
+
+  R_xlen_t x_len = XLENGTH(end);
+  SEXP res = PROTECT(allocVector(STRSXP, x_len)); // WRE docs this is init'ed
+
+  // We'll already have warned about these at some point
+  SEXP warn =  PROTECT(ScalarLogical(0));
+  struct FANSI_state st_end, st_rst;
+
+  for(R_xlen_t i = 0; i < x_len; ++i) {
+    FANSI_interrupt(i);
+    if(STRING_ELT(end, i) == NA_STRING || STRING_ELT(restart, i) == NA_STRING)
+      continue;
+    if(
+      getCharCE(STRING_ELT(end, i)) != CE_NATIVE ||
+      getCharCE(STRING_ELT(restart, i)) != CE_NATIVE
+    ) {
+      // nocov start
+      error(
+        "Internal Error: non-native encoding at index[%jd].",
+        FANSI_ind(i)
+      );
+      // nocov end
+    }
+    // state_init is inefficient
+    st_end = state_at_end(FANSI_state_init(end, warn, term_cap, i), i);
+    st_rst = state_at_end(FANSI_state_init(restart, warn, term_cap, i), i);
+
+    FANSI_reset_buff(&buff);
+
+    // Measure
+    int len = bridge(&buff, st_end, st_rst, i);
+    if(len < 0) continue;
+
+    // Write
+    FANSI_size_buff(&buff);
+    bridge(&buff, st_end, st_rst, i);
+
+    SEXP reschr = PROTECT(FANSI_mkChar(buff, CE_NATIVE, i));
+    SET_STRING_ELT(res, i, reschr);
+    UNPROTECT(1);
+  }
+  FANSI_release_buff(&buff, 1);
+  UNPROTECT(2);
+  return res;
+}
+
+

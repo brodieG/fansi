@@ -56,6 +56,12 @@ check_enc <- function(x, i) .Call(FANSI_check_enc, x, as.integer(i)[1])
 
 ctl_as_int <- function(x) .Call(FANSI_ctl_as_int, as.integer(x))
 
+## testing interface for bridging
+
+bridge <- function(end, restart, term.cap=getOption("fansi.term.cap")) {
+  VAL_IN_ENV(term.cap=term.cap)
+  .Call(FANSI_bridge_state, end, restart, TERM.CAP.INT)
+}
 ## Common argument validation and conversion.  Missing args okay.
 ##
 ## Converts common arguments to standardized forms if needed.
