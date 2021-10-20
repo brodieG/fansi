@@ -21,9 +21,9 @@
 #'
 #' @section Control Characters and Sequences:
 #'
-#' Control characters and sequences are non-printing inline characters that can
-#' be used to modify terminal display and behavior, for example by changing text
-#' color or cursor position.
+#' Control characters and sequences are non-printing inline characters or
+#' sequences initiated by them that can be used to modify terminal display and
+#' behavior, for example by changing text color or cursor position.
 #'
 #' We will refer to X3.64/ECMA-48/ISO-6429 control characters and sequences as
 #' "_Control Sequences_" hereafter.
@@ -54,17 +54,17 @@
 #' two characters long.  There are many more unimplemented ECMA-48
 #' specifications.
 #'
-#' In theory it is possible to encode CSI sequenes with a single byte
+#' In theory it is possible to encode CSI sequences with a single byte
 #' introducing character in the 0x40-0x5F range instead of the traditional
 #' "ESC&#91;".  Since this is rare and it conflicts with UTF-8 encoding, `fansi`
 #' does not support it.
 #'
 #' The special treatment of _Control Sequences_ is to compute their
 #' display/character width as zero.  For the SGR subset of the CSI sequences and
-#' OSC-anchored URLs,, `fansi` will also parse, interpret, and reapply the text
-#' the sequences as needed.  Whether a particular type of _Control Sequence_ is
-#' treated specially can be specified via the `ctl` parameter to the `fansi`
-#' functions that have it.
+#' OSC-anchored URLs, `fansi` will also parse, interpret, and reapply the
+#' sequences to the text as needed.  Whether a particular type of _Control
+#' Sequence_ is treated specially can be specified via the `ctl` parameter to
+#' the `fansi` functions that have it.
 #'
 #' @section CSI SGR Control Sequences:
 #'
@@ -131,9 +131,9 @@
 #' While we try to minimize changes across `fansi` versions in how SGR sequences
 #' are output, we focus on minimizing the changes to rendered output, not
 #' necessarily the specific SGR sequences used to produce it.  To maximize the
-#' odds of getting stable SGR output use [`normalize_state`] and set `term.cap` to
-#' a specific set of capabilities.  In general it is likely best not to rely on
-#' the exact SGR encoding of `fansi` output.
+#' odds of getting stable SGR output use [`normalize_state`] and set `term.cap`
+#' to a specific set of capabilities.  In general it is likely best not to rely
+#' on the exact SGR encoding of `fansi` output.
 #'
 #' Note that `width` calculations may also change across R versions, locales,
 #' etc. (see "Encodings / UTF-8" below).
@@ -151,36 +151,66 @@
 #' @section State Interactions:
 #'
 #' The cumulative nature of state as specified by SGR or OSC-anchored URLs means
-#' that SGR in strings that are spliced will interact with each other.
+#' that unterminated strings that are spliced will interact with each other.
 #' Additionally, a substring does not inherently contain all the information
-#' required to recreate its state as it appeared in the source string.
+#' required to recreate its state as it appeared in the source string.  The
+#' default `fansi` configuration terminates extracted substrings and prepends
+#' original state to them so they present on a stand alone basis as they as part
+#' of the original string.
 #'
-#' One form of interaction to consider is how a character vector provided to
-#' `fansi` functions affect itself.  By default, `fansi` assumes that each
-#' element in an input character vector is independent, but this is incorrect if
-#' the input is a single document with each element a line in it.  In that
-#' situation state from each line should bleed into subsequent ones.  Setting
-#' `carry = TRUE` enables the "single document" interpretation.
+#' To allow state in substrings to affect subsequent strings they may be spliced
+#' onto set `terminate = FALSE`.  Generally you should use `terminate = TRUE`
+#' unless you are willing to deal with the resulting mess (see "Terminal
+#' Quirks") for the sake of fine control of state bleeding.
 #'
-#' Another form of interaction is when substrings produced by `fansi` are
-#' spliced with or into other substrings.  By default `fansi` automatically
-#' terminates substrings it produces if they contain active formats or URLs.
-#' This prevents the state bleeding into external strings, which is useful e.g.
-#' when arranging text in columns.  We can allow the state to bleed into
-#' appended strings by setting `terminate = FALSE`.  `carry` is unaffected by
-#' `terminate` as `fansi` records the ending SGR state prior to termination
-#' internally.
+#' Additionally, by default, `fansi` assumes that each element in an input
+#' character vector is independent, but this is incorrect if the input is a
+#' single document with each element a line in it.  In that situation state from
+#' each line should bleed into subsequent ones.  Setting `carry = TRUE` enables
+#' the "single document" interpretation.
+#'
+#' For `terminate = FALSE` and `carry = TRUE`, `fansi` will re-open active
+#' state on each new element even if a terminal would naturally carry them
+#' over.  This is to allow the user to manually terminate elements without
+#' losing them on the next element.
 #'
 #' Finally, `fansi` strings will be affected by any active state in strings they
-#' are appended to.  There are no parameters to control what happens
-#' automatically in this case, but `fansi` provides several functions that can
-#' help the user get their desired outcome.  `state_at_end` computes the active
-#' state the end of a string, this can then be prepended onto the _input_ of
-#' `fansi` functions so that they are aware of the active style at the beginning
-#' of the string.  Alternatively, one could use `close_state(state_at_end(...))`
-#' and pre-pend that to the _output_ of `fansi` functions so they are unaffected
-#' by preceding SGR.  One could also just prepend "ESC[0m", but in some cases as
+#' are appended to.  There are no parameters to control what happens in this
+#' case, but `fansi` provides functions that can help the user get the desired
+#' behavior.  `state_at_end` computes the active state the end of a string,
+#' which can then be prepended onto the _input_ of `fansi` functions so that
+#' they are aware of the active style at the beginning of the string.
+#' Alternatively, one could use `close_state(state_at_end(...))` and pre-pend
+#' that to the _output_ of `fansi` functions so they are unaffected by preceding
+#' SGR.  One could also just prepend "ESC&#91;0m", but in some cases as
 #' described in [`?normalize_state`][normalize_state] that is sub-optimal.
+#'
+#' @section Terminal Quirks:
+#'
+#' Some terminals (e.g. OS X terminal, ITerm2) will pre-paint the entirety of a
+#' new line with the currently active background before writing the contents of
+#' the line.  If there is a non-default active background color, any unwritten
+#' columns in the new line will keep the prior background color even if the new
+#' line changes the background color.  To avoid this be sure to use `terminate =
+#' TRUE` or to manually terminate each line with e.g.  "ESC&#91;0m".  The
+#' problem manifests as:
+#'
+#' ```
+#' " " = default background
+#' "#" = new background
+#' ">" = start new background
+#' "!" = restore default background
+#'
+#' +-----------+
+#' | abc\n     |
+#' |>###\n     |
+#' |!abc\n#####| <- trailing "#" after newline are from pre-paint
+#' | abc       |
+#' +-----------+
+#' ```
+#'
+#' The simplest way to avoid this problem is to split input strings by any
+#' newlines they contain, and use `terminate = TRUE` (the default).
 #'
 #' @section Encodings / UTF-8:
 #'
