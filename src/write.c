@@ -31,8 +31,8 @@
  * 2. Allocate the buffer with FANSI_size
  * 3. Re-run in write mode to write the buffer.
  *
- * The functions accept a  pointer to a FANSI_struct object.  If the `.buff`
- * member points to NULL, the functions ru in measure mode Otherwise, it runs in
+ * The functions accept a pointer to a FANSI_buff object.  If the `.buff` member
+ * points to NULL, the functions run in measure mode. Otherwise, they run in
  * write mode.
  *
  * Here is an example implementation that uses a loop to iterate between measure
@@ -53,6 +53,9 @@
  *
  *     FANSI_release_buff(&buff, 1);
  *
+ * NOTE: avoid using `R_alloc` in functions that use FANSI buffers, or in
+ *       functions used by such functions (see "Buffer Allocation" below).
+ *
  * Buffers must be reset prior to the measure pass.  Use FANSI_size_buff0 if you
  * know the size ahead of time and don't need the two pass measure/write
  * approach.
@@ -60,14 +63,15 @@
  * The key workhorses are the macros FANSI_W_COPY and FANSI_W_MCOPY which
  * roughly mimic the semantics of `strcpy` and `memcpy` respectively.  Functions
  * that only use these functions to write to the buffer and accept the buffer by
- * reference Ban then be used as `FANSI_W_fun1/2` are used above.
+ * reference can then be used as `FANSI_W_fun1/2` are used above.
  *
  *   vvvvvvvv
  * !> DANGER <!
  *   ^^^^^^^^
  *
  * Writing functions move the buffer pointer to point to the byte after the last
- * non-NULL byte they've written (generally this will be a NULL).
+ * non-NULL byte they've written (this will be a NULL, for FANSI_W_M?COPY, and
+ * other functions should try to ensure the same).
  *
  * This makes it simpler to code measure/write as a two iteration loop that uses
  * the same code for measuring and writing, except for allocating the buffer.
@@ -75,7 +79,7 @@
  * These functions generally return void, but some return how many bytes
  * are/will be written.  They typically will check for overflow of int in the
  * measure part, and then for overflow or underuse of the allocated buffer on
- * the second pass.  Ideally functions will internally use FANSI_W_MCOPY, which
+ * the second pass.  Ideally functions will internally use FANSI_W_M?COPY, which
  * do the overflow checks.
  *
  * The `FANSI_mkChar*` functions also check that any provided buffer has had
@@ -92,7 +96,7 @@
  *
  * Buffers should be initialized with `FANSI_init_buff`, and released with
  * `FANSI_release_buff`, preferably in the same function.  `FANSI_size_buff`
- * must be called at least one to actually allocate memory (init does not do
+ * must be called at least once to actually allocate memory (init does not do
  * this), and may be called repeatedly to resize the buffer.
  *
  * Internally, the same buffer is used if it is big enough to accomodate a new
@@ -298,7 +302,7 @@ size_t FANSI_size_buff(struct FANSI_buff * buff) {
 void FANSI_reset_buff(struct FANSI_buff * buff) {
   buff->len = 0;
   buff->buff = NULL;
-  buff->reset = 1;
+  buff->reset = 1;    // Internal, only for _(reset|size)_buff
 }
 
 /*
@@ -424,7 +428,7 @@ int FANSI_W_mcopy(
       error("Internal Error: exceeded target buffer size in _mcopy.");
     memcpy(buff->buff, tmp, (size_t) tmp_len);
     buff->buff += tmp_len;
-    *(buff->buff) = 0;  // not necessary, but helps to debug
+    *(buff->buff) = 0;  // as documented
   } else {
     FANSI_check_append(buff->len, tmp_len, err_msg, i);
     buff->len += tmp_len;
