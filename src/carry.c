@@ -123,9 +123,8 @@ static int bridge(
   // Any prior open styles not overriden by new one need to be closed
   FANSI_W_sgr_close(buff, to_close, 1, i);
 
-  // Any newly open styles will need to be opened
-  struct FANSI_sgr to_open = FANSI_sgr_setdiff(restart.sgr, end.sgr);
-  FANSI_W_sgr(buff, to_open, 1, i);
+  // Open all new styles (an alternative would be to open only newly open ones)
+  FANSI_W_sgr(buff, restart.sgr, 1, i);
 
   // Any changed URLs will need to be written (empty URL acts as a closer
   // so simpler than with SGR).
