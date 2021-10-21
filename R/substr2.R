@@ -282,6 +282,8 @@ substr2_ctl <- function(
       term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
       carry=carry, terminate=terminate
     ),
+    # This last one should not terminate ever as it preserves whatever the
+    # original string did.
     substr_ctl_internal(
       x, pmin(stop + 1L, start + ncv),
       rep(.Machine[['integer.max']], X.LEN), type.int=TYPE.INT,
@@ -289,7 +291,7 @@ substr2_ctl <- function(
       round.stop=round.b == 'stop' || round.b == 'both',
       tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
       term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
-      carry=carry, terminate=terminate
+      carry=carry, terminate=FALSE
     )
   )
   x
