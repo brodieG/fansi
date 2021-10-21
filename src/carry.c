@@ -116,32 +116,39 @@ static int bridge(
   struct FANSI_buff * buff,
   struct FANSI_state end,
   struct FANSI_state restart,
+  int normalize,
   R_xlen_t i
 ) {
   struct FANSI_sgr to_close = FANSI_sgr_setdiff(end.sgr, restart.sgr);
 
   // Any prior open styles not overriden by new one need to be closed
-  FANSI_W_sgr_close(buff, to_close, 1, i);
+  // One option is to always normalize the close, but ended up preferring to be
+  // consistent with the use of `normalize` as we can't actually know how the
+  // closed style was closed.
+  FANSI_W_sgr_close(buff, to_close, normalize, i);
 
   // Open all new styles (an alternative would be to open only newly open ones)
-  FANSI_W_sgr(buff, restart.sgr, 1, i);
+  FANSI_W_sgr(buff, restart.sgr, normalize, i);
 
   // Any changed URLs will need to be written (empty URL acts as a closer
   // so simpler than with SGR).
   if(FANSI_url_comp(end.url, restart.url))
-    FANSI_W_url(buff, restart.url, 1, i);
+    FANSI_W_url(buff, restart.url, normalize, i);
 
   return buff->len;
 }
 
-SEXP FANSI_bridge_state_ext(SEXP end, SEXP restart, SEXP term_cap) {
+SEXP FANSI_bridge_state_ext(SEXP end, SEXP restart, SEXP term_cap, SEXP norm) {
   if(TYPEOF(end) != STRSXP)
     error("Internal Error: `end` must be character vector");  // nocov
   if(TYPEOF(restart) != STRSXP)
     error("Internal Error: `restart` must be character vector");  // nocov
   if(XLENGTH(end) != XLENGTH(restart))
     error("Internal Error: `end` and `restart` unequal lengths");  // nocov
+  if(TYPEOF(norm) != LGLSXP || XLENGTH(norm) != 1)
+    error("Argument `normalize` should be TRUE or FALSE.");  // nocov
 
+  int normalize = asInteger(norm);
   struct FANSI_buff buff;
   FANSI_INIT_BUFF(&buff);
 
@@ -174,12 +181,12 @@ SEXP FANSI_bridge_state_ext(SEXP end, SEXP restart, SEXP term_cap) {
     FANSI_reset_buff(&buff);
 
     // Measure
-    int len = bridge(&buff, st_end, st_rst, i);
+    int len = bridge(&buff, st_end, st_rst, normalize, i);
     if(len < 0) continue;
 
     // Write
     FANSI_size_buff(&buff);
-    bridge(&buff, st_end, st_rst, i);
+    bridge(&buff, st_end, st_rst, normalize, i);
 
     SEXP reschr = PROTECT(FANSI_mkChar(buff, CE_NATIVE, i));
     SET_STRING_ELT(res, i, reschr);

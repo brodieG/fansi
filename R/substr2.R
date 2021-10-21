@@ -361,7 +361,7 @@ substr_ctl_internal <- function(
   # in C given the current structure using ordered indices into each string.
   # Do before `unique` as this to equal strings may become different.
 
-  x.carry <- character(X.LEN)
+  x.carry <- character(length(x))
   if(!is.na(carry)) {
     ends <- .Call(
       FANSI_state_at_end, x, warn, term.cap.int, ctl.int, normalize, carry
@@ -377,6 +377,8 @@ substr_ctl_internal <- function(
   # We do this for each unique string in `x` as the indices must be incrementing
   # for each of them.
 
+  # x.scalar is likely needed for strsplit (but not sure, this is after the fact
+  # documentation)
   x.scalar <- length(x) == 1
   x.u <- if(x.scalar) x else unique_chr(x)
   ids <- if(x.scalar) seq_along(s.s.valid) else seq_along(x)
@@ -388,7 +390,10 @@ substr_ctl_internal <- function(
     e.start <- start[elems] - 1L
     e.stop <- stop[elems]
     e.ids <- ids[elems]
-    x.elems <- if(x.scalar) rep(x, length.out=elems.len) else x[elems]
+    x.elems <- if(x.scalar)
+      rep(x, length.out=elems.len) else x[elems]
+    x.carries <- if(x.scalar)
+      rep(x.carry, length.out=elems.len) else x.carry[elems]
 
     # note, for expediency we're currently assuming that there is no overlap
     # between starts and stops
@@ -434,8 +439,16 @@ substr_ctl_internal <- function(
         else ""
 
       substring <- substr(x.elems[full], start.ansi[full], stop.ansi[full])
-      tmp <- paste0(start.tag[full], substring)
       term.cap <- VALID.TERM.CAP[term.cap.int]
+      tmp <- paste0(
+        if(!terminate && !is.na(carry)) {
+          bridge(
+            x.carries[full], start.tag[full], term.cap=term.cap,
+            normalize=normalize
+          )
+        } else start.tag[full],
+        substring
+      )
       res[elems[full]] <- paste0(
         if(normalize) normalize_state(tmp, warn=FALSE, term.cap=term.cap)
         else tmp,

@@ -58,9 +58,12 @@ ctl_as_int <- function(x) .Call(FANSI_ctl_as_int, as.integer(x))
 
 ## testing interface for bridging
 
-bridge <- function(end, restart, term.cap=getOption("fansi.term.cap")) {
+bridge <- function(
+  end, restart, term.cap=getOption("fansi.term.cap"),
+  normalize=getOption('fansi.normalize', FALSE)
+) {
   VAL_IN_ENV(term.cap=term.cap)
-  .Call(FANSI_bridge_state, end, restart, TERM.CAP.INT)
+  .Call(FANSI_bridge_state, end, restart, TERM.CAP.INT, normalize)
 }
 ## Common argument validation and conversion.  Missing args okay.
 ##

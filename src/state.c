@@ -349,6 +349,9 @@ int FANSI_sgr_comp(struct FANSI_sgr target, struct FANSI_sgr current) {
  *
  * This is so that we can then generate the closing SGRs required to transition
  * from one state to the other (used for diff).
+ *
+ * A color change is not considered a missing style as the new color would just
+ * ovewrite the old.
  */
 struct FANSI_sgr FANSI_sgr_setdiff(struct FANSI_sgr old, struct FANSI_sgr new) {
   struct FANSI_sgr res = {

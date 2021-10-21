@@ -155,28 +155,28 @@
 #' Additionally, a substring does not inherently contain all the information
 #' required to recreate its state as it appeared in the source string.  The
 #' default `fansi` configuration terminates extracted substrings and prepends
-#' original state to them so they present on a stand alone basis as they as part
-#' of the original string.
+#' original state to them so they present on a stand alone basis as they did as
+#' part of the original string.
 #'
-#' To allow state in substrings to affect subsequent strings they may be spliced
-#' onto set `terminate = FALSE`.  Generally you should use `terminate = TRUE`
-#' unless you are willing to deal with the resulting mess (see "Terminal
-#' Quirks") for the sake of fine control of state bleeding.
+#' To allow state in substrings to affect subsequent strings that may be spliced
+#' onto them set `terminate = FALSE`.  Generally you should use `terminate =
+#' TRUE` unless you are willing to deal with the resulting mess (see "Terminal
+#' Quirks") in exchange for fine control of state bleeding.
 #'
-#' Additionally, by default, `fansi` assumes that each element in an input
-#' character vector is independent, but this is incorrect if the input is a
-#' single document with each element a line in it.  In that situation state from
-#' each line should bleed into subsequent ones.  Setting `carry = TRUE` enables
-#' the "single document" interpretation.
+#' By default, `fansi` assumes that each element in an input character vector is
+#' independent, but this is incorrect if the input is a single document with
+#' each element a line in it.  In that situation state from each line should
+#' bleed into subsequent ones.  Setting `carry = TRUE` enables the "single
+#' document" interpretation.
 #'
 #' For `terminate = FALSE` and `carry = TRUE`, `fansi` will re-open active
 #' state on each new element even if a terminal would naturally carry them
 #' over.  This is to allow the user to manually terminate elements without
-#' losing them on the next element.
+#' losing carried state on the next element.
 #'
-#' Finally, `fansi` strings will be affected by any active state in strings they
-#' are appended to.  There are no parameters to control what happens in this
-#' case, but `fansi` provides functions that can help the user get the desired
+#' `fansi` strings will be affected by any active state in strings they are
+#' appended to.  There are no parameters to control what happens in this case,
+#' but `fansi` provides functions that can help the user get the desired
 #' behavior.  `state_at_end` computes the active state the end of a string,
 #' which can then be prepended onto the _input_ of `fansi` functions so that
 #' they are aware of the active style at the beginning of the string.
@@ -184,6 +184,10 @@
 #' that to the _output_ of `fansi` functions so they are unaffected by preceding
 #' SGR.  One could also just prepend "ESC&#91;0m", but in some cases as
 #' described in [`?normalize_state`][normalize_state] that is sub-optimal.
+#'
+#' If you intend to combine stateful `fansi` manipulated strings with your own,
+#' it may be best to set `normalize = TRUE` for best compatibility (see
+#' [`?normalize_state`][normalize_state].)
 #'
 #' @section Terminal Quirks:
 #'
@@ -210,7 +214,10 @@
 #' ```
 #'
 #' The simplest way to avoid this problem is to split input strings by any
-#' newlines they contain, and use `terminate = TRUE` (the default).
+#' newlines they contain, and use `terminate = TRUE` (the default).  A more
+#' complex solution is to pad with spaces to the terminal window width before
+#' emitting the newline to ensure the pre-paint is overpainted with the current
+#' line's prevailing background color.
 #'
 #' @section Encodings / UTF-8:
 #'
