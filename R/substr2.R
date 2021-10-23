@@ -355,6 +355,7 @@ substr_ctl_internal <- function(
 
   if(tabs.as.spaces)
     x <- .Call(FANSI_tabs_as_spaces, x, tab.stops, warn, term.cap.int, ctl.int)
+  warn <- warn && !tabs.as.spaces
 
   res <- character(length(x))
   s.s.valid <- stop >= start & stop
@@ -371,6 +372,8 @@ substr_ctl_internal <- function(
     x.carry <- c(carry, ends[-length(ends)])
     x <- paste0(x.carry, x)
   }
+  warn <- warn && is.na(carry)
+
   # We compute style at each start and stop position by getting all those
   # positions into a vector and then ordering them by position, keeping track of
   # original order and whether they are starting or ending positions (affects
