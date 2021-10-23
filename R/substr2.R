@@ -443,7 +443,7 @@ substr_ctl_internal <- function(
       substring <- substr(x.elems[full], start.ansi[full], stop.ansi[full])
       term.cap <- VALID.TERM.CAP[term.cap.int]
       tmp <- paste0(
-        if(!terminate && !is.na(carry)) {
+        if(!is.na(carry)) {
           bridge(
             x.carries[full], start.tag[full], term.cap=term.cap,
             normalize=normalize
