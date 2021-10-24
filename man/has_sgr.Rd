@@ -4,7 +4,7 @@
 \alias{has_sgr}
 \title{Check for Presence of Control Sequences}
 \usage{
-has_sgr(x, warn = getOption("fansi.warn"))
+has_sgr(x, warn = getOption("fansi.warn", TRUE))
 }
 \arguments{
 \item{x}{a character vector or object that can be coerced to such.}

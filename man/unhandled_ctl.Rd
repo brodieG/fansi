@@ -4,7 +4,7 @@
 \alias{unhandled_ctl}
 \title{Identify Unhandled Control Sequences}
 \usage{
-unhandled_ctl(x, term.cap = getOption("fansi.term.cap"))
+unhandled_ctl(x, term.cap = getOption("fansi.term.cap", dflt_term_cap()))
 }
 \arguments{
 \item{x}{character vector}

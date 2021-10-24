@@ -59,7 +59,7 @@ ctl_as_int <- function(x) .Call(FANSI_ctl_as_int, as.integer(x))
 ## testing interface for bridging
 
 bridge <- function(
-  end, restart, term.cap=getOption("fansi.term.cap"),
+  end, restart, term.cap=getOption("fansi.term.cap", dflt_term_cap()),
   normalize=getOption('fansi.normalize', FALSE)
 ) {
   VAL_IN_ENV(term.cap=term.cap)

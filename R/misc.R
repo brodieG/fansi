@@ -54,8 +54,8 @@
 #' ) )
 
 tabs_as_spaces <- function(
-  x, tab.stops=getOption('fansi.tab.stops'), warn=getOption('fansi.warn'),
-  ctl='all'
+  x, tab.stops=getOption('fansi.tab.stops', 8L),
+  warn=getOption('fansi.warn', TRUE), ctl='all'
 ) {
 
   if(!is.character(x)) x <- as.character(x)
@@ -325,7 +325,7 @@ set_knit_hooks <- function(
   proc.fun=function(x, class)
     html_code_block(to_html(html_esc(x)), class=class),
   class=sprintf("fansi fansi-%s", which),
-  style=getOption("fansi.css"),
+  style=getOption("fansi.css", dflt_css()),
   split.nl=FALSE,
   .test=FALSE
 ) {
@@ -509,3 +509,30 @@ fwl <- function(..., end='<END>\033[0m') {
   writeLines(c(..., end))
 }
 
+#' Default Arg Helper Funs
+#'
+#' Terminal capabilities are assumed to include bright and 256 color SGR codes,
+#' and will detect 24 bit color support based on the `COLORTERM` environment
+#' variable.
+#'
+#' Default CSS may exceed or fail to cover the interline distance when two lines
+#' have background colors.  To ensure lines are exactly touching use
+#' inline-block, although that has its own issues.  Otherwise specify your own
+#' values.
+#'
+#' @export
+#' @return character to use as default value for `fansi` parameter.
+
+dflt_term_cap <- function() {
+  c(
+    if(isTRUE(Sys.getenv('COLORTERM') %in% c('truecolor', '24bit')))
+    'truecolor',
+    'bright', '256'
+  )
+}
+#' @rdname dflt_term_cap
+#' @export
+
+dflt_css <- function() {
+  "PRE.fansi SPAN {padding-top: .25em; padding-bottom: .25em};"
+}

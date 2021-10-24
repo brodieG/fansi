@@ -9,7 +9,7 @@ set_knit_hooks(
   which = "output",
   proc.fun = function(x, class) html_code_block(to_html(html_esc(x)), class = class),
   class = sprintf("fansi fansi-\%s", which),
-  style = getOption("fansi.css"),
+  style = getOption("fansi.css", dflt_css()),
   split.nl = FALSE,
   .test = FALSE
 )

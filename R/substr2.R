@@ -201,8 +201,8 @@
 
 substr_ctl <- function(
   x, start, stop,
-  warn=getOption('fansi.warn'),
-  term.cap=getOption('fansi.term.cap'),
+  warn=getOption('fansi.warn', TRUE),
+  term.cap=getOption('fansi.term.cap', dflt_term_cap()),
   ctl='all', normalize=getOption('fansi.normalize', FALSE),
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
@@ -217,10 +217,10 @@ substr_ctl <- function(
 
 substr2_ctl <- function(
   x, start, stop, type='chars', round='start',
-  tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
-  tab.stops=getOption('fansi.tab.stops'),
-  warn=getOption('fansi.warn'),
-  term.cap=getOption('fansi.term.cap'),
+  tabs.as.spaces=getOption('fansi.tabs.as.spaces', FALSE),
+  tab.stops=getOption('fansi.tab.stops', 8L),
+  warn=getOption('fansi.warn', TRUE),
+  term.cap=getOption('fansi.term.cap', dflt_term_cap()),
   ctl='all', normalize=getOption('fansi.normalize', FALSE),
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
@@ -254,8 +254,8 @@ substr2_ctl <- function(
 
 `substr_ctl<-` <- function(
   x, start, stop, value,
-  warn=getOption('fansi.warn'),
-  term.cap=getOption('fansi.term.cap'),
+  warn=getOption('fansi.warn', TRUE),
+  term.cap=getOption('fansi.term.cap', dflt_term_cap()),
   ctl='all', normalize=getOption('fansi.normalize', FALSE),
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
@@ -271,10 +271,10 @@ substr2_ctl <- function(
 
 `substr2_ctl<-` <- function(
   x, start, stop, value, type='chars', round='start',
-  tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
-  tab.stops=getOption('fansi.tab.stops'),
-  warn=getOption('fansi.warn'),
-  term.cap=getOption('fansi.term.cap'),
+  tabs.as.spaces=getOption('fansi.tabs.as.spaces', FALSE),
+  tab.stops=getOption('fansi.tab.stops', 8L),
+  warn=getOption('fansi.warn', TRUE),
+  term.cap=getOption('fansi.term.cap', dflt_term_cap()),
   ctl='all', normalize=getOption('fansi.normalize', FALSE),
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
@@ -343,8 +343,8 @@ substr2_ctl <- function(
 
 substr_sgr <- function(
   x, start, stop,
-  warn=getOption('fansi.warn'),
-  term.cap=getOption('fansi.term.cap'),
+  warn=getOption('fansi.warn', TRUE),
+  term.cap=getOption('fansi.term.cap', dflt_term_cap()),
   normalize=getOption('fansi.normalize', FALSE),
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
@@ -359,10 +359,10 @@ substr_sgr <- function(
 
 substr2_sgr <- function(
   x, start, stop, type='chars', round='start',
-  tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
-  tab.stops=getOption('fansi.tab.stops'),
-  warn=getOption('fansi.warn'),
-  term.cap=getOption('fansi.term.cap'),
+  tabs.as.spaces=getOption('fansi.tabs.as.spaces', FALSE),
+  tab.stops=getOption('fansi.tab.stops', 8L),
+  warn=getOption('fansi.warn', TRUE),
+  term.cap=getOption('fansi.term.cap', dflt_term_cap()),
   normalize=getOption('fansi.normalize', FALSE),
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
@@ -503,7 +503,7 @@ substr_ctl_internal <- function(
 ## are sorted properly given starts are input -1L.
 
 state_at_pos <- function(
-  x, starts, ends, warn=getOption('fansi.warn'),
+  x, starts, ends, warn=getOption('fansi.warn', TRUE),
   normalize=getOption('fansi.normalize', FALSE),
   terminate=getOption('fansi.terminate', FALSE)
 ) {

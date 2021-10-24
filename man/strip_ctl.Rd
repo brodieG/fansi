@@ -4,7 +4,7 @@
 \alias{strip_ctl}
 \title{Strip Control Sequences}
 \usage{
-strip_ctl(x, ctl = "all", warn = getOption("fansi.warn"), strip)
+strip_ctl(x, ctl = "all", warn = getOption("fansi.warn", TRUE), strip)
 }
 \arguments{
 \item{x}{a character vector or object that can be coerced to such.}

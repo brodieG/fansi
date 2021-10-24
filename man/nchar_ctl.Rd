@@ -11,11 +11,11 @@ nchar_ctl(
   allowNA = FALSE,
   keepNA = NA,
   ctl = "all",
-  warn = getOption("fansi.warn"),
+  warn = getOption("fansi.warn", TRUE),
   strip
 )
 
-nzchar_ctl(x, keepNA = NA, ctl = "all", warn = getOption("fansi.warn"))
+nzchar_ctl(x, keepNA = NA, ctl = "all", warn = getOption("fansi.warn", TRUE))
 }
 \arguments{
 \item{x}{a character vector or object that can be coerced to such.}

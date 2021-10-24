@@ -288,7 +288,7 @@ unitizer_sect("rare escapes", {
 })
 unitizer_sect("term cap and bright", {
   # default term cap should recognize bright and 256, but not true color.
-  getOption('fansi.term.cap')
+  getOption('fansi.term.cap', dflt_term_cap())
   hello.bright <- '\033[42mhello \033[103mworld wowza\033[49m'
 
   strwrap_ctl(hello.bright, 13)

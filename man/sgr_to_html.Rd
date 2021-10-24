@@ -6,8 +6,8 @@
 \usage{
 sgr_to_html(
   x,
-  warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"),
+  warn = getOption("fansi.warn", TRUE),
+  term.cap = getOption("fansi.term.cap", dflt_term_cap()),
   classes = FALSE,
   carry = getOption("fansi.carry", TRUE)
 )

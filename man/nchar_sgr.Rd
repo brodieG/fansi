@@ -10,10 +10,10 @@ nchar_sgr(
   type = "chars",
   allowNA = FALSE,
   keepNA = NA,
-  warn = getOption("fansi.warn")
+  warn = getOption("fansi.warn", TRUE)
 )
 
-nzchar_sgr(x, keepNA = NA, warn = getOption("fansi.warn"))
+nzchar_sgr(x, keepNA = NA, warn = getOption("fansi.warn", TRUE))
 }
 \arguments{
 \item{x}{a character vector or object that can be coerced to such.}

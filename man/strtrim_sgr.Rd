@@ -8,7 +8,7 @@
 strtrim_sgr(
   x,
   width,
-  warn = getOption("fansi.warn"),
+  warn = getOption("fansi.warn", TRUE),
   normalize = getOption("fansi.normalize", FALSE),
   carry = getOption("fansi.carry", FALSE),
   terminate = getOption("fansi.terminate", TRUE)
@@ -17,9 +17,9 @@ strtrim_sgr(
 strtrim2_sgr(
   x,
   width,
-  warn = getOption("fansi.warn"),
-  tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
-  tab.stops = getOption("fansi.tab.stops"),
+  warn = getOption("fansi.warn", TRUE),
+  tabs.as.spaces = getOption("fansi.tabs.as.spaces", FALSE),
+  tab.stops = getOption("fansi.tab.stops", 8L),
   normalize = getOption("fansi.normalize", FALSE),
   carry = getOption("fansi.carry", FALSE),
   terminate = getOption("fansi.terminate", TRUE)

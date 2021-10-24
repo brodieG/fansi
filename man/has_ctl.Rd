@@ -4,7 +4,7 @@
 \alias{has_ctl}
 \title{Check for Presence of Control Sequences}
 \usage{
-has_ctl(x, ctl = "all", warn = getOption("fansi.warn"), which)
+has_ctl(x, ctl = "all", warn = getOption("fansi.warn", TRUE), which)
 }
 \arguments{
 \item{x}{a character vector or object that can be coerced to such.}

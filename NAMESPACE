@@ -3,6 +3,8 @@
 export("substr2_ctl<-")
 export("substr_ctl<-")
 export(close_state)
+export(dflt_css)
+export(dflt_term_cap)
 export(fansi_lines)
 export(fwl)
 export(has_ctl)
