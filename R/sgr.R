@@ -113,7 +113,7 @@ has_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), which) {
   }
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(x=x, ctl=ctl, warn=warn)
-  if(length(ctl.int)) {
+  if(length(CTL.INT)) {
     .Call(FANSI_has_csi, x, CTL.INT, warn)
   } else rep(FALSE, length(x))
 }
