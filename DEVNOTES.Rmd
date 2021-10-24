@@ -4,14 +4,12 @@ These are internal developer notes.
 
 ## Todo
 
+* `substr` and carry don't work correctly (see `carry` notes)
+
 * Get rid of all the Rprintf.
 
 * Probably for 1.1, do normalize as part of first pass, will require rewriting
   every encountered SGR.
-
-* This produces double warning: `substr_sgr('a\033[21lB', 2, 3)`.
-
-* This does not produce a warning: `substr_ctl('a\033[21lB', 2, 3, ctl='c0')`.
 
 * Try to assess impact of large size of state object being re-used every
   character read.
@@ -65,6 +63,13 @@ These are internal developer notes.
   check for unescaped '<', '>', and '&'?
 
 ## Done
+
+* This produces double warning: `substr_sgr('a\033[21lB', 2, 3)`.
+
+* This does not produce a warning: `substr_ctl('a\033[21lB', 2, 3, ctl='c0')`.
+
+That's okay? Since we don't recognize CSI it's treated just a single control
+width wise.
 
 * Confirm invalid UTF-8 assumptions (do we consume the lead byte count, just on
   byte?).  Right now we consume the lead byte bytes.
@@ -248,6 +253,59 @@ unsigned one (I think).
 
 Currently takes STRSXP.  A little awkward though, but we did it that way because
 we had the index.
+
+## `carry`
+
+Problem right now with `substr_ctl` that it has no awareness of `carry`, but it
+needs to in order to correctly know when to leave ending sequences in, e.g.:
+
+    str.3 <- c("\033[35mA\033[42mB", "\033[49mCD")
+    substr_ctl(str.3, 2, 2, carry=TRUE, terminate=FALSE)
+
+But this highlights a limitation of `state_at_pos`, which is that it can't
+necessarily easily tell you when a leading close state tag should be left in
+place.  In cases where `carry` is TRUE and `terminate` is FALSE, we want to emit
+those so they do actually stop any bleeding styles.
+
+Fundamentally though, we do not track closing tags that should be emitted, only
+what the state is.  We could do a diff between the state at end of prior
+element, and the state at the beginning of the current one, and infer that any
+dropped styles must have been closed.
+
+There is also the awkwardness that maybe we don't need to re-emit the leading
+styles that are present?  Indeed, in the `carry = TRUE && terminate = FALSE`
+case we only want to emit the styles necessary for the transition.  So we only
+emit the styles that transition from prior end to current state.
+
+A few issues, for the string `substr_ctl(c("ABC", "DEF"), 2, 2)` if "C" is
+actually a style, do we carry it?  Yes, presumably.  But then, if we're looking
+at the extracted "B" and "E" and output them to screen, what should we be
+seeing?  I guess the carry needs to be explicitly carried because it is not
+present at the beginning of the string.  So we have to do all this rather
+intense stuff of figuring out what the carry is, applying it, the comparing the
+end of the substring-ed element to our new state, and figure out what it takes
+to bridge the two.  Blergh.
+
+The other option is to declare that if you use `terminate = FALSE`, you're
+responsible for the consequences?  The big issue of not doing this is that not
+just `substr` is affected?  No, everything else should be fine.  It's really
+just `substr` because it drops the portion of the string that would contain the
+closing tags.
+
+And do we want to carry styles that are unchanged from the prior element, or
+simply rely that they will be carried by the terminal?  The latter seems most
+logical, but might be annoying.  We'll do this.
+
+Should `bridge` always normalize?  Otherwise we end up in the ugly position
+where it will emit "\033[0m", which is not desired.  Maybe it only normalizes
+the close?
+
+What's worse, closing styles in a terminate-style when `terminate = FALSE`, or
+normalizing closes?  Because we don't track the closing tags we have no way of
+knowing how we reached a particular state.  It could have been through the
+close-all + re-open, or just close some.  And what about the case where we just
+change a color.  We don't need to close anything, just change the color.
+Setdiff handles this correctly already.
 
 ## `substr<-`
 
@@ -601,7 +659,7 @@ side of insertion.  But what if we don't terminate?  Styles will bleed through
 on the beginning.  What about styles that change in what is being inserted?
 Are those completely lost?  Or is that handled with carry?
 
-Maybe we just implement as the paste business?
+Maybe we just implement as the paste business (yes, with variations)?
 
 
 ## Benchmarks
