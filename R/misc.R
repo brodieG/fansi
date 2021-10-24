@@ -495,4 +495,17 @@ size_buff_prot_test <- function() {
   res[['self']] <- match(res[['self']], addresses)
   res
 }
+#' Display Strings to Terminal
+#'
+#' Shortcut for [`writeLines`] with an additional terminating "ESC&#91;0m".
+#'
+#' @keywords internal
+#' @export
+#' @param ... character vectors to display.
+#' @param end character what to output after the primary inputs.
+#' @return whatever writeLines returns
+
+fwl <- function(..., end='<END>\033[0m') {
+  writeLines(c(..., end))
+}
 

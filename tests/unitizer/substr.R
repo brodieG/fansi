@@ -230,3 +230,84 @@ unitizer_sect('`ctl` related issues', {
   substr_sgr(c("a", "\b", "c"), 1, 1)
   substr_sgr(c("a", "b", "\ac"), 1, 1)
 })
+unitizer_sect("Rep Funs - Equivalence", {
+  txt0 <- "ABCD"
+  ## Basic equivalence
+  identical(`substr_ctl<-`(txt0, 2, 2, "#"), `substr<-`(txt0, 2, 2, "#"))
+  identical(`substr_ctl<-`(txt0, 2, 2, "#?"), `substr<-`(txt0, 2, 2, "#?"))
+  identical(`substr_ctl<-`(txt0, 2, 3, "#?-"), `substr<-`(txt0, 2, 3, "#?-"))
+
+  identical(`substr_ctl<-`(txt0, 0, 0, "#"), `substr<-`(txt0, 0, 0, "#"))
+  identical(`substr_ctl<-`(txt0, 2, 1, "#"), `substr<-`(txt0, 2, 1, "#"))
+  identical(`substr_ctl<-`(txt0, 10, 12, "#"), `substr<-`(txt0, 10, 12, "#"))
+  identical(`substr_ctl<-`(txt0, 2, 3, "#"), `substr<-`(txt0, 2, 3, "#"))
+  ## Bug in R means we can't use identical
+  `substr_ctl<-`(txt0, 0, -1, "#")
+
+  ## Recycling
+  rep1 <- c("_", "_.")
+  rep2 <- c("_", "_.", "...")
+
+  identical(`substr_ctl<-`(txt0, 2, 3, rep1), `substr<-`(txt0, 2, 3, rep1))
+  identical(`substr_ctl<-`(txt0, 2, 3, rep2), `substr<-`(txt0, 2, 3, rep2))
+
+  txt1 <- c("AB", "CDE")
+  identical(`substr_ctl<-`(txt1, 2, 3, '_'), `substr<-`(txt1, 2, 3, '_'))
+  identical(`substr_ctl<-`(txt1, 2, 3, rep1), `substr<-`(txt1, 2, 3, rep1))
+  identical(`substr_ctl<-`(txt1, 2, 3, rep2), `substr<-`(txt1, 2, 3, rep2))
+
+  txt2 <- c("AB", "CDE", "EFGH")
+  identical(`substr_ctl<-`(txt2, 2, 3, '_'), `substr<-`(txt2, 2, 3, '_'))
+  identical(`substr_ctl<-`(txt2, 2, 3, rep1), `substr<-`(txt2, 2, 3, rep1))
+  identical(`substr_ctl<-`(txt2, 2, 3, rep2), `substr<-`(txt2, 2, 3, rep2))
+})
+
+unitizer_sect("Rep Funs - SGR", {
+  txt1 <- "\033[33mABCD"
+  txt2 <- "\033[33mA\033[44mBCD"
+  txt3 <- "\033[33mA\033[44mBC\033[1mD"
+
+  `substr_ctl<-`(txt1, 2, 2, "#")
+  `substr_ctl<-`(txt1, 2, 3, "#?-")
+  `substr_ctl<-`(txt1, 2, 3, "#\033[32m?-")
+  `substr_ctl<-`(txt1, 2, 3, "#\033[32m?-\033[0m")
+  `substr_ctl<-`(txt1, 2, 3, "#\033[0m?-")
+
+  `substr_ctl<-`(txt2, 2, 3, "#\033[32m?-")
+  `substr_ctl<-`(txt2, 2, 3, "#\033[32m?-\033[0m")
+  `substr_ctl<-`(txt2, 2, 3, "#\033[0m?-")
+
+  `substr_ctl<-`(txt3, 2, 3, "#\033[32m?-")
+  `substr_ctl<-`(txt3, 2, 3, "#\033[32m?-\033[0m")
+  `substr_ctl<-`(txt3, 2, 3, "#\033[0m?-")
+
+  ## Terminate
+  `substr_ctl<-`(txt2, 2, 2, terminate=FALSE, "#")
+  `substr_ctl<-`(txt2, 2, 3, terminate=FALSE, "#\033[32m?-")
+  `substr_ctl<-`(txt2, 2, 3, terminate=FALSE, "#\033[32m?-\033[0m")
+  `substr_ctl<-`(txt2, 2, 3, terminate=FALSE, "#\033[0m?-")
+  `substr_ctl<-`(txt1, 2, 3, terminate=FALSE, "#\033[0m?\033[45m-")
+
+  txt4 <- c(txt2, txt0, "\033[39mABCD")
+
+  ## Different lengths
+  `substr_ctl<-`(txt4, 2, 3, "#")
+  `substr_ctl<-`(txt4, 2, 3, c("#", "?"))
+  `substr_ctl<-`(txt4, 2, 3, c("#", "?", "$"))
+
+  ## Lengths + Carry
+  `substr_ctl<-`(txt4, 2, 2, carry=TRUE, "#")
+  `substr_ctl<-`(txt4, 2, 3, carry=TRUE, "#\033[32m?-")
+  `substr_ctl<-`(txt4, 2, 3, carry=TRUE, "#\033[42m?-\033[0m")
+  `substr_ctl<-`(txt4, 2, 3, carry=TRUE, "#\033[0m?-")
+  rep4 <- c("\033[32m_\033[45m", ".-", "\033[39m__")
+  `substr_ctl<-`(txt4, 2, 3, carry=TRUE, rep4)
+
+  ## Lengths + Terminate + Carry
+  `substr_ctl<-`(txt4, 2, 2, terminate=FALSE, carry=TRUE, "#")
+  `substr_ctl<-`(txt4, 2, 3, terminate=FALSE, carry=TRUE, "#\033[32m?-")
+  `substr_ctl<-`(txt4, 2, 3, terminate=FALSE, carry=TRUE, "#\033[35m?-\033[0m")
+  `substr_ctl<-`(txt4, 2, 3, terminate=FALSE, carry=TRUE, "#\033[0m?-")
+  `substr_ctl<-`(txt4, 2, 3, terminate=FALSE, carry=TRUE, rep4)
+
+})

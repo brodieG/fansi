@@ -106,6 +106,7 @@ strwrap_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
+  ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
     carry=carry, terminate=terminate
@@ -118,16 +119,16 @@ strwrap_ctl <- function(
     FALSE, "",
     TRUE,
     FALSE, 8L,
-    warn, term.cap.int,
+    warn, TERM.CAP.INT,
     FALSE,   # first_only
-    ctl.int, normalize,
+    CTL.INT, normalize,
     carry, terminate
   )
   if(simplify) {
     if(normalize) normalize_state(unlist(res), warn, term.cap)
     else unlist(res)
   } else {
-    if(normalize) normalize_state_list(res, warn, term.cap.int) else res
+    if(normalize) normalize_state_list(res, warn, TERM.CAP.INT) else res
   }
 }
 #' @export
@@ -151,6 +152,7 @@ strwrap2_ctl <- function(
   if(!is.logical(tabs.as.spaces)) tabs.as.spaces <- as.logical(tabs.as.spaces)
   if(wrap.always && width < 2L)
     stop("Width must be at least 2 in `wrap.always` mode.")
+  ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV (
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
     carry=carry, terminate=terminate, tab.stops=tab.stops,
@@ -171,16 +173,16 @@ strwrap2_ctl <- function(
     wrap.always, pad.end,
     strip.spaces,
     tabs.as.spaces, tab.stops,
-    warn, term.cap.int,
+    warn, TERM.CAP.INT,
     FALSE,   # first_only
-    ctl.int, normalize,
+    CTL.INT, normalize,
     carry, terminate
   )
   if(simplify) {
     if(normalize) normalize_state(unlist(res), warn, term.cap)
     else unlist(res)
   } else {
-    if(normalize) normalize_state_list(res, warn, term.cap.int) else res
+    if(normalize) normalize_state_list(res, warn, TERM.CAP.INT) else res
   }
 }
 #' Control Sequence Aware Version of strwrap

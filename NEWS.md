@@ -4,6 +4,8 @@
 
 ### Features
 
+* [#26](https://github.com/brodieG/fansi/issues/26) Replacement forms of
+  `substr_cl` (i.e `substr_ctl<-`).
 * [#58](https://github.com/brodieG/fansi/issues/58) Add support for OSC-anchored
   URLs.
 * [#66](https://github.com/brodieG/fansi/issues/66) Improved handling of

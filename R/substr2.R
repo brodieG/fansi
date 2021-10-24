@@ -47,6 +47,31 @@
 #' directly from Gábor Csárdi's `crayon` package, although the implementation of
 #' the calculation is different.
 #'
+#' Replacement functions are implemented as three substring operations, so:
+#' ```
+#' x <- "ABC"
+#' y <- "_."
+#' substr_ctl(x, 2, 2, ...) <- y
+#' ```
+#' Is treated roughly as:
+#' ```
+#' x <- paste0(
+#'   substr(x, 1, 1, ...),
+#'   substr(y, 1, 1, ...),
+#'   substr(x, 3, 3, terminate=FALSE, ...)
+#' )
+#' ```
+#' Except for the `terminate` parameter for the trailing substring, all other
+#' parameters are passed from `substr_ctl<-` to the internal substring calls.
+#' If you wish for the whole return value to be terminated you must manually add
+#' terminating sequences.  `substr_ctl` refrains from doing so to maintain the
+#' illusion of a string modified in place.
+#'
+#' Another implication of the three substring approach is that the `carry`
+#' parameter causes state to carry within the original string and the
+#' replacement values independently, as if they were columns of text cut from
+#' different pages and pasted together.
+#'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work properly in R < 3.2.2.
 #' @note If `stop` < `start`, the return value is always an empty string.
@@ -115,17 +140,21 @@
 #'   normalized strings will occupy more space (e.g. "\033[31;42m" becomes
 #'   "\033[31m\033[42m"), but will work better with code that assumes each SGR
 #'   code will be in its own escape as `crayon` does.
-#' @param carry TRUE, FALSE, or a scalar string, controls whether active SGR
-#'   present at the end of an input vector element is carried into the next
-#'   vector element.  If FALSE each vector element is interpreted as if there
-#'   were no active state when they begin.  If character, then the active
-#'   state at the end of the `carry` string is carried into the first element of
-#'   `x`.  See the "State Interactions" section of [`?fansi`][fansi] for
-#'   details.
+#' @param carry TRUE, FALSE (default), or a scalar string, controls whether to
+#'   interpret the character vector as a "single document" (TRUE or string) or
+#'   as independent elements (FALSE).  In "single document" mode, active state
+#'   at the end of an input element is considered active at the beginning of the
+#'   next vector element, simulating what happens with a document with active
+#'   state at the end of a line.  If FALSE each vector element is interpreted as
+#'   if there were no active state when it begins.  If character, then the
+#'   active state at the end of the `carry` string is carried into the first
+#'   element of `x`.  See the "State Interactions" section of [`?fansi`][fansi]
+#'   for details.
 #' @param terminate TRUE (default) or FALSE whether substrings should have
 #'   active state closed to avoid it bleeding into other strings they may be
-#'   prepended onto.  See the "State Interactions" section of [`?fansi`][fansi]
-#'   for details.
+#'   prepended onto.  This does not stop state from carrying if `carry = TRUE`.
+#'   See the "State Interactions" section of [`?fansi`][fansi] for details.
+#' @param value a character vector or object that can be coerced to such.
 #' @return a character vector of the same length and with the same attributes as
 #'   x (after possible coercion and re-encoding to UTF-8).
 #' @examples
@@ -142,8 +171,8 @@
 #' substr2_ctl(cn.string, 2, 3, type='width', round='stop')
 #'
 #' ## We can specify which escapes are considered special:
-#' substr_ctl("\033[31mhello\tworld", 1, 6, ctl='sgr')
-#' substr_ctl("\033[31mhello\tworld", 1, 6, ctl=c('all', 'c0'))
+#' substr_ctl("\033[31mhello\tworld", 1, 6, ctl='sgr', warn=FALSE)
+#' substr_ctl("\033[31mhello\tworld", 1, 6, ctl=c('all', 'c0'), warn=FALSE)
 #'
 #' ## `carry` allows SGR to carry from one element to the next
 #' substr_ctl(c("\033[33mhello", "world"), 1, 3)
@@ -151,9 +180,24 @@
 #' substr_ctl(c("\033[33mhello", "world"), 1, 3, carry="\033[44m")
 #'
 #' ## We can omit the termination
-#' bleed <- substr_ctl(c("\033[41hello", "world"), 1, 3, terminate=FALSE)
-#' \dontrun{writeLines(bleed)} # Style will bleed out of string
-#' writeLines("\033[m")        # Stop bleeding if needed
+#' bleed <- substr_ctl(c("\033[41mhello", "world"), 1, 3, terminate=FALSE)
+#' writeLines(bleed)      # Style will bleed out of string
+#' end <- "\033[0m\n"
+#' writeLines(end)        # Stanch bleeding
+#'
+#' ## Replacement functions
+#' x0<- x1 <- x2 <- x3 <- c("\033[42mABC", "\033[34mDEF")
+#' substr_ctl(x1, 2, 2) <- "_"
+#' substr_ctl(x2, 2, 2) <- "\033[m_"
+#' substr_ctl(x3, 2, 2) <- "\033[45m_"
+#' writeLines(c(x0, end, x1, end, x2, end, x3, end))
+#'
+#' ## With `carry = TRUE` strings look like original
+#' x0<- x1 <- x2 <- x3 <- c("\033[42mABC", "\033[34mDEF")
+#' substr_ctl(x0, 2, 2, carry=TRUE) <- "_"
+#' substr_ctl(x1, 2, 2, carry=TRUE) <- "\033[m_"
+#' substr_ctl(x2, 2, 2, carry=TRUE) <- "\033[45m_"
+#' writeLines(c(x0, end, x1, end, x2, end, x3, end))
 
 substr_ctl <- function(
   x, start, stop,
@@ -181,54 +225,113 @@ substr2_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
+  ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
     carry=carry, terminate=terminate, tab.stops=tab.stops,
-    tabs.as.spaces=tabs.as.spaces
+    tabs.as.spaces=tabs.as.spaces, type=type, round=round,
+    start=start, stop=stop
   )
-  valid.round <- c('start', 'stop', 'both', 'neither')
-  if(
-    !is.character(round) || length(round) != 1 ||
-    is.na(round.int <- pmatch(round, valid.round))
-  )
-    stop("Argument `round` must partial match one of ", deparse(valid.round))
-
-  round <- valid.round[round.int]
-
-  valid.types <- c('chars', 'width')
-  if(
-    !is.character(type) || length(type) != 1 ||
-    is.na(type.int <- pmatch(type, valid.types))
-  )
-    stop("Argument `type` must partial match one of ", deparse(valid.types))
-
-  type.m <- type.int - 1L
-  x.len <- length(x)
-
-  # Silently recycle start/stop like substr does
-
-  start <- rep(as.integer(start), length.out=x.len)
-  stop <- rep(as.integer(stop), length.out=x.len)
-  start[start < 1L] <- 1L
-
   res <- x
   no.na <- !(is.na(x) | is.na(start & stop))
 
   res[no.na] <- substr_ctl_internal(
     x[no.na], start=start[no.na], stop=stop[no.na],
-    type.int=type.m,
+    type.int=TYPE.INT,
     tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
-    term.cap.int=term.cap.int,
+    term.cap.int=TERM.CAP.INT,
     round.start=round == 'start' || round == 'both',
     round.stop=round == 'stop' || round == 'both',
-    x.len=length(x),
-    ctl.int=ctl.int, normalize=normalize,
+    x.len=X.LEN,
+    ctl.int=CTL.INT, normalize=normalize,
     carry=carry, terminate=terminate
   )
   res[!no.na] <- NA_character_
   res
 }
+#' @rdname substr_ctl
+#' @export
 
+`substr_ctl<-` <- function(
+  x, start, stop, value,
+  warn=getOption('fansi.warn'),
+  term.cap=getOption('fansi.term.cap'),
+  ctl='all', normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
+) {
+  substr2_ctl(
+    x=x, start=start, stop=stop, warn=warn, term.cap=term.cap, ctl=ctl,
+    normalize=normalize, carry=carry, terminate=terminate
+  ) <- value
+  x
+}
+#' @rdname substr_ctl
+#' @export
+
+`substr2_ctl<-` <- function(
+  x, start, stop, value, type='chars', round='start',
+  tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
+  tab.stops=getOption('fansi.tab.stops'),
+  warn=getOption('fansi.warn'),
+  term.cap=getOption('fansi.term.cap'),
+  ctl='all', normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
+) {
+  ## modifies / creates NEW VARS in fun env
+  VAL_IN_ENV(
+    x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
+    carry=carry, terminate=terminate, tab.stops=tab.stops,
+    tabs.as.spaces=tabs.as.spaces, round=round, start=start, stop=stop,
+    type=type
+  )
+  # Need to translate start/stop and remap round
+  round.a <- switch(
+    round, start='stop', stop='start', both='neither', neither='both'
+  )
+  round.b <- round
+
+  # Adjust `stop` to be no longer than end of string, also need to make sure the
+  # overall string length is unchanged.
+  nc <- nchar_ctl(x, type=type, ctl=ctl, warn=warn)
+  stop <- pmin(stop, nc)
+  value <- rep_len(enc2utf8(as.character(value)), X.LEN)
+  ncv <- nchar_ctl(value, type=type, ctl=ctl, warn=warn)
+
+  # All warnings should have been emitted by `nchar_ctl` above
+  x[] <- paste0(
+    substr_ctl_internal(
+      x, rep(1L, X.LEN), start - 1L, type.int=TYPE.INT,
+      round.start=round.a == 'start' || round.a == 'both',
+      round.stop=round.a == 'stop' || round.a == 'both',
+      tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=FALSE,
+      term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
+      carry=carry, terminate=terminate
+    ),
+    substr_ctl_internal(
+      value, rep(1L, X.LEN), stop - start + 1L,
+      type.int=TYPE.INT,
+      round.start=round == 'start' || round == 'both',
+      round.stop=round == 'stop' || round == 'both',
+      tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=FALSE,
+      term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
+      carry=carry, terminate=terminate
+    ),
+    # This last one should not terminate ever as it preserves whatever the
+    # original string did.
+    substr_ctl_internal(
+      x, pmin(stop + 1L, start + ncv),
+      rep(.Machine[['integer.max']], X.LEN), type.int=TYPE.INT,
+      round.start=round.b == 'start' || round.b == 'both',
+      round.stop=round.b == 'stop' || round.b == 'both',
+      tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=FALSE,
+      term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
+      carry=carry, terminate=FALSE
+    )
+  )
+  x
+}
 #' SGR Control Sequence Aware Version of substr
 #'
 #' These functions are deprecated in favor of the [`_ctl` flavors][substr_ctl].
@@ -288,20 +391,25 @@ substr_ctl_internal <- function(
 
   if(tabs.as.spaces)
     x <- .Call(FANSI_tabs_as_spaces, x, tab.stops, warn, term.cap.int, ctl.int)
+  warn <- warn && !tabs.as.spaces
 
-  res <- character(x.len)
+  res <- character(length(x))
   s.s.valid <- stop >= start & stop
 
   # If we want to carry, we'll do this manually as too much work to try to do it
   # in C given the current structure using ordered indices into each string.
   # Do before `unique` as this to equal strings may become different.
 
+  x.carry <- character(length(x))
   if(!is.na(carry)) {
     ends <- .Call(
       FANSI_state_at_end, x, warn, term.cap.int, ctl.int, normalize, carry
     )
-    x <- paste0(c(carry, ends[-length(ends)]), x)
+    x.carry <- c(carry, ends[-length(ends)])
+    x <- paste0(x.carry, x)
   }
+  warn <- warn && is.na(carry)
+
   # We compute style at each start and stop position by getting all those
   # positions into a vector and then ordering them by position, keeping track of
   # original order and whether they are starting or ending positions (affects
@@ -310,6 +418,8 @@ substr_ctl_internal <- function(
   # We do this for each unique string in `x` as the indices must be incrementing
   # for each of them.
 
+  # x.scalar is likely needed for strsplit (but not sure, this is after the fact
+  # documentation)
   x.scalar <- length(x) == 1
   x.u <- if(x.scalar) x else unique_chr(x)
   ids <- if(x.scalar) seq_along(s.s.valid) else seq_along(x)
@@ -321,7 +431,10 @@ substr_ctl_internal <- function(
     e.start <- start[elems] - 1L
     e.stop <- stop[elems]
     e.ids <- ids[elems]
-    x.elems <- if(x.scalar) rep(x, length.out=elems.len) else x[elems]
+    x.elems <- if(x.scalar)
+      rep(x, length.out=elems.len) else x[elems]
+    x.carries <- if(x.scalar)
+      rep(x.carry, length.out=elems.len) else x.carry[elems]
 
     # note, for expediency we're currently assuming that there is no overlap
     # between starts and stops
@@ -367,8 +480,16 @@ substr_ctl_internal <- function(
         else ""
 
       substring <- substr(x.elems[full], start.ansi[full], stop.ansi[full])
-      tmp <- paste0(start.tag[full], substring)
       term.cap <- VALID.TERM.CAP[term.cap.int]
+      tmp <- paste0(
+        if(!is.na(carry)) {
+          bridge(
+            x.carries[full], start.tag[full], term.cap=term.cap,
+            normalize=normalize
+          )
+        } else start.tag[full],
+        substring
+      )
       res[elems[full]] <- paste0(
         if(normalize) normalize_state(tmp, warn=FALSE, term.cap=term.cap)
         else tmp,

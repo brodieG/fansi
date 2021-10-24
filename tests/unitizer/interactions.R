@@ -14,6 +14,15 @@ unitizer_sect("substr", {
   substr_ctl(str.1, 2, 4)
   substr_ctl(str.1, 2, 4, carry=TRUE)
   substr_ctl(str.1, 2, 4, carry="\033[33m")
+
+  str.2 <- c("\033[33mA\033[44mBCD", "ABCD", "\033[39mABCD")
+  substr_ctl(str.2, 2, 2)
+  substr_ctl(str.2, 2, 2, carry=TRUE)
+  substr_ctl(str.2, 2, 2, carry=TRUE, terminate=FALSE)
+
+  ## End background should be kept
+  str.3 <- c("\033[35mA\033[42mB", "\033[49mCD")
+  substr_ctl(str.3, 2, 2, carry=TRUE, terminate=FALSE)
 })
 wrp.0 <- c(
   "once upon \033[44ma time in a land far away over ",
@@ -58,7 +67,7 @@ unitizer_sect("carry corner cases", {
   substr_ctl(character(), 2, 4, carry="\033[33m")
   substr_ctl(NA, 2, 4, carry="\033[33m")
   substr_ctl(environment(), 2, 4, carry="\033[33m")
-  substr_ctl("hello", carry=c("\033[33m", "\033[44m"))
+  substr_ctl("hello", 2, 4, carry=c("\033[33m", "\033[44m"))
 
   substr_ctl(str.0, 2, 4, carry=NA_character_)
   substr_ctl(str.0, 2, 4, carry=character())
@@ -97,3 +106,18 @@ unitizer_sect("terminate", {
   strtrim2_sgr(wrp.0, 20, terminate=FALSE)
 })
 
+unitizer_sect("bridge", {
+  fansi:::bridge("\033[42m", "\033[31m")
+  fansi:::bridge("\033[42m", "\033[31m", normalize=TRUE)
+  fansi:::bridge("", "\033[31m")
+  fansi:::bridge("\033[42m", "")
+  fansi:::bridge("\033[42m", "\033[42m")
+
+  # this is unterminated URL
+  base.st <- '%s\033]8;%s;%s\033\\'
+  url <- "https://x.yz"
+  u0 <- sprintf(base.st, "", "", url)
+
+  fansi:::bridge(paste0("\033[42m", u0), "\033[31m")
+  fansi:::bridge("\033[31m", paste0("\033[42m", u0))
+})

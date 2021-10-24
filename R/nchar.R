@@ -80,6 +80,7 @@ nchar_ctl <- function(
       "Argument `type` must partial match one of 'chars', 'width', or 'bytes'."
     )
 
+  ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(x=x, ctl=ctl, warn=warn)
   type <- valid.types[type.int]
   stripped <- strip_ctl(x, ctl=ctl, warn=warn)
@@ -92,13 +93,14 @@ nchar_ctl <- function(
 #' @rdname nchar_ctl
 
 nzchar_ctl <- function(x, keepNA=NA, ctl='all', warn=getOption('fansi.warn')) {
+  ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(x=x, ctl=ctl, warn=warn)
   if(!is.logical(keepNA)) keepNA <- as.logical(keepNA)
   if(length(keepNA) != 1L)
     stop("Argument `keepNA` must be a scalar logical.")
 
   term.cap.int <- 1L
-  .Call(FANSI_nzchar_esc, x, keepNA, warn, term.cap.int, ctl.int)
+  .Call(FANSI_nzchar_esc, x, keepNA, warn, term.cap.int, CTL.INT)
 }
 #' Control Sequence Aware Version of nchar
 #'

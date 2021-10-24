@@ -443,6 +443,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry
   );
   SEXP FANSI_utf8_to_cp_ext(SEXP x);
+  SEXP FANSI_bridge_state_ext(SEXP end, SEXP restart, SEXP term_cap, SEXP norm);
 
   // - Internal funs -----------------------------------------------------------
 

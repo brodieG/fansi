@@ -223,7 +223,6 @@ static struct FANSI_state_pair state_at_pos2(
   state_res = state_restart = state;
   int pos_new, pos_restart;
   int pos_ini = pos;
-  int warn_max = 0;
   int os = overshoot;
   pos_new = pos_restart = type ? state.pos_width : state.pos_raw;
 
@@ -234,7 +233,6 @@ static struct FANSI_state_pair state_at_pos2(
   ) {
     pos_restart = pos_new;
     state = FANSI_read_next(state, i, 1);
-    warn_max = warn_max < state.warn ? state.warn : warn_max;
     pos_new = type ? state.pos_width : state.pos_raw;
 
     // Last spot that's safe to restart from either as start or stop
@@ -253,7 +251,7 @@ static struct FANSI_state_pair state_at_pos2(
     }
   }
   // Avoid potential double warning next time we read
-  state_res.warn = state_restart.warn = warn_max;
+  state_restart.warn = state.warn = state.warn;
 
   return (struct FANSI_state_pair){.cur=state_res, .restart=state_restart};
 }
@@ -349,6 +347,9 @@ int FANSI_sgr_comp(struct FANSI_sgr target, struct FANSI_sgr current) {
  *
  * This is so that we can then generate the closing SGRs required to transition
  * from one state to the other (used for diff).
+ *
+ * A color change is not considered a missing style as the new color would just
+ * ovewrite the old.
  */
 struct FANSI_sgr FANSI_sgr_setdiff(struct FANSI_sgr old, struct FANSI_sgr new) {
   struct FANSI_sgr res = {
@@ -593,7 +594,8 @@ SEXP FANSI_state_at_pos_ext(
         error("Internal Error: `pos` must be sorted %d %d.", pos_i[i], pos_prev);
         // nocov end
 
-      // index could be int or double
+      // index could be int or double (should we just coerce to double, assuming
+      // 64 bit IEEE754 double?)
       R_xlen_t id_i;
       id_i = (R_xlen_t)(TYPEOF(ids) == INTSXP ? id_i_p.i[i] : id_i_p.d[i]) - 1;
 

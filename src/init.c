@@ -52,6 +52,7 @@ R_CallMethodDef callMethods[] = {
   {"size_buff_prot_test", (DL_FUNC) &FANSI_size_buff_prot_test, 0},
   {"state_at_end", (DL_FUNC) &FANSI_state_at_end_ext, 6},
   {"utf8_to_cp", (DL_FUNC) &FANSI_utf8_to_cp_ext, 1},
+  {"bridge_state", (DL_FUNC) &FANSI_bridge_state_ext, 3},
   {NULL, NULL, 0}
 };
 

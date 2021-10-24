@@ -23,9 +23,9 @@
  *
  * Or computes the size required
  *
- * @param state the start of the string.
- * @param sgr (by ref) final state
  * @param buff if NULL, computes the size required, if not writes it.
+ * @param *state state by reference so that we can recover the changed state
+ *   info from reading for use in the `carry` case.
  */
 
 static int normalize(
@@ -192,5 +192,3 @@ SEXP FANSI_normalize_state_list_ext(
   UNPROTECT(1);
   return res;
 }
-
-

@@ -56,26 +56,39 @@ check_enc <- function(x, i) .Call(FANSI_check_enc, x, as.integer(i)[1])
 
 ctl_as_int <- function(x) .Call(FANSI_ctl_as_int, as.integer(x))
 
+## testing interface for bridging
+
+bridge <- function(
+  end, restart, term.cap=getOption("fansi.term.cap"),
+  normalize=getOption('fansi.normalize', FALSE)
+) {
+  VAL_IN_ENV(term.cap=term.cap)
+  .Call(FANSI_bridge_state, end, restart, TERM.CAP.INT, normalize)
+}
 ## Common argument validation and conversion.  Missing args okay.
 ##
-## DANGER: will modify values in calling environment!  Also may add `ctl.int`
-## and `term.cap.int` to them.
+## Converts common arguments to standardized forms if needed.
+##
+## DANGER: will modify values in calling environment!  Also may add variables
+## such as CTL.INT, X.LEN, etc. (these should all be in caps).
 
 VAL_IN_ENV <- function(...) {
   call <- sys.call(-1)
   par.env <- parent.frame()
   stop2 <- function(...) stop(simpleError(paste0(..., collapse=""), call))
   args <- list(...)
+  argnm <- names(args)
   if(
     !all(
-      names(args) %in%
+      argnm %in%
       c(
         'x', 'warn', 'term.cap', 'ctl', 'normalize', 'carry', 'terminate',
-        'tab.stops', 'tabs.as.spaces', 'strip.spaces'
+        'tab.stops', 'tabs.as.spaces', 'strip.spaces', 'round', 'type',
+        'start', 'stop'
   ) ) )
     stop("Internal Error: some arguments to validate unknown")
 
-  if('x' %in% names(args)) {
+  if('x' %in% argnm) {
     x <- args[['x']]
     if(!is.character(x)) x <- as.character(args[['x']])
     x <- enc2utf8(x)
@@ -91,20 +104,20 @@ VAL_IN_ENV <- function(...) {
       )
     args[['x']] <- x
   }
-  if('warn' %in% names(args)) {
+  if('warn' %in% argnm) {
     warn <- args[['warn']]
     if(!is.logical(warn)) warn <- as.logical(args[['warn']])
     if(length(warn) != 1L || is.na(warn))
       stop2("Argument `warn` must be TRUE or FALSE.")
     args[['warn']] <- warn
   }
-  if('normalize' %in% names(args)) {
+  if('normalize' %in% argnm) {
     normalize <- args[['normalize']]
     if(!isTRUE(normalize %in% c(FALSE, TRUE)))
       stop2("Argument `normalize` must be TRUE or FALSE.")
     args[['normalize']] <- as.logical(normalize)
   }
-  if('term.cap' %in% names(args)) {
+  if('term.cap' %in% argnm) {
     term.cap <- args[['term.cap']]
     if(!is.character(term.cap))
       stop2("Argument `term.cap` must be character.")
@@ -113,9 +126,9 @@ VAL_IN_ENV <- function(...) {
         "Argument `term.cap` may only contain values in ",
         deparse(VALID.TERM.CAP)
       )
-    args[['term.cap.int']] <- term.cap.int
+    args[['TERM.CAP.INT']] <- term.cap.int
   }
-  if('ctl' %in% names(args)) {
+  if('ctl' %in% argnm) {
     ctl <- args[['ctl']]
     if(!is.character(ctl))
       stop2("Argument `ctl` must be character.")
@@ -127,9 +140,9 @@ VAL_IN_ENV <- function(...) {
           "Argument `ctl` may contain only values in `", deparse(VALID.CTL), "`"
         )
     }
-    args[['ctl.int']] <- ctl.int
+    args[['CTL.INT']] <- ctl.int
   }
-  if('carry' %in% names(args)) {
+  if('carry' %in% argnm) {
     carry <- args[['carry']]
     if(length(carry) != 1L)
       stop2("Argument `carry` must be scalar.")
@@ -141,13 +154,13 @@ VAL_IN_ENV <- function(...) {
     if(is.logical(carry)) if(carry) carry <- "" else carry = NA_character_
     args[['carry']] <- carry
   }
-  if('terminate' %in% names(args)) {
+  if('terminate' %in% argnm) {
     terminate <- args[['terminate']]
     if(!isTRUE(terminate %in% c(TRUE, FALSE)))
       stop2("Argument `terminate` must be TRUE or FALSE")
     terminate <- as.logical(terminate)
   }
-  if('tab.stops' %in% names(args)) {
+  if('tab.stops' %in% argnm) {
     tab.stops <- args[['tab.stops']]
     if(
       !is.numeric(tab.stops) || !length(tab.stops) || any(tab.stops < 1) ||
@@ -159,19 +172,52 @@ VAL_IN_ENV <- function(...) {
       )
     args[['tab.stops']] <- as.integer(tab.stops)
   }
-  if('tabs.as.spaces' %in% names(args)) {
+  if('tabs.as.spaces' %in% argnm) {
     tabs.as.spaces <- args[['tabs.as.spaces']]
     if(!is.logical(tabs.as.spaces)) tabs.as.spaces <- as.logical(tabs.as.spaces)
     if(length(tabs.as.spaces) != 1L || is.na(tabs.as.spaces))
       stop2("Argument `tabs.as.spaces` must be TRUE or FALSE.")
     args[['tabs.as.spaces']] <- tabs.as.spaces
   }
-  if('strip.spaces' %in% names(args)) {
+  if('strip.spaces' %in% argnm) {
     strip.spaces <- args[['strip.spaces']]
     if(!is.logical(strip.spaces)) strip.spaces <- as.logical(strip.spaces)
     if(length(strip.spaces) != 1L || is.na(strip.spaces))
       stop2("Argument `strip.spaces` must be TRUE or FALSE.")
     args[['strip.spaces']] <- strip.spaces
+  }
+  if('round' %in% argnm) {
+    valid.round <- c('start', 'stop', 'both', 'neither')
+    round <- args[['round']]
+    if(
+      !is.character(round) || length(round) != 1 ||
+      is.na(round.int <- pmatch(round, valid.round))
+    )
+      stop2("Argument `round` must partial match one of ", deparse(valid.round))
+    args[['round']] <- valid.round[round.int]
+    args[['ROUND.INT']] <- round.int
+  }
+  if('type' %in% argnm) {
+    valid.types <- c('chars', 'width')
+    type <- args[['type']]
+    if(
+      !is.character(type) || length(type) != 1 ||
+      is.na(type.int <- pmatch(type, valid.types))
+    )
+      stop2("Argument `type` must partial match one of ", deparse(valid.types))
+
+    args[['type']] <- valid.types[type.int]
+    args[['TYPE.INT']] <- type.int - 1L
+  }
+  if('start' %in% argnm || 'stop' %in% argnm) {
+    x.len <- length(args[['x']])
+    # Silently recycle start/stop like substr does
+    start <- rep(as.integer(args[['start']]), length.out=x.len)
+    stop <- rep(as.integer(args[['stop']]), length.out=x.len)
+    start[start < 1L] <- 1L
+    args[['start']] <- start
+    args[['stop']] <- stop
+    args[['X.LEN']] <- x.len
   }
   # we might not have validated all, so we should be careful
   list2env(args, par.env)

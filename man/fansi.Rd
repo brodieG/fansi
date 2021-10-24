@@ -11,9 +11,9 @@ the effects of some ANSI X3.64 (a.k.a. ECMA-48, ISO-6429) control sequences.
 \section{Control Characters and Sequences}{
 
 
-Control characters and sequences are non-printing inline characters that can
-be used to modify terminal display and behavior, for example by changing text
-color or cursor position.
+Control characters and sequences are non-printing inline characters or
+sequences initiated by them that can be used to modify terminal display and
+behavior, for example by changing text color or cursor position.
 
 We will refer to X3.64/ECMA-48/ISO-6429 control characters and sequences as
 "\emph{Control Sequences}" hereafter.
@@ -44,17 +44,17 @@ characters, but \code{fansi} will (incorrectly) treat them as if they were
 two characters long.  There are many more unimplemented ECMA-48
 specifications.
 
-In theory it is possible to encode CSI sequenes with a single byte
+In theory it is possible to encode CSI sequences with a single byte
 introducing character in the 0x40-0x5F range instead of the traditional
 "ESC[".  Since this is rare and it conflicts with UTF-8 encoding, \code{fansi}
 does not support it.
 
 The special treatment of \emph{Control Sequences} is to compute their
 display/character width as zero.  For the SGR subset of the CSI sequences and
-OSC-anchored URLs,, \code{fansi} will also parse, interpret, and reapply the text
-the sequences as needed.  Whether a particular type of \emph{Control Sequence} is
-treated specially can be specified via the \code{ctl} parameter to the \code{fansi}
-functions that have it.
+OSC-anchored URLs, \code{fansi} will also parse, interpret, and reapply the
+sequences to the text as needed.  Whether a particular type of \emph{Control
+Sequence} is treated specially can be specified via the \code{ctl} parameter to
+the \code{fansi} functions that have it.
 }
 
 \section{CSI SGR Control Sequences}{
@@ -124,9 +124,11 @@ same as replacement (e.g. if you have a color active and pick another one).
 While we try to minimize changes across \code{fansi} versions in how SGR sequences
 are output, we focus on minimizing the changes to rendered output, not
 necessarily the specific SGR sequences used to produce it.  To maximize the
-odds of getting stable SGR output use \code{\link{normalize_state}} and set \code{term.cap} to
-a specific set of capabilities.  In general it is likely best not to rely on
-the exact SGR encoding of \code{fansi} output.
+odds of getting stable SGR output use \code{\link{normalize_state}} and set \code{term.cap}
+to a specific set of capabilities.
+
+\strong{In general it is likely best not to rely on the exact SGR encoding of
+\code{fansi} output, particularly in tests.}
 
 Note that \code{width} calculations may also change across R versions, locales,
 etc. (see "Encodings / UTF-8" below).
@@ -148,36 +150,75 @@ or terminates them as needed.
 
 
 The cumulative nature of state as specified by SGR or OSC-anchored URLs means
-that SGR in strings that are spliced will interact with each other.
+that unterminated strings that are spliced will interact with each other.
 Additionally, a substring does not inherently contain all the information
-required to recreate its state as it appeared in the source string.
+required to recreate its state as it appeared in the source string.  The
+default \code{fansi} configuration terminates extracted substrings and prepends
+original state to them so they present on a stand alone basis as they did as
+part of the original string.
 
-One form of interaction to consider is how a character vector provided to
-\code{fansi} functions affect itself.  By default, \code{fansi} assumes that each
-element in an input character vector is independent, but this is incorrect if
-the input is a single document with each element a line in it.  In that
-situation state from each line should bleed into subsequent ones.  Setting
-\code{carry = TRUE} enables the "single document" interpretation.
+To allow state in substrings to affect subsequent strings that may be spliced
+onto them set \code{terminate = FALSE}.  Generally you should use \code{terminate = TRUE} unless you are willing to deal with the resulting mess (see "Terminal
+Quirks") in exchange for fine control of state bleeding.
 
-Another form of interaction is when substrings produced by \code{fansi} are
-spliced with or into other substrings.  By default \code{fansi} automatically
-terminates substrings it produces if they contain active formats or URLs.
-This prevents the state to bleed into external strings, which is useful e.g.
-when arranging text in columns.  We can allow the state to bleed into
-appended strings by setting \code{terminate = FALSE}.  \code{carry} is unaffected by
-\code{terminate} as \code{fansi} records the ending SGR state prior to termination
-internally.
+By default, \code{fansi} assumes that each element in an input character vector is
+independent, but this is incorrect if the input is a single document with
+each element a line in it.  In that situation state from each line should
+bleed into subsequent ones.  Setting \code{carry = TRUE} enables the "single
+document" interpretation.
 
-Finally, \code{fansi} strings will be affected by any active state in strings they
-are appended to.  There are no parameters to control what happens
-automatically in this case, but \code{fansi} provides several functions that can
-help the user get their desired outcome.  \code{state_at_end} computes the active
-state the end of a string, this can then be prepended onto the \emph{input} of
-\code{fansi} functions so that they are aware of the active style at the beginning
-of the string.  Alternatively, one could use \code{close_state(state_at_end(...))}
-and pre-pend that to the \emph{output} of \code{fansi} functions so they are unaffected
-by preceding SGR.  One could also just prepend "ESC[0m", but in some cases as
+To most closely approximate what \code{writeLines(x)} produces on your terminal,
+where \code{x} is a stateful string, use \code{writeLines(fansi_fun(x, carry=TRUE, terminate=FALSE))}.  \code{fansi_fun} is a stand-in for any of the \code{fansi} string
+manipulation functions.  Note that even with a "null-op" such as
+\code{substr_ctl(x, 1, nchar_ctl(x), carry=TRUE, terminate=FALSE)} the output
+control sequences may not match the input ones, but the output \emph{should} look
+the same if displayed to the terminal.  With these settings \code{fansi} will
+re-open active state on each new element even if a terminal would naturally
+carry them over.  This is to allow the user to manually terminate elements
+without losing carried state on the next element.
+
+\code{fansi} strings will be affected by any active state in strings they are
+appended to.  There are no parameters to control what happens in this case,
+but \code{fansi} provides functions that can help the user get the desired
+behavior.  \code{state_at_end} computes the active state the end of a string,
+which can then be prepended onto the \emph{input} of \code{fansi} functions so that
+they are aware of the active style at the beginning of the string.
+Alternatively, one could use \code{close_state(state_at_end(...))} and pre-pend
+that to the \emph{output} of \code{fansi} functions so they are unaffected by preceding
+SGR.  One could also just prepend "ESC[0m", but in some cases as
 described in \code{\link[=normalize_state]{?normalize_state}} that is sub-optimal.
+
+If you intend to combine stateful \code{fansi} manipulated strings with your own,
+it may be best to set \code{normalize = TRUE} for best compatibility (see
+\code{\link[=normalize_state]{?normalize_state}}.)
+}
+
+\section{Terminal Quirks}{
+
+
+Some terminals (e.g. OS X terminal, ITerm2) will pre-paint the entirety of a
+new line with the currently active background before writing the contents of
+the line.  If there is a non-default active background color, any unwritten
+columns in the new line will keep the prior background color even if the new
+line changes the background color.  To avoid this be sure to use \code{terminate = TRUE} or to manually terminate each line with e.g.  "ESC[0m".  The
+problem manifests as:\preformatted{" " = default background
+"#" = new background
+">" = start new background
+"!" = restore default background
+
++-----------+
+| abc\\n     |
+|>###\\n     |
+|!abc\\n#####| <- trailing "#" after newline are from pre-paint
+| abc       |
++-----------+
+}
+
+The simplest way to avoid this problem is to split input strings by any
+newlines they contain, and use \code{terminate = TRUE} (the default).  A more
+complex solution is to pad with spaces to the terminal window width before
+emitting the newline to ensure the pre-paint is overpainted with the current
+line's prevailing background color.
 }
 
 \section{Encodings / UTF-8}{

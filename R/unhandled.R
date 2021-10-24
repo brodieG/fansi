@@ -82,8 +82,9 @@
 #' unhandled_ctl(string)
 
 unhandled_ctl <- function(x, term.cap=getOption('fansi.term.cap')) {
+  ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(x=x, term.cap=term.cap)
-  res <- .Call(FANSI_unhandled_esc, x, term.cap.int)
+  res <- .Call(FANSI_unhandled_esc, x, TERM.CAP.INT)
   names(res) <- c("index", "start", "stop", "error", "translated", "esc")
   errors <- c(
     'unknown', 'special', 'exceed-term-cap', 'non-SGR/URL', 'malformed-CSI/OSC',

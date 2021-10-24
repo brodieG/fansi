@@ -54,6 +54,7 @@ strsplit_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
+  ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
     carry=carry, terminate=terminate
@@ -126,8 +127,8 @@ strsplit_ctl <- function(
         start=starts, stop=ends, type.int=0L,
         round.start=TRUE, round.stop=FALSE,
         tabs.as.spaces=FALSE, tab.stops=8L, warn=warn,
-        term.cap.int=term.cap.int, x.len=length(starts),
-        ctl.int=ctl.int, normalize=normalize,
+        term.cap.int=TERM.CAP.INT, x.len=length(starts),
+        ctl.int=CTL.INT, normalize=normalize,
         carry=carry, terminate=terminate
       )
     } else {

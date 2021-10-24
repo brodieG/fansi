@@ -31,13 +31,16 @@ terminal capabilities. See \code{\link{term_cap_test}} for details.  "all" behav
 it does for the \code{ctl} parameter: "all" combined with any other value means
 all terminal capabilities except that one.}
 
-\item{carry}{TRUE, FALSE, or a scalar string, controls whether active SGR
-present at the end of an input vector element is carried into the next
-vector element.  If FALSE each vector element is interpreted as if there
-were no active state when they begin.  If character, then the active
-state at the end of the \code{carry} string is carried into the first element of
-\code{x}.  See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for
-details.}
+\item{carry}{TRUE, FALSE (default), or a scalar string, controls whether to
+interpret the character vector as a "single document" (TRUE or string) or
+as independent elements (FALSE).  In "single document" mode, active state
+at the end of an input element is considered active at the beginning of the
+next vector element, simulating what happens with a document with active
+state at the end of a line.  If FALSE each vector element is interpreted as
+if there were no active state when it begins.  If character, then the
+active state at the end of the \code{carry} string is carried into the first
+element of \code{x}.  See the "State Interactions" section of \code{\link[=fansi]{?fansi}}
+for details.}
 }
 \value{
 \code{x}, with all SGRs normalized.

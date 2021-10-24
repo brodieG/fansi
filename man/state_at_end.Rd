@@ -45,13 +45,16 @@ normalized strings will occupy more space (e.g. "\033[31;42m" becomes
 "\033[31m\033[42m"), but will work better with code that assumes each SGR
 code will be in its own escape as \code{crayon} does.}
 
-\item{carry}{TRUE, FALSE, or a scalar string, controls whether active SGR
-present at the end of an input vector element is carried into the next
-vector element.  If FALSE each vector element is interpreted as if there
-were no active state when they begin.  If character, then the active
-state at the end of the \code{carry} string is carried into the first element of
-\code{x}.  See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for
-details.}
+\item{carry}{TRUE, FALSE (default), or a scalar string, controls whether to
+interpret the character vector as a "single document" (TRUE or string) or
+as independent elements (FALSE).  In "single document" mode, active state
+at the end of an input element is considered active at the beginning of the
+next vector element, simulating what happens with a document with active
+state at the end of a line.  If FALSE each vector element is interpreted as
+if there were no active state when it begins.  If character, then the
+active state at the end of the \code{carry} string is carried into the first
+element of \code{x}.  See the "State Interactions" section of \code{\link[=fansi]{?fansi}}
+for details.}
 }
 \value{
 character vector same length as \code{x}.
@@ -61,11 +64,11 @@ character vector same length as \code{x}.
 OSC-anchored URLs until the end of the string and outputs the active state at
 the end of it.  \code{close_state} produces the sequence that closes active SGR
 and OSC-anchored URLs at the end of the input string.  If \code{normalize = FALSE}
-(default), it will close SGRs with the reset code "ESC[0m", so it is only
-interesting for closing SGRs if \code{normalize = TRUE}.  Unlike \code{state_at_end}
-and other functions \code{close_state} has no concept of \code{carry}: it will only
-close state activate within an element that is still active at the end of
-that element.
+(default), it will emit the reset code "ESC[0m" if any SGR is present. It is
+more interesting for closing SGRs if \code{normalize = TRUE}.  Unlike
+\code{state_at_end} and other functions \code{close_state} has no concept of \code{carry}:
+it will only emit closing sequences for states activate within an element
+that is still active at the end of that element.
 }
 \examples{
 x <- c("\033[44mhello", "\033[33mworld")

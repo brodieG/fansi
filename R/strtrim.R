@@ -38,6 +38,7 @@ strtrim_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
+  ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(
     x=x, warn=warn, ctl=ctl, normalize=normalize, carry=carry,
     terminate=terminate
@@ -64,7 +65,7 @@ strtrim_ctl <- function(
       FALSE, 8L,
       warn, term.cap.int,
       TRUE,      # first only
-      ctl.int,
+      CTL.INT,
       normalize,
       carry,
       terminate
@@ -82,6 +83,7 @@ strtrim2_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
+  ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(
     x=x, warn=warn, ctl=ctl,
     tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops,
@@ -111,7 +113,7 @@ strtrim2_ctl <- function(
       tabs.as.spaces, tab.stops,
       warn, term.cap.int,
       TRUE,      # first only
-      ctl.int,
+      CTL.INT,
       normalize, carry, terminate
   )
   if(normalize) normalize_state(res) else res
