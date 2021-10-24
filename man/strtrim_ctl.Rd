@@ -67,18 +67,21 @@ normalized strings will occupy more space (e.g. "\033[31;42m" becomes
 "\033[31m\033[42m"), but will work better with code that assumes each SGR
 code will be in its own escape as \code{crayon} does.}
 
-\item{carry}{TRUE, FALSE, or a scalar string, controls whether active SGR
-present at the end of an input vector element is carried into the next
-vector element.  If FALSE each vector element is interpreted as if there
-were no active state when they begin.  If character, then the active
-state at the end of the \code{carry} string is carried into the first element of
-\code{x}.  See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for
-details.}
+\item{carry}{TRUE, FALSE (default), or a scalar string, controls whether to
+interpret the character vector as a "single document" (TRUE or string) or
+as independent elements (FALSE).  In "single document" mode, active state
+at the end of an input element is considered active at the beginning of the
+next vector element, simulating what happens with a document with active
+state at the end of a line.  If FALSE each vector element is interpreted as
+if there were no active state when it begins.  If character, then the
+active state at the end of the \code{carry} string is carried into the first
+element of \code{x}.  See the "State Interactions" section of \code{\link[=fansi]{?fansi}}
+for details.}
 
 \item{terminate}{TRUE (default) or FALSE whether substrings should have
 active state closed to avoid it bleeding into other strings they may be
-prepended onto.  See the "State Interactions" section of \code{\link[=fansi]{?fansi}}
-for details.}
+prepended onto.  This does not stop state from carrying if \code{carry = TRUE}.
+See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for details.}
 
 \item{tabs.as.spaces}{FALSE (default) or TRUE, whether to convert tabs to
 spaces.  This can only be set to TRUE if \code{strip.spaces} is FALSE.}

@@ -132,8 +132,10 @@
 #' are output, we focus on minimizing the changes to rendered output, not
 #' necessarily the specific SGR sequences used to produce it.  To maximize the
 #' odds of getting stable SGR output use [`normalize_state`] and set `term.cap`
-#' to a specific set of capabilities.  In general it is likely best not to rely
-#' on the exact SGR encoding of `fansi` output.
+#' to a specific set of capabilities.
+#'
+#' **In general it is likely best not to rely on the exact SGR encoding of
+#' `fansi` output, particularly in tests.**
 #'
 #' Note that `width` calculations may also change across R versions, locales,
 #' etc. (see "Encodings / UTF-8" below).
@@ -169,10 +171,16 @@
 #' bleed into subsequent ones.  Setting `carry = TRUE` enables the "single
 #' document" interpretation.
 #'
-#' For `terminate = FALSE` and `carry = TRUE`, `fansi` will re-open active
-#' state on each new element even if a terminal would naturally carry them
-#' over.  This is to allow the user to manually terminate elements without
-#' losing carried state on the next element.
+#' To most closely approximate what `writeLines(x)` produces on your terminal,
+#' where `x` is a stateful string, use `writeLines(fansi_fun(x, carry=TRUE,
+#' terminate=FALSE))`.  `fansi_fun` is a stand-in for any of the `fansi` string
+#' manipulation functions.  Note that even with a "null-op" such as
+#' `substr_ctl(x, 1, nchar_ctl(x), carry=TRUE, terminate=FALSE)` the output
+#' control sequences may not match the input ones, but the output _should_ look
+#' the same if displayed to the terminal.  With these settings `fansi` will
+#' re-open active state on each new element even if a terminal would naturally
+#' carry them over.  This is to allow the user to manually terminate elements
+#' without losing carried state on the next element.
 #'
 #' `fansi` strings will be affected by any active state in strings they are
 #' appended to.  There are no parameters to control what happens in this case,

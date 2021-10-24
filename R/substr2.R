@@ -47,12 +47,30 @@
 #' directly from Gábor Csárdi's `crayon` package, although the implementation of
 #' the calculation is different.
 #'
-#' Replacement functions are implemented as two substring operations to select
-#' the beginning and end of the final string, and a `paste` operation to stick
-#' all the pieces back together.  The `carry` parameter is applied separately to
-#' the `value` and to the `x` parameter.  Styles in `value` will only carry to
-#' substrings in the result that were originally part of `value`, and vice
-#' versa.
+#' Replacement functions are implemented as three substring operations, so:
+#' ```
+#' x <- "ABC"
+#' y <- "_."
+#' substr_ctl(x, 2, 2, ...) <- y
+#' ```
+#' Is treated roughly as:
+#' ```
+#' x <- paste0(
+#'   substr(x, 1, 1, ...),
+#'   substr(y, 1, 1, ...),
+#'   substr(x, 3, 3, terminate=FALSE, ...)
+#' )
+#' ```
+#' Except for the `terminate` parameter for the trailing substring, all other
+#' parameters are passed from `substr_ctl<-` to the internal substring calls.
+#' If you wish for the whole return value to be terminated you must manually add
+#' terminating sequences.  `substr_ctl` refrains from doing so to maintain the
+#' illusion of a string modified in place.
+#'
+#' Another implication of the three substring approach is that the `carry`
+#' parameter causes state to carry within the original string and the
+#' replacement values independently, as if they were columns of text cut from
+#' different pages and pasted together.
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work properly in R < 3.2.2.
@@ -122,17 +140,20 @@
 #'   normalized strings will occupy more space (e.g. "\033[31;42m" becomes
 #'   "\033[31m\033[42m"), but will work better with code that assumes each SGR
 #'   code will be in its own escape as `crayon` does.
-#' @param carry TRUE, FALSE, or a scalar string, controls whether active SGR
-#'   present at the end of an input vector element is carried into the next
-#'   vector element.  If FALSE each vector element is interpreted as if there
-#'   were no active state when it begins.  If character, then the active
-#'   state at the end of the `carry` string is carried into the first element of
-#'   `x`.  See the "State Interactions" section of [`?fansi`][fansi] for
-#'   details.
+#' @param carry TRUE, FALSE (default), or a scalar string, controls whether to
+#'   interpret the character vector as a "single document" (TRUE or string) or
+#'   as independent elements (FALSE).  In "single document" mode, active state
+#'   at the end of an input element is considered active at the beginning of the
+#'   next vector element, simulating what happens with a document with active
+#'   state at the end of a line.  If FALSE each vector element is interpreted as
+#'   if there were no active state when it begins.  If character, then the
+#'   active state at the end of the `carry` string is carried into the first
+#'   element of `x`.  See the "State Interactions" section of [`?fansi`][fansi]
+#'   for details.
 #' @param terminate TRUE (default) or FALSE whether substrings should have
 #'   active state closed to avoid it bleeding into other strings they may be
-#'   prepended onto.  See the "State Interactions" section of [`?fansi`][fansi]
-#'   for details.
+#'   prepended onto.  This does not stop state from carrying if `carry = TRUE`.
+#'   See the "State Interactions" section of [`?fansi`][fansi] for details.
 #' @param value a character vector or object that can be coerced to such.
 #' @return a character vector of the same length and with the same attributes as
 #'   x (after possible coercion and re-encoding to UTF-8).
@@ -150,8 +171,8 @@
 #' substr2_ctl(cn.string, 2, 3, type='width', round='stop')
 #'
 #' ## We can specify which escapes are considered special:
-#' substr_ctl("\033[31mhello\tworld", 1, 6, ctl='sgr')
-#' substr_ctl("\033[31mhello\tworld", 1, 6, ctl=c('all', 'c0'))
+#' substr_ctl("\033[31mhello\tworld", 1, 6, ctl='sgr', warn=FALSE)
+#' substr_ctl("\033[31mhello\tworld", 1, 6, ctl=c('all', 'c0'), warn=FALSE)
 #'
 #' ## `carry` allows SGR to carry from one element to the next
 #' substr_ctl(c("\033[33mhello", "world"), 1, 3)
@@ -159,9 +180,24 @@
 #' substr_ctl(c("\033[33mhello", "world"), 1, 3, carry="\033[44m")
 #'
 #' ## We can omit the termination
-#' bleed <- substr_ctl(c("\033[41hello", "world"), 1, 3, terminate=FALSE)
-#' \dontrun{writeLines(bleed)} # Style will bleed out of string
-#' writeLines("\033[m")        # Stop bleeding if needed
+#' bleed <- substr_ctl(c("\033[41mhello", "world"), 1, 3, terminate=FALSE)
+#' writeLines(bleed)      # Style will bleed out of string
+#' end <- "\033[0m\n"
+#' writeLines(end)        # Stanch bleeding
+#'
+#' ## Replacement functions
+#' x0<- x1 <- x2 <- x3 <- c("\033[42mABC", "\033[34mDEF")
+#' substr_ctl(x1, 2, 2) <- "_"
+#' substr_ctl(x2, 2, 2) <- "\033[m_"
+#' substr_ctl(x3, 2, 2) <- "\033[45m_"
+#' writeLines(c(x0, end, x1, end, x2, end, x3, end))
+#'
+#' ## With `carry = TRUE` strings look like original
+#' x0<- x1 <- x2 <- x3 <- c("\033[42mABC", "\033[34mDEF")
+#' substr_ctl(x0, 2, 2, carry=TRUE) <- "_"
+#' substr_ctl(x1, 2, 2, carry=TRUE) <- "\033[m_"
+#' substr_ctl(x2, 2, 2, carry=TRUE) <- "\033[45m_"
+#' writeLines(c(x0, end, x1, end, x2, end, x3, end))
 
 substr_ctl <- function(
   x, start, stop,
