@@ -263,13 +263,13 @@ substr2_ctl <- function(
   value <- rep_len(enc2utf8(as.character(value)), X.LEN)
   ncv <- nchar_ctl(value, type=type, ctl=ctl, warn=warn)
 
-  # Actual replacement operation as substr/paste
+  # All warnings should have been emitted by `nchar_ctl` above
   x[] <- paste0(
     substr_ctl_internal(
       x, rep(1L, X.LEN), start - 1L, type.int=TYPE.INT,
       round.start=round.a == 'start' || round.a == 'both',
       round.stop=round.a == 'stop' || round.a == 'both',
-      tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
+      tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=FALSE,
       term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
       carry=carry, terminate=terminate
     ),
@@ -278,7 +278,7 @@ substr2_ctl <- function(
       type.int=TYPE.INT,
       round.start=round == 'start' || round == 'both',
       round.stop=round == 'stop' || round == 'both',
-      tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
+      tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=FALSE,
       term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
       carry=carry, terminate=terminate
     ),
@@ -289,7 +289,7 @@ substr2_ctl <- function(
       rep(.Machine[['integer.max']], X.LEN), type.int=TYPE.INT,
       round.start=round.b == 'start' || round.b == 'both',
       round.stop=round.b == 'stop' || round.b == 'both',
-      tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
+      tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=FALSE,
       term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
       carry=carry, terminate=FALSE
     )
