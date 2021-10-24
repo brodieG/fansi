@@ -49,7 +49,8 @@
 
 strsplit_ctl <- function(
   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
-  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
+  warn=getOption('fansi.warn', TRUE),
+  term.cap=getOption('fansi.term.cap', dflt_term_cap()),
   ctl='all', normalize=getOption('fansi.normalize', FALSE),
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
@@ -153,7 +154,8 @@ strsplit_ctl <- function(
 
 strsplit_sgr <- function(
   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
-  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
+  warn=getOption('fansi.warn', TRUE),
+  term.cap=getOption('fansi.term.cap', dflt_term_cap()),
   normalize=getOption('fansi.normalize', FALSE),
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)

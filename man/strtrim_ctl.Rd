@@ -8,7 +8,7 @@
 strtrim_ctl(
   x,
   width,
-  warn = getOption("fansi.warn"),
+  warn = getOption("fansi.warn", TRUE),
   ctl = "all",
   normalize = getOption("fansi.normalize", FALSE),
   carry = getOption("fansi.carry", FALSE),
@@ -18,9 +18,9 @@ strtrim_ctl(
 strtrim2_ctl(
   x,
   width,
-  warn = getOption("fansi.warn"),
-  tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
-  tab.stops = getOption("fansi.tab.stops"),
+  warn = getOption("fansi.warn", TRUE),
+  tabs.as.spaces = getOption("fansi.tabs.as.spaces", FALSE),
+  tab.stops = getOption("fansi.tab.stops", 8L),
   ctl = "all",
   normalize = getOption("fansi.normalize", FALSE),
   carry = getOption("fansi.carry", FALSE),

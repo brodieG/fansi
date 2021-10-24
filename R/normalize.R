@@ -82,7 +82,8 @@
 #' ) )
 
 normalize_state <- function(
-  x, warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
+  x, warn=getOption('fansi.warn', TRUE),
+  term.cap=getOption('fansi.term.cap', dflt_term_cap()),
   carry=getOption('fansi.carry', FALSE)
 ) {
   ## modifies / creates NEW VARS in fun env

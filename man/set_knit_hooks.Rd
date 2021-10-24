@@ -9,7 +9,7 @@ set_knit_hooks(
   which = "output",
   proc.fun = function(x, class) html_code_block(to_html(html_esc(x)), class = class),
   class = sprintf("fansi fansi-\%s", which),
-  style = getOption("fansi.css"),
+  style = getOption("fansi.css", dflt_css()),
   split.nl = FALSE,
   .test = FALSE
 )
@@ -93,7 +93,7 @@ old.hooks <- set_knit_hooks(knitr::knit_hooks)
 ## them (alternatively we could have done output as part of this call too)
 
 styles <- c(
-  getOption('fansi.style'),  # default style
+  getOption('fansi.style', dflt_css()),  # default style
   "PRE.fansi CODE {background-color: transparent;}",
   "PRE.fansi-error {background-color: #DD5555;}",
   "PRE.fansi-warning {background-color: #DDDD55;}",

@@ -56,7 +56,7 @@
 #' ## as far as the `strip` argument is concerned
 #' strip_ctl(string, c("all", "nl", "c0"))
 
-strip_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), strip) {
+strip_ctl <- function(x, ctl='all', warn=getOption('fansi.warn', TRUE), strip) {
   if(!missing(strip)) {
     message("Parameter `strip` has been deprecated; use `ctl` instead.")
     ctl <- strip
@@ -80,7 +80,7 @@ strip_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), strip) {
 #' ## convenience function, same as `strip_ctl(ctl=c('sgr', 'url'))`
 #' strip_sgr(string)
 
-strip_sgr <- function(x, warn=getOption('fansi.warn')) {
+strip_sgr <- function(x, warn=getOption('fansi.warn', TRUE)) {
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(x=x, warn=warn)
   ctl.int <- match(c("sgr", "url"), VALID.CTL)
@@ -106,7 +106,7 @@ strip_sgr <- function(x, warn=getOption('fansi.warn')) {
 #' has_ctl("hello\nworld", "sgr")
 #' has_ctl("hello\033[31mworld\033[m", "sgr")
 
-has_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), which) {
+has_ctl <- function(x, ctl='all', warn=getOption('fansi.warn', TRUE), which) {
   if(!missing(which)) {
     message("Parameter `which` has been deprecated; use `ctl` instead.")
     ctl <- which
@@ -127,7 +127,7 @@ has_ctl <- function(x, ctl='all', warn=getOption('fansi.warn'), which) {
 #' @keywords internal
 #' @export
 
-has_sgr <- function(x, warn=getOption('fansi.warn'))
+has_sgr <- function(x, warn=getOption('fansi.warn', TRUE))
   has_ctl(x, ctl=c("sgr", "url"), warn=warn)
 
 #' Utilities for Managing CSI and OSC State  In Strings
@@ -155,8 +155,8 @@ has_sgr <- function(x, warn=getOption('fansi.warn'))
 
 state_at_end <- function(
   x,
-  warn=getOption('fansi.warn'),
-  term.cap=getOption('fansi.term.cap'),
+  warn=getOption('fansi.warn', TRUE),
+  term.cap=getOption('fansi.term.cap', dflt_term_cap()),
   normalize=getOption('fansi.normalize', FALSE),
   carry=getOption('fansi.carry', FALSE)
 ) {
@@ -179,7 +179,7 @@ state_at_end <- function(
 
 close_state <- function(
   x,
-  warn=getOption('fansi.warn'),
+  warn=getOption('fansi.warn', TRUE),
   normalize=getOption('fansi.normalize', FALSE)
 ) {
   ## modifies / creates NEW VARS in fun env

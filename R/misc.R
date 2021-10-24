@@ -54,8 +54,8 @@
 #' ) )
 
 tabs_as_spaces <- function(
-  x, tab.stops=getOption('fansi.tab.stops'), warn=getOption('fansi.warn'),
-  ctl='all'
+  x, tab.stops=getOption('fansi.tab.stops', 8L),
+  warn=getOption('fansi.warn', TRUE), ctl='all'
 ) {
 
   if(!is.character(x)) x <- as.character(x)
@@ -99,7 +99,8 @@ tabs_as_spaces <- function(
 #' CSI SGR sequences are displayed as well.
 #'
 #' You should compare the screen output from this function to
-#' `getOption('fansi.term.cap')` to ensure that they are self consistent.
+#' `getOption('fansi.term.cap', dflt_term_cap)` to ensure that they are self
+#' consistent.
 #'
 #' By default `fansi` assumes terminals support bright and 256 color
 #' modes, and also tests for truecolor support via the $COLORTERM system
@@ -108,10 +109,10 @@ tabs_as_spaces <- function(
 #' Functions with the `term.cap` parameter like `substr_ctl` will warn if they
 #' encounter 256 or true color SGR sequences and `term.cap` indicates they are
 #' unsupported as such a terminal may misinterpret those sequences.  Bright
-#' codes in terminals that do not support them are more likely to be silently
-#' ignored, so `fansi` functions do not warn about those.
+#' codes and OSC encoded URLs in terminals that do not support will likely be
+#' silently ignored, so `fansi` functions do not warn about those.
 #'
-#' @inherit has_ctl seealso
+#' @seealso [`dflt_term_cap`], [`has_ctl`].
 #' @export
 #' @return character the test vector, invisibly
 #' @examples
@@ -228,7 +229,7 @@ html_code_block <- function(x, class='fansi-output') {
 #'
 #' This is a convenience function designed for use within an `rmarkdown`
 #' document.  It overrides the `knitr` output hooks by using
-#' `knitr::knit_hooks$set`.  It replaces the hooks with ones that convert 
+#' `knitr::knit_hooks$set`.  It replaces the hooks with ones that convert
 #' _Control Sequences_ into HTML.  In addition to replacing the hook functions,
 #' this will output a &lt;STYLE&gt; HTML block to stdout.  These two actions are
 #' side effects as a result of which R chunks in the `rmarkdown` document that
@@ -298,7 +299,7 @@ html_code_block <- function(x, class='fansi-output') {
 #' ## them (alternatively we could have done output as part of this call too)
 #'
 #' styles <- c(
-#'   getOption('fansi.style'),  # default style
+#'   getOption('fansi.style', dflt_css()),  # default style
 #'   "PRE.fansi CODE {background-color: transparent;}",
 #'   "PRE.fansi-error {background-color: #DD5555;}",
 #'   "PRE.fansi-warning {background-color: #DDDD55;}",
@@ -325,7 +326,7 @@ set_knit_hooks <- function(
   proc.fun=function(x, class)
     html_code_block(to_html(html_esc(x)), class=class),
   class=sprintf("fansi fansi-%s", which),
-  style=getOption("fansi.css"),
+  style=getOption("fansi.css", dflt_css()),
   split.nl=FALSE,
   .test=FALSE
 ) {
@@ -509,3 +510,31 @@ fwl <- function(..., end='<END>\033[0m') {
   writeLines(c(..., end))
 }
 
+#' Default Arg Helper Funs
+#'
+#' Terminal capabilities are assumed to include bright and 256 color SGR codes,
+#' and will detect 24 bit color support based on the `COLORTERM` environment
+#' variable.
+#'
+#' Default CSS may exceed or fail to cover the interline distance when two lines
+#' have background colors.  To ensure lines are exactly touching use
+#' inline-block, although that has its own issues.  Otherwise specify your own
+#' values.
+#'
+#' @seealso [`term_cap_test`].
+#' @export
+#' @return character to use as default value for `fansi` parameter.
+
+dflt_term_cap <- function() {
+  c(
+    if(isTRUE(Sys.getenv('COLORTERM') %in% c('truecolor', '24bit')))
+    'truecolor',
+    'bright', '256'
+  )
+}
+#' @rdname dflt_term_cap
+#' @export
+
+dflt_css <- function() {
+  "PRE.fansi SPAN {padding-top: .25em; padding-bottom: .25em};"
+}

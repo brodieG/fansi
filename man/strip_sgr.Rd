@@ -4,7 +4,7 @@
 \alias{strip_sgr}
 \title{Strip Control Sequences}
 \usage{
-strip_sgr(x, warn = getOption("fansi.warn"))
+strip_sgr(x, warn = getOption("fansi.warn", TRUE))
 }
 \arguments{
 \item{x}{a character vector or object that can be coerced to such.}

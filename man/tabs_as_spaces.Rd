@@ -6,8 +6,8 @@
 \usage{
 tabs_as_spaces(
   x,
-  tab.stops = getOption("fansi.tab.stops"),
-  warn = getOption("fansi.warn"),
+  tab.stops = getOption("fansi.tab.stops", 8L),
+  warn = getOption("fansi.warn", TRUE),
   ctl = "all"
 )
 }

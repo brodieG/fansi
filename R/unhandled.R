@@ -81,7 +81,9 @@
 #' )
 #' unhandled_ctl(string)
 
-unhandled_ctl <- function(x, term.cap=getOption('fansi.term.cap')) {
+unhandled_ctl <- function(
+  x, term.cap=getOption('fansi.term.cap', dflt_term_cap())
+) {
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(x=x, term.cap=term.cap)
   res <- .Call(FANSI_unhandled_esc, x, TERM.CAP.INT)

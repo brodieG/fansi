@@ -58,7 +58,7 @@
 
 nchar_ctl <- function(
   x, type='chars', allowNA=FALSE, keepNA=NA, ctl='all',
-  warn=getOption('fansi.warn'), strip
+  warn=getOption('fansi.warn', TRUE), strip
 ) {
   if(!is.logical(allowNA)) allowNA <- as.logical(allowNA)
   if(length(allowNA) != 1L)
@@ -92,7 +92,9 @@ nchar_ctl <- function(
 #' @export
 #' @rdname nchar_ctl
 
-nzchar_ctl <- function(x, keepNA=NA, ctl='all', warn=getOption('fansi.warn')) {
+nzchar_ctl <- function(
+  x, keepNA=NA, ctl='all', warn=getOption('fansi.warn', TRUE)
+) {
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(x=x, ctl=ctl, warn=warn)
   if(!is.logical(keepNA)) keepNA <- as.logical(keepNA)
@@ -112,7 +114,7 @@ nzchar_ctl <- function(x, keepNA=NA, ctl='all', warn=getOption('fansi.warn')) {
 #' @export
 
 nchar_sgr <- function(
-  x, type='chars', allowNA=FALSE, keepNA=NA, warn=getOption('fansi.warn')
+  x, type='chars', allowNA=FALSE, keepNA=NA, warn=getOption('fansi.warn', TRUE)
 )
   nchar_ctl(
     x=x, type=type, allowNA=allowNA, keepNA=keepNA, warn=warn, ctl='sgr'
@@ -121,6 +123,6 @@ nchar_sgr <- function(
 #' @export
 #' @rdname nchar_sgr
 
-nzchar_sgr <- function(x, keepNA=NA, warn=getOption('fansi.warn'))
+nzchar_sgr <- function(x, keepNA=NA, warn=getOption('fansi.warn', TRUE))
   nzchar_ctl(x=x, keepNA=keepNA, warn=warn, ctl='sgr')
 

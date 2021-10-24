@@ -146,8 +146,8 @@
 #' }
 
 to_html <- function(
-  x, warn=getOption('fansi.warn'),
-  term.cap=getOption('fansi.term.cap'),
+  x, warn=getOption('fansi.warn', TRUE),
+  term.cap=getOption('fansi.term.cap', dflt_term_cap()),
   classes=FALSE,
   carry=getOption('fansi.carry', TRUE)  # different from other functions
 ) {
@@ -179,8 +179,8 @@ to_html <- function(
 #' @keywords internal
 
 sgr_to_html <- function(
-  x, warn=getOption('fansi.warn'),
-  term.cap=getOption('fansi.term.cap'),
+  x, warn=getOption('fansi.warn', TRUE),
+  term.cap=getOption('fansi.term.cap', dflt_term_cap()),
   classes=FALSE,
   carry=getOption('fansi.carry', TRUE)  # different from other functions
 )

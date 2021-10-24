@@ -10,8 +10,8 @@ strsplit_sgr(
   fixed = FALSE,
   perl = FALSE,
   useBytes = FALSE,
-  warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"),
+  warn = getOption("fansi.warn", TRUE),
+  term.cap = getOption("fansi.term.cap", dflt_term_cap()),
   normalize = getOption("fansi.normalize", FALSE),
   carry = getOption("fansi.carry", FALSE),
   terminate = getOption("fansi.terminate", TRUE)

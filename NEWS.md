@@ -4,7 +4,7 @@
 
 ### Features
 
-* [#26](https://github.com/brodieG/fansi/issues/26) Replacement forms of
+* [#26](https://github.com/brodieG/fansi/issues/26) Add replacement forms of
   `substr_cl` (i.e `substr_ctl<-`).
 * [#58](https://github.com/brodieG/fansi/issues/58) Add support for OSC-anchored
   URLs.
@@ -26,6 +26,9 @@
   SGR state.
 * [#71](https://github.com/brodieG/fansi/issues/71) Functions that write SGR are
   now more parsimonious (see "Behavior Changes" below).
+* [#73](https://github.com/brodieG/fansi/issues/73) Default parameter values
+  retrieved with `getOption` now always have explicit fallback values defined
+  (h/t @gadenbui).
 * More granular error messages for `unhandled_ctl` for adjacent _Control
   Sequences_.
 * `term.cap` parameter now accepts "all" as value, like the `ctl` parameter.

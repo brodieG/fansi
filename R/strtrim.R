@@ -33,7 +33,7 @@
 #' strtrim_ctl("\033[42mHello world\033[m", 6)
 
 strtrim_ctl <- function(
-  x, width, warn=getOption('fansi.warn'), ctl='all',
+  x, width, warn=getOption('fansi.warn', TRUE), ctl='all',
   normalize=getOption('fansi.normalize', FALSE),
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
@@ -76,9 +76,9 @@ strtrim_ctl <- function(
 #' @rdname strtrim_ctl
 
 strtrim2_ctl <- function(
-  x, width, warn=getOption('fansi.warn'),
-  tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
-  tab.stops=getOption('fansi.tab.stops'),
+  x, width, warn=getOption('fansi.warn', TRUE),
+  tabs.as.spaces=getOption('fansi.tabs.as.spaces', FALSE),
+  tab.stops=getOption('fansi.tab.stops', 8L),
   ctl='all', normalize=getOption('fansi.normalize', FALSE),
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
@@ -128,7 +128,7 @@ strtrim2_ctl <- function(
 #' @export
 
 strtrim_sgr <- function(
-  x, width, warn=getOption('fansi.warn'),
+  x, width, warn=getOption('fansi.warn', TRUE),
   normalize=getOption('fansi.normalize', FALSE),
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
@@ -141,9 +141,9 @@ strtrim_sgr <- function(
 #' @export
 #' @rdname strtrim_sgr
 
-strtrim2_sgr <- function(x, width, warn=getOption('fansi.warn'),
-  tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
-  tab.stops=getOption('fansi.tab.stops'),
+strtrim2_sgr <- function(x, width, warn=getOption('fansi.warn', TRUE),
+  tabs.as.spaces=getOption('fansi.tabs.as.spaces', FALSE),
+  tab.stops=getOption('fansi.tab.stops', 8L),
   normalize=getOption('fansi.normalize', FALSE),
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)

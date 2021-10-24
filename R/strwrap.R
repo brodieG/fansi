@@ -101,7 +101,8 @@
 strwrap_ctl <- function(
   x, width = 0.9 * getOption("width"), indent = 0,
   exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
-  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
+  warn=getOption('fansi.warn', TRUE),
+  term.cap=getOption('fansi.term.cap', dflt_term_cap()),
   ctl='all', normalize=getOption('fansi.normalize', FALSE),
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
@@ -139,9 +140,10 @@ strwrap2_ctl <- function(
   exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
   wrap.always=FALSE, pad.end="",
   strip.spaces=!tabs.as.spaces,
-  tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
-  tab.stops=getOption('fansi.tab.stops'),
-  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
+  tabs.as.spaces=getOption('fansi.tabs.as.spaces', FALSE),
+  tab.stops=getOption('fansi.tab.stops', 8L),
+  warn=getOption('fansi.warn', TRUE),
+  term.cap=getOption('fansi.term.cap', dflt_term_cap()),
   ctl='all', normalize=getOption('fansi.normalize', FALSE),
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
@@ -197,7 +199,8 @@ strwrap2_ctl <- function(
 strwrap_sgr <- function(
   x, width = 0.9 * getOption("width"), indent = 0,
   exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
-  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
+  warn=getOption('fansi.warn', TRUE),
+  term.cap=getOption('fansi.term.cap', dflt_term_cap()),
   normalize=getOption('fansi.normalize', FALSE),
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
@@ -216,9 +219,10 @@ strwrap2_sgr <- function(
   exdent = 0, prefix = "", simplify = TRUE, initial = prefix,
   wrap.always=FALSE, pad.end="",
   strip.spaces=!tabs.as.spaces,
-  tabs.as.spaces=getOption('fansi.tabs.as.spaces'),
-  tab.stops=getOption('fansi.tab.stops'),
-  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
+  tabs.as.spaces=getOption('fansi.tabs.as.spaces', FALSE),
+  tab.stops=getOption('fansi.tab.stops', 8L),
+  warn=getOption('fansi.warn', TRUE),
+  term.cap=getOption('fansi.term.cap', dflt_term_cap()),
   normalize=getOption('fansi.normalize', FALSE),
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
