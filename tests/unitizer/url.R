@@ -16,6 +16,7 @@
 
 library(fansi)
 unitizer_sect("wrap", {
+  # two ways to terminate OSC, with an ST, or with a BELL (\a)
   txt <- "This is a link"
   base.st <- '%s\033]8;%s;%s\033\\%s\033]8;;\033\\%s'
   base.a <- '%s\033]8;%s;%s\a%s\033]8;;\a%s'
