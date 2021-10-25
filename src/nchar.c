@@ -18,61 +18,75 @@
 
 #include "fansi.h"
 
-SEXP FANSI_nzchar(
-  SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap, SEXP ctl
+/*
+ * @param z logical(1L) whether to stop once we confirm there is one non-sgr
+ *  character.
+ */
+
+SEXP FANSI_nchar(
+  SEXP x, SEXP type, SEXP keepNA, SEXP allowNA,
+  SEXP warn, SEXP term_cap, SEXP ctl, SEXP z
 ) {
-  if(
-    TYPEOF(x) != STRSXP ||
-    TYPEOF(keepNA) != LGLSXP ||
-    TYPEOF(warn) != LGLSXP ||
-    TYPEOF(term_cap) != INTSXP ||
-    TYPEOF(ctl) != INTSXP
-  )
-    error("Internal error: input type error; contact maintainer"); // nocov
+  if(TYPEOF(z) != LGLSXP || XLENGTH(z) != 1)
+    error("Internal error: `z` type error; contact maintainer"); // nocov
+  if(TYPEOF(keepNA) != LGLSXP || XLENGTH(keepNA) != 1)
+    error("Internal error: `keepNA` type error; contact maintainer"); // nocov
+  if(TYPEOF(type) != INTSXP || XLENGTH(type) != 1)
+    error("Internal error: `type` type error; contact maintainer"); // nocov
 
   int keepNA_int = asInteger(keepNA);
-  int warn_int = asInteger(warn);
-  int warned = 0;
+  int type_int = asInteger(type);
+  int zz = asInteger(z);
 
   R_xlen_t x_len = XLENGTH(x);
 
-  SEXP res = PROTECT(allocVector(LGLSXP, x_len));
-  int * resl = LOGICAL(res);
+  // Handle wrnings explicitly as we have a different threshold for warning with
+  // nchar than with normal reading.
+  SEXP warn2 = PROTECT(ScalarLogical(0));
+  SEXP res = PROTECT(allocVector(zz ? LGLSXP : INTSXP, x_len));
+  int * resi = zz ? LOGICAL(res) : INTEGER(res);
+  int warned = 0;
+
+  struct FANSI_state state;
 
   for(R_xlen_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
-    SEXP string_elt = STRING_ELT(x, i);
-    FANSI_check_chrsxp(string_elt, i);
-
-    if(string_elt == R_NaString) {
-      if(keepNA_int == 1) {
-        resl[i] = NA_LOGICAL;
-      } else resl[i] = 1;
+    if(STRING_ELT(x, i) == R_NaString) {
+      // NA case, see ?nchar
+      if(keepNA_int == 1 || (keepNA_int == NA_INTEGER && !type_int)) {
+        resi[i] = zz ? NA_LOGICAL : NA_INTEGER;
+      } else resi[i] = zz ? 1 : 2;
     } else {
-      const char * string = CHAR(string_elt);
-      // Read through any leading controls
-      resl[i] = 0;
-      if(FANSI_maybe_ctl(*string)) {
-        // could be a control
-        SEXP R_false = PROTECT(ScalarLogical(0));
-        struct FANSI_state state = FANSI_state_init_ctl(x, R_false, ctl, i);
-        UNPROTECT(1);
-
-        while(FANSI_maybe_ctl(*string)) {
-          struct FANSI_ctl_pos pos =
-            FANSI_find_ctl(state, warn_int && !warned, i, 1);
-
-          warned = warned || pos.warn;
-          if(!pos.len) {  // Not an escape
-            resl[i] = 1;
-            break;
-          }
-          state.pos_byte = pos.offset + pos.len;
-          string = state.string + state.pos_byte;
-        }
+      if(!i) {
+        state = FANSI_state_init_full(
+          x, warn2, term_cap, allowNA, keepNA, type, ctl, i
+        );
+      } else {
+        state = FANSI_state_reinit(state, x, i);
       }
-      if(*string) resl[i] = 1;  // at least one non-esc bytes
+      while(state.string[state.pos_byte]) {
+        state = FANSI_read_next(state, i, 1);
+        // early exits
+        if((zz && state.pos_raw) || state.err_code == 9) break;
+      }
+      if(zz) {  // nzchar mode
+        resi[i] = !state.pos_raw;
+      } else if (state.err_code == 9) {
+        if(state.allowNA) {
+          resi[i] = zz ? NA_LOGICAL : NA_INTEGER;
+        } else {
+          // read_next should have had an error on invalid encoding
+          error("Internal Error: invalid encoding unhandled."); // nocov
+        }
+      } else if (!state.use_nchar) {// "char" mode
+        resi[i] = state.pos_raw;
+      } else {                      // "width", "grapheme" modes
+        resi[i] = state.pos_width;
+      }
+      if(state.err_code ) {
+
+      }
   } }
-  UNPROTECT(1);
+  UNPROTECT(2);
   return res;
 }

@@ -402,9 +402,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap);
 
   SEXP FANSI_nchar(
-    SEXP x, SEXP type, SEXP allowNA, SEXP keepNA, SEXP warn, SEXP term_cap
+    SEXP x, SEXP type, SEXP keepNA, SEXP allowNA,
+    SEXP warn, SEXP term_cap, SEXP ctl, SEXP z
   );
-  SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap, SEXP ctl);
   // utility / testing
 
   SEXP FANSI_cleave(SEXP x);
@@ -487,6 +487,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   struct FANSI_string_as_utf8 FANSI_string_as_utf8(SEXP x);
   struct FANSI_state FANSI_state_init(
     SEXP strsxp, SEXP warn, SEXP term_cap, R_xlen_t i
+  );
+  struct FANSI_state FANSI_state_reinit(
+    struct FANSI_state state, SEXP x, R_xlen_t i
   );
   struct FANSI_state FANSI_state_init_full(
     SEXP strsxp, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
