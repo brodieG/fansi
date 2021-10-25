@@ -260,20 +260,19 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      *
      * - pos_byte: the byte in the string
      * - pos_byte_sgr_start: the starting position of the last sgr read, really
-     *     only intended to be use din conjuction with 'terminal' so that if we
+     *     only intended to be used in conjuction with 'terminal' so that if we
      *     decide not to write a terminal SGR we know where to stop instead.
      * - pos_ansi: actual character position, different from pos_byte due to
      *   multi-byte characters (i.e. UTF-8)
      * - pos_raw: the character position after we strip the handled ANSI tags,
-     *   the difference with pos_ansi is that pos_ansi counts the escaped
-     *   characters whereas this one does not.
+     *   the difference with pos_ansi is that pos_ansi counts the escape
+     *   sequences whereas this one does not.
      * - pos_width: the character postion accounting for double width
      *   characters, etc., note in this case ASCII escape sequences are treated
      *   as zero chars.  Width is computed mostly with R_nchar.
      *
      * So pos_raw is essentially the character count excluding escapes.
      */
-
     int pos_ansi;
     int pos_raw;
     int pos_width;
@@ -350,8 +349,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      */
     int allowNA;
     int keepNA;
-    // invalid multi-byte char, a bit of duplication with err_code = 9;
-    int nchar_err;
     // what types of Control Sequences should have special treatment.  See
     // `FANSI_ctl_as_int` for the encoding.
     int ctl;

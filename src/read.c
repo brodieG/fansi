@@ -808,14 +808,9 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
     if(state.allowNA) {
       disp_size = NA_INTEGER;
     } else {
-      // nocov start
-      // shouldn't actually be possible to reach this point since in all use
-      // cases we chose to allowNA, except for `nchar_ctl`, which internally
-      // uses `nchar` so would never get here anyway
       error(
         "Invalid multiyte string and index [%jd], %s", FANSI_ind(i), mb_err_str
       );
-      // nocov end
     }
   } else if(state.use_nchar) {  // only true if in width mode
     // Assumes valid UTF-8!
@@ -865,7 +860,6 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
   if(disp_size == NA_INTEGER) {
     state.err_code = 9;
     state.err_msg = "a malformed UTF-8 sequence";
-    state.nchar_err = 1;
     disp_size = byte_size = 1;
   }
   state.pos_byte += byte_size;
@@ -938,14 +932,16 @@ onemoretime:
 
   if(!is_utf8) state.last_ri = 0;  // reset regional indicator
 
-  if(state.warn > 0 && state.err_code) {
-    warning(
-      "Encountered %s at index [%jd], %s%s", state.err_msg, FANSI_ind(i),
-      "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
-      "off these warnings."
-    );
-    state.warn = -state.warn; // only warn once
-  }
+  if(state.warn > 0 && state.err_code > 0) {
+    // allowNA suppresses warning for bad encoding.
+    if(state.err_code != 9 || !state.allowNA) {
+      warning(
+        "Encountered %s at index [%jd], %s%s", state.err_msg, FANSI_ind(i),
+        "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
+        "off these warnings."
+      );
+      state.warn = -state.warn; // only warn once
+  } }
   if(state_prev.last_zwj && state.use_nchar)
     state.pos_width = state_prev.pos_width;
 
