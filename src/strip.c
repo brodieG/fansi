@@ -73,8 +73,8 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
   // Now strip
   int warn_attrib = 0;
   char * chr_buff;
-  // warn can be 2
-  int warn2 = warn_int == 1;
+  // warn can be 2: if so stores warning status an attribute for use elsewhere
+  int warn2 = (warn_int == 1);
 
   for(i = 0; i < len; ++i) {
     FANSI_interrupt(i);
@@ -124,12 +124,9 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
 
           REPROTECT(res_fin = duplicate(x), ipx);
 
-          // Note the is guaranteed to be an over-allocation, as it's the
-          // longest string in the vector.  It should be guaranteed to be no
-          // longer than R_LEN_T_MAX.
-
-          // The character buffer is large enough for the largest element in the
-          // vector, and is re-used for every element in the vector.
+          // Buffer is guaranteed to be an over-allocation, as it fits the
+          // longest string in the vector, re-used for all strings.  It should
+          // be no longer than R_LEN_T_MAX.
 
           chr_buff = (char *) R_alloc(((size_t) mem_req) + 1, sizeof(char));
           res_start = res_track = chr_buff;
