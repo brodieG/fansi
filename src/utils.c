@@ -148,6 +148,7 @@ struct FANSI_ctl_pos FANSI_find_ctl(
 }
 int FANSI_maybe_ctl(const char x) {
   // Controls range from 0000 0001 (0x01) to 0001 1111 (0x1F), plus 0x7F;
+  // We don't treat C1 controls as specials, apparently
   return x && (!(x & (~0x1F)) || x == 0x7F);
 }
 /*
