@@ -24,8 +24,8 @@
  * We rely on struct initialization to set everything else to zero.
  *
  * FANSI_state_init_full is specifically to handle the allowNA case in nchar,
- * for which we MUST check `state.nchar_err` after each `FANSI_read_next`.  In
- * all other cases `R_nchar` shoudl be set to not `allowNA`.
+ * for which we MUST check `state.err_code == 9` after each `FANSI_read_next`.
+ * In all other cases `R_nchar` should be set to not `allowNA`.
  */
 struct FANSI_state FANSI_state_init_full(
   SEXP strsxp, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
@@ -93,6 +93,39 @@ struct FANSI_state FANSI_state_init_full(
     .use_nchar = asInteger(width),  // 0 for chars, 1 for width
     .ctl = FANSI_ctl_as_int(ctl)
   };
+}
+/*
+ * Re-initialize state
+ *
+ * Reduce overhead from revalidating params that are recycled across vector
+ * elements from a single external function call.
+ */
+struct FANSI_state FANSI_state_reinit(
+  struct FANSI_state state, SEXP x, R_xlen_t i
+) {
+  if(i < 0 || i > XLENGTH(x))
+    error(
+      "Internal error: state_init with out of bounds index [%jd] for strsxp.",
+      FANSI_ind(i)
+    );
+  SEXP chrsxp = STRING_ELT(x, i);
+  FANSI_check_chrsxp(chrsxp, i);
+  const char * string = CHAR(chrsxp);
+
+  struct FANSI_state state_reinit;
+  state_reinit = (struct FANSI_state) {
+    .string = string,
+    .warn = state.warn,
+    .term_cap = state.term_cap,
+    .allowNA = state.allowNA,
+    .keepNA = state.keepNA,
+    .use_nchar = state.use_nchar,  // 0 for chars, 1 for width
+    .ctl = state.ctl
+  };
+  state_reinit.string = string;
+  state_reinit.sgr = (struct FANSI_sgr) {.color = -1, .bg_color = -1};
+  state_reinit.sgr_prev = (struct FANSI_sgr) {.color = -1, .bg_color = -1};
+  return state_reinit;
 }
 // When we don't care about R_nchar width, but do care about CSI / SGR (which
 // means, we only really care about SGR since all CSI does is affect width calc).
@@ -164,6 +197,8 @@ struct FANSI_state FANSI_inc_width(
  * element in a character vector to the next.
  *
  * We are not 100% sure we're resetting everything that needs to be reset.
+ *
+ * See also FANSI_state_reinit
  */
 struct FANSI_state FANSI_reset_pos(struct FANSI_state state) {
   state.pos_byte = 0;
@@ -174,6 +209,7 @@ struct FANSI_state FANSI_reset_pos(struct FANSI_state state) {
   state.non_normalized = 0;
   return state;
 }
+
 /*
  * Compute the state given a character position (raw position)
  *
