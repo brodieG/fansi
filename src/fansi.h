@@ -53,10 +53,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   #define FANSI_WARN_ALL    255 // ...0 1111 1111
   #define FANSI_WARN_CSIBAD  80 // ...0 0101 0000
 
-  // symbols
-
-  extern SEXP FANSI_warn_sym;
-
   // macros
 
   #define FANSI_ADD_INT(x, y) FANSI_add_int((x), (y), __FILE__, __LINE__)
@@ -554,7 +550,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_seek_ctl(const char * x);
   int FANSI_maybe_ctl(const char x);
   void FANSI_print(char * x);
-  int FANSI_has_utf8(const char * x);
   void FANSI_interrupt(R_xlen_t i);
   intmax_t FANSI_ind(R_xlen_t i);
   void FANSI_check_chr_size(char * start, char * end, R_xlen_t i);

@@ -27,18 +27,6 @@
  * it.
  */
 
-// Check whether any bytes are greater than 127; doesn't really actually confirm
-// this is UTF8. Note, char may be signed, so > 127 means < 0.
-
-int FANSI_has_utf8(const char * x) {
-  while(*x) {
-    if(*x < 0 || *x > 127) {
-      return 1;
-    }
-    x++;
-  }
-  return 0;
-}
 // nocov start (not needed, use i10n_info!)
 int FANSI_is_utf8_loc() {
   error("Current not in use");

@@ -24,12 +24,6 @@
  *
  * Since we do not use FANSI_read_next, we don't care about conversions to
  * UTF8.
- *
- * @param warn normally TRUE or FALSE, but internally we allow it to be an
- *   integer so that we can use a special mode where if == 2 then we return the
- *   fact that there was a warning as an attached attributed, as opposed to
- *   actually throwing the warning, used by e.g. make_pre and other internal
- *   functions.
  */
 
 SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
@@ -43,9 +37,11 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
   )
     error("Internal Error: `warn` should be TRUE or FALSE");  // nocov
 
-  int warn_raw = asInteger(warn);
-  if(warn_raw < 0 || warn_raw > 2)
-    error("Argument `warn` must be between 0 and 2 if an integer.");  // nocov
+  // We used to allow warn = 2 to indicate that warning status should be
+  // returned as an attributes, but got rid of that.
+  int warn_int = asInteger(warn);
+  if(warn_int < 0 || warn_int > 1)
+    error("Argument `warn` must be between 0 and 1 if an integer.");  // nocov
 
   R_xlen_t i, len = xlength(x);
   SEXP res_fin = x;
@@ -71,10 +67,8 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     if(chr_len > mem_req) mem_req = chr_len;
   }
   // Now strip
-  int warn_attrib = 0;
   char * chr_buff;
-  // warn can be 2: if so stores warning status an attribute for use elsewhere
-  int warn_int = (warn_raw == 1) * FANSI_WARN_CSIBAD;
+  int warn_int = warn_int * FANSI_WARN_CSIBAD;
 
   for(i = 0; i < len; ++i) {
     FANSI_interrupt(i);
@@ -90,7 +84,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     // We re-use the allocated buffer for every string in the character
     // vector, which is why we re-assign to chr_buff here.  chr_buff will be
     // allocated in the loop below the first time it is needed, but we need to
-    // re-assign re_start / res_track .
+    // re-assign re_start / res_track.
 
     res_start = res_track = chr_buff;
 
@@ -106,11 +100,11 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     state.pos_byte = off_init;
     // Rprintf("init %d\n", off_init);
     struct FANSI_ctl_pos pos_prev = {0, 0, 0, 0};
+    int warn_tmp = warn_int;
 
     while(1) {
-      struct FANSI_ctl_pos pos = FANSI_find_ctl(state, warn2, i, 0);
-      warn_attrib = warn_attrib > pos.warn_max ? warn_attrib : pos.warn_max;
-      if(pos.warn) warn2 = 0;
+      struct FANSI_ctl_pos pos = FANSI_find_ctl(state, warn_tmp, i, 0);
+      if(pos.warn_max) warn_tmp = 0;
       if(pos.len) {
         has_ansi = 1;
 
@@ -170,11 +164,6 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
       SET_STRING_ELT(res_fin, i, chr_sexp);
       UNPROTECT(1);
     }
-  }
-  if(warn_attrib && warn_int == 2) {
-    SEXP attrib_val = PROTECT(ScalarLogical(warn_attrib));
-    setAttrib(res_fin, FANSI_warn_sym, attrib_val);
-    UNPROTECT(1);
   }
   UNPROTECT(1);
   return res_fin;
