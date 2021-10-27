@@ -48,21 +48,21 @@ SEXP FANSI_nchar(
 
   for(R_xlen_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
+    if(!i) {
+      state = FANSI_state_init_full(
+        x, warn, term_cap, allowNA, keepNA, type, ctl, i
+      );
+      warn_int = state.warn = state.warn & FANSI_WARN_CSIBAD;
+    } else {
+      state = FANSI_state_reinit(state, x, i);
+      state.warn = warn_int;
+    }
     if(STRING_ELT(x, i) == R_NaString) {
       // NA case, see ?nchar
       if(keepNA_int == 1 || (keepNA_int == NA_INTEGER && !type_int)) {
         resi[i] = zz ? NA_LOGICAL : NA_INTEGER;
       } else resi[i] = zz ? 1 : 2;
     } else {
-      if(!i) {
-        state = FANSI_state_init_full(
-          x, warn, term_cap, allowNA, keepNA, type, ctl, i
-        );
-        warn_int = state.warn = state.warn & FANSI_WARN_CSIBAD;
-      } else {
-        state = FANSI_state_reinit(state, x, i);
-        state.warn = warn_int;
-      }
       while(state.string[state.pos_byte]) {
         state = FANSI_read_next(state, i, 1);
         // early exits
