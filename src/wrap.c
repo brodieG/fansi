@@ -40,13 +40,11 @@ struct FANSI_prefix_dat {
 static struct FANSI_prefix_dat make_pre(
   SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, const char * arg
 ) {
-  const char * x_utf8 = CHAR(chrsxp);
   int prt = 0;
 
   SEXP R1 = PROTECT(ScalarInteger(1)); prt++;
   SEXP Rfalse = PROTECT(ScalarLogical(0)); prt++;
   SEXP Rtrue = PROTECT(ScalarLogical(1)); prt++;
-  SEXP type = R1;
   SEXP keepNA = Rtrue;
   SEXP allowNA = Rtrue;
   SEXP warn2 = Rfalse;
@@ -56,20 +54,21 @@ static struct FANSI_prefix_dat make_pre(
     x, warn2, term_cap, allowNA, keepNA, width, ctl, 0
   );
   while(state.string[state.pos_byte]) {
-    state = FANSI_read_next(state);
+    state = FANSI_read_next(state, 0, 1);
     if(state.err_code == 9) error("`%s` contains %s.", arg, state.err_msg);
     else if(asLogical(warn) && state.err_code) {
       warning(
         "`%s` contains %s. %s%s", arg, state.err_msg,
         "See `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
         "off these warnings."
-  ) } }
+      );
+  } }
   UNPROTECT(prt);
   return (struct FANSI_prefix_dat) {
-    .string=x_utf8,
+    .string=state.string,
     .width=state.pos_width,
     .bytes=state.pos_byte,
-    .has_utf8=state.pos_ansi < state.pos_byte;,
+    .has_utf8=state.pos_ansi < state.pos_byte,
     .indent=0
   };
 }
@@ -574,7 +573,6 @@ SEXP FANSI_strwrap_ext(
 
   int indent_int = asInteger(indent);
   int exdent_int = asInteger(exdent);
-  int warn_int = asInteger(warn);
   int first_only_int = asInteger(first_only);
 
   if(indent_int < 0 || exdent_int < 0)
@@ -582,8 +580,6 @@ SEXP FANSI_strwrap_ext(
 
   pre_dat_raw = make_pre(prefix, warn, term_cap, ctl, "prefix");
 
-  const char * warn_base =
-    "`%s` contains unhandled ctrl or UTF-8 sequences (see `?unhandled_ctl`).";
   if(prefix != initial) {
     ini_dat_raw = make_pre(initial, warn, term_cap, ctl, "initial");
   } else ini_dat_raw = pre_dat_raw;

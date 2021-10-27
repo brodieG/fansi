@@ -480,7 +480,7 @@ static struct FANSI_state read_esc(struct FANSI_state state, int seq) {
     );
     // nocov end
 
-  int err_code = 0;                       // track worst error code
+  unsigned int err_code = 0;           // track worst error code
   int seq_start = state.pos_byte;
   int non_normalized = 0;
   unsigned int esc_types = 0;          // 1 == normal, 2 == SGR

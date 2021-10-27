@@ -43,7 +43,6 @@ SEXP FANSI_nchar(
 
   SEXP res = PROTECT(allocVector(zz ? LGLSXP : INTSXP, x_len));
   int * resi = zz ? LOGICAL(res) : INTEGER(res);
-  int warned = 0;
 
   struct FANSI_state state;
 
