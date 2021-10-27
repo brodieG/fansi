@@ -104,7 +104,6 @@ SEXP FANSI_add_int_ext(SEXP x, SEXP y) {
  * @param one_only give up after a single failed attempt, otherwise keep going
  *   until a recognized control sequence is found.
  */
-
 struct FANSI_ctl_pos FANSI_find_ctl(
   struct FANSI_state state, R_xlen_t i, int one_only
 ) {

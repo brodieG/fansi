@@ -486,7 +486,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   int FANSI_utf8clen(char c);
   int FANSI_valid_utf8(const char * chr, int bytes);
-  int FANSI_is_utf8_loc();
   int FANSI_utf8_to_cp(const char * chr, int bytes);
   int FANSI_digits_in_int(int x);
   struct FANSI_string_as_utf8 FANSI_string_as_utf8(SEXP x);
