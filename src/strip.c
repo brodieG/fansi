@@ -59,20 +59,26 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
 
   for(i = 0; i < len; ++i) {
     FANSI_interrupt(i);
-    SEXP x_chr = STRING_ELT(x, i);
-    FANSI_check_chrsxp(x_chr, i);
     R_len_t chr_len = LENGTH(STRING_ELT(x, i));
     if(chr_len > mem_req) mem_req = chr_len;
   }
   // Now strip
   char * chr_buff;
-  int warn_int = warn_int * FANSI_WARN_CSIBAD;
+  struct FANSI_state state;
 
   for(i = 0; i < len; ++i) {
-    FANSI_interrupt(i);
+    if(!i) {
+      // Now full check
+      SEXP R_false = PROTECT(ScalarLogical(0));
+      state = FANSI_state_init_ctl(x, R_false, ctl, i);
+      state.warn = warn_int;
+    } else {
+      state = FANSI_state_reinit(state, x, i);
+      state.warn = warn_int;
+    }
     SEXP x_chr = STRING_ELT(x, i);
     if(x_chr == NA_STRING) continue;
-    FANSI_check_chrsxp(x_chr, i);
+    FANSI_interrupt(i);
 
     int has_ansi = 0;
     const char * chr = CHAR(x_chr);
