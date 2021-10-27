@@ -32,16 +32,14 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
   if(TYPEOF(ctl) != INTSXP)
     error("Internal Error: `ctl` should integer.");      // nocov
   if(
-    (TYPEOF(warn) != LGLSXP && TYPEOF(warn) != INTSXP) || XLENGTH(warn) != 1 ||
+    TYPEOF(warn) != LGLSXP || XLENGTH(warn) != 1 ||
     INTEGER(warn)[0] == NA_INTEGER
   )
     error("Internal Error: `warn` should be TRUE or FALSE");  // nocov
 
   // We used to allow warn = 2 to indicate that warning status should be
   // returned as an attributes, but got rid of that.
-  int warn_int = asInteger(warn);
-  if(warn_int < 0 || warn_int > 1)
-    error("Argument `warn` must be between 0 and 1 if an integer.");  // nocov
+  int warn_int = asLogical(warn) * FANSI_WARN_CSIBAD;
 
   R_xlen_t i, len = xlength(x);
   SEXP res_fin = x;
@@ -93,18 +91,12 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     int off_init = FANSI_seek_ctl(chr);
     if(!*(chr + off_init)) continue;
 
-    // Now full check
-    SEXP R_false = PROTECT(ScalarLogical(0));
-    struct FANSI_state state = FANSI_state_init_ctl(x, R_false, ctl, i);
-    UNPROTECT(1);
     state.pos_byte = off_init;
     // Rprintf("init %d\n", off_init);
-    struct FANSI_ctl_pos pos_prev = {0, 0, 0, 0};
-    int warn_tmp = warn_int;
+    struct FANSI_ctl_pos pos_prev = {0, 0, 0};
 
     while(1) {
-      struct FANSI_ctl_pos pos = FANSI_find_ctl(state, warn_tmp, i, 0);
-      if(pos.warn_max) warn_tmp = 0;
+      struct FANSI_ctl_pos pos = FANSI_find_ctl(state, i, 0);
       if(pos.len) {
         has_ansi = 1;
 

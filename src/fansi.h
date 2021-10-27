@@ -458,7 +458,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   );
 
   struct FANSI_ctl_pos FANSI_find_ctl(
-    struct FANSI_state state, int warn, R_xlen_t i, int one_only
+    struct FANSI_state state, R_xlen_t i, int one_only
   );
 
   struct FANSI_state FANSI_inc_width(

@@ -106,7 +106,7 @@ SEXP FANSI_add_int_ext(SEXP x, SEXP y) {
  */
 
 struct FANSI_ctl_pos FANSI_find_ctl(
-  struct FANSI_state state, int warn, R_xlen_t i, int one_only
+  struct FANSI_state state, R_xlen_t i, int one_only
 ) {
   int raw_prev, pos_prev, found, err_prev;
   unsigned int warn_max = 0;
