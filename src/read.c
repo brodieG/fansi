@@ -932,16 +932,14 @@ onemoretime:
 
   if(!is_utf8) state.last_ri = 0;  // reset regional indicator
 
-  if(state.warn > 0 && state.err_code > 0) {
-    // allowNA suppresses warning for bad encoding.
-    if(state.err_code != 9 || !state.allowNA) {
-      warning(
-        "Encountered %s at index [%jd], %s%s", state.err_msg, FANSI_ind(i),
-        "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
-        "off these warnings."
-      );
-      state.warn = -state.warn; // only warn once
-  } }
+  if(state.err_code && (state.warn & 1U << (state.err_code - 1U))) {
+    warning(
+      "Encountered %s at index [%jd], %s%s", state.err_msg, FANSI_ind(i),
+      "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
+      "off these warnings."
+    );
+    state.warn = 0U;  // only warn once
+  }
   if(state_prev.last_zwj && state.use_nchar)
     state.pos_width = state_prev.pos_width;
 

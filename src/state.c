@@ -86,7 +86,7 @@ struct FANSI_state FANSI_state_init_full(
     .sgr = (struct FANSI_sgr) {.color = -1, .bg_color = -1},
     .sgr_prev = (struct FANSI_sgr) {.color = -1, .bg_color = -1},
     .string = string,
-    .warn = asLogical(warn),
+    .warn = asLogical(warn) * FANSI_WARN_ALL,
     .term_cap = FANSI_term_cap_as_int(term_cap),
     .allowNA = asLogical(allowNA),
     .keepNA = asLogical(keepNA),

@@ -43,8 +43,8 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
   )
     error("Internal Error: `warn` should be TRUE or FALSE");  // nocov
 
-  int warn_int = asInteger(warn);
-  if(warn_int < 0 || warn_int > 2)
+  int warn_raw = asInteger(warn);
+  if(warn_raw < 0 || warn_raw > 2)
     error("Argument `warn` must be between 0 and 2 if an integer.");  // nocov
 
   R_xlen_t i, len = xlength(x);
@@ -74,7 +74,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
   int warn_attrib = 0;
   char * chr_buff;
   // warn can be 2: if so stores warning status an attribute for use elsewhere
-  int warn2 = (warn_int == 1);
+  int warn_int = (warn_raw == 1) * FANSI_WARN_CSIBAD;
 
   for(i = 0; i < len; ++i) {
     FANSI_interrupt(i);

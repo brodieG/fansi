@@ -49,6 +49,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   #define FANSI_TERM_256 2
   #define FANSI_TERM_TRUECOLOR 4
 
+  // WARN_ALL excludes error_code = 9 as that is handled as an error
+  #define FANSI_WARN_ALL    255 // ...0 1111 1111
+  #define FANSI_WARN_CSIBAD  80 // ...0 0101 0000
+
   // symbols
 
   extern SEXP FANSI_warn_sym;
@@ -113,10 +117,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int offset;
     // how many characters to the end of the sequnce
     int len;
-    // Whethaer a warning was issued (or would have been issued)
-    int warn;
-    // Max warning encountered, whether issued or not
-    int warn_max;
+    // Warnings encounted, encoded "bitwise" as with FANSI_state.warn
+    unsigned int warn_max;
   };
   /*
    * Encode Active SGR
@@ -304,21 +306,23 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     /*
      * Type of failure
      *
-     * * 0: no error
-     * * 1: well formed csi sgr, but contains uninterpretable sub-strings, if a
-     *      CSI sequence is not fully parsed yet (i.e. last char not read) it is
-     *      assumed to be SGR until we read the final code.
-     * * 2: well formed csi sgr, but contains uninterpretable characters [:<=>]
-     * * 3: well formed csi sgr, but contains color codes that exceed terminal
-     *     capabilities
-     * * 4: well formed csi, but not an SGR
-     * * 5: malformed csi
-     * * 6: other escape sequence
-     * * 7: malformed escape
-     * * 8: c0 escapes
-     * * 9: malformed UTF8
+     * *  0: no error
+     * *  1: well formed csi sgr, but contains uninterpretable sub-strings, if a
+     *       CSI sequence is not fully parsed yet (i.e. last char not read) it is
+     *       assumed to be SGR until we read the final code.
+     * *  2: well formed csi sgr, but contains uninterpretable characters [:<=>]
+     * *  3: well formed csi sgr, but contains color codes that exceed terminal
+     *      capabilities
+     * *  4: well formed csi, but not an SGR
+     * *  5: malformed csi
+     * *  6: other escape sequence
+     * *  7: malformed escape
+     * *  8: c0 escapes
+     * *  9: malformed UTF8
+     * * ..: unused
+     * * 32: unused, max error code allowable.
      */
-    int err_code;
+    unsigned int err_code;
     /*
      * Terminal capabilities
      *
@@ -335,9 +339,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     // really intended to be internal.  It's really only meaningful when
     // `state.last` is true.
     int is_sgr;
-    // Whether to issue warnings if err_code is non-zero, if -1 means that the
-    // warning was issued at least once so may not need to be re-issued
-    int warn;
+    // Whether to issue warnings if err_code is non-zero.  Warnings are issued
+    // if warn & (1 << (err_code - 1)) is set.  `read_next` will reset warnings
+    // to zero after emitting them.
+    unsigned int warn;
     // Whether to use R_nchar, really only needed when we're doing things in
     // width mode
     int use_nchar;
@@ -345,7 +350,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int non_normalized;
 
     /*
-     * These support the arguments of the same names for nchar
+     * These support the arguments of the same names for nchars.  allowNA means
+     * that the normal errors caused by invalid UTF-8 encoding are suppressed.
+     * If running with `allowNA` the code must check for err_code == 9 (bad
+     * UTF-8) after each `read_next` call to ensure it does not keep reading
+     * after a bad "UTF-8".
      */
     int allowNA;
     int keepNA;

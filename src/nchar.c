@@ -37,12 +37,10 @@ SEXP FANSI_nchar(
   int keepNA_int = asInteger(keepNA);
   int type_int = asInteger(type);
   int zz = asInteger(z);
+  unsigned int warn_int = 0;
 
   R_xlen_t x_len = XLENGTH(x);
 
-  // Handle wrnings explicitly as we have a different threshold for warning with
-  // nchar than with normal reading.
-  SEXP warn2 = PROTECT(ScalarLogical(0));
   SEXP res = PROTECT(allocVector(zz ? LGLSXP : INTSXP, x_len));
   int * resi = zz ? LOGICAL(res) : INTEGER(res);
   int warned = 0;
@@ -59,10 +57,12 @@ SEXP FANSI_nchar(
     } else {
       if(!i) {
         state = FANSI_state_init_full(
-          x, warn2, term_cap, allowNA, keepNA, type, ctl, i
+          x, warn, term_cap, allowNA, keepNA, type, ctl, i
         );
+        warn_int = state.warn = state.warn & FANSI_WARN_CSIBAD;
       } else {
         state = FANSI_state_reinit(state, x, i);
+        state.warn = warn_int;
       }
       while(state.string[state.pos_byte]) {
         state = FANSI_read_next(state, i, 1);
@@ -82,9 +82,6 @@ SEXP FANSI_nchar(
         resi[i] = state.pos_raw;
       } else {                      // "width", "grapheme" modes
         resi[i] = state.pos_width;
-      }
-      if(state.err_code ) {
-
       }
   } }
   UNPROTECT(2);
