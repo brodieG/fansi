@@ -71,6 +71,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
       // Now full check
       SEXP R_false = PROTECT(ScalarLogical(0));
       state = FANSI_state_init_ctl(x, R_false, ctl, i);
+      UNPROTECT(1);
       state.warn = warn_int;
     } else {
       state = FANSI_state_reinit(state, x, i);
