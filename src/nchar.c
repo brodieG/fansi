@@ -58,8 +58,11 @@ SEXP FANSI_nchar(
       state.warn = warn_int;
     }
     if(STRING_ELT(x, i) == R_NaString) {
-      // NA case, see ?nchar
-      if(keepNA_int == 1 || (keepNA_int == NA_INTEGER && !type_int)) {
+      // NA case, see ?nchar, note nzchar behavior is incorrectly doc'ed
+      if(
+        keepNA_int == 1 ||
+        (keepNA_int == NA_LOGICAL && !type_int && !zz)
+      ) {
         resi[i] = zz ? NA_LOGICAL : NA_INTEGER;
       } else resi[i] = zz ? 1 : 2;
     } else {
