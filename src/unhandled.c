@@ -53,8 +53,12 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
     SEXP chrsxp = STRING_ELT(x, i);
 
     if(chrsxp != NA_STRING && LENGTH(chrsxp)) {
+      SEXP allowNA, keepNA, width;
+      allowNA = keepNA = R_true;
+      width = R_one;
+
       struct FANSI_state state = FANSI_state_init_full(
-        x, no_warn, term_cap, R_true, R_true, R_one, ctl_all, i
+        x, no_warn, term_cap, allowNA, keepNA, width, ctl_all, i
       );
       int has_errors = 0;
 

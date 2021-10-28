@@ -69,8 +69,8 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
   for(i = 0; i < len; ++i) {
     if(!i) {
       // Now full check
-      SEXP R_false = PROTECT(ScalarLogical(0));
-      state = FANSI_state_init_ctl(x, R_false, ctl, i);
+      SEXP warn = PROTECT(ScalarLogical(0));
+      state = FANSI_state_init_ctl(x, warn, ctl, i);
       UNPROTECT(1);
       state.warn = warn_int;
     } else {
@@ -202,9 +202,13 @@ SEXP FANSI_process(
   R_xlen_t len = XLENGTH(res);
   for(R_xlen_t i = 0; i < len; ++i) {
     FANSI_interrupt(i);
-    // Don't warn - we don't modify or interpret sequences
+    // Don't warn - we don't modify or interpret sequences.  This allows bad
+    // UTF-8 through.
+    SEXP allowNA, keepNA, width;
+    allowNA = keepNA = R_true;
+    width = R_zero;
     struct FANSI_state state = FANSI_state_init_full(
-      input, R_false, term_cap, R_true, R_true, R_zero, ctl, i
+      input, R_false, term_cap, allowNA, keepNA, width, ctl, i
     );
     const char * string = state.string;
     const char * string_start = string;

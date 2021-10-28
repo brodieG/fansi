@@ -113,8 +113,11 @@ SEXP FANSI_tabs_as_spaces(
 
       SEXP R_true = PROTECT(ScalarLogical(1));
       SEXP R_one = PROTECT(ScalarInteger(1));
+      SEXP keepNA, allowNA, width;
+      keepNA = allowNA = R_true;
+      width = R_one;
       struct FANSI_state state = FANSI_state_init_full(
-        vec, warn, term_cap, R_true, R_true, R_one, ctl, i
+        vec, warn, term_cap, allowNA, keepNA, width, ctl, i
       );
       UNPROTECT(2);
 
