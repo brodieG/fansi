@@ -84,7 +84,7 @@ VAL_IN_ENV <- function(...) {
       c(
         'x', 'warn', 'term.cap', 'ctl', 'normalize', 'carry', 'terminate',
         'tab.stops', 'tabs.as.spaces', 'strip.spaces', 'round', 'type',
-        'start', 'stop'
+        'start', 'stop', 'keepNA', 'allowNA'
   ) ) )
     stop("Internal Error: some arguments to validate unknown")
 
@@ -198,10 +198,10 @@ VAL_IN_ENV <- function(...) {
     args[['ROUND.INT']] <- round.int
   }
   if('type' %in% argnm) {
-    valid.types <- c('chars', 'width')
+    valid.types <- c('chars', 'width', 'bytes')
     type <- args[['type']]
     if(
-      !is.character(type) || length(type) != 1 ||
+      !is.character(type) || length(type) != 1 || is.na(type) ||
       is.na(type.int <- pmatch(type, valid.types))
     )
       stop2("Argument `type` must partial match one of ", deparse(valid.types))
@@ -218,6 +218,19 @@ VAL_IN_ENV <- function(...) {
     args[['start']] <- start
     args[['stop']] <- stop
     args[['X.LEN']] <- x.len
+  }
+  if('keepNA' %in% argnm) {
+    keepNA <- as.logical(args[['keepNA']])
+    if(length(keepNA) != 1L)
+      stop2("Argument `keepNA` must be a scalar logical.")
+    args[['keepNA']] <- keepNA
+  }
+  if('allowNA' %in% argnm) {
+    allowNA <- as.logical(args[['allowNA']])
+    if(!is.logical(allowNA)) allowNA <- as.logical(allowNA)
+    if(length(allowNA) != 1L)
+      stop2("Argument `allowNA` must be a scalar logical.")
+    args[['allowNA']] <- isTRUE(allowNA)
   }
   # we might not have validated all, so we should be careful
   list2env(args, par.env)

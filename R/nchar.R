@@ -44,7 +44,7 @@
 #' ## Remember newlines are not counted by default
 #' nchar_ctl("\t\n\r")
 #'
-#' ## The 'c0' value for the `ctl` argument does not include 
+#' ## The 'c0' value for the `ctl` argument does not include
 #' ## newlines.
 #' nchar_ctl("\t\n\r", ctl="c0")
 #' nchar_ctl("\t\n\r", ctl=c("c0", "nl"))
@@ -64,47 +64,35 @@ nchar_ctl <- function(
     message("Parameter `strip` has been deprecated; use `ctl` instead.")
     ctl <- strip
   }
+  ## modifies / creates NEW VARS in fun env
+  VAL_IN_ENV(x=x, ctl=ctl, warn=warn, type=type, allowNA=allowNA, keepNA=keepNA)
+
   nchar_ctl_internal(
-    x=x, type=type, allowNA=allowNA, keepNA=keepNA, ctl=ctl, warn=warn,
-    z=FALSE
+    x=x, type.int=TYPE.INT, allowNA=allowNA, keepNA=keepNA, ctl.int=CTL.INT,
+    warn=warn, z=FALSE
   )
 }
 #' @export
 #' @rdname nchar_ctl
 
 nzchar_ctl <- function(
-  x, keepNA=NA, ctl='all', warn=getOption('fansi.warn', TRUE)
+  x, keepNA=FALSE, ctl='all', warn=getOption('fansi.warn', TRUE)
 ) {
+  ## modifies / creates NEW VARS in fun env
+  VAL_IN_ENV(x=x, ctl=ctl, warn=warn, type='chars', keepNA=keepNA)
   nchar_ctl_internal(
-    x=x, type=type, allowNA=TRUE, keepNA=keepNA, ctl=ctl, warn=warn,
-    z=FALSE
+    x=x, type.int=TYPE.INT, allowNA=TRUE, keepNA=keepNA, ctl.int=CTL.INT,
+    warn=warn, z=TRUE
   )
 }
-
-nchar_ctl_internal <- function(
-  x, type='chars', allowNA=FALSE, keepNA=NA, ctl='all',
-  warn=getOption('fansi.warn', TRUE), z, strip
-) {
-  if(!is.logical(allowNA)) allowNA <- as.logical(allowNA)
-  if(length(allowNA) != 1L)
-    stop("Argument `allowNA` must be a scalar logical.")
-
-  if(!is.logical(keepNA)) keepNA <- as.logical(keepNA)
-  if(length(keepNA) != 1L)
-    stop("Argument `keepNA` must be a scalar logical.")
-
-  ## modifies / creates NEW VARS in fun env
-  VAL_IN_ENV(x=x, ctl=ctl, warn=warn, type=type)
-
-  TERM.CAP.INT <- 1L
-  z <- FALSE
-
+nchar_ctl_internal <- function(x, type.int, allowNA, keepNA, ctl.int, warn, z) {
+  term.cap.int <- 1L
   R.ver.gte.3.2.2 <- R.ver.gte.3.2.2 # "import" symbol from namespace
   if(R.ver.gte.3.2.2)
     .Call(
       FANSI_nchar_esc,
-      x, TYPE.INT, keepNA, allowNA,
-      warn, TERM.CAP.INT, CTL.INT, z
+      x, type.int, keepNA, allowNA,
+      warn, term.cap.int, ctl.int, z
     )
   else nchar(stripped, type=type, allowNA=allowNA) # nocov
 }
