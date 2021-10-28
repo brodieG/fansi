@@ -57,6 +57,8 @@ static struct FANSI_prefix_dat make_pre(
     state = FANSI_read_next(state, 0, 1);
     if(state.err_code == 9) error("`%s` contains %s.", arg, state.err_msg);
     else if(asLogical(warn) && state.err_code) {
+      // We don't use internal warning because we want to be able to provide the
+      // argument name.
       warning(
         "`%s` contains %s. %s%s", arg, state.err_msg,
         "See `?unhandled_ctl`; you can use `warn=FALSE` to turn ",

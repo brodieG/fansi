@@ -312,7 +312,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * *  4: well formed csi, but not an SGR
      * *  5: malformed csi
      * *  6: other escape sequence
-     * *  7: malformed escape
+     * *  7: malformed escape (e.g. string ending in ESC).
      * *  8: c0 escapes
      * *  9: malformed UTF8
      * * ..: unused

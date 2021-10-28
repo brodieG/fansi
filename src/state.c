@@ -520,7 +520,7 @@ SEXP FANSI_state_at_pos_ext(
   * IMPORTANT: INPUT MUST ALREADY BE IN UTF8! *
   \*******************************************/
 
-  // errors shoudl be handled R side, but just in case
+  // errors should be handled R side, but just in case
   if(XLENGTH(x) != 1 || STRING_ELT(x, 0) == NA_STRING)
     error("Argument `x` must be scalar character and not be NA.");   // nocov
   if(
