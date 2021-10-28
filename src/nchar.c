@@ -34,14 +34,15 @@ SEXP FANSI_nchar(
   if(TYPEOF(type) != INTSXP || XLENGTH(type) != 1)
     error("Internal error: `type` type error; contact maintainer"); // nocov
 
-  int keepNA_int = asInteger(keepNA);
+  int prt = 0;
+  int keepNA_int = asLogical(keepNA);
   int type_int = asInteger(type);
-  int zz = asInteger(z);
+  int zz = asLogical(z);
   unsigned int warn_int = 0;
 
   R_xlen_t x_len = XLENGTH(x);
 
-  SEXP res = PROTECT(allocVector(zz ? LGLSXP : INTSXP, x_len));
+  SEXP res = PROTECT(allocVector(zz ? LGLSXP : INTSXP, x_len)); prt++;
   int * resi = zz ? LOGICAL(res) : INTEGER(res);
 
   struct FANSI_state state;
@@ -72,7 +73,7 @@ SEXP FANSI_nchar(
         if((zz && state.pos_raw) || state.err_code == 9) break;
       }
       if(zz) {  // nzchar mode
-        resi[i] = !state.pos_raw;
+        resi[i] = state.pos_raw > 0;
       } else if (state.err_code == 9) {
         if(state.allowNA) {
           resi[i] = zz ? NA_LOGICAL : NA_INTEGER;
@@ -86,6 +87,6 @@ SEXP FANSI_nchar(
         resi[i] = state.pos_width;
       }
   } }
-  UNPROTECT(2);
+  UNPROTECT(prt);
   return res;
 }

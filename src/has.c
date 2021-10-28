@@ -50,8 +50,9 @@ SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn) {
       if(xc + off_init) {
         state.pos_byte = off_init;
         struct FANSI_ctl_pos pos = FANSI_find_ctl(state, i, 0);
-        res_int[i] = pos.len > 0;
-      } else res_int[i] = 0;
+        res = pos.len > 0;
+      }
+      res_int[i] = res;
     } else {
       res_int[i] = NA_LOGICAL;
     }
