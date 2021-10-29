@@ -104,19 +104,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
 
     while(1) {
       struct FANSI_ctl_pos pos = FANSI_find_ctl(state, i, 0);
-      if(pos.warn_max && state.warn) {
-        state.warn = 0U;
-        // We chose to issue warnings about bad UTF-8 encoding.  This would be
-        // better to re use warning messages for consistency.
-        if(pos.warn_max & (1U << (9U - 1U))) {
-          warning(
-            "Encountered %s at index [%jd], %s%s",
-            "a malformed UTF-8 sequence", FANSI_ind(i),
-            "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
-            "off these warnings."
-          );
-        }
-      }
+      if(pos.warn_max && state.warn) state.warn = 0U;
       if(pos.len) {
         has_ansi = 1;
 
