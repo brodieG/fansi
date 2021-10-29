@@ -594,8 +594,12 @@ SEXP FANSI_state_at_pos_ext(
   char * empty = "";
   SEXP res_chr, res_chr_prev =
     PROTECT(FANSI_mkChar0(empty, empty, CE_NATIVE, (R_xlen_t) 0)); ++prt;
+
+  SEXP allowNA, keepNA;
+  allowNA = keepNA = R_true;
+
   struct FANSI_state state = FANSI_state_init_full(
-    x, warn, term_cap, R_true, R_true, type, ctl, (R_xlen_t) 0
+    x, warn, term_cap, allowNA, keepNA, type, ctl, (R_xlen_t) 0
   );
   struct FANSI_state state_prev = state;
   struct FANSI_state_pair state_pair = {state, state_prev};
