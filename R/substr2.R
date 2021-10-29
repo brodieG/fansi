@@ -238,7 +238,8 @@ substr2_ctl <- function(
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
     carry=carry, terminate=terminate, tab.stops=tab.stops,
     tabs.as.spaces=tabs.as.spaces, type=type, round=round,
-    start=start, stop=stop
+    start=start, stop=stop,
+    valid.types=c('chars', 'width')
   )
   res <- x
   no.na <- !(is.na(x) | is.na(start & stop))
@@ -292,7 +293,8 @@ substr2_ctl <- function(
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
     carry=carry, terminate=terminate, tab.stops=tab.stops,
     tabs.as.spaces=tabs.as.spaces, round=round, start=start, stop=stop,
-    type=type
+    type=type,
+    valid.types=c('chars', 'width')
   )
   # Need to translate start/stop and remap round
   round.a <- switch(

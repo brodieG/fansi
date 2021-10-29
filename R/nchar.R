@@ -65,7 +65,10 @@ nchar_ctl <- function(
     ctl <- strip
   }
   ## modifies / creates NEW VARS in fun env
-  VAL_IN_ENV(x=x, ctl=ctl, warn=warn, type=type, allowNA=allowNA, keepNA=keepNA)
+  VAL_IN_ENV(
+    x=x, ctl=ctl, warn=warn, type=type, allowNA=allowNA, keepNA=keepNA,
+    valid.types=c('chars', 'width', 'bytes')
+  )
 
   nchar_ctl_internal(
     x=x, type.int=TYPE.INT, allowNA=allowNA, keepNA=keepNA, ctl.int=CTL.INT,
@@ -79,7 +82,10 @@ nzchar_ctl <- function(
   x, keepNA=FALSE, ctl='all', warn=getOption('fansi.warn', TRUE)
 ) {
   ## modifies / creates NEW VARS in fun env
-  VAL_IN_ENV(x=x, ctl=ctl, warn=warn, type='chars', keepNA=keepNA)
+  VAL_IN_ENV(
+    x=x, ctl=ctl, warn=warn, type='chars', keepNA=keepNA,
+    valid.types=c('chars', 'width', 'bytes')
+  )
   nchar_ctl_internal(
     x=x, type.int=TYPE.INT, allowNA=TRUE, keepNA=keepNA, ctl.int=CTL.INT,
     warn=warn, z=TRUE

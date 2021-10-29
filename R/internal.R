@@ -72,7 +72,9 @@ bridge <- function(
 ## DANGER: will modify values in calling environment!  Also may add variables
 ## such as CTL.INT, X.LEN, etc. (these should all be in caps).
 
-VAL_IN_ENV <- function(...) {
+VAL_IN_ENV <- function(
+  ..., valid.types=c('chars', 'width')
+) {
   call <- sys.call(-1)
   par.env <- parent.frame()
   stop2 <- function(...) stop(simpleError(paste0(..., collapse=""), call))
@@ -84,7 +86,10 @@ VAL_IN_ENV <- function(...) {
       c(
         'x', 'warn', 'term.cap', 'ctl', 'normalize', 'carry', 'terminate',
         'tab.stops', 'tabs.as.spaces', 'strip.spaces', 'round', 'type',
-        'start', 'stop', 'keepNA', 'allowNA'
+        'start', 'stop', 'keepNA', 'allowNA',
+
+        # meta parameters (i.e. internal parameters)
+        'valid.types'    # nchar and substr allow different things
   ) ) )
     stop("Internal Error: some arguments to validate unknown")
 
@@ -198,7 +203,6 @@ VAL_IN_ENV <- function(...) {
     args[['ROUND.INT']] <- round.int
   }
   if('type' %in% argnm) {
-    valid.types <- c('chars', 'width', 'bytes')
     type <- args[['type']]
     if(
       !is.character(type) || length(type) != 1 || is.na(type) ||
