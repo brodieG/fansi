@@ -2,9 +2,23 @@
 
 These are internal developer notes.
 
+## Immediate Next Steps
+
 ## Todo
 
-* `substr` and carry don't work correctly (see `carry` notes)
+* Change the `warn` business to be more compatible with reinit, in particular we
+  might want a `warned` field (warn_max?) to know when not to issue warnings
+  anymore so that we can retain the warning level info when we re-init.
+  Otherwise the semantics of the `warn` argument are different than others e.g.
+  `term_cap` wrt to reinit (see below point).
+
+* state init should allow specification of a warning mask (see above point).
+
+* Would be nice if `read_next` warnings gave the parameter name, but that means
+  we need to pass it in everywhere.  Could be a NULL default maybe?
+
+* Check whether `bridge` (and others?) could be switched to
+  `FANSI_state_reinit`.
 
 * Get rid of all the Rprintf.
 
@@ -63,6 +77,10 @@ These are internal developer notes.
   check for unescaped '<', '>', and '&'?
 
 ## Done
+
+* `substr` and carry don't work correctly (see `carry` notes)
+
+Handled with `bridge`.
 
 * This produces double warning: `substr_sgr('a\033[21lB', 2, 3)`.
 
@@ -256,6 +274,8 @@ we had the index.
 
 ## `carry`
 
+This was handled with bridge.
+
 Problem right now with `substr_ctl` that it has no awareness of `carry`, but it
 needs to in order to correctly know when to leave ending sequences in, e.g.:
 
@@ -306,17 +326,6 @@ knowing how we reached a particular state.  It could have been through the
 close-all + re-open, or just close some.  And what about the case where we just
 change a color.  We don't need to close anything, just change the color.
 Setdiff handles this correctly already.
-
-## `substr<-`
-
-Main question here is whether leading and trailing SGR are selected in the
-replacement:
-
-    substr_ctl("A\033[31mhello\033[42mB", 2, 6) <- "\033[32mgoodbye\033[0m"
-
-First reaction is that all the leading SGR should be consumed.  The tricky
-business starts when we have other zero width stuff, like an accent, or an emoji
-ZWJ sequence with a color change in the middle.
 
 ## Consumption of Zero Width
 
@@ -661,6 +670,66 @@ Are those completely lost?  Or is that handled with carry?
 
 Maybe we just implement as the paste business (yes, with variations)?
 
+What happens in the situation "aXXb" where XX and YY is a single two-wide
+grapheme?
+
+```
+`substr2_ctl<-("aXXb", 2, 2, "YY")
+```
+
+Interesting zero insert cases:
+
+* aXX + XXb  # complicated, should be a no-op
+* aXX + b
+* a + XXb
+
+Measure start and end.  If sum of the two exceeds the length of the input, then
+it is a no-op.  Actually, might even be a no-op if the sum of start, end, and
+the smallest selected part of the replacement exceeds length.
+
+Other interesting cases:
+
+```
+`substr2_ctl<-("abc", 2, 2, "YY")
+`substr2_ctl<-("abcd", 2, 3, "YY")
+```
+
+More generally, what happens when the replacement bit is not quite big enough to
+fit the width gap? This seems like a natural outcome:
+
+```
+`substr2_ctl<-("aXXcd", 2, 4, "YYZZ")
+## [1] "aYYcd"
+```
+
+But then if:
+
+```
+`substr2_ctl<-("aXXde", 2, 4, "YYZZ")
+## [1] "aYYde"
+```
+
+Does it need to be multi-pass b/c we might be required to try to reclaim
+from the end anything that can't be roundly filled?
+
+1. Measure start + end
+   * Check if no-op
+2. Measure start + end + replacement
+   * Check if no-op
+3. If replacement < end - start
+   * Try to re-substring the end?  But what if in doing so we overshoot (which
+     would naturally happen with the default `round`)?
+   * Then use old end.  So we don't re-substring the whole thing, we just try to
+     do so with the gap.  Don't we risk duplicate chars in doing this?
+     Certainly in "both" mode could happen.  We should be able to tell if
+     anything unsavory happened by looking at the coordinates of what we pulled
+     out.
+
+Separately, what's becoming apparent is that we need a grapheme mode in addition
+to width, e.g. if we want to replace a single char with a complex grapheme.
+
+Should be simple, in `read_utf8` we just need to always return 1 for non-zero
+widths.
 
 ## Benchmarks
 
