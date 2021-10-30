@@ -50,7 +50,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   #define FANSI_TERM_TRUECOLOR 4
 
   #define FANSI_WARN_ALL    511 // ... 0001 1111 1111
-  #define FANSI_WARN_CSIBAD  80 // ... 0000 0101 0000
+  #define FANSI_WARN_CSIBAD 336 // ... 0001 0101 0000
 
   // macros
 
