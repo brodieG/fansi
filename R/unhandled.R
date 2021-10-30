@@ -20,7 +20,10 @@
 #' character vector.  Unhandled sequences may cause `fansi` to interpret strings
 #' in a way different to your display.  See [fansi] for details.  Functions that
 #' interpret SGR/OSC URLs might omit bad SGR/OSC URLs in sequences in output
-#' substrings, particularly if they are leading or trailing.
+#' substrings, particularly if they are leading or trailing.  Some functions are
+#' more tolerant of bad inputs than others.  For example [`nchar_ctl`] will not
+#' report unsupported colors because it only cares about counts or widths.
+#' `unhandled_ctl` will report all potentially problematic sequences.
 #'
 #' To work around tabs present in input, you can use [`tabs_as_spaces`] or the
 #' `tabs.as.spaces` parameter on functions that have it, or the [`strip_ctl`]

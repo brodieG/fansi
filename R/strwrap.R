@@ -17,16 +17,17 @@
 #' Control Sequence Aware Version of strwrap
 #'
 #' Wraps strings to a specified width accounting for zero display width _Control
-#' Sequences_.  `strwrap_ctl` is intended to emulate `strwrap` exactly except
-#' with respect to the _Control Sequences_, while `strwrap2_ctl` adds features
-#' and changes the processing of whitespace.
+#' Sequences_.  `strwrap_ctl` is intended to emulate `strwrap` closely except
+#' with respect to the _Control Sequences_ (see details for other minor
+#' differences), while `strwrap2_ctl` adds features and changes the processing
+#' of whitespace.
 #'
 #' `strwrap2_ctl` can convert tabs to spaces, pad strings up to `width`, and
 #' hard-break words if single words are wider than `width`.
 #'
 #' Unlike [base::strwrap], both these functions will translate any non-ASCII
-#' strings to UTF-8 and return them in UTF-8.  Additionally, malformed UTF-8
-#' sequences are not converted to a text representation of bytes.
+#' strings to UTF-8 and return them in UTF-8.  Additionally, invalid UTF-8
+#' always causes errors, and `prefix` and `indent` must be scalar.
 #'
 #' When replacing tabs with spaces the tabs are computed relative to the
 #' beginning of the input line, not the most recent wrap point.

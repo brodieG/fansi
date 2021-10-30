@@ -104,13 +104,11 @@ SEXP FANSI_add_int_ext(SEXP x, SEXP y) {
  * @param one_only give up after a single failed attempt, otherwise keep going
  *   until a recognized control sequence is found.
  */
-
 struct FANSI_ctl_pos FANSI_find_ctl(
-  struct FANSI_state state, int warn, R_xlen_t i, int one_only
+  struct FANSI_state state, R_xlen_t i, int one_only
 ) {
   int raw_prev, pos_prev, found, err_prev;
-  int warned = 0;
-  int warn_max = 0;
+  unsigned int warn_max = 0;
   found = 0;
 
   while(state.string[state.pos_byte]) {
@@ -118,18 +116,7 @@ struct FANSI_ctl_pos FANSI_find_ctl(
     pos_prev = state.pos_byte;
     err_prev = state.err_code;
     state = FANSI_read_next(state, i, 1);
-    warn_max = state.err_code > warn_max ? state.err_code : warn_max;
-    if(
-      warn && !warned && (state.err_code == 5 || state.err_code == 7)
-    ) {
-      warned = 1;
-      warning(
-        "Encountered %s at index [%jd], %s%s",
-        state.err_msg, FANSI_ind(i),
-        "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
-        "off these warnings."
-      );
-    }
+    if(state.err_code) warn_max |= (1U << (state.err_code - 1U));
     // Known control read
     if(state.pos_raw == raw_prev) {
       found = 1;
@@ -142,12 +129,12 @@ struct FANSI_ctl_pos FANSI_find_ctl(
   int res = 0;
   if(found) res = state.pos_byte - pos_prev;
   return (struct FANSI_ctl_pos) {
-    .offset = pos_prev, .len = res,
-    .warn = warned, .warn_max=warn_max
+    .offset = pos_prev, .len = res, .warn_max=warn_max
   };
 }
 int FANSI_maybe_ctl(const char x) {
   // Controls range from 0000 0001 (0x01) to 0001 1111 (0x1F), plus 0x7F;
+  // We don't treat C1 controls as specials, apparently
   return x && (!(x & (~0x1F)) || x == 0x7F);
 }
 /*

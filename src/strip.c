@@ -24,12 +24,6 @@
  *
  * Since we do not use FANSI_read_next, we don't care about conversions to
  * UTF8.
- *
- * @param warn normally TRUE or FALSE, but internally we allow it to be an
- *   integer so that we can use a special mode where if == 2 then we return the
- *   fact that there was a warning as an attached attributed, as opposed to
- *   actually throwing the warning, used by e.g. make_pre and other internal
- *   functions.
  */
 
 SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
@@ -38,14 +32,14 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
   if(TYPEOF(ctl) != INTSXP)
     error("Internal Error: `ctl` should integer.");      // nocov
   if(
-    (TYPEOF(warn) != LGLSXP && TYPEOF(warn) != INTSXP) || XLENGTH(warn) != 1 ||
+    TYPEOF(warn) != LGLSXP || XLENGTH(warn) != 1 ||
     INTEGER(warn)[0] == NA_INTEGER
   )
     error("Internal Error: `warn` should be TRUE or FALSE");  // nocov
 
-  int warn_int = asInteger(warn);
-  if(warn_int < 0 || warn_int > 2)
-    error("Argument `warn` must be between 0 and 2 if an integer.");  // nocov
+  // We used to allow warn = 2 to indicate that warning status should be
+  // returned as an attributes, but got rid of that.
+  int warn_int = asLogical(warn) * FANSI_WARN_CSIBAD;
 
   R_xlen_t i, len = xlength(x);
   SEXP res_fin = x;
@@ -65,22 +59,27 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
 
   for(i = 0; i < len; ++i) {
     FANSI_interrupt(i);
-    SEXP x_chr = STRING_ELT(x, i);
-    FANSI_check_chrsxp(x_chr, i);
     R_len_t chr_len = LENGTH(STRING_ELT(x, i));
     if(chr_len > mem_req) mem_req = chr_len;
   }
   // Now strip
-  int warn_attrib = 0;
   char * chr_buff;
-  // warn can be 2
-  int warn2 = warn_int == 1;
+  struct FANSI_state state;
 
   for(i = 0; i < len; ++i) {
-    FANSI_interrupt(i);
+    if(!i) {
+      // Now full check
+      SEXP warn = PROTECT(ScalarLogical(0));
+      state = FANSI_state_init_ctl(x, warn, ctl, i);
+      UNPROTECT(1);
+      state.warn = warn_int;
+    } else {
+      state = FANSI_state_reinit(state, x, i);
+      state.warn = warn_int;
+    }
     SEXP x_chr = STRING_ELT(x, i);
     if(x_chr == NA_STRING) continue;
-    FANSI_check_chrsxp(x_chr, i);
+    FANSI_interrupt(i);
 
     int has_ansi = 0;
     const char * chr = CHAR(x_chr);
@@ -90,7 +89,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     // We re-use the allocated buffer for every string in the character
     // vector, which is why we re-assign to chr_buff here.  chr_buff will be
     // allocated in the loop below the first time it is needed, but we need to
-    // re-assign re_start / res_track .
+    // re-assign re_start / res_track.
 
     res_start = res_track = chr_buff;
 
@@ -99,18 +98,13 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     int off_init = FANSI_seek_ctl(chr);
     if(!*(chr + off_init)) continue;
 
-    // Now full check
-    SEXP R_false = PROTECT(ScalarLogical(0));
-    struct FANSI_state state = FANSI_state_init_ctl(x, R_false, ctl, i);
-    UNPROTECT(1);
     state.pos_byte = off_init;
     // Rprintf("init %d\n", off_init);
-    struct FANSI_ctl_pos pos_prev = {0, 0, 0, 0};
+    struct FANSI_ctl_pos pos_prev = {0, 0, 0};
 
     while(1) {
-      struct FANSI_ctl_pos pos = FANSI_find_ctl(state, warn2, i, 0);
-      warn_attrib = warn_attrib > pos.warn_max ? warn_attrib : pos.warn_max;
-      if(pos.warn) warn2 = 0;
+      struct FANSI_ctl_pos pos = FANSI_find_ctl(state, i, 0);
+      if(pos.warn_max && state.warn) state.warn = 0U;
       if(pos.len) {
         has_ansi = 1;
 
@@ -124,12 +118,9 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
 
           REPROTECT(res_fin = duplicate(x), ipx);
 
-          // Note the is guaranteed to be an over-allocation, as it's the
-          // longest string in the vector.  It should be guaranteed to be no
-          // longer than R_LEN_T_MAX.
-
-          // The character buffer is large enough for the largest element in the
-          // vector, and is re-used for every element in the vector.
+          // Buffer is guaranteed to be an over-allocation, as it fits the
+          // longest string in the vector, re-used for all strings.  It should
+          // be no longer than R_LEN_T_MAX.
 
           chr_buff = (char *) R_alloc(((size_t) mem_req) + 1, sizeof(char));
           res_start = res_track = chr_buff;
@@ -174,11 +165,6 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
       UNPROTECT(1);
     }
   }
-  if(warn_attrib && warn_int == 2) {
-    SEXP attrib_val = PROTECT(ScalarLogical(warn_attrib));
-    setAttrib(res_fin, FANSI_warn_sym, attrib_val);
-    UNPROTECT(1);
-  }
   UNPROTECT(1);
   return res_fin;
 }
@@ -217,9 +203,13 @@ SEXP FANSI_process(
   R_xlen_t len = XLENGTH(res);
   for(R_xlen_t i = 0; i < len; ++i) {
     FANSI_interrupt(i);
-    // Don't warn - we don't modify or interpret sequences
+    // Don't warn - we don't modify or interpret sequences.  This allows bad
+    // UTF-8 through.
+    SEXP allowNA, keepNA, width;
+    allowNA = keepNA = R_true;
+    width = R_zero;
     struct FANSI_state state = FANSI_state_init_full(
-      input, R_false, term_cap, R_true, R_true, R_zero, ctl, i
+      input, R_false, term_cap, allowNA, keepNA, width, ctl, i
     );
     const char * string = state.string;
     const char * string_start = string;

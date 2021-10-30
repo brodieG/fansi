@@ -44,7 +44,7 @@
 #' ## Remember newlines are not counted by default
 #' nchar_ctl("\t\n\r")
 #'
-#' ## The 'c0' value for the `ctl` argument does not include 
+#' ## The 'c0' value for the `ctl` argument does not include
 #' ## newlines.
 #' nchar_ctl("\t\n\r", ctl="c0")
 #' nchar_ctl("\t\n\r", ctl=c("c0", "nl"))
@@ -60,50 +60,49 @@ nchar_ctl <- function(
   x, type='chars', allowNA=FALSE, keepNA=NA, ctl='all',
   warn=getOption('fansi.warn', TRUE), strip
 ) {
-  if(!is.logical(allowNA)) allowNA <- as.logical(allowNA)
-  if(length(allowNA) != 1L)
-    stop("Argument `allowNA` must be a scalar logical.")
-
-  if(!is.logical(keepNA)) keepNA <- as.logical(keepNA)
-  if(length(keepNA) != 1L)
-    stop("Argument `keepNA` must be a scalar logical.")
-
   if(!missing(strip)) {
     message("Parameter `strip` has been deprecated; use `ctl` instead.")
     ctl <- strip
   }
-  if(!is.character(type) || length(type) != 1 || is.na(type))
-    stop("Argument `type` must be scalar character and not NA.")
-  valid.types <- c('chars', 'width', 'bytes')
-  if(is.na(type.int <- pmatch(type, valid.types)))
-    stop(
-      "Argument `type` must partial match one of 'chars', 'width', or 'bytes'."
-    )
-
   ## modifies / creates NEW VARS in fun env
-  VAL_IN_ENV(x=x, ctl=ctl, warn=warn)
-  type <- valid.types[type.int]
-  stripped <- strip_ctl(x, ctl=ctl, warn=warn)
+  VAL_IN_ENV(
+    x=x, ctl=ctl, warn=warn, type=type, allowNA=allowNA, keepNA=keepNA,
+    valid.types=c('chars', 'width', 'bytes')
+  )
 
-  R.ver.gte.3.2.2 <- R.ver.gte.3.2.2 # "import" symbol from namespace
-  if(R.ver.gte.3.2.2) nchar(stripped, type=type, allowNA=allowNA, keepNA=keepNA)
-  else nchar(stripped, type=type, allowNA=allowNA) # nocov
+  nchar_ctl_internal(
+    x=x, type.int=TYPE.INT, allowNA=allowNA, keepNA=keepNA, ctl.int=CTL.INT,
+    warn=warn, z=FALSE
+  )
 }
 #' @export
 #' @rdname nchar_ctl
 
 nzchar_ctl <- function(
-  x, keepNA=NA, ctl='all', warn=getOption('fansi.warn', TRUE)
+  x, keepNA=FALSE, ctl='all', warn=getOption('fansi.warn', TRUE)
 ) {
   ## modifies / creates NEW VARS in fun env
-  VAL_IN_ENV(x=x, ctl=ctl, warn=warn)
-  if(!is.logical(keepNA)) keepNA <- as.logical(keepNA)
-  if(length(keepNA) != 1L)
-    stop("Argument `keepNA` must be a scalar logical.")
-
-  term.cap.int <- 1L
-  .Call(FANSI_nzchar_esc, x, keepNA, warn, term.cap.int, CTL.INT)
+  VAL_IN_ENV(
+    x=x, ctl=ctl, warn=warn, type='chars', keepNA=keepNA,
+    valid.types=c('chars', 'width', 'bytes')
+  )
+  nchar_ctl_internal(
+    x=x, type.int=TYPE.INT, allowNA=TRUE, keepNA=keepNA, ctl.int=CTL.INT,
+    warn=warn, z=TRUE
+  )
 }
+nchar_ctl_internal <- function(x, type.int, allowNA, keepNA, ctl.int, warn, z) {
+  term.cap.int <- 1L
+  R.ver.gte.3.2.2 <- R.ver.gte.3.2.2 # "import" symbol from namespace
+  if(R.ver.gte.3.2.2)
+    .Call(
+      FANSI_nchar_esc,
+      x, type.int, keepNA, allowNA,
+      warn, term.cap.int, ctl.int, z
+    )
+  else nchar(stripped, type=type, allowNA=allowNA) # nocov
+}
+
 #' Control Sequence Aware Version of nchar
 #'
 #' These functions are deprecated in favor of the [`_ctl` flavors][nchar_ctl].

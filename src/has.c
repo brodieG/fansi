@@ -21,23 +21,6 @@
  */
 
 #include "fansi.h"
-
-static int has_int(SEXP x, int * warn, SEXP ctl, R_xlen_t i) {
-  if(TYPEOF(x) != STRSXP) error("Argument `x` must be STRSXP.");
-  int res = 0;
-  const char * xc = CHAR(STRING_ELT(x, i));
-  int off_init = FANSI_seek_ctl(xc);
-  if(xc + off_init) {
-    SEXP R_false = PROTECT(ScalarLogical(0));
-    struct FANSI_state state = FANSI_state_init_ctl(x, R_false, ctl, i);
-    UNPROTECT(1);
-    state.pos_byte = off_init;
-    struct FANSI_ctl_pos pos = FANSI_find_ctl(state, *warn, i, 0);
-    res = pos.len > 0;
-    if(pos.warn) *warn = 0;
-  }
-  return res;
-}
 /*
  * Check if a CHARSXP contains ANSI esc sequences
  */
@@ -48,14 +31,32 @@ SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn) {
 
   SEXP res = PROTECT(allocVector(LGLSXP, len));
   int * res_int = LOGICAL(res);
-  int warn_int = asLogical(warn);
+  struct FANSI_state state;
+  unsigned int warn_int = asLogical(warn) * FANSI_WARN_CSIBAD;
 
   for(R_xlen_t i = 0; i < len; ++i) {
+    if(!i) {
+      state = FANSI_state_init_ctl(x, warn, ctl, i);
+      state.warn = warn_int;
+    } else {
+      state = FANSI_state_reinit(state, x, i);
+      state.warn = warn_int;
+    }
     FANSI_interrupt(i);
     SEXP chrsxp = STRING_ELT(x, i);
-    FANSI_check_chrsxp(chrsxp, i);
-    if(chrsxp == NA_STRING) res_int[i] = NA_LOGICAL;
-    else res_int[i] = has_int(x, &warn_int, ctl, i);
+    if(chrsxp != NA_STRING) {
+      int res = 0;
+      const char * xc = CHAR(chrsxp);
+      int off_init = FANSI_seek_ctl(xc);
+      if(xc + off_init) {
+        state.pos_byte = off_init;
+        struct FANSI_ctl_pos pos = FANSI_find_ctl(state, i, 0);
+        res = pos.len > 0;
+      }
+      res_int[i] = res;
+    } else {
+      res_int[i] = NA_LOGICAL;
+    }
   }
   UNPROTECT(1);
   return res;

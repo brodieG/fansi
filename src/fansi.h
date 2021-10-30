@@ -49,9 +49,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   #define FANSI_TERM_256 2
   #define FANSI_TERM_TRUECOLOR 4
 
-  // symbols
-
-  extern SEXP FANSI_warn_sym;
+  #define FANSI_WARN_ALL    511 // ... 0001 1111 1111
+  #define FANSI_WARN_CSIBAD 336 // ... 0001 0101 0000
 
   // macros
 
@@ -113,10 +112,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int offset;
     // how many characters to the end of the sequnce
     int len;
-    // Whethaer a warning was issued (or would have been issued)
-    int warn;
-    // Max warning encountered, whether issued or not
-    int warn_max;
+    // Warnings encounted, encoded "bitwise" as with FANSI_state.warn
+    unsigned int warn_max;
   };
   /*
    * Encode Active SGR
@@ -260,20 +257,19 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      *
      * - pos_byte: the byte in the string
      * - pos_byte_sgr_start: the starting position of the last sgr read, really
-     *     only intended to be use din conjuction with 'terminal' so that if we
+     *     only intended to be used in conjuction with 'terminal' so that if we
      *     decide not to write a terminal SGR we know where to stop instead.
      * - pos_ansi: actual character position, different from pos_byte due to
      *   multi-byte characters (i.e. UTF-8)
      * - pos_raw: the character position after we strip the handled ANSI tags,
-     *   the difference with pos_ansi is that pos_ansi counts the escaped
-     *   characters whereas this one does not.
+     *   the difference with pos_ansi is that pos_ansi counts the escape
+     *   sequences whereas this one does not.
      * - pos_width: the character postion accounting for double width
      *   characters, etc., note in this case ASCII escape sequences are treated
      *   as zero chars.  Width is computed mostly with R_nchar.
      *
      * So pos_raw is essentially the character count excluding escapes.
      */
-
     int pos_ansi;
     int pos_raw;
     int pos_width;
@@ -305,21 +301,23 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     /*
      * Type of failure
      *
-     * * 0: no error
-     * * 1: well formed csi sgr, but contains uninterpretable sub-strings, if a
-     *      CSI sequence is not fully parsed yet (i.e. last char not read) it is
-     *      assumed to be SGR until we read the final code.
-     * * 2: well formed csi sgr, but contains uninterpretable characters [:<=>]
-     * * 3: well formed csi sgr, but contains color codes that exceed terminal
-     *     capabilities
-     * * 4: well formed csi, but not an SGR
-     * * 5: malformed csi
-     * * 6: other escape sequence
-     * * 7: malformed escape
-     * * 8: c0 escapes
-     * * 9: malformed UTF8
+     * *  0: no error
+     * *  1: well formed csi sgr, but contains uninterpretable sub-strings, if a
+     *       CSI sequence is not fully parsed yet (i.e. last char not read) it is
+     *       assumed to be SGR until we read the final code.
+     * *  2: well formed csi sgr, but contains uninterpretable characters [:<=>]
+     * *  3: well formed csi sgr, but contains color codes that exceed terminal
+     *      capabilities
+     * *  4: well formed csi, but not an SGR
+     * *  5: malformed csi
+     * *  6: other escape sequence
+     * *  7: malformed escape (e.g. string ending in ESC).
+     * *  8: c0 escapes
+     * *  9: malformed UTF8
+     * * ..: unused
+     * * 32: unused, max error code allowable.
      */
-    int err_code;
+    unsigned int err_code;
     /*
      * Terminal capabilities
      *
@@ -336,9 +334,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     // really intended to be internal.  It's really only meaningful when
     // `state.last` is true.
     int is_sgr;
-    // Whether to issue warnings if err_code is non-zero, if -1 means that the
-    // warning was issued at least once so may not need to be re-issued
-    int warn;
+    // Whether to issue warnings if err_code is non-zero.  Warnings are issued
+    // if warn & (1 << (err_code - 1)) is set.  `read_next` will reset warnings
+    // to zero after emitting them.
+    unsigned int warn;
     // Whether to use R_nchar, really only needed when we're doing things in
     // width mode
     int use_nchar;
@@ -346,12 +345,14 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int non_normalized;
 
     /*
-     * These support the arguments of the same names for nchar
+     * These support the arguments of the same names for nchars.  allowNA means
+     * that the normal errors caused by invalid UTF-8 encoding are suppressed.
+     * If running with `allowNA` the code must check for err_code == 9 (bad
+     * UTF-8) after each `read_next` call to ensure it does not keep reading
+     * after a bad "UTF-8" (or not care about bad UTF-8).
      */
     int allowNA;
     int keepNA;
-    // invalid multi-byte char, a bit of duplication with err_code = 9;
-    int nchar_err;
     // what types of Control Sequences should have special treatment.  See
     // `FANSI_ctl_as_int` for the encoding.
     int ctl;
@@ -405,9 +406,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap);
 
   SEXP FANSI_nchar(
-    SEXP x, SEXP type, SEXP allowNA, SEXP keepNA, SEXP warn, SEXP term_cap
+    SEXP x, SEXP type, SEXP keepNA, SEXP allowNA,
+    SEXP warn, SEXP term_cap, SEXP ctl, SEXP z
   );
-  SEXP FANSI_nzchar(SEXP x, SEXP keepNA, SEXP warn, SEXP term_cap, SEXP ctl);
   // utility / testing
 
   SEXP FANSI_cleave(SEXP x);
@@ -456,7 +457,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   );
 
   struct FANSI_ctl_pos FANSI_find_ctl(
-    struct FANSI_state state, int warn, R_xlen_t i, int one_only
+    struct FANSI_state state, R_xlen_t i, int one_only
   );
 
   struct FANSI_state FANSI_inc_width(
@@ -484,12 +485,14 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   int FANSI_utf8clen(char c);
   int FANSI_valid_utf8(const char * chr, int bytes);
-  int FANSI_is_utf8_loc();
   int FANSI_utf8_to_cp(const char * chr, int bytes);
   int FANSI_digits_in_int(int x);
   struct FANSI_string_as_utf8 FANSI_string_as_utf8(SEXP x);
   struct FANSI_state FANSI_state_init(
     SEXP strsxp, SEXP warn, SEXP term_cap, R_xlen_t i
+  );
+  struct FANSI_state FANSI_state_reinit(
+    struct FANSI_state state, SEXP x, R_xlen_t i
   );
   struct FANSI_state FANSI_state_init_full(
     SEXP strsxp, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
@@ -545,7 +548,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_seek_ctl(const char * x);
   int FANSI_maybe_ctl(const char x);
   void FANSI_print(char * x);
-  int FANSI_has_utf8(const char * x);
   void FANSI_interrupt(R_xlen_t i);
   intmax_t FANSI_ind(R_xlen_t i);
   void FANSI_check_chr_size(char * start, char * end, R_xlen_t i);

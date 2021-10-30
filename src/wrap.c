@@ -37,34 +37,41 @@ struct FANSI_prefix_dat {
  * Generate data related to prefix / initial
  */
 
-static struct FANSI_prefix_dat make_pre(SEXP x) {
-  SEXP chrsxp = STRING_ELT(x, 0);
-  FANSI_check_chrsxp(chrsxp, 0);
-  const char * x_utf8 = CHAR(chrsxp);
-  // ideally we would IS_ASCII(x), but that's not available to extensions
-  int x_has_utf8 = FANSI_has_utf8(x_utf8);
+static struct FANSI_prefix_dat make_pre(
+  SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, const char * arg
+) {
+  int prt = 0;
 
-  // ideally would have an internal interface to strip so we don't need to
-  // generate these SEXPs here
-  SEXP warn = PROTECT(ScalarInteger(2));
-  SEXP ctl = PROTECT(ScalarInteger(1));
-  SEXP x_strip = PROTECT(FANSI_strip(x, ctl, warn));
-  int x_width = R_nchar(
-    asChar(x_strip), Width, TRUE, FALSE, "when computing display width"
+  SEXP R1 = PROTECT(ScalarInteger(1)); prt++;
+  SEXP Rfalse = PROTECT(ScalarLogical(0)); prt++;
+  SEXP Rtrue = PROTECT(ScalarLogical(1)); prt++;
+  SEXP keepNA = Rtrue;
+  SEXP allowNA = Rtrue;
+  SEXP warn2 = Rfalse;
+  SEXP width = R1;     // width mode
+
+  struct FANSI_state state = FANSI_state_init_full(
+    x, warn2, term_cap, allowNA, keepNA, width, ctl, 0
   );
-  // wish we could get this directly from R_nchar, grr
-
-  int x_bytes = strlen(x_utf8);
-  int warn_int = getAttrib(x_strip, FANSI_warn_sym) != R_NilValue;
-
-  if(x_width == NA_INTEGER) {
-    x_width = x_bytes;
-    warn_int = 9;
-  }
-  UNPROTECT(3);
+  while(state.string[state.pos_byte]) {
+    state = FANSI_read_next(state, 0, 1);
+    if(state.err_code == 9) error("`%s` contains %s.", arg, state.err_msg);
+    else if(asLogical(warn) && state.err_code) {
+      // We don't use internal warning because we want to be able to provide the
+      // argument name.
+      warning(
+        "`%s` contains %s. %s%s", arg, state.err_msg,
+        "See `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
+        "off these warnings."
+      );
+  } }
+  UNPROTECT(prt);
   return (struct FANSI_prefix_dat) {
-    .string=x_utf8, .width=x_width, .bytes=x_bytes, .has_utf8=x_has_utf8,
-    .indent=0, .warn=warn_int
+    .string=state.string,
+    .width=state.pos_width,
+    .bytes=state.pos_byte,
+    .has_utf8=state.pos_ansi < state.pos_byte,
+    .indent=0
   };
 }
 /*
@@ -568,20 +575,15 @@ SEXP FANSI_strwrap_ext(
 
   int indent_int = asInteger(indent);
   int exdent_int = asInteger(exdent);
-  int warn_int = asInteger(warn);
   int first_only_int = asInteger(first_only);
 
   if(indent_int < 0 || exdent_int < 0)
     error("Internal Error: illegal indent/exdent values.");  // nocov
 
-  pre_dat_raw = make_pre(prefix);
+  pre_dat_raw = make_pre(prefix, warn, term_cap, ctl, "prefix");
 
-  const char * warn_base =
-    "`%s` contains unhandled ctrl or UTF-8 sequences (see `?unhandled_ctl`).";
-  if(warn_int && pre_dat_raw.warn) warning(warn_base, "prefix");
   if(prefix != initial) {
-    ini_dat_raw = make_pre(initial);
-    if(warn_int && ini_dat_raw.warn) warning(warn_base, "initial");
+    ini_dat_raw = make_pre(initial, warn, term_cap, ctl, "initial");
   } else ini_dat_raw = pre_dat_raw;
 
   ini_first_dat = pad_pre(ini_dat_raw, indent_int);

@@ -17,10 +17,10 @@
 #' Control Sequence Aware Version of substr
 #'
 #' `substr_ctl` is a drop-in replacement for `substr`.  Performance is
-#' slightly slower than `substr`.  CSI SGR sequences will be included in the
-#' substrings to reflect the format of the substring when it was embedded in
-#' the source string.  Additionally, other _Control Sequences_ specified in
-#' `ctl` are treated as zero-width.
+#' slightly slower than `substr`, and more so for `type = 'width'`.  CSI SGR
+#' sequences will be included in the substrings to reflect the format of the
+#' substring when it was embedded in the source string.  Additionally, other
+#' _Control Sequences_ specified in `ctl` are treated as zero-width.
 #'
 #' `substr2_ctl` adds the ability to retrieve substrings based on display width
 #' in addition to the normal character width.  `substr2_ctl` also provides the
@@ -47,6 +47,8 @@
 #' directly from Gábor Csárdi's `crayon` package, although the implementation of
 #' the calculation is different.
 #'
+#' @section Replacement Functions:
+#'
 #' Replacement functions are implemented as three substring operations, so:
 #' ```
 #' x <- "ABC"
@@ -63,14 +65,22 @@
 #' ```
 #' Except for the `terminate` parameter for the trailing substring, all other
 #' parameters are passed from `substr_ctl<-` to the internal substring calls.
-#' If you wish for the whole return value to be terminated you must manually add
-#' terminating sequences.  `substr_ctl` refrains from doing so to maintain the
-#' illusion of a string modified in place.
+#' The `start`, `stop`, and `round` arguments are translated from the provided
+#' values to those required for the internal substring calls.  If you wish for
+#' the whole return value to be terminated you must manually add terminating
+#' sequences.  `substr_ctl` refrains from doing so to maintain the illusion of a
+#' string modified in place.
 #'
 #' Another implication of the three substring approach is that the `carry`
 #' parameter causes state to carry within the original string and the
 #' replacement values independently, as if they were columns of text cut from
 #' different pages and pasted together.
+#'
+#' When in `type = 'width'` mode, it is only guaranteed that the result will be
+#' no wider than the original `x`.  Narrower strings may result if a mixture
+#' of narrow and wide graphemes cannot be replaced exactly with the same `width`
+#' value, possibly because the provided `start`/`stop` values (or the
+#' implicit ones generated for `value`) do not align with grapheme boundaries.
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work properly in R < 3.2.2.
@@ -230,7 +240,8 @@ substr2_ctl <- function(
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
     carry=carry, terminate=terminate, tab.stops=tab.stops,
     tabs.as.spaces=tabs.as.spaces, type=type, round=round,
-    start=start, stop=stop
+    start=start, stop=stop,
+    valid.types=c('chars', 'width')
   )
   res <- x
   no.na <- !(is.na(x) | is.na(start & stop))
@@ -279,57 +290,112 @@ substr2_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
+  # This would probably be better done in C, given the contortions we have to
+  # resort to here...
+
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
     carry=carry, terminate=terminate, tab.stops=tab.stops,
     tabs.as.spaces=tabs.as.spaces, round=round, start=start, stop=stop,
-    type=type
+    type=type,
+    valid.types=c('chars', 'width')
   )
-  # Need to translate start/stop and remap round
-  round.a <- switch(
-    round, start='stop', stop='start', both='neither', neither='both'
-  )
-  round.b <- round
-
   # Adjust `stop` to be no longer than end of string, also need to make sure the
   # overall string length is unchanged.
-  nc <- nchar_ctl(x, type=type, ctl=ctl, warn=warn)
+  nc <- nchar_ctl(x, type=type, ctl=ctl, warn=FALSE)
   stop <- pmin(stop, nc)
   value <- rep_len(enc2utf8(as.character(value)), X.LEN)
-  ncv <- nchar_ctl(value, type=type, ctl=ctl, warn=warn)
+  ncv <- nchar_ctl(value, type=type, ctl=ctl, warn=FALSE)
+  end.start <- pmin(stop + 1L, start + ncv)
+  end.end <- rep(.Machine[['integer.max']], X.LEN)
+  round.start <- round == 'start' || round == 'both'
+  round.stop <- round == 'stop' || round == 'both'
 
-  # All warnings should have been emitted by `nchar_ctl` above
-  x[] <- paste0(
-    substr_ctl_internal(
-      x, rep(1L, X.LEN), start - 1L, type.int=TYPE.INT,
-      round.start=round.a == 'start' || round.a == 'both',
-      round.stop=round.a == 'stop' || round.a == 'both',
-      tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=FALSE,
-      term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
-      carry=carry, terminate=terminate
-    ),
-    substr_ctl_internal(
-      value, rep(1L, X.LEN), stop - start + 1L,
-      type.int=TYPE.INT,
-      round.start=round == 'start' || round == 'both',
-      round.stop=round == 'stop' || round == 'both',
-      tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=FALSE,
-      term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
-      carry=carry, terminate=terminate
-    ),
-    # This last one should not terminate ever as it preserves whatever the
-    # original string did.
-    substr_ctl_internal(
-      x, pmin(stop + 1L, start + ncv),
-      rep(.Machine[['integer.max']], X.LEN), type.int=TYPE.INT,
-      round.start=round.b == 'start' || round.b == 'both',
-      round.stop=round.b == 'stop' || round.b == 'both',
-      tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=FALSE,
-      term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
-      carry=carry, terminate=FALSE
-    )
+  # Rely on warning with `mid` and `end` to catch all warnings.
+  # Possible optim here: the `begin` and `end` substrings could be done as part
+  # of the same pass since they are using the same substrings.
+
+  begin <- substr_ctl_internal(
+    x, rep(1L, X.LEN), start - 1L, type.int=TYPE.INT,
+    round.start=round.start, round.stop=round.stop,
+    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=FALSE,
+    term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
+    carry=carry, terminate=terminate
   )
+  end <- substr_ctl_internal(
+    x, end.start, end.end,
+    type.int=TYPE.INT,
+    round.start=round.start, round.stop=round.stop,
+    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
+    term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
+    carry=carry, terminate=FALSE
+  )
+  # In no-op cases we don't need this, but it's simpler to always compute it
+  mid <- substr_ctl_internal(
+    value, rep(1L, X.LEN), stop - start + 1L,
+    type.int=TYPE.INT,
+    round.start=round.start, round.stop=round.stop,
+    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
+    term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
+    carry=carry, terminate=terminate
+  )
+  # In width mode it is possible for some seemingly valid replacements to end up
+  # as no-ops depending on how rounding pans out.  No-ops are also possible in
+  # character mode, but we just let the normal code deal with those.
+
+  valid <- rep(TRUE, X.LEN)  # this may get changed in body of `if` statement
+  x[valid] <- if(type == 'width') {
+    ncb <- nchar_ctl(begin, type=type, ctl=ctl, warn=warn)
+    nce <- nchar_ctl(end, type=type, ctl=ctl, warn=warn)
+    ncm <- nchar_ctl(mid, type=type, ctl=ctl, warn=warn)
+    ncsub <- ncb + nce + ncm
+    valid <- (ncsub <= nc)
+
+    # Try to rescue some invalids by reducing the size of the replacement by 1
+    # Implicit here is that the widths are all either 1 or 2, which may not be
+    # the case when a \U code is rendered (but that should only be for
+    # EncodeString, which we don't care about).
+    if(!all(valid) && any(mid.again <- !valid & ncm > 1)) {
+      mid2 <- substr_ctl_internal(
+        value[mid.again], rep(1L, sum(mid.again)), (stop - start)[mid.again],
+        type.int=TYPE.INT,
+        round.start=round.start, round.stop=round.stop,
+        tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=FALSE,
+        term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
+        carry=carry, terminate=terminate
+      )
+      ncm2 <- nchar_ctl(mid2, type=type, ctl=ctl, warn=warn)
+      ncsub2 <- ncb[mid.again] + ncm2 + nce[mid.again]
+      noops2 <- ncsub2 > nc[mid.again]
+      mid[mid.again][!noops2] <- mid2[!noops2]
+      ncm[mid.again][!noops2] <- ncm2[!noops2]
+      ncsub <- ncb + nce + ncm
+      valid <- (ncsub <= nc)
+    }
+    # Try to fill in any gaps between end of mid and end by scooching end
+    # forward by the gap amount.
+    if(any(valid)) {
+      if(any(end.again <- (ncbad <- nc - ncsub) > 0L)) {
+        end2 <- substr_ctl_internal(
+          x[end.again], pmax(end.start[end.again] - ncbad[end.again], 1L),
+          end.end[end.again],
+          type.int=TYPE.INT,
+          round.start=round.start, round.stop=round.stop,
+          tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=FALSE,
+          term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
+          carry=carry, terminate=FALSE
+        )
+        nce2 <- nchar_ctl(end2, type=type, ctl=ctl, warn=warn)
+        ncsub2 <- ncb[end.again] + ncm[end.again] + nce2
+        noops2 <- ncsub2 > nc[end.again]
+        end[end.again][!noops2] <- end2[!noops2]
+      }
+      paste0(begin[valid], mid[valid], end[valid])
+    } else character()
+  } else {
+    paste0(begin, mid, end)
+  }
   x
 }
 #' SGR Control Sequence Aware Version of substr

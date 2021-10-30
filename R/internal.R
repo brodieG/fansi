@@ -72,7 +72,9 @@ bridge <- function(
 ## DANGER: will modify values in calling environment!  Also may add variables
 ## such as CTL.INT, X.LEN, etc. (these should all be in caps).
 
-VAL_IN_ENV <- function(...) {
+VAL_IN_ENV <- function(
+  ..., valid.types=c('chars', 'width')
+) {
   call <- sys.call(-1)
   par.env <- parent.frame()
   stop2 <- function(...) stop(simpleError(paste0(..., collapse=""), call))
@@ -84,7 +86,10 @@ VAL_IN_ENV <- function(...) {
       c(
         'x', 'warn', 'term.cap', 'ctl', 'normalize', 'carry', 'terminate',
         'tab.stops', 'tabs.as.spaces', 'strip.spaces', 'round', 'type',
-        'start', 'stop'
+        'start', 'stop', 'keepNA', 'allowNA',
+
+        # meta parameters (i.e. internal parameters)
+        'valid.types'    # nchar and substr allow different things
   ) ) )
     stop("Internal Error: some arguments to validate unknown")
 
@@ -198,10 +203,9 @@ VAL_IN_ENV <- function(...) {
     args[['ROUND.INT']] <- round.int
   }
   if('type' %in% argnm) {
-    valid.types <- c('chars', 'width')
     type <- args[['type']]
     if(
-      !is.character(type) || length(type) != 1 ||
+      !is.character(type) || length(type) != 1 || is.na(type) ||
       is.na(type.int <- pmatch(type, valid.types))
     )
       stop2("Argument `type` must partial match one of ", deparse(valid.types))
@@ -218,6 +222,19 @@ VAL_IN_ENV <- function(...) {
     args[['start']] <- start
     args[['stop']] <- stop
     args[['X.LEN']] <- x.len
+  }
+  if('keepNA' %in% argnm) {
+    keepNA <- as.logical(args[['keepNA']])
+    if(length(keepNA) != 1L)
+      stop2("Argument `keepNA` must be a scalar logical.")
+    args[['keepNA']] <- keepNA
+  }
+  if('allowNA' %in% argnm) {
+    allowNA <- as.logical(args[['allowNA']])
+    if(!is.logical(allowNA)) allowNA <- as.logical(allowNA)
+    if(length(allowNA) != 1L)
+      stop2("Argument `allowNA` must be a scalar logical.")
+    args[['allowNA']] <- isTRUE(allowNA)
   }
   # we might not have validated all, so we should be careful
   list2env(args, par.env)

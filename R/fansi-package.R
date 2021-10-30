@@ -44,8 +44,8 @@
 #' long (including the ESC) unless they are of the CSI or OSC variety, in which
 #' case their length is computed as per the [ECMA-48
 #' specification](https://www.ecma-international.org/publications-and-standards/standards/ecma-48/),
-#' with the exception that OSC-anchored URLs may be terminated with BEL ("\\a")
-#' in addition to ST ("ESC\\").
+#' with the exception that [OSC-anchored URLs](#osc-anchored-urls) may be
+#' terminated with BEL ("\\a") in addition to ST ("ESC\\").
 #'
 #' `fansi` handles most common _Control Sequences_ in its parsing
 #' algorithms, but it is not a conforming implementation of ECMA-48.  For
@@ -61,10 +61,10 @@
 #'
 #' The special treatment of _Control Sequences_ is to compute their
 #' display/character width as zero.  For the SGR subset of the CSI sequences and
-#' OSC-anchored URLs, `fansi` will also parse, interpret, and reapply the
-#' sequences to the text as needed.  Whether a particular type of _Control
-#' Sequence_ is treated specially can be specified via the `ctl` parameter to
-#' the `fansi` functions that have it.
+#' [OSC-anchored URLs](#osc-anchored-urls), `fansi` will also parse, interpret,
+#' and reapply the sequences to the text as needed.  Whether a particular type
+#' of _Control Sequence_ is treated specially can be specified via the `ctl`
+#' parameter to the `fansi` functions that have it.
 #'
 #' @section CSI SGR Control Sequences:
 #'
@@ -140,15 +140,27 @@
 #' Note that `width` calculations may also change across R versions, locales,
 #' etc. (see "Encodings / UTF-8" below).
 #'
-#' @section OSC Encoded URLs:
+#' @section OSC Anchored URLs:
 #'
 #' Operating System Commands are interpreted by terminal emulators typically to
 #' engage actions external to the display of text proper, such as setting a
 #' window title or changing the active color palette.
 #'
-#' [Some terminals][1] have added support for associating URLs to text with OSCs
-#' in a similar way to anchors in HTML, so `fansi` interprets them and outputs
-#' or terminates them as needed.
+#' [Some terminals](https://iterm2.com/documentation-escape-codes.html) have
+#' added support for associating URLs to text with OSCs in a similar way to
+#' anchors in HTML, so `fansi` interprets them and outputs or terminates them as
+#' needed.  For example:
+#'
+#' ```
+#' "\033]8;;xy.z\033\\LINK\033]8;;\033\\"
+#' ```
+#'
+#' Might be interpreted as [LINK](x.z).  To make The encoding pattern clearer,
+#' we replace "\033]" with "&lt;OSC&gt;" and "\033\\" with "&gt;ST&lt;" below:
+#'
+#' ```
+#' <OSC>8;;URL<ST>LINK TEXT<OSC>8;;<ST>
+#' ```
 #'
 #' @section State Interactions:
 #'
@@ -285,8 +297,6 @@
 #' always report malformed UTF-8 sequences as it usually does.  One
 #' exception to this is [`nchar_ctl`] as that is just a thin wrapper around
 #' [`base::nchar`].
-#'
-#' [1]: https://iterm2.com/documentation-escape-codes.html
 #'
 #' @useDynLib fansi, .registration=TRUE, .fixes="FANSI_"
 #' @docType package

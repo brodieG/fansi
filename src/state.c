@@ -24,8 +24,8 @@
  * We rely on struct initialization to set everything else to zero.
  *
  * FANSI_state_init_full is specifically to handle the allowNA case in nchar,
- * for which we MUST check `state.nchar_err` after each `FANSI_read_next`.  In
- * all other cases `R_nchar` shoudl be set to not `allowNA`.
+ * for which we MUST check `state.err_code == 9` after each `FANSI_read_next`.
+ * In all other cases `R_nchar` should be set to not `allowNA`.
  */
 struct FANSI_state FANSI_state_init_full(
   SEXP strsxp, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
@@ -86,13 +86,46 @@ struct FANSI_state FANSI_state_init_full(
     .sgr = (struct FANSI_sgr) {.color = -1, .bg_color = -1},
     .sgr_prev = (struct FANSI_sgr) {.color = -1, .bg_color = -1},
     .string = string,
-    .warn = asLogical(warn),
+    .warn = asLogical(warn) * FANSI_WARN_ALL,
     .term_cap = FANSI_term_cap_as_int(term_cap),
     .allowNA = asLogical(allowNA),
     .keepNA = asLogical(keepNA),
     .use_nchar = asInteger(width),  // 0 for chars, 1 for width
     .ctl = FANSI_ctl_as_int(ctl)
   };
+}
+/*
+ * Re-initialize state
+ *
+ * Reduce overhead from revalidating params that are recycled across vector
+ * elements from a single external function call.
+ */
+struct FANSI_state FANSI_state_reinit(
+  struct FANSI_state state, SEXP x, R_xlen_t i
+) {
+  if(i < 0 || i > XLENGTH(x))
+    error(
+      "Internal error: state_init with out of bounds index [%jd] for strsxp.",
+      FANSI_ind(i)
+    );
+  SEXP chrsxp = STRING_ELT(x, i);
+  FANSI_check_chrsxp(chrsxp, i);
+  const char * string = CHAR(chrsxp);
+
+  struct FANSI_state state_reinit;
+  state_reinit = (struct FANSI_state) {
+    .string = string,
+    .warn = state.warn,
+    .term_cap = state.term_cap,
+    .allowNA = state.allowNA,
+    .keepNA = state.keepNA,
+    .use_nchar = state.use_nchar,  // 0 for chars, 1 for width
+    .ctl = state.ctl
+  };
+  state_reinit.string = string;
+  state_reinit.sgr = (struct FANSI_sgr) {.color = -1, .bg_color = -1};
+  state_reinit.sgr_prev = (struct FANSI_sgr) {.color = -1, .bg_color = -1};
+  return state_reinit;
 }
 // When we don't care about R_nchar width, but do care about CSI / SGR (which
 // means, we only really care about SGR since all CSI does is affect width calc).
@@ -164,6 +197,8 @@ struct FANSI_state FANSI_inc_width(
  * element in a character vector to the next.
  *
  * We are not 100% sure we're resetting everything that needs to be reset.
+ *
+ * See also FANSI_state_reinit
  */
 struct FANSI_state FANSI_reset_pos(struct FANSI_state state) {
   state.pos_byte = 0;
@@ -174,6 +209,7 @@ struct FANSI_state FANSI_reset_pos(struct FANSI_state state) {
   state.non_normalized = 0;
   return state;
 }
+
 /*
  * Compute the state given a character position (raw position)
  *
@@ -484,7 +520,7 @@ SEXP FANSI_state_at_pos_ext(
   * IMPORTANT: INPUT MUST ALREADY BE IN UTF8! *
   \*******************************************/
 
-  // errors shoudl be handled R side, but just in case
+  // errors should be handled R side, but just in case
   if(XLENGTH(x) != 1 || STRING_ELT(x, 0) == NA_STRING)
     error("Argument `x` must be scalar character and not be NA.");   // nocov
   if(
@@ -558,8 +594,12 @@ SEXP FANSI_state_at_pos_ext(
   char * empty = "";
   SEXP res_chr, res_chr_prev =
     PROTECT(FANSI_mkChar0(empty, empty, CE_NATIVE, (R_xlen_t) 0)); ++prt;
+
+  SEXP allowNA, keepNA;
+  allowNA = keepNA = R_true;
+
   struct FANSI_state state = FANSI_state_init_full(
-    x, warn, term_cap, R_true, R_true, type, ctl, (R_xlen_t) 0
+    x, warn, term_cap, allowNA, keepNA, type, ctl, (R_xlen_t) 0
   );
   struct FANSI_state state_prev = state;
   struct FANSI_state_pair state_pair = {state, state_prev};

@@ -44,10 +44,12 @@ SEXP FANSI_state_at_end_ext(
 
   SEXP R_true = PROTECT(ScalarLogical(1)); ++prt;
   SEXP R_zero = PROTECT(ScalarInteger(0)); ++prt;
+  SEXP allowNA, keepNA, width;
+  allowNA = keepNA = R_true;
+  width = R_zero; // character width mode
 
   struct FANSI_state state_prev = FANSI_state_init_full(
-    carry_string, warn, term_cap, R_true, R_true,
-    R_zero, // character width mode
+    carry_string, warn, term_cap, allowNA, keepNA, width,
     ctl, (R_xlen_t) 0
   );
   state_prev = state_at_end(state_prev, 0);
@@ -62,7 +64,7 @@ SEXP FANSI_state_at_end_ext(
     FANSI_interrupt(i);
 
     struct FANSI_state state = FANSI_state_init_full(
-      x, warn, term_cap, R_true, R_true, R_zero, ctl, i
+      x, warn, term_cap, allowNA, keepNA, width, ctl, i
     );
     if(do_carry) state.sgr = state_prev.sgr;
 
@@ -92,12 +94,14 @@ struct FANSI_state FANSI_carry_init(
   }
   SEXP R_true = PROTECT(ScalarLogical(1)); ++prt;
   SEXP R_zero = PROTECT(ScalarInteger(0)); ++prt;
+  SEXP allowNA, keepNA, width;
+  allowNA = keepNA = R_true;
+  width = R_zero; // character width mode
 
   // Read-in any pre-existing state to carry
   struct FANSI_state state_carry = FANSI_state_init_full(
-    carry_string, warn, term_cap, R_true, R_true,
-    R_zero, // normal char, we don't care about width
-    ctl, (R_xlen_t) 0
+    carry_string, warn, term_cap, allowNA, keepNA,
+    width, ctl, (R_xlen_t) 0
   );
   state_carry = state_at_end(state_carry, (R_xlen_t) 0);
   UNPROTECT(prt);
