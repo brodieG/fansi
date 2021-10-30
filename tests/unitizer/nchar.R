@@ -6,17 +6,37 @@ unitizer_sect('basic tests', {
   nchar_ctl(c('hello', 'world'), type='wi') # partial match
 
   # Keep NA
+  na.world <- c('hello', NA, 'world', '')
+  identical(nchar_ctl(na.world), nchar(na.world))
+  identical(
+    nchar_ctl(na.world, keepNA=FALSE),
+    nchar(na.world, keepNA=FALSE)
+  )
+  identical(
+    nchar_ctl(na.world, keepNA=NA, type='width'),
+    nchar(na.world, keepNA=NA, type='width')
+  )
+  identical(
+    nchar_ctl(na.world, keepNA=TRUE, type='width'),
+    nchar(na.world, keepNA=TRUE, type='width')
+  )
+  identical(nzchar_ctl(na.world), nzchar(na.world))
+  identical(nzchar_ctl(na.world, keepNA=TRUE), nzchar(na.world, keepNA=TRUE))
+  identical(nzchar_ctl(na.world, keepNA=NA), nzchar(na.world, keepNA=NA))
 
-  na.world <- c('hello', NA, 'world')
-  nchar_ctl(na.world)
-  nchar_ctl(na.world, keepNA=FALSE)
-  nchar_ctl(na.world, keepNA=NA, type='width')
-  nchar_ctl(na.world, keepNA=TRUE, type='width')
+  # Strip equivalence
+  hw.sgr <- c(
+    'hello', 'wo\033[42mrld', '\033[31m', 'mo\non', 'star\033[p', 
+    'link: \033]8;;xy.z\033\\hello\033]8;;\033\\ world'
+  )
+  identical(nchar_ctl(hw.sgr), nchar(strip_ctl(hw.sgr)))
 
-  nzchar_ctl(na.world)
-  nzchar_ctl(na.world, keepNA=NA)
-  nzchar_ctl(na.world, keepNA=TRUE)
-
+  # Bad encoding
+  x <- "\xf0"
+  Encoding(x) <- "UTF-8"
+  identical(nzchar_ctl(x), nzchar(x))
+  nchar_ctl(x)
+  identical(nchar_ctl(x, allowNA=TRUE), nchar(x, allowNA=TRUE))
 })
 unitizer_sect('with escapes', {
   esc.2 <- "\n\r\033P\033[31m\a"
