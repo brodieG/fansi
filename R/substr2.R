@@ -65,9 +65,11 @@
 #' ```
 #' Except for the `terminate` parameter for the trailing substring, all other
 #' parameters are passed from `substr_ctl<-` to the internal substring calls.
-#' If you wish for the whole return value to be terminated you must manually add
-#' terminating sequences.  `substr_ctl` refrains from doing so to maintain the
-#' illusion of a string modified in place.
+#' The `start`, `stop`, and `round` arguments are translated from the provided
+#' values to those required for the internal substring calls.  If you wish for
+#' the whole return value to be terminated you must manually add terminating
+#' sequences.  `substr_ctl` refrains from doing so to maintain the illusion of a
+#' string modified in place.
 #'
 #' Another implication of the three substring approach is that the `carry`
 #' parameter causes state to carry within the original string and the
@@ -288,6 +290,9 @@ substr2_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
+  # This would probably be better done in C, given the contortions we have to
+  # resort to here...
+
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
@@ -296,27 +301,24 @@ substr2_ctl <- function(
     type=type,
     valid.types=c('chars', 'width')
   )
-  # Need to translate start/stop and remap round
-  round.a <- switch(
-    round, start='stop', stop='start', both='neither', neither='both'
-  )
-  round.b <- round
-
   # Adjust `stop` to be no longer than end of string, also need to make sure the
   # overall string length is unchanged.
-  nc <- nchar_ctl(x, type=type, ctl=ctl, warn=warn)
+  nc <- nchar_ctl(x, type=type, ctl=ctl, warn=FALSE)
   stop <- pmin(stop, nc)
   value <- rep_len(enc2utf8(as.character(value)), X.LEN)
-  ncv <- nchar_ctl(value, type=type, ctl=ctl, warn=warn)
+  ncv <- nchar_ctl(value, type=type, ctl=ctl, warn=FALSE)
   end.start <- pmin(stop + 1L, start + ncv)
   end.end <- rep(.Machine[['integer.max']], X.LEN)
+  round.start <- round == 'start' || round == 'both'
+  round.stop <- round == 'stop' || round == 'both'
 
-  # All warnings should have been emitted by `nchar_ctl` above
+  # Rely on warning with `mid` and `end` to catch all warnings.
+  # Possible optim here: the `begin` and `end` substrings could be done as part
+  # of the same pass since they are using the same substrings.
 
   begin <- substr_ctl_internal(
     x, rep(1L, X.LEN), start - 1L, type.int=TYPE.INT,
-    round.start=round.a == 'start' || round.a == 'both',
-    round.stop=round.a == 'stop' || round.a == 'both',
+    round.start=round.start, round.stop=round.stop,
     tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=FALSE,
     term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
     carry=carry, terminate=terminate
@@ -324,9 +326,8 @@ substr2_ctl <- function(
   end <- substr_ctl_internal(
     x, end.start, end.end,
     type.int=TYPE.INT,
-    round.start=round.b == 'start' || round.b == 'both',
-    round.stop=round.b == 'stop' || round.b == 'both',
-    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=FALSE,
+    round.start=round.start, round.stop=round.stop,
+    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
     term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
     carry=carry, terminate=FALSE
   )
@@ -334,9 +335,8 @@ substr2_ctl <- function(
   mid <- substr_ctl_internal(
     value, rep(1L, X.LEN), stop - start + 1L,
     type.int=TYPE.INT,
-    round.start=round == 'start' || round == 'both',
-    round.stop=round == 'stop' || round == 'both',
-    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=FALSE,
+    round.start=round.start, round.stop=round.stop,
+    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
     term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
     carry=carry, terminate=terminate
   )
@@ -352,20 +352,41 @@ substr2_ctl <- function(
     ncsub <- ncb + nce + ncm
     valid <- (ncsub <= nc)
 
+    # Try to rescue some invalids by reducing the size of the replacement by 1
+    # Implicit here is that the widths are all either 1 or 2, which may not be
+    # the case when a \U code is rendered (but that should only be for
+    # EncodeString, which we don't care about).
+    if(!all(valid) && any(mid.again <- !valid & ncm > 1)) {
+      mid2 <- substr_ctl_internal(
+        value[mid.again], rep(1L, sum(mid.again)), (stop - start)[mid.again],
+        type.int=TYPE.INT,
+        round.start=round.start, round.stop=round.stop,
+        tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=FALSE,
+        term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
+        carry=carry, terminate=terminate
+      )
+      ncm2 <- nchar_ctl(mid2, type=type, ctl=ctl, warn=warn)
+      ncsub2 <- ncb[mid.again] + ncm2 + nce[mid.again]
+      noops2 <- ncsub2 > nc[mid.again]
+      mid[mid.again][!noops2] <- mid2[!noops2]
+      ncm[mid.again][!noops2] <- ncm2[!noops2]
+      ncsub <- ncb + nce + ncm
+      valid <- (ncsub <= nc)
+    }
+    # Try to fill in any gaps between end of mid and end by scooching end
+    # forward by the gap amount.
     if(any(valid)) {
       if(any(end.again <- (ncbad <- nc - ncsub) > 0L)) {
-        # Try to fill in any gaps by scooching end forward by the gap
         end2 <- substr_ctl_internal(
           x[end.again], pmax(end.start[end.again] - ncbad[end.again], 1L),
           end.end[end.again],
           type.int=TYPE.INT,
-          round.start=round.b == 'start' || round.b == 'both',
-          round.stop=round.b == 'stop' || round.b == 'both',
+          round.start=round.start, round.stop=round.stop,
           tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=FALSE,
           term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
           carry=carry, terminate=FALSE
         )
-        nce2 <- nchar_ctl(end, type=type, ctl=ctl, warn=warn)
+        nce2 <- nchar_ctl(end2, type=type, ctl=ctl, warn=warn)
         ncsub2 <- ncb[end.again] + ncm[end.again] + nce2
         noops2 <- ncsub2 > nc[end.again]
         end[end.again][!noops2] <- end2[!noops2]
