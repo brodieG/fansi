@@ -187,7 +187,6 @@ SEXP FANSI_process(
   int prt = 0;
   PROTECT_WITH_INDEX(res, &ipx); ++prt;
   SEXP R_true = PROTECT(ScalarLogical(1)); ++prt;
-  SEXP R_false = PROTECT(ScalarLogical(0)); ++prt;
   SEXP R_zero = PROTECT(ScalarInteger(0)); ++prt;
   char * err_msg = "Processing whitespace";
 
