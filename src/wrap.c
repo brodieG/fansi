@@ -252,28 +252,21 @@ static SEXP writeline(
  */
 
 static SEXP strwrap(
-  SEXP x, int width,
+  int width,
   struct FANSI_prefix_dat pre_first,
   struct FANSI_prefix_dat pre_next,
   int wrap_always,
   struct FANSI_buff * buff,
   const char * pad_chr,
   int strip_spaces,
-  SEXP warn, SEXP term_cap,
-  int first_only, SEXP ctl,
+  int first_only,
   R_xlen_t index,
   int normalize,
   int carry,
+  struct FANSI_state state,
   struct FANSI_state * state_carry,
   int terminate
 ) {
-  SEXP R_true = PROTECT(ScalarLogical(1));
-  SEXP R_one = PROTECT(ScalarInteger(1));
-  struct FANSI_state state = FANSI_state_init_full(
-    x, warn, term_cap, R_true, R_true, R_one, ctl, index
-  );
-  UNPROTECT(2);
-
   int width_1 = FANSI_ADD_INT(width, -pre_first.width);
   int width_2 = FANSI_ADD_INT(width, -pre_next.width);
 
@@ -654,25 +647,36 @@ SEXP FANSI_strwrap_ext(
   } else {
     res = PROTECT(allocVector(VECSXP, x_len)); ++prt;
   }
+  SEXP R_true = PROTECT(ScalarLogical(1)); ++prt;
+  SEXP R_one = PROTECT(ScalarInteger(1)); ++prt;
+  struct FANSI_state state;
 
   // Wrap each element
   for(i = 0; i < x_len; ++i) {
+    if(!i) {
+      state = FANSI_state_init_full(
+        x, warn, term_cap, R_true, R_true, R_one, ctl, i
+      );
+    } else state = FANSI_state_reinit(state, x, i);
+
     FANSI_interrupt(i);
     SEXP chr = STRING_ELT(x, i);
     if(chr == NA_STRING) continue;
 
     SEXP str_i = PROTECT(
       strwrap(
-        x, width_int,
+        width_int,
         i ? pre_first_dat : ini_first_dat,
         pre_next_dat,
-        wrap_always_int, &buff,
+        wrap_always_int,
+        &buff,
         CHAR(asChar(pad_end)),
         strip_spaces_int,
-        warn, term_cap,
         first_only_int,
-        ctl, i, normalize,
+        i,
+        normalize,
         do_carry,
+        state,
         &state_carry,
         asLogical(terminate)
     ) );
