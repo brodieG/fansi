@@ -320,7 +320,7 @@ substr2_ctl <- function(
   begin <- substr_ctl_internal(
     x, rep(1L, X.LEN), start - 1L, type.int=TYPE.INT,
     round.start=round.start, round.stop=round.stop,
-    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=FALSE,
+    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=0L,
     term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
     carry=carry, terminate=terminate
   )
@@ -328,7 +328,7 @@ substr2_ctl <- function(
     x, end.start, end.end,
     type.int=TYPE.INT,
     round.start=round.start, round.stop=round.stop,
-    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
+    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=WARN.INT,
     term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
     carry=carry, terminate=FALSE
   )
@@ -337,7 +337,7 @@ substr2_ctl <- function(
     value, rep(1L, X.LEN), stop - start + 1L,
     type.int=TYPE.INT,
     round.start=round.start, round.stop=round.stop,
-    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
+    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=WARN.INT,
     term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
     carry=carry, terminate=terminate
   )
@@ -347,9 +347,9 @@ substr2_ctl <- function(
 
   valid <- rep(TRUE, X.LEN)  # this may get changed in body of `if` statement
   x[valid] <- if(type == 'width') {
-    ncb <- nchar_ctl(begin, type=type, ctl=ctl, warn=warn)
-    nce <- nchar_ctl(end, type=type, ctl=ctl, warn=warn)
-    ncm <- nchar_ctl(mid, type=type, ctl=ctl, warn=warn)
+    ncb <- nchar_ctl(begin, type=type, ctl=ctl, warn=FALSE)
+    nce <- nchar_ctl(end, type=type, ctl=ctl, warn=FALSE)
+    ncm <- nchar_ctl(mid, type=type, ctl=ctl, warn=FALSE)
     ncsub <- ncb + nce + ncm
     valid <- (ncsub <= nc)
 
@@ -362,7 +362,7 @@ substr2_ctl <- function(
         value[mid.again], rep(1L, sum(mid.again)), (stop - start)[mid.again],
         type.int=TYPE.INT,
         round.start=round.start, round.stop=round.stop,
-        tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=FALSE,
+        tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=0L,
         term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
         carry=carry, terminate=terminate
       )
@@ -383,7 +383,7 @@ substr2_ctl <- function(
           end.end[end.again],
           type.int=TYPE.INT,
           round.start=round.start, round.stop=round.stop,
-          tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=FALSE,
+          tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=0L,
           term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
           carry=carry, terminate=FALSE
         )

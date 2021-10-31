@@ -809,7 +809,7 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
       disp_size = NA_INTEGER;
     } else {
       error(
-        "Invalid multiyte string and index [%jd], %s", FANSI_ind(i), mb_err_str
+        "Invalid multiyte string at index [%jd], %s", FANSI_ind(i), mb_err_str
       );
     }
   } else if(state.use_nchar) {  // only true if in width mode

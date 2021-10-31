@@ -58,6 +58,8 @@ tabs_as_spaces <- function(
   warn=getOption('fansi.warn', TRUE), ctl='all'
 ) {
   ## modifies / creates NEW VARS in fun env
+  if(!is.numeric(tab.stops) || !length(tab.stops) || any(tab.stops < 1))
+    stop("Argument `tab.stops` must be numeric and strictly positive")
   VAL_IN_ENV(x=x, warn=warn, ctl=ctl, warn.mask=set_bits(5, 7, 9))
   term.cap.int <- 1L
   .Call(

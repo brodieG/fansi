@@ -35,11 +35,6 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     error("Argument `x` should be a character vector.");  // nocov
   if(TYPEOF(ctl) != INTSXP)
     error("Internal Error: `ctl` should integer.");      // nocov
-  if(
-    TYPEOF(warn) != LGLSXP || XLENGTH(warn) != 1 ||
-    INTEGER(warn)[0] == NA_INTEGER
-  )
-    error("Internal Error: `warn` should be TRUE or FALSE");  // nocov
 
   R_xlen_t i, len = xlength(x);
   SEXP res_fin = x;

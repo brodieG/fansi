@@ -185,7 +185,7 @@ strwrap2_ctl <- function(
     if(normalize) normalize_state(unlist(res), warn, term.cap)
     else unlist(res)
   } else {
-    if(normalize) normalize_state_list(res, warn, TERM.CAP.INT) else res
+    if(normalize) normalize_state_list(res, WARN.INT, TERM.CAP.INT) else res
   }
 }
 #' Control Sequence Aware Version of strwrap

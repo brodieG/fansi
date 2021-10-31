@@ -43,11 +43,11 @@ static struct FANSI_prefix_dat make_pre(
   int prt = 0;
 
   SEXP R1 = PROTECT(ScalarInteger(1)); prt++;
-  SEXP Rfalse = PROTECT(ScalarLogical(0)); prt++;
+  SEXP R0 = PROTECT(ScalarInteger(0)); prt++;
   SEXP Rtrue = PROTECT(ScalarLogical(1)); prt++;
   SEXP keepNA = Rtrue;
   SEXP allowNA = Rtrue;
-  SEXP warn2 = Rfalse;
+  SEXP warn2 = R0;
   SEXP width = R1;     // width mode
 
   struct FANSI_state state = FANSI_state_init_full(

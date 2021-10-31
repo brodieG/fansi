@@ -160,7 +160,7 @@ SEXP FANSI_bridge_state_ext(SEXP end, SEXP restart, SEXP term_cap, SEXP norm) {
   SEXP res = PROTECT(allocVector(STRSXP, x_len)); // WRE docs this is init'ed
 
   // We'll already have warned about these at some point
-  SEXP warn =  PROTECT(ScalarLogical(0));
+  SEXP warn =  PROTECT(ScalarInteger(0));
   struct FANSI_state st_end, st_rst;
 
   for(R_xlen_t i = 0; i < x_len; ++i) {

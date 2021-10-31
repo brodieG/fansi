@@ -127,7 +127,7 @@ strsplit_ctl <- function(
         x=x[[i]],
         start=starts, stop=ends, type.int=0L,
         round.start=TRUE, round.stop=FALSE,
-        tabs.as.spaces=FALSE, tab.stops=8L, warn=warn,
+        tabs.as.spaces=FALSE, tab.stops=8L, warn.int=WARN.INT,
         term.cap.int=TERM.CAP.INT, x.len=length(starts),
         ctl.int=CTL.INT, normalize=normalize,
         carry=carry, terminate=terminate

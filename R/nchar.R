@@ -67,12 +67,12 @@ nchar_ctl <- function(
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(
     x=x, ctl=ctl, warn=warn, type=type, allowNA=allowNA, keepNA=keepNA,
-    valid.types=c('chars', 'width', 'bytes'), warn.mask=set_bits(5, 7, 9)
+    valid.types=c('chars', 'width', 'bytes'),
+    warn.mask=if(isTRUE(allowNA)) set_bits(5, 7) else set_bits(5, 7, 9)
   )
-
   nchar_ctl_internal(
     x=x, type.int=TYPE.INT, allowNA=allowNA, keepNA=keepNA, ctl.int=CTL.INT,
-    warn=WARN.INT, z=FALSE
+    warn.int=WARN.INT, z=FALSE
   )
 }
 #' @export
@@ -84,11 +84,11 @@ nzchar_ctl <- function(
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(
     x=x, ctl=ctl, warn=warn, type='chars', keepNA=keepNA,
-    valid.types=c('chars', 'width', 'bytes'), warn.mask=set_bits(5, 7, 9)
+    valid.types=c('chars', 'width', 'bytes'), warn.mask=set_bits(5, 7)
   )
   nchar_ctl_internal(
     x=x, type.int=TYPE.INT, allowNA=TRUE, keepNA=keepNA, ctl.int=CTL.INT,
-    warn=WARN.INT, z=TRUE
+    warn.int=WARN.INT, z=TRUE
   )
 }
 nchar_ctl_internal <- function(
