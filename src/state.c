@@ -74,10 +74,10 @@ struct FANSI_state FANSI_state_init_full(
       "Internal error: state_init with bad type for ctl (%s)",
       type2char(TYPEOF(ctl))
     );
-  if(TYPEOF(warn) != INTSXP || XLENGTH(warn))
+  if(TYPEOF(warn) != INTSXP || XLENGTH(warn) != 1L)
     error(
-      "Internal error: state_init with bad type for warn (%s)",
-      type2char(TYPEOF(warn))
+      "Internal error: state_init with bad (%s) type or length (%jd) for warn.",
+      type2char(TYPEOF(warn)), XLENGTH(warn)
     );
   int warn_int = asInteger(warn);
   if(warn_int < 0 || warn_int > FANSI_WARN_ALL)
