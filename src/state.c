@@ -293,7 +293,7 @@ static struct FANSI_state_pair state_at_pos2(
     }
   }
   // Avoid potential double warning next time we read
-  state_restart.warn = state.warn = state.warn;
+  state_restart.warned = state.warned = state.warned;
 
   return (struct FANSI_state_pair){.cur=state_res, .restart=state_restart};
 }

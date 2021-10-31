@@ -134,7 +134,7 @@ static SEXP normalize_state_int(
     if(res == x) REPROTECT(res = duplicate(x), ipx);
     FANSI_size_buff(buff);
     state = state_start;
-    state.warn = 0;  // avoid double warnings
+    state.warned = 0;  // avoid double warnings
     normalize(buff, &state, i);
 
     cetype_t chr_type = getCharCE(chrsxp);
