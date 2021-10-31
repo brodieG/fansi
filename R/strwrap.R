@@ -121,7 +121,7 @@ strwrap_ctl <- function(
     FALSE, "",
     TRUE,
     FALSE, 8L,
-    warn, TERM.CAP.INT,
+    WARN.INT, TERM.CAP.INT,
     FALSE,   # first_only
     CTL.INT, normalize,
     carry, terminate
@@ -130,7 +130,7 @@ strwrap_ctl <- function(
     if(normalize) normalize_state(unlist(res), warn, term.cap)
     else unlist(res)
   } else {
-    if(normalize) normalize_state_list(res, warn, TERM.CAP.INT) else res
+    if(normalize) normalize_state_list(res, WARN.INT, TERM.CAP.INT) else res
   }
 }
 #' @export
@@ -176,7 +176,7 @@ strwrap2_ctl <- function(
     wrap.always, pad.end,
     strip.spaces,
     tabs.as.spaces, tab.stops,
-    warn, TERM.CAP.INT,
+    WARN.INT, TERM.CAP.INT,
     FALSE,   # first_only
     CTL.INT, normalize,
     carry, terminate

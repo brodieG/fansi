@@ -41,6 +41,7 @@ R_CallMethodDef callMethods[] = {
   {"sort_chr", (DL_FUNC) &FANSI_sort_chr, 1},
   {"set_int_max", (DL_FUNC) &FANSI_set_int_max, 1},
   {"get_int_max", (DL_FUNC) &FANSI_get_int_max, 0},
+  {"get_warn_all", (DL_FUNC) &FANSI_get_warn_all, 0},
   {"check_enc", (DL_FUNC) &FANSI_check_enc_ext, 2},
   {"ctl_as_int", (DL_FUNC) &FANSI_ctl_as_int_ext, 1},
   {"esc_html", (DL_FUNC) &FANSI_esc_html, 2},

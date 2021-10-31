@@ -63,7 +63,7 @@ strtrim_ctl <- function(
       TRUE, "",  # wrap always
       FALSE,     # strip spaces
       FALSE, 8L,
-      warn, term.cap.int,
+      WARN.INT, term.cap.int,
       TRUE,      # first only
       CTL.INT,
       normalize,
@@ -104,17 +104,17 @@ strtrim2_ctl <- function(
 
   # a bit inefficient to rely on strwrap, but oh well
   res <- .Call(
-      FANSI_strwrap_csi,
-      enc2utf8(x), width,
-      0L, 0L,    # indent, exdent
-      "", "",    # prefix, initial
-      TRUE, "",  # wrap always
-      FALSE,     # strip spaces
-      tabs.as.spaces, tab.stops,
-      warn, term.cap.int,
-      TRUE,      # first only
-      CTL.INT,
-      normalize, carry, terminate
+    FANSI_strwrap_csi,
+    enc2utf8(x), width,
+    0L, 0L,    # indent, exdent
+    "", "",    # prefix, initial
+    TRUE, "",  # wrap always
+    FALSE,     # strip spaces
+    tabs.as.spaces, tab.stops,
+    WARN.INT, term.cap.int,
+    TRUE,      # first only
+    CTL.INT,
+    normalize, carry, terminate
   )
   if(normalize) normalize_state(res) else res
 }

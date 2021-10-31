@@ -57,29 +57,12 @@ tabs_as_spaces <- function(
   x, tab.stops=getOption('fansi.tab.stops', 8L),
   warn=getOption('fansi.warn', TRUE), ctl='all'
 ) {
-
-  if(!is.character(x)) x <- as.character(x)
-  if(!is.logical(warn)) warn <- as.logical(warn)
-  if(length(warn) != 1L || is.na(warn))
-    stop("Argument `warn` must be TRUE or FALSE.")
-  if(!is.numeric(tab.stops) || !length(tab.stops) || any(tab.stops < 1))
-    stop("Argument `tab.stops` must be numeric and strictly positive")
-
-  if(!is.character(ctl))
-    stop("Argument `ctl` must be character.")
-  ctl.int <- integer()
-  if(length(ctl)) {
-    # duplicate values in `ctl` are okay, so save a call to `unique` here
-    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
-      stop(
-        "Argument `ctl` may contain only values in `",
-        deparse(VALID.CTL), "`"
-      )
-  }
+  ## modifies / creates NEW VARS in fun env
+  VAL_IN_ENV(x=x, warn=warn, ctl=ctl, warn.mask=set_bits(5, 7, 9))
   term.cap.int <- 1L
   .Call(
-    FANSI_tabs_as_spaces, enc2utf8(x), as.integer(tab.stops), warn,
-    term.cap.int, ctl.int
+    FANSI_tabs_as_spaces, x, as.integer(tab.stops), WARN.INT,
+    term.cap.int, CTL.INT
   )
 }
 #' Test Terminal Capabilities

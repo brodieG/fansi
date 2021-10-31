@@ -315,7 +315,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * *  8: c0 escapes
      * *  9: malformed UTF8
      * * ..: unused
-     * * 32: unused, max error code allowable.
+     * * 31: unused, max error code allowable (must fit in signed int for
+     *       transfer to R).
      */
     unsigned int err_code;
     /*
@@ -335,9 +336,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     // `state.last` is true.
     int is_sgr;
     // Whether to issue warnings if err_code is non-zero.  Warnings are issued
-    // if warn & (1 << (err_code - 1)) is set.  `read_next` will reset warnings
-    // to zero after emitting them.
+    // if warn & (1 << (err_code - 1)) is set.
     unsigned int warn;
+    // Whether a warning was issued; `read_next` will set this to 1 which will
+    // suppress additional warnings.
+    int warned;
     // Whether to use R_nchar, really only needed when we're doing things in
     // width mode
     int use_nchar;
@@ -424,6 +427,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   SEXP FANSI_set_int_max(SEXP x);
   SEXP FANSI_get_int_max();
+  SEXP FANSI_get_warn_all();
   SEXP FANSI_esc_html(SEXP x, SEXP what);
 
   SEXP FANSI_normalize_state_ext(

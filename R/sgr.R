@@ -62,9 +62,9 @@ strip_ctl <- function(x, ctl='all', warn=getOption('fansi.warn', TRUE), strip) {
     ctl <- strip
   }
   ## modifies / creates NEW VARS in fun env
-  VAL_IN_ENV(x=x, ctl=ctl, warn=warn)
+  VAL_IN_ENV(x=x, ctl=ctl, warn=warn, warn.mask=set_bits(5, 7, 9))
 
-  if(length(ctl)) .Call(FANSI_strip_csi, enc2utf8(x), CTL.INT, warn)
+  if(length(ctl)) .Call(FANSI_strip_csi, enc2utf8(x), CTL.INT, WARN.INT)
   else x
 }
 #' Strip Control Sequences
@@ -82,9 +82,9 @@ strip_ctl <- function(x, ctl='all', warn=getOption('fansi.warn', TRUE), strip) {
 
 strip_sgr <- function(x, warn=getOption('fansi.warn', TRUE)) {
   ## modifies / creates NEW VARS in fun env
-  VAL_IN_ENV(x=x, warn=warn)
+  VAL_IN_ENV(x=x, warn=warn, warn.mask=set_bits(5, 7, 9))
   ctl.int <- match(c("sgr", "url"), VALID.CTL)
-  .Call(FANSI_strip_csi, x, ctl.int, warn)
+  .Call(FANSI_strip_csi, x, ctl.int, WARN.INT)
 }
 
 #' Check for Presence of Control Sequences
@@ -112,9 +112,9 @@ has_ctl <- function(x, ctl='all', warn=getOption('fansi.warn', TRUE), which) {
     ctl <- which
   }
   ## modifies / creates NEW VARS in fun env
-  VAL_IN_ENV(x=x, ctl=ctl, warn=warn)
+  VAL_IN_ENV(x=x, ctl=ctl, warn=warn, warn.mask=set_bits(5, 7, 9))
   if(length(CTL.INT)) {
-    .Call(FANSI_has_csi, x, CTL.INT, warn)
+    .Call(FANSI_has_csi, x, CTL.INT, WARN.INT)
   } else rep(FALSE, length(x))
 }
 #' Check for Presence of Control Sequences
@@ -165,7 +165,7 @@ state_at_end <- function(
   .Call(
     FANSI_state_at_end,
     x,
-    warn,
+    WARN.INT,
     TERM.CAP.INT,
     CTL.INT,
     normalize,
@@ -184,7 +184,7 @@ close_state <- function(
 ) {
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(x=x, warn=warn, normalize=normalize)
-  .Call(FANSI_close_state, x, warn, 1L, normalize)
+  .Call(FANSI_close_state, x, WARN.INT, 1L, normalize)
 }
 
 

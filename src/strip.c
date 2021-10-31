@@ -24,6 +24,10 @@
  *
  * Since we do not use FANSI_read_next, we don't care about conversions to
  * UTF8.
+ *
+ * Warn was used pre 1.0 to request to return warn info in attributes e.g. by
+ * setting it to two, but that feature was dropped in favor of bit-encoded
+ * warning levels.
  */
 
 SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
@@ -36,10 +40,6 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     INTEGER(warn)[0] == NA_INTEGER
   )
     error("Internal Error: `warn` should be TRUE or FALSE");  // nocov
-
-  // We used to allow warn = 2 to indicate that warning status should be
-  // returned as an attributes, but got rid of that.
-  int warn_int = asLogical(warn) * FANSI_WARN_CSIBAD;
 
   R_xlen_t i, len = xlength(x);
   SEXP res_fin = x;
@@ -67,16 +67,10 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
   struct FANSI_state state;
 
   for(i = 0; i < len; ++i) {
-    if(!i) {
-      // Now full check
-      SEXP warn = PROTECT(ScalarLogical(0));
-      state = FANSI_state_init_ctl(x, warn, ctl, i);
-      UNPROTECT(1);
-      state.warn = warn_int;
-    } else {
-      state = FANSI_state_reinit(state, x, i);
-      state.warn = warn_int;
-    }
+    // Now full check
+    if(!i) state = FANSI_state_init_ctl(x, warn, ctl, i);
+    else state = FANSI_state_reinit(state, x, i);
+
     SEXP x_chr = STRING_ELT(x, i);
     if(x_chr == NA_STRING) continue;
     FANSI_interrupt(i);
@@ -99,12 +93,11 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     if(!*(chr + off_init)) continue;
 
     state.pos_byte = off_init;
-    // Rprintf("init %d\n", off_init);
     struct FANSI_ctl_pos pos_prev = {0, 0, 0};
 
     while(1) {
       struct FANSI_ctl_pos pos = FANSI_find_ctl(state, i, 0);
-      if(pos.warn_max && state.warn) state.warn = 0U;
+      if(pos.warn_max && state.warn) state.warned = 1;
       if(pos.len) {
         has_ansi = 1;
 
@@ -205,11 +198,11 @@ SEXP FANSI_process(
     FANSI_interrupt(i);
     // Don't warn - we don't modify or interpret sequences.  This allows bad
     // UTF-8 through.
-    SEXP allowNA, keepNA, width;
+    SEXP allowNA, keepNA, width, warn;
     allowNA = keepNA = R_true;
-    width = R_zero;
+    width = warn = R_zero;
     struct FANSI_state state = FANSI_state_init_full(
-      input, R_false, term_cap, allowNA, keepNA, width, ctl, i
+      input, warn, term_cap, allowNA, keepNA, width, ctl, i
     );
     const char * string = state.string;
     const char * string_start = string;

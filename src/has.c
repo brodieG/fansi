@@ -32,16 +32,10 @@ SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn) {
   SEXP res = PROTECT(allocVector(LGLSXP, len));
   int * res_int = LOGICAL(res);
   struct FANSI_state state;
-  unsigned int warn_int = asLogical(warn) * FANSI_WARN_CSIBAD;
 
   for(R_xlen_t i = 0; i < len; ++i) {
-    if(!i) {
-      state = FANSI_state_init_ctl(x, warn, ctl, i);
-      state.warn = warn_int;
-    } else {
-      state = FANSI_state_reinit(state, x, i);
-      state.warn = warn_int;
-    }
+    if(!i) state = FANSI_state_init_ctl(x, warn, ctl, i);
+    else state = FANSI_state_reinit(state, x, i);
     FANSI_interrupt(i);
     SEXP chrsxp = STRING_ELT(x, i);
     if(chrsxp != NA_STRING) {

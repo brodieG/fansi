@@ -162,7 +162,7 @@ to_html <- function(
   } else
     stop("Argument `classes` must be TRUE, FALSE, or a character vector.")
 
-  .Call(FANSI_esc_to_html, x, warn, TERM.CAP.INT, classes, carry)
+  .Call(FANSI_esc_to_html, x, WARN.INT, TERM.CAP.INT, classes, carry)
 }
 #' Convert Control Sequences to HTML Equivalents
 #'

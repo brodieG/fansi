@@ -328,7 +328,7 @@ static SEXP strwrap(
             state_bound.string[state_bound.pos_byte] == 0x1b &&
             !state_tmp.last_special
           ) {
-            state_bound.warn = state_tmp.warn;  // avoid double warnings
+            state_bound.warned = state_tmp.warned;  // avoid double warnings
             break;
           }
           state_bound = state_tmp;
@@ -336,7 +336,7 @@ static SEXP strwrap(
       } else if(state_bound.string[state_bound.pos_byte] == 0x1b) {
         state_tmp = FANSI_read_next(state_bound, index, 1);
         if(state_tmp.last_special) state_bound = state_tmp;
-        else state_bound.warn = state_tmp.warn;  // avoid double warnings
+        else state_bound.warned = state_tmp.warned;  // avoid double warnings
       }
       has_boundary = 0;
       state_bound.pos_width = 0;
@@ -348,7 +348,7 @@ static SEXP strwrap(
     state_next = state; // if we hit end of string, re-use state as next
     // Look ahead one element
     if(!end) state_next = FANSI_read_next(state_next, index, 1);
-    state.warn = state_bound.warn = state_next.warn;  // avoid double warning
+    state.warned = state_bound.warned = state_next.warned;// avoid 2x warning
 
     // detect word boundaries and paragraph starts; we need to track
     // state_bound for the special case where we are in strip space mode

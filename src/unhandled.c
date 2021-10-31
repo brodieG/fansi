@@ -34,7 +34,7 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
 
   SEXP R_true = PROTECT(ScalarLogical(1));
   SEXP R_one = PROTECT(ScalarInteger(1));
-  SEXP no_warn = PROTECT(ScalarLogical(0));
+  SEXP no_warn = PROTECT(ScalarInteger(0));
   SEXP ctl_all = PROTECT(ScalarInteger(0));
   SEXP res, res_start;
   res = res_start = R_NilValue;

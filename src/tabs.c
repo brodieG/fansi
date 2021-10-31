@@ -124,7 +124,7 @@ SEXP FANSI_tabs_as_spaces(
       char cur_chr;
 
       int last_byte = state.pos_byte;
-      int warn_old = state.warn;
+      unsigned int warn_old = state.warn;
       int tab_acc_width, tab_stop;
       tab_acc_width = tab_stop = 0;
 
@@ -146,7 +146,7 @@ SEXP FANSI_tabs_as_spaces(
           int write_bytes = state.pos_byte - last_byte;
           FANSI_W_MCOPY(buff, state.string + last_byte, write_bytes);
 
-          // consume tab and advance
+          // consume tab and advance, temporarily suppressing warning
           state.warn = 0;
           state = FANSI_read_next(state, i, 1);
           state.warn = warn_old;

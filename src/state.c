@@ -49,11 +49,6 @@ struct FANSI_state FANSI_state_init_full(
 
   // Validation not complete here, many of these should be scalar, rely on R
   // level checks.
-  if(TYPEOF(warn) != LGLSXP)
-    error(
-      "Internal error: state_init with bad type for warn (%s)",
-      type2char(TYPEOF(warn))
-    );
   if(TYPEOF(term_cap) != INTSXP)
     error(
       "Internal error: state_init with bad type for term_cap (%s)",
@@ -79,14 +74,25 @@ struct FANSI_state FANSI_state_init_full(
       "Internal error: state_init with bad type for ctl (%s)",
       type2char(TYPEOF(ctl))
     );
-
+  if(TYPEOF(warn) != INTSXP || XLENGTH(warn))
+    error(
+      "Internal error: state_init with bad type for warn (%s)",
+      type2char(TYPEOF(warn))
+    );
+  int warn_int = asInteger(warn);
+  if(warn_int < 0 || warn_int > FANSI_WARN_ALL)
+    error(
+      "Internal error: state_init with OOB value for warn (%d)",
+      warn_int
+    );
   // nocov end
 
+  // All others struct-inited to zero.
   return (struct FANSI_state) {
     .sgr = (struct FANSI_sgr) {.color = -1, .bg_color = -1},
     .sgr_prev = (struct FANSI_sgr) {.color = -1, .bg_color = -1},
     .string = string,
-    .warn = asLogical(warn) * FANSI_WARN_ALL,
+    .warn = (unsigned int) warn_int,
     .term_cap = FANSI_term_cap_as_int(term_cap),
     .allowNA = asLogical(allowNA),
     .keepNA = asLogical(keepNA),

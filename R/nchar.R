@@ -67,12 +67,12 @@ nchar_ctl <- function(
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(
     x=x, ctl=ctl, warn=warn, type=type, allowNA=allowNA, keepNA=keepNA,
-    valid.types=c('chars', 'width', 'bytes')
+    valid.types=c('chars', 'width', 'bytes'), warn.mask=set_bits(5, 7, 9)
   )
 
   nchar_ctl_internal(
     x=x, type.int=TYPE.INT, allowNA=allowNA, keepNA=keepNA, ctl.int=CTL.INT,
-    warn=warn, z=FALSE
+    warn=WARN.INT, z=FALSE
   )
 }
 #' @export
@@ -84,21 +84,23 @@ nzchar_ctl <- function(
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(
     x=x, ctl=ctl, warn=warn, type='chars', keepNA=keepNA,
-    valid.types=c('chars', 'width', 'bytes')
+    valid.types=c('chars', 'width', 'bytes'), warn.mask=set_bits(5, 7, 9)
   )
   nchar_ctl_internal(
     x=x, type.int=TYPE.INT, allowNA=TRUE, keepNA=keepNA, ctl.int=CTL.INT,
-    warn=warn, z=TRUE
+    warn=WARN.INT, z=TRUE
   )
 }
-nchar_ctl_internal <- function(x, type.int, allowNA, keepNA, ctl.int, warn, z) {
+nchar_ctl_internal <- function(
+  x, type.int, allowNA, keepNA, ctl.int, warn.int, z
+) {
   term.cap.int <- 1L
   R.ver.gte.3.2.2 <- R.ver.gte.3.2.2 # "import" symbol from namespace
   if(R.ver.gte.3.2.2)
     .Call(
       FANSI_nchar_esc,
       x, type.int, keepNA, allowNA,
-      warn, term.cap.int, ctl.int, z
+      warn.int, term.cap.int, ctl.int, z
     )
   else nchar(stripped, type=type, allowNA=allowNA) # nocov
 }
