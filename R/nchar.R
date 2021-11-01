@@ -21,12 +21,12 @@
 #' Sequence_ sequence characters.  By default newlines and other C0 control
 #' characters are not counted.
 #'
-#' `nchar_ctl` is just a wrapper around `nchar(strip_ctl(...))`.  `nzchar_ctl`
-#' is implemented in native code and is much faster than the otherwise
-#' equivalent `nzchar(strip_ctl(...))`.
+#' `nchar_ctl` and `nzchar_ctl` are implemented in statically compiled code, so
+#' in particular `nzchar_ctl` will be much faster than the otherwise equivalent
+#' `nzchar(strip_ctl(...))`.
 #'
-#' These functions will warn if either malformed or non-CSI escape sequences are
-#' encountered, as these may be incorrectly interpreted.
+#' These functions will warn if either malformed or escape or UTF-8 sequences
+#' are encountered as they may be incorrectly interpreted.
 #'
 #' @inheritParams substr_ctl
 #' @inheritParams base::nchar

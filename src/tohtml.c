@@ -371,7 +371,7 @@ SEXP FANSI_esc_to_html(
   R_xlen_t x_len = XLENGTH(x);
   struct FANSI_state state, state_prev, state_init;
   SEXP empty = PROTECT(mkString(""));
-  state = FANSI_state_init(empty, warn, term_cap, (R_xlen_t) 0);
+  state = FANSI_state_init(empty, warn, term_cap, (R_xlen_t) 0, "x");
   UNPROTECT(1);
 
   state_prev = state_init = state;

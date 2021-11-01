@@ -63,7 +63,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
 
   for(i = 0; i < len; ++i) {
     // Now full check
-    if(!i) state = FANSI_state_init_ctl(x, warn, ctl, i);
+    if(!i) state = FANSI_state_init_ctl(x, warn, ctl, i, "x");
     else state = FANSI_state_reinit(state, x, i);
 
     SEXP x_chr = STRING_ELT(x, i);
@@ -197,8 +197,9 @@ SEXP FANSI_process(
     allowNA = keepNA = R_true;
     width = warn = R_zero;
     if(!i) {
+      // AFAICT process only for strwrap, and testing
       state = FANSI_state_init_full(
-        input, warn, term_cap, allowNA, keepNA, width, ctl, i
+        input, warn, term_cap, allowNA, keepNA, width, ctl, i, "x"
       );
     } else {
       state = FANSI_state_reinit(state, input, i);

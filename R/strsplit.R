@@ -87,7 +87,7 @@ strsplit_ctl <- function(
   s.x.seq <- rep(s.seq, length.out=length(x)) * (!x.na)
 
   matches <- res <- vector("list", length(x))
-  x.strip <- strip_ctl(x, warn=warn, ctl=ctl)
+  x.strip <- strip_ctl(x, warn=FALSE, ctl=ctl)
   chars <- nchar(x.strip)
 
   # Find the split locations and widths

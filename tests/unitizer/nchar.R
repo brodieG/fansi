@@ -36,6 +36,7 @@ unitizer_sect('basic tests', {
   Encoding(x) <- "UTF-8"
   identical(nzchar_ctl(x), nzchar(x))
   nchar_ctl(x)
+  nchar_ctl(c("", x))
   identical(nchar_ctl(x, allowNA=TRUE), nchar(x, allowNA=TRUE))
 })
 unitizer_sect('with escapes', {

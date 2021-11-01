@@ -472,12 +472,20 @@ substr_ctl_internal <- function(
 
   x.carry <- character(length(x))
   if(!is.na(carry)) {
+    # need to check carry, do a one-pass through checking for problems
     ends <- .Call(
-      FANSI_state_at_end, x, warn.int, term.cap.int, ctl.int, normalize, carry
+      FANSI_state_at_end, x, warn.int, term.cap.int, ctl.int, normalize,
+      NA_character_, "carry"
+    )
+    # and now compute style at end
+    ends <- .Call(
+      FANSI_state_at_end, x, warn.int, term.cap.int, ctl.int, normalize,
+      carry, "x"
     )
     x.carry <- c(carry, ends[-length(ends)])
     x <- paste0(x.carry, x)
   }
+  # Need to warn here as during substringing we might not see the end.
   warn.int <- warn.int * is.na(carry)
 
   # We compute style at each start and stop position by getting all those

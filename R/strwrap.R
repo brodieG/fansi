@@ -127,10 +127,10 @@ strwrap_ctl <- function(
     carry, terminate
   )
   if(simplify) {
-    if(normalize) normalize_state(unlist(res), warn, term.cap)
+    if(normalize) normalize_state(unlist(res), warn=FALSE, term.cap)
     else unlist(res)
   } else {
-    if(normalize) normalize_state_list(res, WARN.INT, TERM.CAP.INT) else res
+    if(normalize) normalize_state_list(res, 0L, TERM.CAP.INT) else res
   }
 }
 #' @export
@@ -182,10 +182,10 @@ strwrap2_ctl <- function(
     carry, terminate
   )
   if(simplify) {
-    if(normalize) normalize_state(unlist(res), warn, term.cap)
+    if(normalize) normalize_state(unlist(res), warn=FALSE, term.cap)
     else unlist(res)
   } else {
-    if(normalize) normalize_state_list(res, WARN.INT, TERM.CAP.INT) else res
+    if(normalize) normalize_state_list(res, 0L, TERM.CAP.INT) else res
   }
 }
 #' Control Sequence Aware Version of strwrap

@@ -808,8 +808,21 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
     if(state.allowNA) {
       disp_size = NA_INTEGER;
     } else {
+      char arg[39];
+      if(state.arg) {
+        if(strlen(state.arg) > 18)
+          error("Internal Error: arg name too long for error.");// nocov
+        int try = sprintf(arg, "Argument `%s` contains", state.arg);
+        if(try < 0)
+          error("Internal Error: snprintf failed.");  // nocov
+      } else {
+        strcpy(arg, "Encountered");
+      }
       error(
-        "Invalid multiyte string at index [%jd], %s", FANSI_ind(i), mb_err_str
+        "%s %s at index [%jd], %s%s",
+        arg, "an invalid UTF-8 byte sequence", FANSI_ind(i),
+        "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
+        "off these warnings."
       );
     }
   } else if(state.use_nchar) {  // only true if in width mode
@@ -936,8 +949,19 @@ onemoretime:
     !state.warned && state.err_code &&
     (state.warn & 1U << (state.err_code - 1U))
   ) {
+    char arg[39];
+    if(state.arg) {
+      if(strlen(state.arg) > 18)
+        error("Internal Error: arg name too long for warning.");// nocov
+      int try = sprintf(arg, "Argument `%s` contains", state.arg);
+      if(try < 0)
+        error("Internal Error: snprintf failed.");  // nocov
+    } else {
+      strcpy(arg, "Encountered");
+    }
     warning(
-      "Encountered %s at index [%jd], %s%s", state.err_msg, FANSI_ind(i),
+      "%s %s at index [%jd], %s%s",
+      arg, state.err_msg, FANSI_ind(i),
       "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
       "off these warnings."
     );

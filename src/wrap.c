@@ -43,28 +43,17 @@ static struct FANSI_prefix_dat make_pre(
   int prt = 0;
 
   SEXP R1 = PROTECT(ScalarInteger(1)); prt++;
-  SEXP R0 = PROTECT(ScalarInteger(0)); prt++;
   SEXP Rtrue = PROTECT(ScalarLogical(1)); prt++;
+  SEXP Rfalse = PROTECT(ScalarLogical(0)); prt++;
   SEXP keepNA = Rtrue;
-  SEXP allowNA = Rtrue;
-  SEXP warn2 = R0;
+  SEXP allowNA = Rfalse;
   SEXP width = R1;     // width mode
 
   struct FANSI_state state = FANSI_state_init_full(
-    x, warn2, term_cap, allowNA, keepNA, width, ctl, 0
+    x, warn, term_cap, allowNA, keepNA, width, ctl, 0, arg
   );
-  while(state.string[state.pos_byte]) {
-    state = FANSI_read_next(state, 0, 1);
-    if(state.err_code == 9) error("`%s` contains %s.", arg, state.err_msg);
-    else if(asLogical(warn) && state.err_code) {
-      // We don't use internal warning because we want to be able to provide the
-      // argument name.
-      warning(
-        "`%s` contains %s. %s%s", arg, state.err_msg,
-        "See `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
-        "off these warnings."
-      );
-  } }
+  while(state.string[state.pos_byte]) state = FANSI_read_next(state, 0, 1);
+
   UNPROTECT(prt);
   return (struct FANSI_prefix_dat) {
     .string=state.string,
@@ -655,7 +644,7 @@ SEXP FANSI_strwrap_ext(
   for(i = 0; i < x_len; ++i) {
     if(!i) {
       state = FANSI_state_init_full(
-        x, warn, term_cap, R_true, R_true, R_one, ctl, i
+        x, warn, term_cap, R_true, R_true, R_one, ctl, i, "x"
       );
     } else state = FANSI_state_reinit(state, x, i);
 

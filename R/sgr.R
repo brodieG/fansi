@@ -169,7 +169,8 @@ state_at_end <- function(
     TERM.CAP.INT,
     CTL.INT,
     normalize,
-    carry
+    carry,
+    "x"
   )
 }
 # Given an SGR, compute the sequence that closes it

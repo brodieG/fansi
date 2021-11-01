@@ -86,7 +86,7 @@ SEXP FANSI_tabs_as_spaces(
     FANSI_interrupt(i);
     if(!i) {
       state = FANSI_state_init_full(
-        vec, warn, term_cap, allowNA, keepNA, width, ctl, i
+        vec, warn, term_cap, allowNA, keepNA, width, ctl, i, "x"
       );
     } else {
       state = FANSI_state_reinit(state, vec, i);
@@ -125,16 +125,6 @@ SEXP FANSI_tabs_as_spaces(
       // Note: this does not use the measure - write approach; we just
       // overallocate knowing the upper bound of tab space usage.
       FANSI_size_buff0(buff, new_buff_size);
-
-      SEXP R_true = PROTECT(ScalarLogical(1));
-      SEXP R_one = PROTECT(ScalarInteger(1));
-      SEXP keepNA, allowNA, width;
-      keepNA = allowNA = R_true;
-      width = R_one;
-      struct FANSI_state state = FANSI_state_init_full(
-        vec, warn, term_cap, allowNA, keepNA, width, ctl, i
-      );
-      UNPROTECT(2);
 
       char cur_chr;
 

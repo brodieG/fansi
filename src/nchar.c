@@ -50,7 +50,7 @@ SEXP FANSI_nchar(
     FANSI_interrupt(i);
     if(!i) {
       state = FANSI_state_init_full(
-        x, warn, term_cap, allowNA, keepNA, type, ctl, i
+        x, warn, term_cap, allowNA, keepNA, type, ctl, i, "x"
       );
     } else {
       state = FANSI_state_reinit(state, x, i);

@@ -113,7 +113,7 @@ static SEXP normalize_state_int(
   for(R_xlen_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i + index0);
     if(!i) {
-      state = FANSI_state_init(x, warn, term_cap, i);
+      state = FANSI_state_init(x, warn, term_cap, i, "x");
     } else {
       state = FANSI_state_reinit(state, x, i);
     }

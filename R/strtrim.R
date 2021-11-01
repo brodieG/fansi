@@ -70,7 +70,7 @@ strtrim_ctl <- function(
       carry,
       terminate
   )
-  if(normalize) normalize_state(res) else res
+  if(normalize) normalize_state(res, warn=FALSE) else res
 }
 #' @export
 #' @rdname strtrim_ctl
@@ -116,7 +116,7 @@ strtrim2_ctl <- function(
     CTL.INT,
     normalize, carry, terminate
   )
-  if(normalize) normalize_state(res) else res
+  if(normalize) normalize_state(res, warn=FALSE) else res
 }
 #' Control Sequence Aware Version of strtrim
 #'

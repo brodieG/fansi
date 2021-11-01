@@ -29,7 +29,7 @@
  */
 struct FANSI_state FANSI_state_init_full(
   SEXP strsxp, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
-  SEXP width, SEXP ctl, R_xlen_t i
+  SEXP width, SEXP ctl, R_xlen_t i, const char * arg
 ) {
   // nocov start
   if(TYPEOF(strsxp) != STRSXP) {
@@ -97,7 +97,8 @@ struct FANSI_state FANSI_state_init_full(
     .allowNA = asLogical(allowNA),
     .keepNA = asLogical(keepNA),
     .use_nchar = asInteger(width),  // 0 for chars, 1 for width
-    .ctl = FANSI_ctl_as_int(ctl)
+    .ctl = FANSI_ctl_as_int(ctl),
+    .arg = arg
   };
 }
 /*
@@ -126,7 +127,8 @@ struct FANSI_state FANSI_state_reinit(
     .allowNA = state.allowNA,
     .keepNA = state.keepNA,
     .use_nchar = state.use_nchar,  // 0 for chars, 1 for width
-    .ctl = state.ctl
+    .ctl = state.ctl,
+    .arg = state.arg
   };
   state_reinit.string = string;
   state_reinit.sgr = (struct FANSI_sgr) {.color = -1, .bg_color = -1};
@@ -137,7 +139,7 @@ struct FANSI_state FANSI_state_reinit(
 // means, we only really care about SGR since all CSI does is affect width calc).
 
 struct FANSI_state FANSI_state_init(
-  SEXP strsxp, SEXP warn, SEXP term_cap, R_xlen_t i
+  SEXP strsxp, SEXP warn, SEXP term_cap, R_xlen_t i, const char * arg
 ) {
   int prt = 0;
   SEXP R_false = PROTECT(ScalarLogical(0)); ++prt;
@@ -150,7 +152,8 @@ struct FANSI_state FANSI_state_init(
     R_false, // keepNA
     R_zero,  // Don't use width by default
     R_one,   // Treat all escapes as special by default (wrong prior to v1.0)
-    i
+    i,
+    arg
   );
   UNPROTECT(prt);
   return res;
@@ -159,7 +162,7 @@ struct FANSI_state FANSI_state_init(
 // means, we only really care about SGR since all CSI does is affect width calc).
 
 struct FANSI_state FANSI_state_init_ctl(
-  SEXP strsxp, SEXP warn, SEXP ctl, R_xlen_t i
+  SEXP strsxp, SEXP warn, SEXP ctl, R_xlen_t i, const char * arg
 ) {
   int prt = 0;
   SEXP R_false = PROTECT(ScalarLogical(0)); ++prt;
@@ -173,7 +176,8 @@ struct FANSI_state FANSI_state_init_ctl(
     R_false, // keepNA
     R_zero,  // Don't use width by default
     ctl,     // Which sequences are recognized
-    i
+    i,
+    arg
   );
   UNPROTECT(prt);
   return res;
@@ -481,7 +485,7 @@ SEXP FANSI_state_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm) {
     FANSI_interrupt(i);
     if(!i) {
       state = FANSI_state_init_full(
-        x, warn, term_cap, R_true, R_true, R_zero, R_one, i
+        x, warn, term_cap, R_true, R_true, R_zero, R_one, i, "x"
       );
     } else {
       state = FANSI_state_reinit(state, x, i);
@@ -610,7 +614,7 @@ SEXP FANSI_state_at_pos_ext(
   allowNA = keepNA = R_true;
 
   struct FANSI_state state = FANSI_state_init_full(
-    x, warn, term_cap, allowNA, keepNA, type, ctl, (R_xlen_t) 0
+    x, warn, term_cap, allowNA, keepNA, type, ctl, (R_xlen_t) 0, "x"
   );
   struct FANSI_state state_prev = state;
   struct FANSI_state_pair state_pair = {state, state_prev};
