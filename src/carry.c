@@ -59,13 +59,17 @@ SEXP FANSI_state_at_end_ext(
   FANSI_INIT_BUFF(&buff);
 
   SEXP res = PROTECT(allocVector(STRSXP, len)); ++prt;
+  struct FANSI_state state;
 
   for(R_xlen_t i = 0; i < len; ++i) {
     FANSI_interrupt(i);
-
-    struct FANSI_state state = FANSI_state_init_full(
-      x, warn, term_cap, allowNA, keepNA, width, ctl, i
-    );
+    if(!i) {
+      state = FANSI_state_init_full(
+        x, warn, term_cap, allowNA, keepNA, width, ctl, i
+      );
+    } else {
+      state = FANSI_state_reinit(state, x, i);
+    }
     if(do_carry) state.sgr = state_prev.sgr;
 
     state = state_at_end(state, i);
@@ -178,10 +182,13 @@ SEXP FANSI_bridge_state_ext(SEXP end, SEXP restart, SEXP term_cap, SEXP norm) {
       );
       // nocov end
     }
-    // state_init is inefficient
-    st_end = state_at_end(FANSI_state_init(end, warn, term_cap, i), i);
-    st_rst = state_at_end(FANSI_state_init(restart, warn, term_cap, i), i);
-
+    if(!i) {
+      st_end = state_at_end(FANSI_state_init(end, warn, term_cap, i), i);
+      st_rst = state_at_end(FANSI_state_init(restart, warn, term_cap, i), i);
+    } else {
+      st_end = state_at_end(FANSI_state_reinit(st_end, end, i), i);
+      st_rst = state_at_end(FANSI_state_reinit(st_rst, restart, i), i);
+    }
     FANSI_reset_buff(&buff);
 
     // Measure

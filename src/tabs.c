@@ -71,11 +71,26 @@ SEXP FANSI_tabs_as_spaces(
 
   SEXP res_sxp = vec;
 
+  int prt = 0;
   PROTECT_INDEX ipx;
-  PROTECT_WITH_INDEX(res_sxp, &ipx);  // reserve spot if we need to alloc later
+  PROTECT_WITH_INDEX(res_sxp, &ipx); prt++;  // reserve spot to alloc later
+  struct FANSI_state state;
+
+  SEXP R_true = PROTECT(ScalarLogical(1)); prt++;
+  SEXP R_one = PROTECT(ScalarInteger(1)); prt++;
+  SEXP keepNA, allowNA, width;
+  keepNA = allowNA = R_true;
+  width = R_one;
 
   for(R_xlen_t i = 0; i < len; ++i) {
     FANSI_interrupt(i);
+    if(!i) {
+      state = FANSI_state_init_full(
+        vec, warn, term_cap, allowNA, keepNA, width, ctl, i
+      );
+    } else {
+      state = FANSI_state_reinit(state, vec, i);
+    }
     int tab_count = 0;
 
     SEXP chr = STRING_ELT(vec, i);
@@ -171,7 +186,7 @@ SEXP FANSI_tabs_as_spaces(
       UNPROTECT(1);
     }
   }
-  UNPROTECT(1);
+  UNPROTECT(prt);
   return res_sxp;
 }
 SEXP FANSI_tabs_as_spaces_ext(

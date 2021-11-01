@@ -475,15 +475,20 @@ SEXP FANSI_state_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm) {
   SEXP R_true = PROTECT(ScalarLogical(1)); ++prt;
   SEXP R_one = PROTECT(ScalarInteger(1)); ++prt;
   SEXP R_zero = PROTECT(ScalarInteger(0)); ++prt;
+  struct FANSI_state state;
 
   for(R_xlen_t i = 0; i < len; ++i) {
     FANSI_interrupt(i);
+    if(!i) {
+      state = FANSI_state_init_full(
+        x, warn, term_cap, R_true, R_true, R_zero, R_one, i
+      );
+    } else {
+      state = FANSI_state_reinit(state, x, i);
+    }
     SEXP x_chr = STRING_ELT(x, i);
     if(x_chr == NA_STRING || !LENGTH(x_chr)) continue;
 
-    struct FANSI_state state = FANSI_state_init_full(
-      x, warn, term_cap, R_true, R_true, R_zero, R_one, i
-    );
     while(*(state.string + state.pos_byte)) {
       state = FANSI_read_next(state, i, 1);
     }

@@ -36,8 +36,10 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
   SEXP R_one = PROTECT(ScalarInteger(1));
   SEXP no_warn = PROTECT(ScalarInteger(0));
   SEXP ctl_all = PROTECT(ScalarInteger(0));
-  SEXP res, res_start;
+  SEXP res, res_start, allowNA, keepNA, width;
   res = res_start = R_NilValue;
+  allowNA = keepNA = R_true;
+  width = R_one;
 
   // reserve spot if we need to alloc later
 
@@ -47,19 +49,19 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
   int any_errors = 0;
   int err_count = 0;
   int break_early = 0;
+  struct FANSI_state state;
 
   for(R_xlen_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
     SEXP chrsxp = STRING_ELT(x, i);
-
-    if(chrsxp != NA_STRING && LENGTH(chrsxp)) {
-      SEXP allowNA, keepNA, width;
-      allowNA = keepNA = R_true;
-      width = R_one;
-
-      struct FANSI_state state = FANSI_state_init_full(
+    if(!i) {
+      state = FANSI_state_init_full(
         x, no_warn, term_cap, allowNA, keepNA, width, ctl_all, i
       );
+    } else {
+      state = FANSI_state_reinit(state, x, i);
+    }
+    if(chrsxp != NA_STRING && LENGTH(chrsxp)) {
       int has_errors = 0;
 
       while(state.string[state.pos_byte]) {

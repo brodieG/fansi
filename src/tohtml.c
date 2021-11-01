@@ -398,6 +398,7 @@ SEXP FANSI_esc_to_html(
 
     state.string = string;
     struct FANSI_state state_start = FANSI_reset_pos(state);
+    state.warned = 0;
     state_prev = state_init;  // but there are no styles in the string yet
 
     int bytes_init = (int) LENGTH(chrsxp);

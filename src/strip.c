@@ -188,6 +188,7 @@ SEXP FANSI_process(
   int strip_any = 0;          // Have any elements in the STRSXP been stripped
 
   R_xlen_t len = XLENGTH(res);
+  struct FANSI_state state;
   for(R_xlen_t i = 0; i < len; ++i) {
     FANSI_interrupt(i);
     // Don't warn - we don't modify or interpret sequences.  This allows bad
@@ -195,9 +196,13 @@ SEXP FANSI_process(
     SEXP allowNA, keepNA, width, warn;
     allowNA = keepNA = R_true;
     width = warn = R_zero;
-    struct FANSI_state state = FANSI_state_init_full(
-      input, warn, term_cap, allowNA, keepNA, width, ctl, i
-    );
+    if(!i) {
+      state = FANSI_state_init_full(
+        input, warn, term_cap, allowNA, keepNA, width, ctl, i
+      );
+    } else {
+      state = FANSI_state_reinit(state, input, i);
+    }
     const char * string = state.string;
     const char * string_start = string;
 
