@@ -252,6 +252,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * Any error associated with err_code
      */
     const char * err_msg;
+    /* Name of the parameter containing the strings, for warnings */
+
+    const char * arg;
     /*
      * Position markers (all zero index).
      *
@@ -315,7 +318,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * *  8: c0 escapes
      * *  9: malformed UTF8
      * * ..: unused
-     * * 32: unused, max error code allowable.
+     * * 31: unused, max error code allowable (must fit in signed int for
+     *       transfer to R).
      */
     unsigned int err_code;
     /*
@@ -335,9 +339,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     // `state.last` is true.
     int is_sgr;
     // Whether to issue warnings if err_code is non-zero.  Warnings are issued
-    // if warn & (1 << (err_code - 1)) is set.  `read_next` will reset warnings
-    // to zero after emitting them.
+    // if warn & (1 << (err_code - 1)) is set.
     unsigned int warn;
+    // Whether a warning was issued; `read_next` will set this to 1 which will
+    // suppress additional warnings.
+    int warned;
     // Whether to use R_nchar, really only needed when we're doing things in
     // width mode
     int use_nchar;
@@ -424,6 +430,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   SEXP FANSI_set_int_max(SEXP x);
   SEXP FANSI_get_int_max();
+  SEXP FANSI_get_warn_all();
   SEXP FANSI_esc_html(SEXP x, SEXP what);
 
   SEXP FANSI_normalize_state_ext(
@@ -441,7 +448,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   SEXP FANSI_state_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm);
   SEXP FANSI_state_at_end_ext(
-    SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry
+    SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry,
+    SEXP arg
   );
   SEXP FANSI_utf8_to_cp_ext(SEXP x);
   SEXP FANSI_bridge_state_ext(SEXP end, SEXP restart, SEXP term_cap, SEXP norm);
@@ -489,17 +497,17 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_digits_in_int(int x);
   struct FANSI_string_as_utf8 FANSI_string_as_utf8(SEXP x);
   struct FANSI_state FANSI_state_init(
-    SEXP strsxp, SEXP warn, SEXP term_cap, R_xlen_t i
+    SEXP strsxp, SEXP warn, SEXP term_cap, R_xlen_t i, const char * arg
   );
   struct FANSI_state FANSI_state_reinit(
     struct FANSI_state state, SEXP x, R_xlen_t i
   );
   struct FANSI_state FANSI_state_init_full(
     SEXP strsxp, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
-    SEXP width, SEXP ctl, R_xlen_t i
+    SEXP width, SEXP ctl, R_xlen_t i, const char * arg
   );
   struct FANSI_state FANSI_state_init_ctl(
-    SEXP strsxp, SEXP warn, SEXP ctl, R_xlen_t i
+    SEXP strsxp, SEXP warn, SEXP ctl, R_xlen_t i, const char * arg
   );
   int FANSI_sgr_active(struct FANSI_sgr sgr);
   int FANSI_url_active(struct FANSI_url url);

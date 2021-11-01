@@ -29,8 +29,8 @@
 * [#73](https://github.com/brodieG/fansi/issues/73) Default parameter values
   retrieved with `getOption` now always have explicit fallback values defined
   (h/t @gadenbui).
-* More granular error messages for `unhandled_ctl` for adjacent _Control
-  Sequences_.
+* Better warnings and error messages, including more granular messages for
+  `unhandled_ctl` for adjacent _Control Sequences_.
 * `term.cap` parameter now accepts "all" as value, like the `ctl` parameter.
 
 ### Deprecated Functions
@@ -83,6 +83,8 @@ Other changes:
 * Reworked internals to simplify buffer size computation and synchronization, in
   some cases this might cause slightly reduced performance.  Please report any
   significant performance regressions.
+* `nchar_ctl(...)` is no longer a wrapper for `nchar(strip_ctl(...))` so that it
+  may correctly support grapheme width calculations.
 
 ## v0.5.0
 

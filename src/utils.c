@@ -221,6 +221,10 @@ SEXP FANSI_term_cap_as_int_ext(SEXP term_cap) {
   return ScalarInteger(FANSI_term_cap_as_int(term_cap));
 }
 
+SEXP FANSI_get_warn_all() {
+  return ScalarInteger(FANSI_WARN_ALL);
+}
+
 
 /*
  * Partial match a single string byte by byte

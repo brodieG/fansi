@@ -43,28 +43,17 @@ static struct FANSI_prefix_dat make_pre(
   int prt = 0;
 
   SEXP R1 = PROTECT(ScalarInteger(1)); prt++;
-  SEXP Rfalse = PROTECT(ScalarLogical(0)); prt++;
   SEXP Rtrue = PROTECT(ScalarLogical(1)); prt++;
+  SEXP Rfalse = PROTECT(ScalarLogical(0)); prt++;
   SEXP keepNA = Rtrue;
-  SEXP allowNA = Rtrue;
-  SEXP warn2 = Rfalse;
+  SEXP allowNA = Rfalse;
   SEXP width = R1;     // width mode
 
   struct FANSI_state state = FANSI_state_init_full(
-    x, warn2, term_cap, allowNA, keepNA, width, ctl, 0
+    x, warn, term_cap, allowNA, keepNA, width, ctl, 0, arg
   );
-  while(state.string[state.pos_byte]) {
-    state = FANSI_read_next(state, 0, 1);
-    if(state.err_code == 9) error("`%s` contains %s.", arg, state.err_msg);
-    else if(asLogical(warn) && state.err_code) {
-      // We don't use internal warning because we want to be able to provide the
-      // argument name.
-      warning(
-        "`%s` contains %s. %s%s", arg, state.err_msg,
-        "See `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
-        "off these warnings."
-      );
-  } }
+  while(state.string[state.pos_byte]) state = FANSI_read_next(state, 0, 1);
+
   UNPROTECT(prt);
   return (struct FANSI_prefix_dat) {
     .string=state.string,
@@ -252,28 +241,21 @@ static SEXP writeline(
  */
 
 static SEXP strwrap(
-  SEXP x, int width,
+  int width,
   struct FANSI_prefix_dat pre_first,
   struct FANSI_prefix_dat pre_next,
   int wrap_always,
   struct FANSI_buff * buff,
   const char * pad_chr,
   int strip_spaces,
-  SEXP warn, SEXP term_cap,
-  int first_only, SEXP ctl,
+  int first_only,
   R_xlen_t index,
   int normalize,
   int carry,
+  struct FANSI_state state,
   struct FANSI_state * state_carry,
   int terminate
 ) {
-  SEXP R_true = PROTECT(ScalarLogical(1));
-  SEXP R_one = PROTECT(ScalarInteger(1));
-  struct FANSI_state state = FANSI_state_init_full(
-    x, warn, term_cap, R_true, R_true, R_one, ctl, index
-  );
-  UNPROTECT(2);
-
   int width_1 = FANSI_ADD_INT(width, -pre_first.width);
   int width_2 = FANSI_ADD_INT(width, -pre_next.width);
 
@@ -328,7 +310,7 @@ static SEXP strwrap(
             state_bound.string[state_bound.pos_byte] == 0x1b &&
             !state_tmp.last_special
           ) {
-            state_bound.warn = state_tmp.warn;  // avoid double warnings
+            state_bound.warned = state_tmp.warned;  // avoid double warnings
             break;
           }
           state_bound = state_tmp;
@@ -336,7 +318,7 @@ static SEXP strwrap(
       } else if(state_bound.string[state_bound.pos_byte] == 0x1b) {
         state_tmp = FANSI_read_next(state_bound, index, 1);
         if(state_tmp.last_special) state_bound = state_tmp;
-        else state_bound.warn = state_tmp.warn;  // avoid double warnings
+        else state_bound.warned = state_tmp.warned;  // avoid double warnings
       }
       has_boundary = 0;
       state_bound.pos_width = 0;
@@ -348,7 +330,7 @@ static SEXP strwrap(
     state_next = state; // if we hit end of string, re-use state as next
     // Look ahead one element
     if(!end) state_next = FANSI_read_next(state_next, index, 1);
-    state.warn = state_bound.warn = state_next.warn;  // avoid double warning
+    state.warned = state_bound.warned = state_next.warned;// avoid 2x warning
 
     // detect word boundaries and paragraph starts; we need to track
     // state_bound for the special case where we are in strip space mode
@@ -654,25 +636,36 @@ SEXP FANSI_strwrap_ext(
   } else {
     res = PROTECT(allocVector(VECSXP, x_len)); ++prt;
   }
+  SEXP R_true = PROTECT(ScalarLogical(1)); ++prt;
+  SEXP R_one = PROTECT(ScalarInteger(1)); ++prt;
+  struct FANSI_state state;
 
   // Wrap each element
   for(i = 0; i < x_len; ++i) {
+    if(!i) {
+      state = FANSI_state_init_full(
+        x, warn, term_cap, R_true, R_true, R_one, ctl, i, "x"
+      );
+    } else state = FANSI_state_reinit(state, x, i);
+
     FANSI_interrupt(i);
     SEXP chr = STRING_ELT(x, i);
     if(chr == NA_STRING) continue;
 
     SEXP str_i = PROTECT(
       strwrap(
-        x, width_int,
+        width_int,
         i ? pre_first_dat : ini_first_dat,
         pre_next_dat,
-        wrap_always_int, &buff,
+        wrap_always_int,
+        &buff,
         CHAR(asChar(pad_end)),
         strip_spaces_int,
-        warn, term_cap,
         first_only_int,
-        ctl, i, normalize,
+        i,
+        normalize,
         do_carry,
+        state,
         &state_carry,
         asLogical(terminate)
     ) );

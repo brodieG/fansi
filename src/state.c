@@ -29,7 +29,7 @@
  */
 struct FANSI_state FANSI_state_init_full(
   SEXP strsxp, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
-  SEXP width, SEXP ctl, R_xlen_t i
+  SEXP width, SEXP ctl, R_xlen_t i, const char * arg
 ) {
   // nocov start
   if(TYPEOF(strsxp) != STRSXP) {
@@ -49,11 +49,6 @@ struct FANSI_state FANSI_state_init_full(
 
   // Validation not complete here, many of these should be scalar, rely on R
   // level checks.
-  if(TYPEOF(warn) != LGLSXP)
-    error(
-      "Internal error: state_init with bad type for warn (%s)",
-      type2char(TYPEOF(warn))
-    );
   if(TYPEOF(term_cap) != INTSXP)
     error(
       "Internal error: state_init with bad type for term_cap (%s)",
@@ -79,19 +74,31 @@ struct FANSI_state FANSI_state_init_full(
       "Internal error: state_init with bad type for ctl (%s)",
       type2char(TYPEOF(ctl))
     );
-
+  if(TYPEOF(warn) != INTSXP || XLENGTH(warn) != 1L)
+    error(
+      "Internal error: state_init with bad (%s) type or length (%jd) for warn.",
+      type2char(TYPEOF(warn)), XLENGTH(warn)
+    );
+  int warn_int = asInteger(warn);
+  if(warn_int < 0 || warn_int > FANSI_WARN_ALL)
+    error(
+      "Internal error: state_init with OOB value for warn (%d)",
+      warn_int
+    );
   // nocov end
 
+  // All others struct-inited to zero.
   return (struct FANSI_state) {
     .sgr = (struct FANSI_sgr) {.color = -1, .bg_color = -1},
     .sgr_prev = (struct FANSI_sgr) {.color = -1, .bg_color = -1},
     .string = string,
-    .warn = asLogical(warn) * FANSI_WARN_ALL,
+    .warn = (unsigned int) warn_int,
     .term_cap = FANSI_term_cap_as_int(term_cap),
     .allowNA = asLogical(allowNA),
     .keepNA = asLogical(keepNA),
     .use_nchar = asInteger(width),  // 0 for chars, 1 for width
-    .ctl = FANSI_ctl_as_int(ctl)
+    .ctl = FANSI_ctl_as_int(ctl),
+    .arg = arg
   };
 }
 /*
@@ -120,7 +127,8 @@ struct FANSI_state FANSI_state_reinit(
     .allowNA = state.allowNA,
     .keepNA = state.keepNA,
     .use_nchar = state.use_nchar,  // 0 for chars, 1 for width
-    .ctl = state.ctl
+    .ctl = state.ctl,
+    .arg = state.arg
   };
   state_reinit.string = string;
   state_reinit.sgr = (struct FANSI_sgr) {.color = -1, .bg_color = -1};
@@ -131,7 +139,7 @@ struct FANSI_state FANSI_state_reinit(
 // means, we only really care about SGR since all CSI does is affect width calc).
 
 struct FANSI_state FANSI_state_init(
-  SEXP strsxp, SEXP warn, SEXP term_cap, R_xlen_t i
+  SEXP strsxp, SEXP warn, SEXP term_cap, R_xlen_t i, const char * arg
 ) {
   int prt = 0;
   SEXP R_false = PROTECT(ScalarLogical(0)); ++prt;
@@ -144,7 +152,8 @@ struct FANSI_state FANSI_state_init(
     R_false, // keepNA
     R_zero,  // Don't use width by default
     R_one,   // Treat all escapes as special by default (wrong prior to v1.0)
-    i
+    i,
+    arg
   );
   UNPROTECT(prt);
   return res;
@@ -153,7 +162,7 @@ struct FANSI_state FANSI_state_init(
 // means, we only really care about SGR since all CSI does is affect width calc).
 
 struct FANSI_state FANSI_state_init_ctl(
-  SEXP strsxp, SEXP warn, SEXP ctl, R_xlen_t i
+  SEXP strsxp, SEXP warn, SEXP ctl, R_xlen_t i, const char * arg
 ) {
   int prt = 0;
   SEXP R_false = PROTECT(ScalarLogical(0)); ++prt;
@@ -167,7 +176,8 @@ struct FANSI_state FANSI_state_init_ctl(
     R_false, // keepNA
     R_zero,  // Don't use width by default
     ctl,     // Which sequences are recognized
-    i
+    i,
+    arg
   );
   UNPROTECT(prt);
   return res;
@@ -287,7 +297,7 @@ static struct FANSI_state_pair state_at_pos2(
     }
   }
   // Avoid potential double warning next time we read
-  state_restart.warn = state.warn = state.warn;
+  state_restart.warned = state.warned = state.warned;
 
   return (struct FANSI_state_pair){.cur=state_res, .restart=state_restart};
 }
@@ -469,15 +479,20 @@ SEXP FANSI_state_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm) {
   SEXP R_true = PROTECT(ScalarLogical(1)); ++prt;
   SEXP R_one = PROTECT(ScalarInteger(1)); ++prt;
   SEXP R_zero = PROTECT(ScalarInteger(0)); ++prt;
+  struct FANSI_state state;
 
   for(R_xlen_t i = 0; i < len; ++i) {
     FANSI_interrupt(i);
+    if(!i) {
+      state = FANSI_state_init_full(
+        x, warn, term_cap, R_true, R_true, R_zero, R_one, i, "x"
+      );
+    } else {
+      state = FANSI_state_reinit(state, x, i);
+    }
     SEXP x_chr = STRING_ELT(x, i);
     if(x_chr == NA_STRING || !LENGTH(x_chr)) continue;
 
-    struct FANSI_state state = FANSI_state_init_full(
-      x, warn, term_cap, R_true, R_true, R_zero, R_one, i
-    );
     while(*(state.string + state.pos_byte)) {
       state = FANSI_read_next(state, i, 1);
     }
@@ -599,7 +614,7 @@ SEXP FANSI_state_at_pos_ext(
   allowNA = keepNA = R_true;
 
   struct FANSI_state state = FANSI_state_init_full(
-    x, warn, term_cap, allowNA, keepNA, type, ctl, (R_xlen_t) 0
+    x, warn, term_cap, allowNA, keepNA, type, ctl, (R_xlen_t) 0, "x"
   );
   struct FANSI_state state_prev = state;
   struct FANSI_state_pair state_pair = {state, state_prev};

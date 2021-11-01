@@ -41,6 +41,7 @@ R_CallMethodDef callMethods[] = {
   {"sort_chr", (DL_FUNC) &FANSI_sort_chr, 1},
   {"set_int_max", (DL_FUNC) &FANSI_set_int_max, 1},
   {"get_int_max", (DL_FUNC) &FANSI_get_int_max, 0},
+  {"get_warn_all", (DL_FUNC) &FANSI_get_warn_all, 0},
   {"check_enc", (DL_FUNC) &FANSI_check_enc_ext, 2},
   {"ctl_as_int", (DL_FUNC) &FANSI_ctl_as_int_ext, 1},
   {"esc_html", (DL_FUNC) &FANSI_esc_html, 2},
@@ -50,7 +51,7 @@ R_CallMethodDef callMethods[] = {
   {"close_state", (DL_FUNC) &FANSI_state_close_ext, 4},
   {"size_buff", (DL_FUNC) &FANSI_size_buff_ext, 1},
   {"size_buff_prot_test", (DL_FUNC) &FANSI_size_buff_prot_test, 0},
-  {"state_at_end", (DL_FUNC) &FANSI_state_at_end_ext, 6},
+  {"state_at_end", (DL_FUNC) &FANSI_state_at_end_ext, 7},
   {"utf8_to_cp", (DL_FUNC) &FANSI_utf8_to_cp_ext, 1},
   {"bridge_state", (DL_FUNC) &FANSI_bridge_state_ext, 3},
   {NULL, NULL, 0}

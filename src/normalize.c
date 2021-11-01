@@ -108,15 +108,19 @@ static SEXP normalize_state_int(
   SEXP ctl = PROTECT(ScalarInteger(1)); ++prt;  // "all"
   int do_carry = STRING_ELT(carry, 0) != NA_STRING;
   struct FANSI_state state_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
+  struct FANSI_state state_start, state;
 
   for(R_xlen_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i + index0);
+    if(!i) {
+      state = FANSI_state_init(x, warn, term_cap, i, "x");
+    } else {
+      state = FANSI_state_reinit(state, x, i);
+    }
     SEXP chrsxp = STRING_ELT(x, i);
     if(chrsxp == NA_STRING) continue;
 
     // Measure
-    struct FANSI_state state_start, state;
-    state = FANSI_state_init(x, warn, term_cap, i);
     if(do_carry) {
       state.sgr = state_carry.sgr;
       state.url = state_carry.url;
@@ -134,7 +138,7 @@ static SEXP normalize_state_int(
     if(res == x) REPROTECT(res = duplicate(x), ipx);
     FANSI_size_buff(buff);
     state = state_start;
-    state.warn = 0;  // avoid double warnings
+    state.warned = 1;  // avoid double warnings
     normalize(buff, &state, i);
 
     cetype_t chr_type = getCharCE(chrsxp);

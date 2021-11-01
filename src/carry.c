@@ -29,10 +29,16 @@ static struct FANSI_state state_at_end(
 }
 
 SEXP FANSI_state_at_end_ext(
-  SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry
+  SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry, SEXP arg
 ) {
   FANSI_val_args(x, norm, carry);
+  if(
+    TYPEOF(arg) != STRSXP || XLENGTH(arg) != 1 ||
+    STRING_ELT(arg, 1) == NA_STRING
+  )
+    error("Internal Error: bad `arg` arg.");
 
+  const char * arg_chr = CHAR(STRING_ELT(arg, 0));  // should be ASCII
   int prt = 0;
   int normalize = asInteger(norm);
 
@@ -50,7 +56,7 @@ SEXP FANSI_state_at_end_ext(
 
   struct FANSI_state state_prev = FANSI_state_init_full(
     carry_string, warn, term_cap, allowNA, keepNA, width,
-    ctl, (R_xlen_t) 0
+    ctl, (R_xlen_t) 0, "carry"
   );
   state_prev = state_at_end(state_prev, 0);
 
@@ -59,13 +65,17 @@ SEXP FANSI_state_at_end_ext(
   FANSI_INIT_BUFF(&buff);
 
   SEXP res = PROTECT(allocVector(STRSXP, len)); ++prt;
+  struct FANSI_state state;
 
   for(R_xlen_t i = 0; i < len; ++i) {
     FANSI_interrupt(i);
-
-    struct FANSI_state state = FANSI_state_init_full(
-      x, warn, term_cap, allowNA, keepNA, width, ctl, i
-    );
+    if(!i) {
+      state = FANSI_state_init_full(
+        x, warn, term_cap, allowNA, keepNA, width, ctl, i, arg_chr
+      );
+    } else {
+      state = FANSI_state_reinit(state, x, i);
+    }
     if(do_carry) state.sgr = state_prev.sgr;
 
     state = state_at_end(state, i);
@@ -101,7 +111,7 @@ struct FANSI_state FANSI_carry_init(
   // Read-in any pre-existing state to carry
   struct FANSI_state state_carry = FANSI_state_init_full(
     carry_string, warn, term_cap, allowNA, keepNA,
-    width, ctl, (R_xlen_t) 0
+    width, ctl, (R_xlen_t) 0, "carry"
   );
   state_carry = state_at_end(state_carry, (R_xlen_t) 0);
   UNPROTECT(prt);
@@ -160,7 +170,7 @@ SEXP FANSI_bridge_state_ext(SEXP end, SEXP restart, SEXP term_cap, SEXP norm) {
   SEXP res = PROTECT(allocVector(STRSXP, x_len)); // WRE docs this is init'ed
 
   // We'll already have warned about these at some point
-  SEXP warn =  PROTECT(ScalarLogical(0));
+  SEXP warn =  PROTECT(ScalarInteger(0));
   struct FANSI_state st_end, st_rst;
 
   for(R_xlen_t i = 0; i < x_len; ++i) {
@@ -178,10 +188,16 @@ SEXP FANSI_bridge_state_ext(SEXP end, SEXP restart, SEXP term_cap, SEXP norm) {
       );
       // nocov end
     }
-    // state_init is inefficient
-    st_end = state_at_end(FANSI_state_init(end, warn, term_cap, i), i);
-    st_rst = state_at_end(FANSI_state_init(restart, warn, term_cap, i), i);
-
+    // Do not warn here, so arg does not matter
+    if(!i) {
+      st_end =
+        state_at_end(FANSI_state_init(end, warn, term_cap, i, NULL), i);
+      st_rst =
+        state_at_end(FANSI_state_init(restart, warn, term_cap, i, NULL), i);
+    } else {
+      st_end = state_at_end(FANSI_state_reinit(st_end, end, i), i);
+      st_rst = state_at_end(FANSI_state_reinit(st_rst, restart, i), i);
+    }
     FANSI_reset_buff(&buff);
 
     // Measure

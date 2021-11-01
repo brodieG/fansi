@@ -48,6 +48,8 @@ set_int_max <- function(x) .Call(FANSI_set_int_max, as.integer(x)[1])
 get_int_max <- function(x) .Call(FANSI_get_int_max)  # nocov for debug only
 reset_limits <- function(x) .Call(FANSI_reset_limits)
 
+get_warn_all <- function(x) .Call(FANSI_get_warn_all)
+
 ## exposed internals for testing
 
 check_enc <- function(x, i) .Call(FANSI_check_enc, x, as.integer(i)[1])
@@ -56,6 +58,16 @@ check_enc <- function(x, i) .Call(FANSI_check_enc, x, as.integer(i)[1])
 
 ctl_as_int <- function(x) .Call(FANSI_ctl_as_int, as.integer(x))
 
+## Encode Bits into an Integer
+##
+## Given an integer vector of 1-indexed bit positions, return an scalar integer
+## with those bits set.
+
+set_bits <- function(...) {
+  x <- as.integer(c(...))
+  stopifnot(all(x > 0 & x < 32))
+  as.integer(sum(2^(x - 1L)))
+}
 ## testing interface for bridging
 
 bridge <- function(
@@ -73,7 +85,7 @@ bridge <- function(
 ## such as CTL.INT, X.LEN, etc. (these should all be in caps).
 
 VAL_IN_ENV <- function(
-  ..., valid.types=c('chars', 'width')
+  ..., valid.types=c('chars', 'width'), warn.mask=get_warn_all()
 ) {
   call <- sys.call(-1)
   par.env <- parent.frame()
@@ -115,6 +127,7 @@ VAL_IN_ENV <- function(
     if(length(warn) != 1L || is.na(warn))
       stop2("Argument `warn` must be TRUE or FALSE.")
     args[['warn']] <- warn
+    args[['WARN.INT']] <- warn * warn.mask
   }
   if('normalize' %in% argnm) {
     normalize <- args[['normalize']]

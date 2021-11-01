@@ -71,11 +71,26 @@ SEXP FANSI_tabs_as_spaces(
 
   SEXP res_sxp = vec;
 
+  int prt = 0;
   PROTECT_INDEX ipx;
-  PROTECT_WITH_INDEX(res_sxp, &ipx);  // reserve spot if we need to alloc later
+  PROTECT_WITH_INDEX(res_sxp, &ipx); prt++;  // reserve spot to alloc later
+  struct FANSI_state state;
+
+  SEXP R_true = PROTECT(ScalarLogical(1)); prt++;
+  SEXP R_one = PROTECT(ScalarInteger(1)); prt++;
+  SEXP keepNA, allowNA, width;
+  keepNA = allowNA = R_true;
+  width = R_one;
 
   for(R_xlen_t i = 0; i < len; ++i) {
     FANSI_interrupt(i);
+    if(!i) {
+      state = FANSI_state_init_full(
+        vec, warn, term_cap, allowNA, keepNA, width, ctl, i, "x"
+      );
+    } else {
+      state = FANSI_state_reinit(state, vec, i);
+    }
     int tab_count = 0;
 
     SEXP chr = STRING_ELT(vec, i);
@@ -111,20 +126,10 @@ SEXP FANSI_tabs_as_spaces(
       // overallocate knowing the upper bound of tab space usage.
       FANSI_size_buff0(buff, new_buff_size);
 
-      SEXP R_true = PROTECT(ScalarLogical(1));
-      SEXP R_one = PROTECT(ScalarInteger(1));
-      SEXP keepNA, allowNA, width;
-      keepNA = allowNA = R_true;
-      width = R_one;
-      struct FANSI_state state = FANSI_state_init_full(
-        vec, warn, term_cap, allowNA, keepNA, width, ctl, i
-      );
-      UNPROTECT(2);
-
       char cur_chr;
 
       int last_byte = state.pos_byte;
-      int warn_old = state.warn;
+      unsigned int warn_old = state.warn;
       int tab_acc_width, tab_stop;
       tab_acc_width = tab_stop = 0;
 
@@ -146,7 +151,7 @@ SEXP FANSI_tabs_as_spaces(
           int write_bytes = state.pos_byte - last_byte;
           FANSI_W_MCOPY(buff, state.string + last_byte, write_bytes);
 
-          // consume tab and advance
+          // consume tab and advance, temporarily suppressing warning
           state.warn = 0;
           state = FANSI_read_next(state, i, 1);
           state.warn = warn_old;
@@ -171,7 +176,7 @@ SEXP FANSI_tabs_as_spaces(
       UNPROTECT(1);
     }
   }
-  UNPROTECT(1);
+  UNPROTECT(prt);
   return res_sxp;
 }
 SEXP FANSI_tabs_as_spaces_ext(

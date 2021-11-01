@@ -38,7 +38,6 @@ SEXP FANSI_nchar(
   int keepNA_int = asLogical(keepNA);
   int type_int = asInteger(type);
   int zz = asLogical(z);
-  unsigned int warn_int = 0;
 
   R_xlen_t x_len = XLENGTH(x);
 
@@ -51,12 +50,10 @@ SEXP FANSI_nchar(
     FANSI_interrupt(i);
     if(!i) {
       state = FANSI_state_init_full(
-        x, warn, term_cap, allowNA, keepNA, type, ctl, i
+        x, warn, term_cap, allowNA, keepNA, type, ctl, i, "x"
       );
-      warn_int = state.warn = state.warn & FANSI_WARN_CSIBAD;
     } else {
       state = FANSI_state_reinit(state, x, i);
-      state.warn = warn_int;
     }
     if(STRING_ELT(x, i) == R_NaString) {
       // NA case, see ?nchar, note nzchar behavior is incorrectly doc'ed

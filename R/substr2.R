@@ -136,7 +136,8 @@
 #'   to be incorrect, for example by moving the cursor (see [`?fansi`][fansi]).
 #'   If the problematic sequence is a tab, you can use the `tabs.as.spaces`
 #'   parameter on functions that have it, or the `tabs_as_spaces` function, to
-#'   turn the tabs to spaces and resolve the warning that way.
+#'   turn the tabs to spaces and resolve the warning that way.  At most one
+#'   warning will be issued per element in each input vector.
 #' @param term.cap character a vector of the capabilities of the terminal, can
 #'   be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
 #'   starting with "38;5" or "48;5"), "truecolor" (SGR codes starting with
@@ -249,8 +250,8 @@ substr2_ctl <- function(
   res[no.na] <- substr_ctl_internal(
     x[no.na], start=start[no.na], stop=stop[no.na],
     type.int=TYPE.INT,
-    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
-    term.cap.int=TERM.CAP.INT,
+    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops,
+    warn.int=WARN.INT, term.cap.int=TERM.CAP.INT,
     round.start=round == 'start' || round == 'both',
     round.stop=round == 'stop' || round == 'both',
     x.len=X.LEN,
@@ -319,7 +320,7 @@ substr2_ctl <- function(
   begin <- substr_ctl_internal(
     x, rep(1L, X.LEN), start - 1L, type.int=TYPE.INT,
     round.start=round.start, round.stop=round.stop,
-    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=FALSE,
+    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=0L,
     term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
     carry=carry, terminate=terminate
   )
@@ -327,7 +328,7 @@ substr2_ctl <- function(
     x, end.start, end.end,
     type.int=TYPE.INT,
     round.start=round.start, round.stop=round.stop,
-    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
+    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=WARN.INT,
     term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
     carry=carry, terminate=FALSE
   )
@@ -336,7 +337,7 @@ substr2_ctl <- function(
     value, rep(1L, X.LEN), stop - start + 1L,
     type.int=TYPE.INT,
     round.start=round.start, round.stop=round.stop,
-    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=warn,
+    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=WARN.INT,
     term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
     carry=carry, terminate=terminate
   )
@@ -346,9 +347,9 @@ substr2_ctl <- function(
 
   valid <- rep(TRUE, X.LEN)  # this may get changed in body of `if` statement
   x[valid] <- if(type == 'width') {
-    ncb <- nchar_ctl(begin, type=type, ctl=ctl, warn=warn)
-    nce <- nchar_ctl(end, type=type, ctl=ctl, warn=warn)
-    ncm <- nchar_ctl(mid, type=type, ctl=ctl, warn=warn)
+    ncb <- nchar_ctl(begin, type=type, ctl=ctl, warn=FALSE)
+    nce <- nchar_ctl(end, type=type, ctl=ctl, warn=FALSE)
+    ncm <- nchar_ctl(mid, type=type, ctl=ctl, warn=FALSE)
     ncsub <- ncb + nce + ncm
     valid <- (ncsub <= nc)
 
@@ -361,7 +362,7 @@ substr2_ctl <- function(
         value[mid.again], rep(1L, sum(mid.again)), (stop - start)[mid.again],
         type.int=TYPE.INT,
         round.start=round.start, round.stop=round.stop,
-        tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=FALSE,
+        tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=0L,
         term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
         carry=carry, terminate=terminate
       )
@@ -382,7 +383,7 @@ substr2_ctl <- function(
           end.end[end.again],
           type.int=TYPE.INT,
           round.start=round.start, round.stop=round.stop,
-          tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn=FALSE,
+          tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=0L,
           term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
           carry=carry, terminate=FALSE
         )
@@ -449,15 +450,18 @@ substr2_sgr <- function(
 
 substr_ctl_internal <- function(
   x, start, stop, type.int, round, tabs.as.spaces,
-  tab.stops, warn, term.cap.int, round.start, round.stop,
+  tab.stops, warn.int, term.cap.int, round.start, round.stop,
   x.len, ctl.int, normalize, carry, terminate
 ) {
   # For each unique string, compute the state at each start and stop position
   # and re-map the positions to "ansi" space
 
   if(tabs.as.spaces)
-    x <- .Call(FANSI_tabs_as_spaces, x, tab.stops, warn, term.cap.int, ctl.int)
-  warn <- warn && !tabs.as.spaces
+    x <- .Call(
+      FANSI_tabs_as_spaces, x, tab.stops,
+      0L,  # turn off warning, will be reported later
+      term.cap.int, ctl.int
+    )
 
   res <- character(length(x))
   s.s.valid <- stop >= start & stop
@@ -468,13 +472,21 @@ substr_ctl_internal <- function(
 
   x.carry <- character(length(x))
   if(!is.na(carry)) {
+    # need to check carry, do a one-pass through checking for problems
     ends <- .Call(
-      FANSI_state_at_end, x, warn, term.cap.int, ctl.int, normalize, carry
+      FANSI_state_at_end, x, warn.int, term.cap.int, ctl.int, normalize,
+      NA_character_, "carry"
+    )
+    # and now compute style at end
+    ends <- .Call(
+      FANSI_state_at_end, x, warn.int, term.cap.int, ctl.int, normalize,
+      carry, "x"
     )
     x.carry <- c(carry, ends[-length(ends)])
     x <- paste0(x.carry, x)
   }
-  warn <- warn && is.na(carry)
+  # Need to warn here as during substringing we might not see the end.
+  warn.int <- warn.int * is.na(carry)
 
   # We compute style at each start and stop position by getting all those
   # positions into a vector and then ordering them by position, keeping track of
@@ -514,7 +526,7 @@ substr_ctl_internal <- function(
       u, e.sort, type.int,
       e.keep,  # whether to include a partially covered multi-byte character
       rep(c(TRUE, FALSE), each=length(elems))[e.order], # start or end of string
-      warn, term.cap.int,
+      warn.int, term.cap.int,
       ctl.int, normalize, terminate,
       c(e.ids, e.ids)[e.order]
     )
@@ -573,6 +585,7 @@ state_at_pos <- function(
   normalize=getOption('fansi.normalize', FALSE),
   terminate=getOption('fansi.terminate', FALSE)
 ) {
+  warn.int <- warn * get_warn_all()
   is.start <- c(rep(TRUE, length(starts)), rep(FALSE, length(ends)))
   .Call(
     FANSI_state_at_pos_ext,
@@ -580,7 +593,7 @@ state_at_pos <- function(
     0L,        # character type
     is.start,  # keep if is.start
     is.start,  # indicate that it's a start
-    warn,
+    warn.int,
     1L,        # term.cap="all"
     1L,        # ctl="all"
     normalize,

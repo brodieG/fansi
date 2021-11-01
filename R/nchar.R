@@ -21,12 +21,12 @@
 #' Sequence_ sequence characters.  By default newlines and other C0 control
 #' characters are not counted.
 #'
-#' `nchar_ctl` is just a wrapper around `nchar(strip_ctl(...))`.  `nzchar_ctl`
-#' is implemented in native code and is much faster than the otherwise
-#' equivalent `nzchar(strip_ctl(...))`.
+#' `nchar_ctl` and `nzchar_ctl` are implemented in statically compiled code, so
+#' in particular `nzchar_ctl` will be much faster than the otherwise equivalent
+#' `nzchar(strip_ctl(...))`.
 #'
-#' These functions will warn if either malformed or non-CSI escape sequences are
-#' encountered, as these may be incorrectly interpreted.
+#' These functions will warn if either malformed or escape or UTF-8 sequences
+#' are encountered as they may be incorrectly interpreted.
 #'
 #' @inheritParams substr_ctl
 #' @inheritParams base::nchar
@@ -67,12 +67,12 @@ nchar_ctl <- function(
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(
     x=x, ctl=ctl, warn=warn, type=type, allowNA=allowNA, keepNA=keepNA,
-    valid.types=c('chars', 'width', 'bytes')
+    valid.types=c('chars', 'width', 'bytes'),
+    warn.mask=if(isTRUE(allowNA)) set_bits(5, 7) else set_bits(5, 7, 9)
   )
-
   nchar_ctl_internal(
     x=x, type.int=TYPE.INT, allowNA=allowNA, keepNA=keepNA, ctl.int=CTL.INT,
-    warn=warn, z=FALSE
+    warn.int=WARN.INT, z=FALSE
   )
 }
 #' @export
@@ -84,21 +84,23 @@ nzchar_ctl <- function(
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(
     x=x, ctl=ctl, warn=warn, type='chars', keepNA=keepNA,
-    valid.types=c('chars', 'width', 'bytes')
+    valid.types=c('chars', 'width', 'bytes'), warn.mask=set_bits(5, 7)
   )
   nchar_ctl_internal(
     x=x, type.int=TYPE.INT, allowNA=TRUE, keepNA=keepNA, ctl.int=CTL.INT,
-    warn=warn, z=TRUE
+    warn.int=WARN.INT, z=TRUE
   )
 }
-nchar_ctl_internal <- function(x, type.int, allowNA, keepNA, ctl.int, warn, z) {
+nchar_ctl_internal <- function(
+  x, type.int, allowNA, keepNA, ctl.int, warn.int, z
+) {
   term.cap.int <- 1L
   R.ver.gte.3.2.2 <- R.ver.gte.3.2.2 # "import" symbol from namespace
   if(R.ver.gte.3.2.2)
     .Call(
       FANSI_nchar_esc,
       x, type.int, keepNA, allowNA,
-      warn, term.cap.int, ctl.int, z
+      warn.int, term.cap.int, ctl.int, z
     )
   else nchar(stripped, type=type, allowNA=allowNA) # nocov
 }

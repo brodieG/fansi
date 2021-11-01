@@ -371,7 +371,7 @@ SEXP FANSI_esc_to_html(
   R_xlen_t x_len = XLENGTH(x);
   struct FANSI_state state, state_prev, state_init;
   SEXP empty = PROTECT(mkString(""));
-  state = FANSI_state_init(empty, warn, term_cap, (R_xlen_t) 0);
+  state = FANSI_state_init(empty, warn, term_cap, (R_xlen_t) 0, "x");
   UNPROTECT(1);
 
   state_prev = state_init = state;
@@ -398,6 +398,7 @@ SEXP FANSI_esc_to_html(
 
     state.string = string;
     struct FANSI_state state_start = FANSI_reset_pos(state);
+    state.warned = 0;
     state_prev = state_init;  // but there are no styles in the string yet
 
     int bytes_init = (int) LENGTH(chrsxp);
@@ -405,7 +406,7 @@ SEXP FANSI_esc_to_html(
     // Some ESCs may not produce any HTML, and some strings may gain HTML from
     // an ESC from a prior element even if they have no ESCs.
     int has_esc = 0;
-    int has_state = 
+    int has_state =
       sgr_has_style_html(state.sgr) || FANSI_url_active(state.url);
     int trail_span, trail_a;
     trail_span = trail_a = 0;
@@ -425,7 +426,7 @@ SEXP FANSI_esc_to_html(
           // Allocate buffer and reset states for second pass
           FANSI_size_buff(&buff);
           string = state.string;  // always points to first byte
-          state_start.warn = state.warn;
+          state_start.warned = state.warned;
           state = state_start;
           state_prev = state_init;
         } else break;
