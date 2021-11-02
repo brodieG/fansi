@@ -74,7 +74,8 @@ assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
 If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
 parameter on functions that have it, or the \code{tabs_as_spaces} function, to
-turn the tabs to spaces and resolve the warning that way.}
+turn the tabs to spaces and resolve the warning that way.  At most one
+warning will be issued per element in each input vector.}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
@@ -152,17 +153,18 @@ count begins from the beginning of the input line.}
 }
 \description{
 Wraps strings to a specified width accounting for zero display width \emph{Control
-Sequences}.  \code{strwrap_ctl} is intended to emulate \code{strwrap} exactly except
-with respect to the \emph{Control Sequences}, while \code{strwrap2_ctl} adds features
-and changes the processing of whitespace.
+Sequences}.  \code{strwrap_ctl} is intended to emulate \code{strwrap} closely except
+with respect to the \emph{Control Sequences} (see details for other minor
+differences), while \code{strwrap2_ctl} adds features and changes the processing
+of whitespace.
 }
 \details{
 \code{strwrap2_ctl} can convert tabs to spaces, pad strings up to \code{width}, and
 hard-break words if single words are wider than \code{width}.
 
 Unlike \link[base:strwrap]{base::strwrap}, both these functions will translate any non-ASCII
-strings to UTF-8 and return them in UTF-8.  Additionally, malformed UTF-8
-sequences are not converted to a text representation of bytes.
+strings to UTF-8 and return them in UTF-8.  Additionally, invalid UTF-8
+always causes errors, and \code{prefix} and \code{indent} must be scalar.
 
 When replacing tabs with spaces the tabs are computed relative to the
 beginning of the input line, not the most recent wrap point.

@@ -67,7 +67,7 @@ nchar_ctl <- function(
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(
     x=x, ctl=ctl, warn=warn, type=type, allowNA=allowNA, keepNA=keepNA,
-    valid.types=c('chars', 'width', 'bytes'),
+    valid.types=c('chars', 'width', 'graphemes', 'bytes'),
     warn.mask=if(isTRUE(allowNA)) set_bits(5, 7) else set_bits(5, 7, 9)
   )
   nchar_ctl_internal(

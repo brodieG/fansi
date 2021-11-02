@@ -819,14 +819,16 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
         strcpy(arg, "Encountered");
       }
       error(
-        "%s %s at index [%jd], %s%s",
+        "%s %s at index [%jd], %s",
         arg, "an invalid UTF-8 byte sequence", FANSI_ind(i),
-        "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
-        "off these warnings."
+        "see `?unhandled_ctl`."
       );
     }
-  } else if(state.use_nchar) {  // only true if in width mode
-    // Assumes valid UTF-8!
+  } else if(
+      state.width_mode == FANSI_COUNT_WIDTH ||
+      state.width_mode == FANSI_COUNT_GRAPH
+  ) {
+    // Assumes valid UTF-8!  Should have been checked.
     int cp = FANSI_utf8_to_cp(state.string + state.pos_byte, byte_size);
 
     // Hacky grapheme approximation ensures flags (RI) aren't split, sets
@@ -835,7 +837,7 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
     // (for the same reason).  This will work in many cases, provided that the
     // emoji sequences are valid and recognized by the display device.
     // Other graphemes work similarly to the extent continuation code points
-    // are zero width naturally.  Prefixes, sequence interruptors,  and other
+    // are zero width naturally.  Prefixes, sequence interruptors, and other
     // things will not work.
 
     if(cp >= 0x1F1E6 && cp <= 0x1F1FF) {         // Regional Indicator
@@ -883,7 +885,15 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
       "String with display width greater than INT_MAX at index [%jd].",
       FANSI_ind(i)
     );
-  state.pos_width += disp_size;
+  // Width is basically counting graphemes when non-zero.
+  switch(state.width_mode) {
+    case FANSI_COUNT_CHARS: ++state.pos_width; break;
+    case FANSI_COUNT_WIDTH: state.pos_width += disp_size; break;
+    case FANSI_COUNT_GRAPH: state.pos_width += disp_size > 0; break;
+    case FANSI_COUNT_BYTES: state.pos_width += byte_size; break;
+    default:
+      error("Internal Error: invalid width mode (%d).", state.width_mode); // nocov
+  }
   state.has_utf8 = 1;
   return state;
 }
@@ -967,7 +977,12 @@ onemoretime:
     );
     state.warned = 1;  // only warn once
   }
-  if(state_prev.last_zwj && state.use_nchar)
+  if(
+    state_prev.last_zwj && (
+      state.width_mode == FANSI_COUNT_WIDTH ||
+      state.width_mode == FANSI_COUNT_GRAPH
+    )
+  )
     state.pos_width = state_prev.pos_width;
 
   if(state.read_one_more && state.string[state.pos_byte])

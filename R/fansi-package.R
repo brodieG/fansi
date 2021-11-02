@@ -262,15 +262,26 @@
 #'
 #' Internally, `fansi` computes the width of most UTF-8 character sequences
 #' outside of the ASCII range using the native `R_nchar` function.  This will
-#' cause such characters to be processed slower than ASCII characters.  `fansi`
-#' also attempts to approximate the effect of emoji combining sequences on
-#' string widths, which R does not at least as of R 4.1.  The
-#' [`utf8`](https://cran.r-project.org/package=utf8) package provides a
-#' conforming grapheme parsing implementation.
+#' cause such characters to be processed slower than ASCII characters.  Unlike R
+#' (at least as of version 4.1), `fansi` can account for graphemes (see
+#' "Graphemes" next).
 #'
 #' Because `fansi` implements it's own internal UTF-8 parsing it is possible
 #' that you will see results different from those that R produces even on
 #' strings without _Control Sequences_.
+#'
+#' @section Graphemes:
+#'
+#' `fansi` approximates grapheme widths and counts by using heuristics for
+#' grapheme breaks that work for most common graphemes, including emoji
+#' combining sequences.  The heuristic is known to work incorrectly with
+#' invalid combining sequences, prepending marks, and sequence interruptors.
+#' `fansi` does not provide a full implementation to avoid carrying a copy of
+#' the Unicode grapheme breaks table, and also because the hope is that R will
+#' add the feature itself.
+#'
+#' The [`utf8`](https://cran.r-project.org/package=utf8) package provides a
+#' conforming grapheme parsing implementation.
 #'
 #' @section Overflow:
 #'

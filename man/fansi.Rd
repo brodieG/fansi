@@ -34,8 +34,8 @@ Commands (OSC).
 \emph{Control Sequences} starting with ESC are assumed to be two characters
 long (including the ESC) unless they are of the CSI or OSC variety, in which
 case their length is computed as per the \href{https://www.ecma-international.org/publications-and-standards/standards/ecma-48/}{ECMA-48 specification},
-with the exception that OSC-anchored URLs may be terminated with BEL ("\\a")
-in addition to ST ("ESC\\").
+with the exception that \href{#osc-anchored-urls}{OSC-anchored URLs} may be
+terminated with BEL ("\\a") in addition to ST ("ESC\\").
 
 \code{fansi} handles most common \emph{Control Sequences} in its parsing
 algorithms, but it is not a conforming implementation of ECMA-48.  For
@@ -51,10 +51,10 @@ does not support it.
 
 The special treatment of \emph{Control Sequences} is to compute their
 display/character width as zero.  For the SGR subset of the CSI sequences and
-OSC-anchored URLs, \code{fansi} will also parse, interpret, and reapply the
-sequences to the text as needed.  Whether a particular type of \emph{Control
-Sequence} is treated specially can be specified via the \code{ctl} parameter to
-the \code{fansi} functions that have it.
+\href{#osc-anchored-urls}{OSC-anchored URLs}, \code{fansi} will also parse, interpret,
+and reapply the sequences to the text as needed.  Whether a particular type
+of \emph{Control Sequence} is treated specially can be specified via the \code{ctl}
+parameter to the \code{fansi} functions that have it.
 }
 
 \section{CSI SGR Control Sequences}{
@@ -134,16 +134,22 @@ Note that \code{width} calculations may also change across R versions, locales,
 etc. (see "Encodings / UTF-8" below).
 }
 
-\section{OSC Encoded URLs}{
+\section{OSC Anchored URLs}{
 
 
 Operating System Commands are interpreted by terminal emulators typically to
 engage actions external to the display of text proper, such as setting a
 window title or changing the active color palette.
 
-\link[=1]{Some terminals} have added support for associating URLs to text with OSCs
-in a similar way to anchors in HTML, so \code{fansi} interprets them and outputs
-or terminates them as needed.
+\href{https://iterm2.com/documentation-escape-codes.html}{Some terminals} have
+added support for associating URLs to text with OSCs in a similar way to
+anchors in HTML, so \code{fansi} interprets them and outputs or terminates them as
+needed.  For example:\preformatted{"\\033]8;;xy.z\\033\\\\LINK\\033]8;;\\033\\\\"
+}
+
+Might be interpreted as \href{x.z}{LINK}.  To make The encoding pattern clearer,
+we replace "\033]" with "<OSC>" and "\033\\" with ">ST<" below:\preformatted{<OSC>8;;URL<ST>LINK TEXT<OSC>8;;<ST>
+}
 }
 
 \section{State Interactions}{
@@ -246,15 +252,28 @@ width calculations to always work correctly with strings containing emoji.
 
 Internally, \code{fansi} computes the width of most UTF-8 character sequences
 outside of the ASCII range using the native \code{R_nchar} function.  This will
-cause such characters to be processed slower than ASCII characters.  \code{fansi}
-also attempts to approximate the effect of emoji combining sequences on
-string widths, which R does not at least as of R 4.1.  The
-\href{https://cran.r-project.org/package=utf8}{\code{utf8}} package provides a
-conforming grapheme parsing implementation.
+cause such characters to be processed slower than ASCII characters.  Unlike R
+(at least as of version 4.1), \code{fansi} can account for graphemes (see
+"Graphemes" next).
 
 Because \code{fansi} implements it's own internal UTF-8 parsing it is possible
 that you will see results different from those that R produces even on
 strings without \emph{Control Sequences}.
+}
+
+\section{Graphemes}{
+
+
+\code{fansi} approximates grapheme widths and counts by using heuristics for
+grapheme breaks that work for most common graphemes, including emoji
+combining sequences.  The heuristic is known to work incorrectly with
+invalid combining sequences, prepending marks, and sequence interruptors.
+\code{fansi} does not provide a full implementation to avoid carrying a copy of
+the Unicode grapheme breaks table, and also because the hope is that R will
+add the feature itself.
+
+The \href{https://cran.r-project.org/package=utf8}{\code{utf8}} package provides a
+conforming grapheme parsing implementation.
 }
 
 \section{Overflow}{

@@ -85,7 +85,7 @@ bridge <- function(
 ## such as CTL.INT, X.LEN, etc. (these should all be in caps).
 
 VAL_IN_ENV <- function(
-  ..., valid.types=c('chars', 'width'), warn.mask=get_warn_all()
+  ..., valid.types=c('chars', 'width', 'graphemes'), warn.mask=get_warn_all()
 ) {
   call <- sys.call(-1)
   par.env <- parent.frame()

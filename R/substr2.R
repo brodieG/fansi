@@ -41,11 +41,11 @@
 #' characters to be dropped irrespective whether they correspond to `start` or
 #' `stop`, and "both" could cause all of them to be included.
 #'
-#' These functions map string lengths accounting for CSI SGR sequence semantics
-#' to the naive length calculations, and then use the mapping in conjunction
-#' with [base::substr()] to extract the string.  This concept is borrowed
-#' directly from Gábor Csárdi's `crayon` package, although the implementation of
-#' the calculation is different.
+#' These functions map string lengths accounting for _Control Sequence_
+#' semantics to the naive length calculations, and then use the mapping in
+#' conjunction with [base::substr()] to extract the string.  This concept is
+#' borrowed directly from Gábor Csárdi's `crayon` package, although the
+#' implementation of the calculation is different.
 #'
 #' @section Replacement Functions:
 #'
@@ -93,14 +93,16 @@
 #'   [`state_at_end`] to compute active state at the end of strings,
 #'   [`close_state`] to compute the sequence required to close active state.
 #' @param x a character vector or object that can be coerced to such.
-#' @param type character(1L) partial matching `c("chars", "width")`, although
-#'   `type="width"` only works correctly with R >= 3.2.2.  See
-#'   [`?nchar`][base::nchar]. With "width", the results might be affected by
-#'   locale changes, Unicode database updates, and logic changes for processing
-#'   of complex graphemes.  Generally you should not rely on a specific output
+#' @param type character(1L) partial matching
+#'   `c("chars", "width", "graphemes")`, although types other than "chars" only
+#'   work correctly with R >= 3.2.2.  See [`?nchar`][base::nchar]. With "width",
+#'   the results might be affected by locale changes, Unicode database updates,
+#'   and logic changes for processing of complex graphemes.  This latter would
+#'   also affect "grapheme".  Generally you should not rely on a specific output
 #'   e.g. by embedding it in unit tests.  For the most part `fansi` (currently)
 #'   uses the internals of `base::nchar(type='width')`, but there are exceptions
-#'   and this may change in the future.
+#'   and this may change in the future.  Grapheme breaks are approximate, but
+#'   should work correctly in most common cases (see "Grapheme" in `?fansi`).
 #' @param round character(1L) partial matching
 #'   `c("start", "stop", "both", "neither")`, controls how to resolve
 #'   ambiguities when a `start` or `stop` value in "width" `type` mode falls
@@ -241,8 +243,7 @@ substr2_ctl <- function(
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
     carry=carry, terminate=terminate, tab.stops=tab.stops,
     tabs.as.spaces=tabs.as.spaces, type=type, round=round,
-    start=start, stop=stop,
-    valid.types=c('chars', 'width')
+    start=start, stop=stop
   )
   res <- x
   no.na <- !(is.na(x) | is.na(start & stop))
@@ -299,8 +300,7 @@ substr2_ctl <- function(
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
     carry=carry, terminate=terminate, tab.stops=tab.stops,
     tabs.as.spaces=tabs.as.spaces, round=round, start=start, stop=stop,
-    type=type,
-    valid.types=c('chars', 'width')
+    type=type
   )
   # Adjust `stop` to be no longer than end of string, also need to make sure the
   # overall string length is unchanged.

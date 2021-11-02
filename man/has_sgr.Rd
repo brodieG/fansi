@@ -15,7 +15,8 @@ assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
 If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
 parameter on functions that have it, or the \code{tabs_as_spaces} function, to
-turn the tabs to spaces and resolve the warning that way.}
+turn the tabs to spaces and resolve the warning that way.  At most one
+warning will be issued per element in each input vector.}
 }
 \value{
 logical of same length as \code{x}; NA values in \code{x} result in NA values

@@ -52,6 +52,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   #define FANSI_WARN_ALL    511 // ... 0001 1111 1111
   #define FANSI_WARN_CSIBAD 336 // ... 0001 0101 0000
 
+  #define FANSI_COUNT_CHARS   0
+  #define FANSI_COUNT_WIDTH   1
+  #define FANSI_COUNT_GRAPH   2
+  #define FANSI_COUNT_BYTES   3
+
   // macros
 
   #define FANSI_ADD_INT(x, y) FANSI_add_int((x), (y), __FILE__, __LINE__)
@@ -238,7 +243,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
    * This object has gotten completely out of hand with how large it is.  We
    * could change many of the fields to char, or even bitfields and potentially
    * create smaller structs to passs to-and-fro functions instead of this
-   * monster.
+   * monster.  Or explore passing around e.g. a RO pointer.
    */
 
   struct FANSI_state {
@@ -345,17 +350,17 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     // suppress additional warnings.
     int warned;
     // Whether to use R_nchar, really only needed when we're doing things in
-    // width mode
-    int use_nchar;
+    // width and grapheme mode (see FANSI_COUNT_* defined constants).
+    int width_mode;
+
     // Last sequence of SGRs contained non-normal escapes
     int non_normalized;
 
     /*
      * These support the arguments of the same names for nchars.  allowNA means
      * that the normal errors caused by invalid UTF-8 encoding are suppressed.
-     * If running with `allowNA` the code must check for err_code == 9 (bad
-     * UTF-8) after each `read_next` call to ensure it does not keep reading
-     * after a bad "UTF-8" (or not care about bad UTF-8).
+     * If running with `allowNA` the corresopnding code is responsible for
+     * ensuring bad utf-8 is dealt with in some way.
      */
     int allowNA;
     int keepNA;
