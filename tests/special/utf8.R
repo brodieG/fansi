@@ -140,11 +140,8 @@ unitizer_sect("zero width combining", {
   substr2_ctl(combo, 5, 8, type='width')
   substr2_ctl(rep(combo, 2), c(1, 5), c(5, 8), type='width')
 
-  combo1 <- "hello\u0300\u035c"
-  Encoding(combo1) <- "UTF-8"
-
-  substr2_ctl(combo, 1, 5, type='width')
-  substr2_ctl(combo, 2, 6, type='width')
+  nchar_ctl(combo, type='width')
+  nchar_ctl(combo, type='graphemes')
 
   # zero width with double width
 
@@ -257,6 +254,8 @@ unitizer_sect("nchar", {
   w2 <- "\u4E00\u4E01\u4E03"
   nchar_ctl(w1)
   nchar_ctl(w2, type='width')
+  nchar_ctl(w2, type='graphemes')
+  nchar_ctl(w2, type='bytes')
 
   # Allow NA for illegal sequences
 
@@ -280,6 +279,7 @@ unitizer_sect("nchar", {
   Encoding(esc.1) <- 'UTF-8'
   nchar_ctl(esc.1)
   nchar_ctl(esc.1, type='width')
+  nchar_ctl(esc.1, type='bytes')
 
   nzchar_ctl(esc.1)
 
@@ -474,9 +474,11 @@ unitizer_sect("graphemes", {
   emo.0 <- "\U0001F476\U0001F3FD\U0001F468\U0001F3FF\U0001F46E\U0001F3FF"
   emo.1 <- "A_\U0001F468\U0001F3FE\U000200D\U0001F9B3_B"
   emo.2 <- "\U0001F468\U0001F3FE\U000200D\U0001F9B3"
+  emo.2a <- paste0("_", emo.2, "^", emo.2)
 
   # nchar
   nchar_ctl(c(emo.0, emo.1, emo.2), type='width')
+  nchar_ctl(c(emo.0, emo.1, emo.2), type='graphemes')
 
   substr2_ctl(emo.0, 1, 1, type='width')
   substr2_ctl(emo.0, 1, 1, type='width', round='stop')
@@ -506,6 +508,13 @@ unitizer_sect("graphemes", {
   )
   strwrap2_ctl(emo.big, 10, wrap.always=TRUE, carry="\033[44m", pad.end=" ")
 
+  # More grapheme tests
+  emo.6 <- c(emo.0, emo.2a, emo.4)
+  substr2_ctl(emo.6, 1, 2, type='graphemes')
+  substr2_ctl(emo.6, 1, 3, type='graphemes')
+  substr2_ctl(emo.6, 2, 3, type='graphemes')
+  substr2_ctl(emo.6, 3, 3, type='graphemes')
+
   # Corner cases, effect of SGRs in emo-sequences, on OS X term they are
   # excluded from flow so don't interrupt sequences.
   emo.5 <- "\xf0\x9f\x91\xb6\033[43m\xf0\x9f\x8f\xbd###\033[m"
@@ -513,6 +522,8 @@ unitizer_sect("graphemes", {
 
   substr2_ctl(emo.5, 1, 2, type='width')
   substr2_ctl(emo.5, 2, 3, type='width')
+  nchar_ctl(emo.5, type='width')
+  nchar_ctl(emo.5, type='grapheme')
 })
 unitizer_sect("replacement and width", {
   # weird, but correct, should be white haired light brown baby, but at least
