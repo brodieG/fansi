@@ -8,9 +8,11 @@
   `substr_cl` (i.e `substr_ctl<-`).
 * [#58](https://github.com/brodieG/fansi/issues/58) Add support for OSC-anchored
   URLs.
-* [#66](https://github.com/brodieG/fansi/issues/66) Improved handling of
-  graphemes in `type="width"` mode.  Flags and well formed emoji sequences
-  should have widths computed correctly in most common use cases.
+* [#66](https://github.com/brodieG/fansi/issues/66) Improved grapheme support,
+  including accounting for them in `type="width"` mode, as well as a
+  `type="graphemes"` mode to measure in graphemes instead of characters.
+  Implementation is based on heuristics designed to work in most common use
+  cases.
 * [#64](https://github.com/brodieG/fansi/issues/64) New function `normalize_sgr`
   converts compound SGR sequences into normalized form (e.g. "ESC[44;31m"
   becomes "ESC[31mESC[44m") for better compatibility with
