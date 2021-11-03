@@ -253,27 +253,11 @@ width calculations to always work correctly with strings containing emoji.
 Internally, \code{fansi} computes the width of most UTF-8 character sequences
 outside of the ASCII range using the native \code{R_nchar} function.  This will
 cause such characters to be processed slower than ASCII characters.  Unlike R
-(at least as of version 4.1), \code{fansi} can account for graphemes (see
-"Graphemes" next).
+(at least as of version 4.1), \code{fansi} can account for graphemes.
 
 Because \code{fansi} implements it's own internal UTF-8 parsing it is possible
 that you will see results different from those that R produces even on
 strings without \emph{Control Sequences}.
-}
-
-\section{Graphemes}{
-
-
-\code{fansi} approximates grapheme widths and counts by using heuristics for
-grapheme breaks that work for most common graphemes, including emoji
-combining sequences.  The heuristic is known to work incorrectly with
-invalid combining sequences, prepending marks, and sequence interruptors.
-\code{fansi} does not provide a full implementation to avoid carrying a copy of
-the Unicode grapheme breaks table, and also because the hope is that R will
-add the feature itself.
-
-The \href{https://cran.r-project.org/package=utf8}{\code{utf8}} package provides a
-conforming grapheme parsing implementation.
 }
 
 \section{Overflow}{

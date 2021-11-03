@@ -235,6 +235,21 @@ value, possibly because the provided \code{start}/\code{stop} values (or the
 implicit ones generated for \code{value}) do not align with grapheme boundaries.
 }
 
+\section{Graphemes}{
+
+
+\code{fansi} approximates grapheme widths and counts by using heuristics for
+grapheme breaks that work for most common graphemes, including emoji
+combining sequences.  The heuristic is known to work incorrectly with
+invalid combining sequences, prepending marks, and sequence interruptors.
+\code{fansi} does not provide a full implementation to avoid carrying a copy of
+the Unicode grapheme breaks table, and also because the hope is that R will
+add the feature itself.
+
+The \href{https://cran.r-project.org/package=utf8}{\code{utf8}} package provides a
+conforming grapheme parsing implementation.
+}
+
 \examples{
 substr_ctl("\033[42mhello\033[m world", 1, 9)
 substr_ctl("\033[42mhello\033[m world", 3, 9)

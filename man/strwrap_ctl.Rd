@@ -181,6 +181,21 @@ within a single wrapped vector element (e.g. if one of the input elements
 gets wrapped into three lines, the styles will carry through those three
 lines even if \code{carry=FALSE}, but not across input vector elements).
 }
+\section{Graphemes}{
+
+
+\code{fansi} approximates grapheme widths and counts by using heuristics for
+grapheme breaks that work for most common graphemes, including emoji
+combining sequences.  The heuristic is known to work incorrectly with
+invalid combining sequences, prepending marks, and sequence interruptors.
+\code{fansi} does not provide a full implementation to avoid carrying a copy of
+the Unicode grapheme breaks table, and also because the hope is that R will
+add the feature itself.
+
+The \href{https://cran.r-project.org/package=utf8}{\code{utf8}} package provides a
+conforming grapheme parsing implementation.
+}
+
 \examples{
 hello.1 <- "hello \033[41mred\033[49m world"
 hello.2 <- "hello\t\033[41mred\033[49m\tworld"

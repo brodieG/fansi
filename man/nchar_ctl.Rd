@@ -95,6 +95,21 @@ are encountered as they may be incorrectly interpreted.
 \note{
 the \code{keepNA} parameter is ignored for R < 3.2.2.
 }
+\section{Graphemes}{
+
+
+\code{fansi} approximates grapheme widths and counts by using heuristics for
+grapheme breaks that work for most common graphemes, including emoji
+combining sequences.  The heuristic is known to work incorrectly with
+invalid combining sequences, prepending marks, and sequence interruptors.
+\code{fansi} does not provide a full implementation to avoid carrying a copy of
+the Unicode grapheme breaks table, and also because the hope is that R will
+add the feature itself.
+
+The \href{https://cran.r-project.org/package=utf8}{\code{utf8}} package provides a
+conforming grapheme parsing implementation.
+}
+
 \examples{
 nchar_ctl("\033[31m123\a\r")
 ## with some wide characters
