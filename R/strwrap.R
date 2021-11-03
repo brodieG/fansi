@@ -166,8 +166,6 @@ strwrap2_ctl <- function(
   # This changes `width`, so needs to happen after the first width validation
   VAL_WRAP_IN_ENV(width, indent, exdent, prefix, initial, pad.end)
 
-  tab.stops <- as.integer(tab.stops)
-
   res <- .Call(
     FANSI_strwrap_csi,
     x, width,

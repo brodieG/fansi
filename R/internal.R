@@ -130,7 +130,7 @@ VAL_IN_ENV <- function(
     args[['WARN.INT']] <- warn * warn.mask
   }
   if('normalize' %in% argnm) {
-    normalize <- args[['normalize']]
+    normalize <- as.logical(args[['normalize']])
     if(!isTRUE(normalize %in% c(FALSE, TRUE)))
       stop2("Argument `normalize` must be TRUE or FALSE.")
     args[['normalize']] <- as.logical(normalize)
@@ -173,7 +173,7 @@ VAL_IN_ENV <- function(
     args[['carry']] <- carry
   }
   if('terminate' %in% argnm) {
-    terminate <- args[['terminate']]
+    terminate <- as.logical(args[['terminate']])
     if(!isTRUE(terminate %in% c(TRUE, FALSE)))
       stop2("Argument `terminate` must be TRUE or FALSE")
     terminate <- as.logical(terminate)
@@ -228,7 +228,9 @@ VAL_IN_ENV <- function(
   }
   if('start' %in% argnm || 'stop' %in% argnm) {
     x.len <- length(args[['x']])
-    # Silently recycle start/stop like substr does
+    # Silently recycle start/stop like substr does.  Coercion to integer
+    # should be done ahead of VAL_IN_ENV so warnings are reported
+    # correctly
     start <- rep(as.integer(args[['start']]), length.out=x.len)
     stop <- rep(as.integer(args[['stop']]), length.out=x.len)
     start[start < 1L] <- 1L
@@ -239,14 +241,13 @@ VAL_IN_ENV <- function(
   if('keepNA' %in% argnm) {
     keepNA <- as.logical(args[['keepNA']])
     if(length(keepNA) != 1L)
-      stop2("Argument `keepNA` must be a scalar logical.")
+      stop2("Argument `keepNA` must be interpretable as a scalar logical.")
     args[['keepNA']] <- keepNA
   }
   if('allowNA' %in% argnm) {
     allowNA <- as.logical(args[['allowNA']])
-    if(!is.logical(allowNA)) allowNA <- as.logical(allowNA)
     if(length(allowNA) != 1L)
-      stop2("Argument `allowNA` must be a scalar logical.")
+      stop2("Argument `allowNA` must be interpretable as a scalar logical.")
     args[['allowNA']] <- isTRUE(allowNA)
   }
   # we might not have validated all, so we should be careful

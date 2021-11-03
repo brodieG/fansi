@@ -95,8 +95,6 @@ strtrim2_ctl <- function(
       "Argument `width` must be a positive scalar numeric representable ",
       "as an integer."
     )
-  width <- as.integer(width)
-
   # can assume all term cap available for these purposes
   term.cap.int <- 1L
   width <- as.integer(width)

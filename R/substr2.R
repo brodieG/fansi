@@ -238,10 +238,15 @@ substr2_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
+  ## So warning are issues here
+  start <- as.integer(start)
+  stop <- as.integer(stop)
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(
-    x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
-    carry=carry, terminate=terminate, tab.stops=tab.stops,
+    x=x, warn=warn, term.cap=term.cap,
+    ctl=ctl, normalize=normalize,
+    carry=carry, terminate=terminate,
+    tab.stops=tab.stops,
     tabs.as.spaces=tabs.as.spaces, type=type, round=round,
     start=start, stop=stop
   )
@@ -295,12 +300,15 @@ substr2_ctl <- function(
   # This would probably be better done in C, given the contortions we have to
   # resort to here...
 
+  ## So warning are issues here
+  start <- as.integer(start)
+  stop <- as.integer(stop)
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
     carry=carry, terminate=terminate, tab.stops=tab.stops,
-    tabs.as.spaces=tabs.as.spaces, round=round, start=start, stop=stop,
-    type=type
+    tabs.as.spaces=tabs.as.spaces, round=round, start=start,
+    stop=stop, type=type
   )
   # Adjust `stop` to be no longer than end of string, also need to make sure the
   # overall string length is unchanged.
