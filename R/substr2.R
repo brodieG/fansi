@@ -306,7 +306,7 @@ substr2_ctl <- function(
   # overall string length is unchanged.
   nc <- nchar_ctl(x, type=type, ctl=ctl, warn=FALSE)
   stop <- pmin(stop, nc)
-  value <- rep_len(enc2utf8(as.character(value)), X.LEN)
+  value <- rep_len(enc_to_utf8(as.character(value)), X.LEN)
   ncv <- nchar_ctl(value, type=type, ctl=ctl, warn=FALSE)
   end.start <- pmin(stop + 1L, start + ncv)
   end.end <- rep(.Machine[['integer.max']], X.LEN)

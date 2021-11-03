@@ -177,7 +177,7 @@ html_esc <- function(x, what=getOption("fansi.html.esc", "<>&'\"")) {
     stop("Argument `x` must be character, is ", typeof(x), ".")
   if(!is.character(what))
     stop("Argument `what` must be character, is ", typeof(what), ".")
-  .Call(FANSI_esc_html, enc2utf8(x), what)
+  .Call(FANSI_esc_html, enc_to_utf8(x), what)
 }
 
 #' Format Character Vector for Display as Code in HTML

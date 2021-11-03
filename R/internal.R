@@ -23,7 +23,7 @@ R.ver.gte.3.2.2 <- NA
 ## A version of unique that isn't terrible for very long strings that are
 ## actually the same
 
-unique_chr <- function(x) .Call(FANSI_unique_chr, enc2utf8(x))
+unique_chr <- function(x) .Call(FANSI_unique_chr, enc_to_utf8(x))
 
 ## Testing interface for color code to HTML conversion
 
@@ -108,7 +108,7 @@ VAL_IN_ENV <- function(
   if('x' %in% argnm) {
     x <- args[['x']]
     if(!is.character(x)) x <- as.character(args[['x']])
-    x <- enc2utf8(x)
+    x <- enc_to_utf8(x)
     if(length(which.byte <- which(Encoding(x) == "bytes")))
       stop2(
         "Argument `x` contains a \"bytes\" encoded string at index [",
@@ -252,4 +252,19 @@ VAL_IN_ENV <- function(
   # we might not have validated all, so we should be careful
   list2env(args, par.env)
 }
+## Encode to UTF-8 If needed
+##
+## Problem is that if native is UTF-8, unknown vectors are re-encoded,
+## which will include escaping of bad encoding which hides errors.
+##
+## Assumes char input
 
+enc_to_utf8 <- function(x) {
+  if(isTRUE(l10n_info()[['UTF-8']])) {
+    enc <- Encoding(x)
+    # in theory just "latin1", but just in case other encs added
+    translate <- enc != "unknown" & enc != "UTF-8"
+    x[translate] <- enc2utf8(x[translate])
+    x
+  } else enc2utf8(x)
+}
