@@ -61,10 +61,10 @@
 #'
 #' The special treatment of _Control Sequences_ is to compute their
 #' display/character width as zero.  For the SGR subset of the CSI sequences and
-#' [OSC-anchored URLs](#osc-anchored-urls), `fansi` will also parse, interpret,
-#' and reapply the sequences to the text as needed.  Whether a particular type
-#' of _Control Sequence_ is treated specially can be specified via the `ctl`
-#' parameter to the `fansi` functions that have it.
+#' OSC-anchored URLs, `fansi` will also parse, interpret, and reapply the
+#' sequences to the text as needed.  Whether a particular type of _Control
+#' Sequence_ is treated specially can be specified via the `ctl` parameter to
+#' the `fansi` functions that have it.
 #'
 #' @section CSI SGR Control Sequences:
 #'
@@ -128,18 +128,6 @@
 #' rather than replace previous ones, although in some cases the effect is the
 #' same as replacement (e.g. if you have a color active and pick another one).
 #'
-#' While we try to minimize changes across `fansi` versions in how SGR sequences
-#' are output, we focus on minimizing the changes to rendered output, not
-#' necessarily the specific SGR sequences used to produce it.  To maximize the
-#' odds of getting stable SGR output use [`normalize_state`] and set `term.cap`
-#' to a specific set of capabilities.
-#'
-#' **In general it is likely best not to rely on the exact SGR encoding of
-#' `fansi` output, particularly in tests.**
-#'
-#' Note that `width` calculations may also change across R versions, locales,
-#' etc. (see "Encodings / UTF-8" below).
-#'
 #' @section OSC Anchored URLs:
 #'
 #' Operating System Commands are interpreted by terminal emulators typically to
@@ -155,8 +143,8 @@
 #' "\033]8;;xy.z\033\\LINK\033]8;;\033\\"
 #' ```
 #'
-#' Might be interpreted as [LINK](x.z).  To make The encoding pattern clearer,
-#' we replace "\033]" with "&lt;OSC&gt;" and "\033\\" with "&gt;ST&lt;" below:
+#' Might be interpreted as [LINK](x.z).  To make the encoding pattern clearer,
+#' we replace "\033]" with "&lt;OSC&gt;" and "\033\\\\" with "&gt;ST&lt;" below:
 #'
 #' ```
 #' <OSC>8;;URL<ST>LINK TEXT<OSC>8;;<ST>
@@ -263,25 +251,11 @@
 #' Internally, `fansi` computes the width of most UTF-8 character sequences
 #' outside of the ASCII range using the native `R_nchar` function.  This will
 #' cause such characters to be processed slower than ASCII characters.  Unlike R
-#' (at least as of version 4.1), `fansi` can account for graphemes (see
-#' "Graphemes" next).
+#' (at least as of version 4.1), `fansi` can account for graphemes.
 #'
 #' Because `fansi` implements it's own internal UTF-8 parsing it is possible
 #' that you will see results different from those that R produces even on
 #' strings without _Control Sequences_.
-#'
-#' @section Graphemes:
-#'
-#' `fansi` approximates grapheme widths and counts by using heuristics for
-#' grapheme breaks that work for most common graphemes, including emoji
-#' combining sequences.  The heuristic is known to work incorrectly with
-#' invalid combining sequences, prepending marks, and sequence interruptors.
-#' `fansi` does not provide a full implementation to avoid carrying a copy of
-#' the Unicode grapheme breaks table, and also because the hope is that R will
-#' add the feature itself.
-#'
-#' The [`utf8`](https://cran.r-project.org/package=utf8) package provides a
-#' conforming grapheme parsing implementation.
 #'
 #' @section Overflow:
 #'

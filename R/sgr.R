@@ -144,6 +144,7 @@ has_sgr <- function(x, warn=getOption('fansi.warn', TRUE))
 #'
 #' @export
 #' @inheritParams substr_ctl
+#' @inheritSection substr_ctl Output Stability
 #' @inherit has_ctl seealso
 #' @return character vector same length as `x`.
 #' @examples

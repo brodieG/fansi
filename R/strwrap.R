@@ -34,6 +34,8 @@
 #' Additionally,`indent`, `exdent`, `initial`, and `prefix` will be ignored when
 #' computing tab positions.
 #'
+#' @inheritSection substr_ctl Graphemes
+#' @inheritSection substr_ctl Output Stability
 #' @inheritParams base::strwrap
 #' @inheritParams tabs_as_spaces
 #' @inheritParams substr_ctl

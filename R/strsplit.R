@@ -36,6 +36,7 @@
 #' @inheritParams base::strsplit
 #' @inheritParams strwrap_ctl
 #' @inherit substr_ctl seealso
+#' @inheritSection substr_ctl Output Stability
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work properly in R < 3.2.2.
 #' @inherit base::strsplit return

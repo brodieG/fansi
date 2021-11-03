@@ -31,6 +31,8 @@
 #' @inheritParams substr_ctl
 #' @inheritParams base::nchar
 #' @inheritParams strip_ctl
+#' @inheritSection substr_ctl Output Stability
+#' @inheritSection substr_ctl Graphemes
 #' @note the `keepNA` parameter is ignored for R < 3.2.2.
 #' @export
 #' @inherit has_ctl seealso
