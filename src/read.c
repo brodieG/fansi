@@ -336,10 +336,13 @@ static struct FANSI_url parse_url(const char *x) {
     end = x = x0 + 3;
     // Look for end of escape tracking position of first semi-colons (subsequent
     // ones may be part of the URI).
+    //
+    // neither params nor URI must contain bytes outside of 0x20-0x7E. This is a
+    // narrower range than stricly allowed by OSC CSI.
     int semicolon = 0;
 
     while(*end && *end != '\a' && !(*end == 0x1b && *(end + 1) == '\\')) {
-      if(*end >= 0x20 && *end <= 0x7e) { // URLs allowed narrower set of bytes
+      if(*end >= 0x20 && *end <= 0x7e) {
         // All good
         if (*end == ';' && !semicolon) semicolon = end - x0;
       } else if (!(*end >= 0x08 && *end <= 0x0d)) {
@@ -673,7 +676,7 @@ static struct FANSI_state read_esc(struct FANSI_state state, int seq) {
         // Possible URL
         struct FANSI_url url = parse_url(state.string + state.pos_byte);
         osc_bytes = url.bytes;
-        if(url.bytes) state.url = url;    // success
+        if(url.url.len) state.url = url;  // success
         else if(osc_bytes) err_code = 4;  // malformed OSC URL
         else err_code = 5;                // Illegal OSC
 
