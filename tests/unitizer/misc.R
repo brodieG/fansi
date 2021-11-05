@@ -6,13 +6,6 @@ unitizer_sect("term_cap_test", {
   tct
   fansi_lines(LETTERS, step=6)
 })
-unitizer_sect("digits", {
-  ints <- c(-100L, -9999L, -1L, 0L, 1L, 9L, 10L, 99L, 100L, 101L, 9999L)
-  cbind(
-    ints,
-    fansi:::digits_in_int(ints)
-  )
-})
 unitizer_sect("add_int", {
   fansi:::add_int(1, 1)
   fansi:::add_int(2^31 - 1, 1)

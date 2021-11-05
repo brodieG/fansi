@@ -34,7 +34,6 @@ esc_color_code_to_html <- function(x) {
 }
 
 check_assumptions <- function() .Call(FANSI_check_assumptions)  # nocov
-digits_in_int <- function(x) .Call(FANSI_digits_in_int, x)
 
 add_int <- function(x, y) .Call(FANSI_add_int, as.integer(x), as.integer(y))
 

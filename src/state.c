@@ -306,34 +306,6 @@ static struct FANSI_state_pair state_at_pos2(
   return (struct FANSI_state_pair){.cur=state_res, .restart=state_restart};
 }
 /*
- * We always include the size of the delimiter; could be a problem that this
- * isn't the actual size, but rather the maximum size (i.e. we always assume
- * three bytes even if the numbers don't get into three digits).
- */
-int FANSI_color_size(int color, int * color_extra) {
-  int size = 0;
-  if(color == 8 && color_extra[0] == 2) {
-    size = 3 + 2 +
-      FANSI_digits_in_int(color_extra[1]) + 1 +
-      FANSI_digits_in_int(color_extra[2]) + 1 +
-      FANSI_digits_in_int(color_extra[3]) + 1;
-  } else if (color == 8 && color_extra[0] == 5) {
-    size = 3 + 2 +
-      FANSI_digits_in_int(color_extra[1]) + 1;
-  } else if (color == 8) {
-    error("Internal Error: unexpected compound color format");   // nocov
-  } else if (color >= 0 && color < 10) {
-    size = 3;
-  } else if (color >= 90 && color <= 97) {
-    size = 3;
-  } else if (color >= 100 && color <= 107) {
-    size = 4;
-  } else if (color > 0) {
-    error("Internal Error: unexpected color format"); // nocov
-  }
-  return size;
-}
-/*
  * Generate the tag corresponding to the state and write it out as a NULL
  * terminated string.
  */

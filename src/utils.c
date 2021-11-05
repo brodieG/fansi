@@ -149,35 +149,6 @@ int FANSI_seek_ctl(const char * x) {
     error("Internal error: sought past INT_MAX, should not happen.");  // nocov
   return (x - x0);
 }
-
-
-/*
- * Compute how many digits are in a number
- *
- * Add an extra character for negative integers.
- */
-
-int FANSI_digits_in_int(int x) {
-  int num = 1;
-  if(x < 0) {
-    ++num;
-    x = -x;
-  }
-  while((x = (x / 10))) ++num;
-  return num;
-}
-SEXP FANSI_digits_in_int_ext(SEXP y) {
-  if(TYPEOF(y) != INTSXP) error("Internal Error: required int.");
-
-  R_xlen_t ylen = XLENGTH(y);
-  SEXP res = PROTECT(allocVector(INTSXP, ylen));
-
-  for(R_xlen_t i = 0; i < ylen; ++i)
-    INTEGER(res)[i] = FANSI_digits_in_int(INTEGER(y)[i]);
-
-  UNPROTECT(1);
-  return(res);
-}
 /*
  * Compresses the ctl vector into a single integer by encoding each value of
  * ctl as a bit.

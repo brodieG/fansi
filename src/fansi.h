@@ -433,7 +433,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_sort_chr(SEXP x);
 
   SEXP FANSI_check_assumptions();
-  SEXP FANSI_digits_in_int_ext(SEXP y);
   SEXP FANSI_unique_chr(SEXP x);
 
   SEXP FANSI_add_int_ext(SEXP x, SEXP y);
@@ -504,7 +503,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_utf8clen(char c);
   int FANSI_valid_utf8(const char * chr, int bytes);
   int FANSI_utf8_to_cp(const char * chr, int bytes);
-  int FANSI_digits_in_int(int x);
   struct FANSI_string_as_utf8 FANSI_string_as_utf8(SEXP x);
   struct FANSI_state FANSI_state_init(
     SEXP strsxp, SEXP warn, SEXP term_cap, R_xlen_t i, const char * arg
