@@ -446,7 +446,8 @@ void FANSI_val_args(SEXP x, SEXP norm, SEXP carry) {
     error("Argument `carry` must be scalar character.");         // nocov
   if(!is_tf(norm)) error("Argument `norm` must be TRUE or FALSE.");  // nocov
 }
-
+// Utilitiy fun
+// nocov start
 
 void FANSI_print(char * x) {
   if(x) {
@@ -459,3 +460,4 @@ void FANSI_print(char * x) {
     Rprintf("\n");
   }
 }
+// nocov end
