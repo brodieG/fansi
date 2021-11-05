@@ -56,6 +56,7 @@ unitizer_sect("in functions", {
   strwrap_ctl(string1, 11, normalize=TRUE)
   strwrap_ctl(string2, 11, normalize=TRUE)
   strwrap_ctl(string3, 11, normalize=TRUE)
+  strwrap_ctl(string3, 11, normalize=TRUE, simplify=FALSE)
   strwrap2_ctl(string3, 11, normalize=TRUE, pad.end=" ")
 
   strwrap_sgr(string3, 11, normalize=TRUE)
