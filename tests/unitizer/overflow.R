@@ -106,5 +106,10 @@ unitizer_sect('misc', {
   invisible(fansi:::set_int_max(1L))
   substr_ctl("1", 2, 2)
 })
-
 new_max <- fansi:::set_int_max(old_max)
+
+unitizer_sect('R_len_t', {
+  old_rlent <- fansi:::set_rlent_max(5)
+  tabs_as_spaces("A\tB")
+  new_rlent <- fansi:::set_rlent_max(old_rlent)
+})

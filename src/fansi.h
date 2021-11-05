@@ -66,12 +66,12 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   // thought we could feed the struct to one function, but that is not to be.
   // (well TBD).
 
-  struct FANSI_ulimit {
+  struct FANSI_ulimit {   // unsigned limits
     const char * name;
     uintmax_t min;
     uintmax_t max;
   };
-  struct FANSI_slimit {
+  struct FANSI_slimit {   // signed limits
     const char * name;
     intmax_t min;
     intmax_t max;
@@ -438,6 +438,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_add_int_ext(SEXP x, SEXP y);
 
   SEXP FANSI_set_int_max(SEXP x);
+  SEXP FANSI_set_rlent_max(SEXP x);
   SEXP FANSI_get_int_max();
   SEXP FANSI_get_warn_all();
   SEXP FANSI_esc_html(SEXP x, SEXP what);

@@ -49,6 +49,18 @@ SEXP FANSI_set_int_max(SEXP x) {
   FANSI_lim.lim_int.max = (intmax_t) x_int;
   return ScalarInteger(old_int);
 }
+SEXP FANSI_set_rlent_max(SEXP x) {
+  if(TYPEOF(x) != INTSXP || XLENGTH(x) != 1)
+    error("invalid R_len_t_max value");  // nocov
+  int x_R_len_t = asInteger(x);
+
+  if(x_R_len_t < 1)
+    error("R_len_t_max value must be positive"); // nocov
+
+  int old_R_len_t = FANSI_lim.lim_R_len_t.max;
+  FANSI_lim.lim_R_len_t.max = (intmax_t) x_R_len_t;
+  return ScalarInteger(old_R_len_t);
+}
 SEXP FANSI_reset_limits() {
   FANSI_lim = LIM_INIT;
   return ScalarLogical(1);
@@ -385,12 +397,13 @@ static SEXP mkChar_core(
   // PTRDIFF_MAX known to be >= INT_MAX (assumptions), and string should not
   // be longer than INT_MAX, so no overflow possible here.
 
-  if(buff.len > FANSI_lim.lim_R_len_t.max)
+  if(buff.len > FANSI_lim.lim_R_len_t.max) {
     error(
       "%s at index [%jd].",
       "Attempting to create CHARSXP longer than R_LEN_T_MAX",
       FANSI_ind(i)
     );
+  }
 
   // Annoyingly mkCharLenCE accepts int parameter instead of R_len_t, so we need
   // to check that too.
