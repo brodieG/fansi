@@ -149,7 +149,9 @@ unitizer_sect('osc', {
 
   nchar_ctl("\033]hello \aworld")
   nchar_ctl("\033]hello \033\\world")
-  nchar_ctl("\033]hello\x80\033\\world")
+  x <- "\033]hello\x80\033\\world"
+  Encoding(x) <- "UTF-8"
+  nchar_ctl(x)
   nchar_ctl("\033]hello world")
 })
 
