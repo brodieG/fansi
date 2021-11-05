@@ -132,7 +132,11 @@ strwrap_ctl <- function(
     if(normalize) normalize_state(unlist(res), warn=FALSE, term.cap)
     else unlist(res)
   } else {
-    if(normalize) normalize_state_list(res, 0L, TERM.CAP.INT) else res
+    if(normalize)
+      normalize_state_list(
+        res, warn.int=0L, term.cap.int=TERM.CAP.INT, carry=carry
+      )
+    else res
   }
 }
 #' @export
