@@ -177,15 +177,12 @@ int FANSI_term_cap_as_int(SEXP term_cap) {
   for(R_xlen_t i = 0; i < XLENGTH(term_cap); ++i) {
     int term_cap_val = INTEGER(term_cap)[i] - 2;
     if(term_cap_val > 2)
-      error("Internal Error: max term_cap value allowed is 2.");
+      error("Internal Error: max term_cap value allowed is 2."); // nocov
     if(term_cap_val < 0) flip_bits = 1;
     else term_cap_int |= 1 << term_cap_val;
   }
   if(flip_bits) term_cap_int ^= FANSI_TERM_CAP_ALL;
   return term_cap_int;
-}
-SEXP FANSI_term_cap_as_int_ext(SEXP term_cap) {
-  return ScalarInteger(FANSI_term_cap_as_int(term_cap));
 }
 
 SEXP FANSI_get_warn_all() {
