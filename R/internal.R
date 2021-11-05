@@ -113,12 +113,9 @@ VAL_IN_ENV <- function(
     if(length(which.byte <- which(Encoding(x) == "bytes")))
       stop2(
         "Argument `x` contains a \"bytes\" encoded string at index [",
-        which.byte[1],"] ",
-        if(length(which.byte) > 1) {
-          sprintf(
-            "and %d other%s ", which.byte - 1, if(which.byte > 2) "s" else ""
-        ) },
-        "which is not supported."
+        which.byte[1],"]",
+        if(length(which.byte) > 1) "and others, " else ", ",
+        "which is disallowed."
       )
     args[['x']] <- x
   }
@@ -268,5 +265,5 @@ enc_to_utf8 <- function(x) {
     translate <- enc != "unknown" & enc != "UTF-8"
     x[translate] <- enc2utf8(x[translate])
     x
-  } else enc2utf8(x)
+  } else enc2utf8(x) # nocov tested manually
 }

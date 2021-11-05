@@ -140,7 +140,7 @@ SEXP FANSI_utf8_to_cp_ext(SEXP x) {
     const char * chr = CHAR(STRING_ELT(x, i));
     int len = FANSI_utf8clen(*chr);
     if(LENGTH(STRING_ELT(x, i)) != len)
-      error("`x` may only contain single valid UTF-8 encoded code points.");
+      error("`x` may only contain single valid UTF-8 encoded code point.");
     resi[i] = FANSI_utf8_to_cp(chr, len);
   }
   UNPROTECT(1);
