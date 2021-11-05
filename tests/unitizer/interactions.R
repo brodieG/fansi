@@ -121,3 +121,16 @@ unitizer_sect("bridge", {
   fansi:::bridge(paste0("\033[42m", u0), "\033[31m")
   fansi:::bridge("\033[31m", paste0("\033[42m", u0))
 })
+unitizer_sect("at end / close", {
+  x <- c("a\033[31mb", "c", "\033[42md")
+  state_at_end(x)
+  state_at_end(x, carry=TRUE)
+  state_at_end(x, carry=TRUE, normalize=TRUE)
+  state_at_end("a\033[pb")
+  state_at_end("a\033[pb", warn=FALSE)
+
+  close_state(x)
+  close_state(x, normalize=TRUE)
+  close_state("a\033[pb")
+  close_state("a\033[pb", warn=FALSE)
+})
