@@ -429,7 +429,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   SEXP FANSI_cleave(SEXP x);
   SEXP FANSI_order(SEXP x);
-  SEXP FANSI_sort_int(SEXP x);
   SEXP FANSI_sort_chr(SEXP x);
 
   SEXP FANSI_check_assumptions();
@@ -568,7 +567,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   void FANSI_check_chr_size(char * start, char * end, R_xlen_t i);
   SEXP FANSI_mkChar0(char * start, char * end, cetype_t enc, R_xlen_t i);
   SEXP FANSI_mkChar(struct FANSI_buff buff, cetype_t enc, R_xlen_t i);
-  SEXP FANSI_mkChar2(struct FANSI_buff buff, cetype_t enc, R_xlen_t i);
   SEXP FANSI_reset_limits();
   void FANSI_check_limits();
 

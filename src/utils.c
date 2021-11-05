@@ -426,13 +426,8 @@ SEXP FANSI_mkChar0(
   struct FANSI_buff buff = {.buff0=start, .buff=end, .len=end - start};
   return mkChar_core(buff, enc, i, 0);
 }
-
 SEXP FANSI_mkChar(struct FANSI_buff buff, cetype_t enc, R_xlen_t i) {
   return mkChar_core(buff, enc, i, 1);
-}
-// Unstrict check, for use with tabs_as_spaces that over-allocs.
-SEXP FANSI_mkChar2(struct FANSI_buff buff, cetype_t enc, R_xlen_t i) {
-  return mkChar_core(buff, enc, i, 0);
 }
 
 static int is_tf(SEXP x) {
