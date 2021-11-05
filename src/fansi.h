@@ -231,12 +231,17 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
    *
    * Failed url parses designated by bytes == 0.
    */
+  struct FANSI_osc {
+    int len;    // bytes of the entire OSC, excluding the initial ESC
+    int error;  // error, if any, one of 0, 4 or 5 (see FANSI_state.err_code).
+  };
   struct FANSI_url {
     struct FANSI_string url;
     struct FANSI_string params;  // unparsed param string
     struct FANSI_string id;      // parsed id
-    int bytes;  // bytes of the entire OSC, excluding the initial ESC
+    struct FANSI_osc osc;
   };
+
   /*
    * Captures the SGR and OSC URL state at any particular position in a string.
    *
