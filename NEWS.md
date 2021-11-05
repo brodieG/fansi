@@ -70,11 +70,17 @@ Other changes:
   supported via the `ctl` parameter.  If CSI and OSC are indicated as not
   supported, but two byte escapes are, the two initial bytes of CSI and OSCs
   will be stripped.
+* "unknown" encoded strings are no longer translated to UTF-8 in UTF-8 locales.
 
 ### Bug Fixes
 
 * Fix `tabs_as_spaces` to handle sequential tabs, and to perform better on very
   wide strings.
+* Strings with invalid UTF-8 sequences with "unknown" declared encoding in UTF-8
+  locales now cause errors instead of being silently translated into byte
+  escaped versions (e.g. "\xf0\xc2" (2 bytes), used to be interpreted as
+  "<f0><c2>" (four characters).  These now cause errors as they would have if
+  they had had "UTF-8" declared encoding.
 
 ### Internal Changes
 
