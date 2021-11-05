@@ -188,56 +188,6 @@ int FANSI_term_cap_as_int(SEXP term_cap) {
 SEXP FANSI_get_warn_all() {
   return ScalarInteger(FANSI_WARN_ALL);
 }
-
-
-/*
- * Partial match a single string byte by byte
- *
- * @param x a scalar STRSXP
- * @param choices an array of strings to match against
- * @param choice_count how many elements there are in array
- * @param arg_name the name of the argument to use in an error message if
- *   the match fails.
- * @return the position in choices that partial matches x, on a 0-index basis
- *   (ie. 0 == 1st, 1 == 2nd, etc.)
- */
-// nocov start
-int FANSI_pmatch(
-  SEXP x, const char ** choices, int choice_count, const char * arg_name
-) {
-  error("remove nocov if we start to use this");
-  if(TYPEOF(x) != STRSXP || XLENGTH(x) != 1)
-    error("Argument `%s` must be a length 1 character vector.", arg_name);
-
-  SEXP x_chrsxp = STRING_ELT(x, 0);
-  const char * x_chr = CHAR(x_chrsxp);
-
-  if(!LENGTH(x_chrsxp))
-    error("Argument `%s` may not be an empty string.", arg_name);
-
-  int match_count = choice_count;
-  int last_match_index = -1;
-
-  for(int i = 0; i < choice_count; ++i) {
-    if(!strncmp(x_chr, choices[i], LENGTH(x_chrsxp))) {
-      last_match_index = i;
-      --match_count;
-    }
-  }
-  if(match_count > 1) {
-    error(
-      "Argument `%s` matches more than one of the possible choices.",
-      arg_name
-    );
-  } else if(!match_count) {
-    error("Argument `%s` does not match any of the valid choices.", arg_name);
-  }
-  // success
-
-  return last_match_index;
-}
-// nocov end
-
 // concept borrowed from utf8-lite, but is not great because we're
 // still doing the calculation every iteration.  Probably okay though, the
 // alternative is just too much of a pain.
@@ -318,32 +268,6 @@ SEXP FANSI_order(SEXP x) {
   UNPROTECT(1);
   return res;
 }
-/*
- * Equivalent to `sort`, but less overhead.  May not be faster for longer
- * vectors but since we call it potentially repeatedly via our initial version
- * of strsplit, we want to do this to make somewhat less sub-optimal
- */
-// nocov start
-static int cmpfun2 (const void * p, const void * q) {
-  int a = *(int *) p;
-  int b = *(int *) q;
-  return(a > b ? 1 : (a < b ? -1 : 0));
-}
-SEXP FANSI_sort_int(SEXP x) {
-  error("get rid of nocov if we start using");
-  if(TYPEOF(x) != INTSXP)
-    error("Internal error: this order only supports ints.");  // nocov
-
-  R_xlen_t len = XLENGTH(x);
-
-  SEXP res = PROTECT(duplicate(x));
-
-  qsort(INTEGER(res), (size_t) len, sizeof(int), cmpfun2);
-
-  UNPROTECT(1);
-  return res;
-}
-// nocov end
 struct datum2 {SEXP val; R_xlen_t idx;};
 
 static int cmpfun3 (const void * p, const void * q) {
