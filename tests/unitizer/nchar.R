@@ -43,6 +43,10 @@ unitizer_sect('basic tests', {
 
   # Bad encoding
   x <- "\xf0"
+  if(isTRUE(l10n_info()[['UTF-8']])) {
+    # don't translate unknown in UTF-8 locale
+    inherits(try(nchar_ctl(x), silent=TRUE), "try-error")
+  } else TRUE
   Encoding(x) <- "UTF-8"
   identical(nzchar_ctl(x), nzchar(x))
   nchar_ctl(x)

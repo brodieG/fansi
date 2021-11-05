@@ -45,8 +45,8 @@ unitizer_sect("unhandled", {
   unhandled_ctl("\033[38;2;10;20;30mworld\033[m", NULL)
 
   # Malformed in sequences
-
   unhandled_ctl("AB\033[34m\033]9\033\\\033[1m\033[2LCD")
+  # Unterminated OSC consumes everything
   unhandled_ctl("AB\033[34m\033]9\033[1m\033[2LCD")
 
 })
