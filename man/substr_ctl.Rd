@@ -132,14 +132,7 @@ See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for details
 
 \item{type}{character(1L) partial matching
 \code{c("chars", "width", "graphemes")}, although types other than "chars" only
-work correctly with R >= 3.2.2.  See \code{\link[base:nchar]{?nchar}}. With "width",
-the results might be affected by locale changes, Unicode database updates,
-and logic changes for processing of complex graphemes.  This latter would
-also affect "grapheme".  Generally you should not rely on a specific output
-e.g. by embedding it in unit tests.  For the most part \code{fansi} (currently)
-uses the internals of \code{base::nchar(type='width')}, but there are exceptions
-and this may change in the future.  Grapheme breaks are approximate, but
-should work correctly in most common cases (see "Grapheme" in \code{?fansi}).}
+work correctly with R >= 3.2.2.  See \code{\link[base:nchar]{?nchar}}.}
 
 \item{round}{character(1L) partial matching
 \code{c("start", "stop", "both", "neither")}, controls how to resolve
@@ -200,6 +193,29 @@ Width calculations will not work properly in R < 3.2.2.
 
 If \code{stop} < \code{start}, the return value is always an empty string.
 }
+\section{Output Stability}{
+
+
+Several factors could affect the exact output produced by \code{fansi}
+functions across versions of \code{fansi}, \code{R}, and/or across systems.
+\strong{In general it is likely best not to rely on the exact \code{fansi} output,
+e.g. by embedding it in tests.}
+
+Width and grapheme calculations depend on locale, Unicode database
+version, and grapheme processing logic which likely will change in the
+future, among other things.  For the most part \code{fansi} (currently) uses
+the internals of \code{base::nchar(type='width')}, but there are exceptions
+and this may change in the future.
+
+How a particular display format is encoded in \emph{Control Sequences} is
+not guaranteed to be stable across \code{fansi} versions, although we will
+strive to keep the rendered appearance stable.
+
+To maximize the odds of getting stable output set \code{normalize_state} to
+\code{TRUE} and \code{type} to \code{"chars"} in functions that allow it, and
+set \code{term.cap} to a specific set of capabilities.
+}
+
 \section{Replacement Functions}{
 
 

@@ -115,23 +115,6 @@ of the string and prepend all the accumulated tags up to beginning of a
 substring to the substring.  In many case the bulk of those accumulated tags
 will be irrelevant as their effects will have been superseded by subsequent
 tags.
-
-\code{fansi} assumes that CSI SGR sequences should be interpreted in cumulative
-"Graphic Rendition Combination Mode".  This means new SGR sequences add to
-rather than replace previous ones, although in some cases the effect is the
-same as replacement (e.g. if you have a color active and pick another one).
-
-While we try to minimize changes across \code{fansi} versions in how SGR sequences
-are output, we focus on minimizing the changes to rendered output, not
-necessarily the specific SGR sequences used to produce it.  To maximize the
-odds of getting stable SGR output use \code{\link{normalize_state}} and set \code{term.cap}
-to a specific set of capabilities.
-
-\strong{In general it is likely best not to rely on the exact SGR encoding of
-\code{fansi} output, particularly in tests.}
-
-Note that \code{width} calculations may also change across R versions, locales,
-etc. (see "Encodings / UTF-8" below).
 }
 
 \section{OSC Anchored URLs}{

@@ -20,14 +20,7 @@ nzchar_sgr(x, keepNA = NA, warn = getOption("fansi.warn", TRUE))
 
 \item{type}{character(1L) partial matching
 \code{c("chars", "width", "graphemes")}, although types other than "chars" only
-work correctly with R >= 3.2.2.  See \code{\link[base:nchar]{?nchar}}. With "width",
-the results might be affected by locale changes, Unicode database updates,
-and logic changes for processing of complex graphemes.  This latter would
-also affect "grapheme".  Generally you should not rely on a specific output
-e.g. by embedding it in unit tests.  For the most part \code{fansi} (currently)
-uses the internals of \code{base::nchar(type='width')}, but there are exceptions
-and this may change in the future.  Grapheme breaks are approximate, but
-should work correctly in most common cases (see "Grapheme" in \code{?fansi}).}
+work correctly with R >= 3.2.2.  See \code{\link[base:nchar]{?nchar}}.}
 
 \item{allowNA}{logical: should \code{NA} be returned for invalid
     multibyte strings or \code{"bytes"}-encoded strings (rather than

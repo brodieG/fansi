@@ -196,6 +196,29 @@ The \href{https://cran.r-project.org/package=utf8}{\code{utf8}} package provides
 conforming grapheme parsing implementation.
 }
 
+\section{Output Stability}{
+
+
+Several factors could affect the exact output produced by \code{fansi}
+functions across versions of \code{fansi}, \code{R}, and/or across systems.
+\strong{In general it is likely best not to rely on the exact \code{fansi} output,
+e.g. by embedding it in tests.}
+
+Width and grapheme calculations depend on locale, Unicode database
+version, and grapheme processing logic which likely will change in the
+future, among other things.  For the most part \code{fansi} (currently) uses
+the internals of \code{base::nchar(type='width')}, but there are exceptions
+and this may change in the future.
+
+How a particular display format is encoded in \emph{Control Sequences} is
+not guaranteed to be stable across \code{fansi} versions, although we will
+strive to keep the rendered appearance stable.
+
+To maximize the odds of getting stable output set \code{normalize_state} to
+\code{TRUE} and \code{type} to \code{"chars"} in functions that allow it, and
+set \code{term.cap} to a specific set of capabilities.
+}
+
 \examples{
 hello.1 <- "hello \033[41mred\033[49m world"
 hello.2 <- "hello\t\033[41mred\033[49m\tworld"
