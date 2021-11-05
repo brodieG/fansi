@@ -59,7 +59,11 @@ SEXP FANSI_nchar(
       // NA case, see ?nchar, note nzchar behavior is incorrectly doc'ed
       if(
         keepNA_int == 1 ||
-        (keepNA_int == NA_LOGICAL && !type_int && !zz)
+        (
+          keepNA_int == NA_LOGICAL &&
+          !(type_int == FANSI_COUNT_WIDTH || type_int == FANSI_COUNT_GRAPH) &&
+          !zz
+        )
       ) {
         resi[i] = zz ? NA_LOGICAL : NA_INTEGER;
       } else resi[i] = zz ? 1 : 2;
@@ -78,9 +82,7 @@ SEXP FANSI_nchar(
           // read_next should have had an error on invalid encoding
           error("Internal Error: invalid encoding unhandled."); // nocov
         }
-      } else if (!state.use_nchar) {// "char" mode
-        resi[i] = state.pos_raw;
-      } else {                      // "width", "grapheme" modes
+      } else {
         resi[i] = state.pos_width;
       }
   } }

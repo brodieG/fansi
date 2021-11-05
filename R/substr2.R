@@ -41,11 +41,32 @@
 #' characters to be dropped irrespective whether they correspond to `start` or
 #' `stop`, and "both" could cause all of them to be included.
 #'
-#' These functions map string lengths accounting for CSI SGR sequence semantics
-#' to the naive length calculations, and then use the mapping in conjunction
-#' with [base::substr()] to extract the string.  This concept is borrowed
-#' directly from Gábor Csárdi's `crayon` package, although the implementation of
-#' the calculation is different.
+#' These functions map string lengths accounting for _Control Sequence_
+#' semantics to the naive length calculations, and then use the mapping in
+#' conjunction with [base::substr()] to extract the string.  This concept is
+#' borrowed directly from Gábor Csárdi's `crayon` package, although the
+#' implementation of the calculation is different.
+#'
+#' @section Output Stability:
+#'
+#' Several factors could affect the exact output produced by `fansi`
+#' functions across versions of `fansi`, `R`, and/or across systems.
+#' **In general it is likely best not to rely on the exact `fansi` output,
+#' e.g. by embedding it in tests.**
+#'
+#' Width and grapheme calculations depend on locale, Unicode database
+#' version, and grapheme processing logic which likely will change in the
+#' future, among other things.  For the most part `fansi` (currently) uses
+#' the internals of `base::nchar(type='width')`, but there are exceptions
+#' and this may change in the future.
+#'
+#' How a particular display format is encoded in _Control Sequences_ is
+#' not guaranteed to be stable across `fansi` versions, although we will
+#' strive to keep the rendered appearance stable.
+#'
+#' To maximize the odds of getting stable output set `normalize_state` to
+#' `TRUE` and `type` to `"chars"` in functions that allow it, and
+#' set `term.cap` to a specific set of capabilities.
 #'
 #' @section Replacement Functions:
 #'
@@ -82,6 +103,19 @@
 #' value, possibly because the provided `start`/`stop` values (or the
 #' implicit ones generated for `value`) do not align with grapheme boundaries.
 #'
+#' @section Graphemes:
+#'
+#' `fansi` approximates grapheme widths and counts by using heuristics for
+#' grapheme breaks that work for most common graphemes, including emoji
+#' combining sequences.  The heuristic is known to work incorrectly with
+#' invalid combining sequences, prepending marks, and sequence interruptors.
+#' `fansi` does not provide a full implementation to avoid carrying a copy of
+#' the Unicode grapheme breaks table, and also because the hope is that R will
+#' add the feature itself.
+#'
+#' The [`utf8`](https://cran.r-project.org/package=utf8) package provides a
+#' conforming grapheme parsing implementation.
+#'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work properly in R < 3.2.2.
 #' @note If `stop` < `start`, the return value is always an empty string.
@@ -93,14 +127,9 @@
 #'   [`state_at_end`] to compute active state at the end of strings,
 #'   [`close_state`] to compute the sequence required to close active state.
 #' @param x a character vector or object that can be coerced to such.
-#' @param type character(1L) partial matching `c("chars", "width")`, although
-#'   `type="width"` only works correctly with R >= 3.2.2.  See
-#'   [`?nchar`][base::nchar]. With "width", the results might be affected by
-#'   locale changes, Unicode database updates, and logic changes for processing
-#'   of complex graphemes.  Generally you should not rely on a specific output
-#'   e.g. by embedding it in unit tests.  For the most part `fansi` (currently)
-#'   uses the internals of `base::nchar(type='width')`, but there are exceptions
-#'   and this may change in the future.
+#' @param type character(1L) partial matching
+#'   `c("chars", "width", "graphemes")`, although types other than "chars" only
+#'   work correctly with R >= 3.2.2.  See [`?nchar`][base::nchar].
 #' @param round character(1L) partial matching
 #'   `c("start", "stop", "both", "neither")`, controls how to resolve
 #'   ambiguities when a `start` or `stop` value in "width" `type` mode falls
@@ -236,13 +265,17 @@ substr2_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
+  ## So warning are issues here
+  start <- as.integer(start)
+  stop <- as.integer(stop)
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(
-    x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
-    carry=carry, terminate=terminate, tab.stops=tab.stops,
+    x=x, warn=warn, term.cap=term.cap,
+    ctl=ctl, normalize=normalize,
+    carry=carry, terminate=terminate,
+    tab.stops=tab.stops,
     tabs.as.spaces=tabs.as.spaces, type=type, round=round,
-    start=start, stop=stop,
-    valid.types=c('chars', 'width')
+    start=start, stop=stop
   )
   res <- x
   no.na <- !(is.na(x) | is.na(start & stop))
@@ -294,19 +327,21 @@ substr2_ctl <- function(
   # This would probably be better done in C, given the contortions we have to
   # resort to here...
 
+  ## So warning are issues here
+  start <- as.integer(start)
+  stop <- as.integer(stop)
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
     carry=carry, terminate=terminate, tab.stops=tab.stops,
-    tabs.as.spaces=tabs.as.spaces, round=round, start=start, stop=stop,
-    type=type,
-    valid.types=c('chars', 'width')
+    tabs.as.spaces=tabs.as.spaces, round=round, start=start,
+    stop=stop, type=type
   )
   # Adjust `stop` to be no longer than end of string, also need to make sure the
   # overall string length is unchanged.
   nc <- nchar_ctl(x, type=type, ctl=ctl, warn=FALSE)
   stop <- pmin(stop, nc)
-  value <- rep_len(enc2utf8(as.character(value)), X.LEN)
+  value <- rep_len(enc_to_utf8(as.character(value)), X.LEN)
   ncv <- nchar_ctl(value, type=type, ctl=ctl, warn=FALSE)
   end.start <- pmin(stop + 1L, start + ncv)
   end.end <- rep(.Machine[['integer.max']], X.LEN)

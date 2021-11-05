@@ -59,27 +59,38 @@ unitizer_sect("wrap", {
   strwrap_ctl(u9, 5)
 
   # OOB char for OSC
-  u10 <- sprintf(base.st, "", "\x07", url, txt, "")
-  u11 <- sprintf(base.st, "", "\x0e", url, txt, "")
+  u10 <- sprintf(base.st, "", "\x07", url, txt, "")  # not good
+  u11 <- sprintf(base.st, "", "\x0e", url, txt, "")  # 0x08-0x20 okayish
+  Encoding(u10) <- "UTF-8"
+  Encoding(u11) <- "UTF-8"
+  # Unsupported parameter (only id supported), questionable whether
+  # this should be allowed to carry or not.
+  u11a <- sprintf(base.st, "", "hello", url, txt, "")
 
   strwrap_ctl(u10, 5)
   strwrap_ctl(u11, 5)
+  strwrap_ctl(u11a, 5)
+  nchar_ctl(c(u10, u11, u11a))
 
-  # OOB char for URL
-  u12 <- sprintf(base.st, "", "\x08", url, txt, "")
-  # OOB in theory, but enc2utf8 re-encodes to <80>
-  u12a <- sprintf(base.st, "", "\x80", url, txt, "")
+  # OOB chars for URL
+  u12 <- sprintf(base.st, "", "", "\x08", txt, "")
+  u12a <- sprintf(base.st, "", "", "\x80", txt, "")
+  Encoding(u12) <- "UTF-8"
+  Encoding(u12a) <- "UTF-8"
 
   strwrap_ctl(u12, 5)
   strwrap_ctl(u12a, 5)
+  nchar_ctl(c(u12, u12a))
 
-  # Unterminated
+  # Unterminated, should consume everything?  It does in terminals, but what are
+  # the semantics of that, and carrying it?
   u13 <- "a\033]8;;THE END"
   u14 <- "a\033]8;;THE END\033]8;;NO?"
   u15 <- "a\033]8;;THE END\033]8;;\033["
   strwrap_ctl(u13, 5);
   strwrap_ctl(u14, 5);
   strwrap_ctl(u15, 5);
+  nchar_ctl(c(u13, u14, u15))
 
   # Empty Fields
   u16 <- sprintf(base.st, "", "", "", txt, "")
@@ -132,5 +143,13 @@ unitizer_sect('tohtml', {
   )
   to_html(u23)
   to_html(strwrap_ctl(u23, 4))
+})
+unitizer_sect('osc', {
+  # Non-URL OSC
+
+  nchar_ctl("\033]hello \aworld")
+  nchar_ctl("\033]hello \033\\world")
+  nchar_ctl("\033]hello\x80\033\\world")
+  nchar_ctl("\033]hello world")
 })
 

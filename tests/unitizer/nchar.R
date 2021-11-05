@@ -24,6 +24,16 @@ unitizer_sect('basic tests', {
   identical(nzchar_ctl(na.world, keepNA=TRUE), nzchar(na.world, keepNA=TRUE))
   identical(nzchar_ctl(na.world, keepNA=NA), nzchar(na.world, keepNA=NA))
 
+  identical(nchar_ctl(na.world, type='bytes'), nchar(na.world, type='bytes'))
+  identical(
+    nchar_ctl(na.world, keepNA=FALSE, type='bytes'),
+    nchar(na.world, keepNA=FALSE, type='bytes')
+  )
+  identical(
+    nchar_ctl(na.world, keepNA=TRUE, type='bytes'),
+    nchar(na.world, keepNA=TRUE, type='bytes')
+  )
+
   # Strip equivalence
   hw.sgr <- c(
     'hello', 'wo\033[42mrld', '\033[31m', 'mo\non', 'star\033[p', 
@@ -33,6 +43,10 @@ unitizer_sect('basic tests', {
 
   # Bad encoding
   x <- "\xf0"
+  if(isTRUE(l10n_info()[['UTF-8']])) {
+    # don't translate unknown in UTF-8 locale
+    inherits(try(nchar_ctl(x), silent=TRUE), "try-error")
+  } else TRUE
   Encoding(x) <- "UTF-8"
   identical(nzchar_ctl(x), nzchar(x))
   nchar_ctl(x)

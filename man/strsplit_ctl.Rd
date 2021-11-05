@@ -50,7 +50,8 @@ assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
 If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
 parameter on functions that have it, or the \code{tabs_as_spaces} function, to
-turn the tabs to spaces and resolve the warning that way.}
+turn the tabs to spaces and resolve the warning that way.  At most one
+warning will be issued per element in each input vector.}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
@@ -136,6 +137,29 @@ converted to UTF-8.
 Non-ASCII strings are converted to and returned in UTF-8 encoding.
 Width calculations will not work properly in R < 3.2.2.
 }
+\section{Output Stability}{
+
+
+Several factors could affect the exact output produced by \code{fansi}
+functions across versions of \code{fansi}, \code{R}, and/or across systems.
+\strong{In general it is likely best not to rely on the exact \code{fansi} output,
+e.g. by embedding it in tests.}
+
+Width and grapheme calculations depend on locale, Unicode database
+version, and grapheme processing logic which likely will change in the
+future, among other things.  For the most part \code{fansi} (currently) uses
+the internals of \code{base::nchar(type='width')}, but there are exceptions
+and this may change in the future.
+
+How a particular display format is encoded in \emph{Control Sequences} is
+not guaranteed to be stable across \code{fansi} versions, although we will
+strive to keep the rendered appearance stable.
+
+To maximize the odds of getting stable output set \code{normalize_state} to
+\code{TRUE} and \code{type} to \code{"chars"} in functions that allow it, and
+set \code{term.cap} to a specific set of capabilities.
+}
+
 \examples{
 strsplit_ctl("\033[31mhello\033[42m world!", " ")
 

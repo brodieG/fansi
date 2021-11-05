@@ -34,6 +34,8 @@
 #' Additionally,`indent`, `exdent`, `initial`, and `prefix` will be ignored when
 #' computing tab positions.
 #'
+#' @inheritSection substr_ctl Graphemes
+#' @inheritSection substr_ctl Output Stability
 #' @inheritParams base::strwrap
 #' @inheritParams tabs_as_spaces
 #' @inheritParams substr_ctl
@@ -166,8 +168,6 @@ strwrap2_ctl <- function(
   # This changes `width`, so needs to happen after the first width validation
   VAL_WRAP_IN_ENV(width, indent, exdent, prefix, initial, pad.end)
 
-  tab.stops <- as.integer(tab.stops)
-
   res <- .Call(
     FANSI_strwrap_csi,
     x, width,
@@ -270,21 +270,21 @@ VAL_WRAP_IN_ENV <- function(
   if(!is.character(prefix)) prefix <- as.character(prefix)
   if(length(prefix) != 1L)
     stop2("Argument `prefix` must be a scalar character.")
-  prefix <- enc2utf8(prefix)
+  prefix <- enc_to_utf8(prefix)
   if(Encoding(prefix) == "bytes")
     stop2("Argument `prefix` cannot be \"bytes\" encoded.")
 
   if(!is.character(initial)) initial <- as.character(initial)
   if(length(initial) != 1L)
     stop2("Argument `initial` must be a scalar character.")
-  initial <- enc2utf8(initial)
+  initial <- enc_to_utf8(initial)
   if(Encoding(initial) == "bytes")
     stop2("Argument `initial` cannot be \"bytes\" encoded.")
 
   if(!is.character(pad.end)) pad.end <- as.character(pad.end)
   if(length(pad.end) != 1L)
     stop2("Argument `pad.end` must be a scalar character.")
-  pad.end <- enc2utf8(pad.end)
+  pad.end <- enc_to_utf8(pad.end)
   if(Encoding(pad.end) == "bytes")
     stop2("Argument `pad.end` cannot be \"bytes\" encoded.")
   if(nchar(pad.end, type='bytes') > 1L)

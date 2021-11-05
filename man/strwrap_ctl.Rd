@@ -74,7 +74,8 @@ assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
 If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
 parameter on functions that have it, or the \code{tabs_as_spaces} function, to
-turn the tabs to spaces and resolve the warning that way.}
+turn the tabs to spaces and resolve the warning that way.  At most one
+warning will be issued per element in each input vector.}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
@@ -152,17 +153,18 @@ count begins from the beginning of the input line.}
 }
 \description{
 Wraps strings to a specified width accounting for zero display width \emph{Control
-Sequences}.  \code{strwrap_ctl} is intended to emulate \code{strwrap} exactly except
-with respect to the \emph{Control Sequences}, while \code{strwrap2_ctl} adds features
-and changes the processing of whitespace.
+Sequences}.  \code{strwrap_ctl} is intended to emulate \code{strwrap} closely except
+with respect to the \emph{Control Sequences} (see details for other minor
+differences), while \code{strwrap2_ctl} adds features and changes the processing
+of whitespace.
 }
 \details{
 \code{strwrap2_ctl} can convert tabs to spaces, pad strings up to \code{width}, and
 hard-break words if single words are wider than \code{width}.
 
 Unlike \link[base:strwrap]{base::strwrap}, both these functions will translate any non-ASCII
-strings to UTF-8 and return them in UTF-8.  Additionally, malformed UTF-8
-sequences are not converted to a text representation of bytes.
+strings to UTF-8 and return them in UTF-8.  Additionally, invalid UTF-8
+always causes errors, and \code{prefix} and \code{indent} must be scalar.
 
 When replacing tabs with spaces the tabs are computed relative to the
 beginning of the input line, not the most recent wrap point.
@@ -179,6 +181,44 @@ within a single wrapped vector element (e.g. if one of the input elements
 gets wrapped into three lines, the styles will carry through those three
 lines even if \code{carry=FALSE}, but not across input vector elements).
 }
+\section{Graphemes}{
+
+
+\code{fansi} approximates grapheme widths and counts by using heuristics for
+grapheme breaks that work for most common graphemes, including emoji
+combining sequences.  The heuristic is known to work incorrectly with
+invalid combining sequences, prepending marks, and sequence interruptors.
+\code{fansi} does not provide a full implementation to avoid carrying a copy of
+the Unicode grapheme breaks table, and also because the hope is that R will
+add the feature itself.
+
+The \href{https://cran.r-project.org/package=utf8}{\code{utf8}} package provides a
+conforming grapheme parsing implementation.
+}
+
+\section{Output Stability}{
+
+
+Several factors could affect the exact output produced by \code{fansi}
+functions across versions of \code{fansi}, \code{R}, and/or across systems.
+\strong{In general it is likely best not to rely on the exact \code{fansi} output,
+e.g. by embedding it in tests.}
+
+Width and grapheme calculations depend on locale, Unicode database
+version, and grapheme processing logic which likely will change in the
+future, among other things.  For the most part \code{fansi} (currently) uses
+the internals of \code{base::nchar(type='width')}, but there are exceptions
+and this may change in the future.
+
+How a particular display format is encoded in \emph{Control Sequences} is
+not guaranteed to be stable across \code{fansi} versions, although we will
+strive to keep the rendered appearance stable.
+
+To maximize the odds of getting stable output set \code{normalize_state} to
+\code{TRUE} and \code{type} to \code{"chars"} in functions that allow it, and
+set \code{term.cap} to a specific set of capabilities.
+}
+
 \examples{
 hello.1 <- "hello \033[41mred\033[49m world"
 hello.2 <- "hello\t\033[41mred\033[49m\tworld"

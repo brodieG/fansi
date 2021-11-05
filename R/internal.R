@@ -23,7 +23,7 @@ R.ver.gte.3.2.2 <- NA
 ## A version of unique that isn't terrible for very long strings that are
 ## actually the same
 
-unique_chr <- function(x) .Call(FANSI_unique_chr, enc2utf8(x))
+unique_chr <- function(x) .Call(FANSI_unique_chr, enc_to_utf8(x))
 
 ## Testing interface for color code to HTML conversion
 
@@ -85,7 +85,7 @@ bridge <- function(
 ## such as CTL.INT, X.LEN, etc. (these should all be in caps).
 
 VAL_IN_ENV <- function(
-  ..., valid.types=c('chars', 'width'), warn.mask=get_warn_all()
+  ..., valid.types=c('chars', 'width', 'graphemes'), warn.mask=get_warn_all()
 ) {
   call <- sys.call(-1)
   par.env <- parent.frame()
@@ -108,7 +108,7 @@ VAL_IN_ENV <- function(
   if('x' %in% argnm) {
     x <- args[['x']]
     if(!is.character(x)) x <- as.character(args[['x']])
-    x <- enc2utf8(x)
+    x <- enc_to_utf8(x)
     if(length(which.byte <- which(Encoding(x) == "bytes")))
       stop2(
         "Argument `x` contains a \"bytes\" encoded string at index [",
@@ -130,7 +130,7 @@ VAL_IN_ENV <- function(
     args[['WARN.INT']] <- warn * warn.mask
   }
   if('normalize' %in% argnm) {
-    normalize <- args[['normalize']]
+    normalize <- as.logical(args[['normalize']])
     if(!isTRUE(normalize %in% c(FALSE, TRUE)))
       stop2("Argument `normalize` must be TRUE or FALSE.")
     args[['normalize']] <- as.logical(normalize)
@@ -173,7 +173,7 @@ VAL_IN_ENV <- function(
     args[['carry']] <- carry
   }
   if('terminate' %in% argnm) {
-    terminate <- args[['terminate']]
+    terminate <- as.logical(args[['terminate']])
     if(!isTRUE(terminate %in% c(TRUE, FALSE)))
       stop2("Argument `terminate` must be TRUE or FALSE")
     terminate <- as.logical(terminate)
@@ -228,7 +228,9 @@ VAL_IN_ENV <- function(
   }
   if('start' %in% argnm || 'stop' %in% argnm) {
     x.len <- length(args[['x']])
-    # Silently recycle start/stop like substr does
+    # Silently recycle start/stop like substr does.  Coercion to integer
+    # should be done ahead of VAL_IN_ENV so warnings are reported
+    # correctly
     start <- rep(as.integer(args[['start']]), length.out=x.len)
     stop <- rep(as.integer(args[['stop']]), length.out=x.len)
     start[start < 1L] <- 1L
@@ -239,17 +241,31 @@ VAL_IN_ENV <- function(
   if('keepNA' %in% argnm) {
     keepNA <- as.logical(args[['keepNA']])
     if(length(keepNA) != 1L)
-      stop2("Argument `keepNA` must be a scalar logical.")
+      stop2("Argument `keepNA` must be interpretable as a scalar logical.")
     args[['keepNA']] <- keepNA
   }
   if('allowNA' %in% argnm) {
     allowNA <- as.logical(args[['allowNA']])
-    if(!is.logical(allowNA)) allowNA <- as.logical(allowNA)
     if(length(allowNA) != 1L)
-      stop2("Argument `allowNA` must be a scalar logical.")
+      stop2("Argument `allowNA` must be interpretable as a scalar logical.")
     args[['allowNA']] <- isTRUE(allowNA)
   }
   # we might not have validated all, so we should be careful
   list2env(args, par.env)
 }
+## Encode to UTF-8 If needed
+##
+## Problem is that if native is UTF-8, unknown vectors are re-encoded,
+## which will include escaping of bad encoding which hides errors.
+##
+## Assumes char input
 
+enc_to_utf8 <- function(x) {
+  if(isTRUE(l10n_info()[['UTF-8']])) {
+    enc <- Encoding(x)
+    # in theory just "latin1", but just in case other encs added
+    translate <- enc != "unknown" & enc != "UTF-8"
+    x[translate] <- enc2utf8(x[translate])
+    x
+  } else enc2utf8(x)
+}

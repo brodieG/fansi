@@ -311,7 +311,22 @@ static struct FANSI_string get_url_param(
  *
  * With OSC == ']' and params == 'key1=val1:key2=val2' with the only key that is
  * being discussed as in use at all being 'id'.  Notwithstanding iterm2 doesn't
- * seem to implement id (should connects multiple links into one).
+ * seem to implement id (should connects multiple links into one).  Not entirely
+ * clear what we should do with the unsupported params.
+ *
+ * There is no real harm in carrying them, even though this is contrary to what
+ * we do with SGR, because we just keep a pointer to the original string (this
+ * should be okay because by the time we return to R this pointer is released,
+ * or at least completely inaccessible so in the case of a GC there is no risk
+ * of us trying to use it again).
+ *
+ * The reason we shouldn't do something similar with SGR is we have no idea of
+ * the semantics of the tokens.  So we could keep piling on opening and closing
+ * sequences of unknown tokens with no understanding of what they do, and as
+ * soon as we want to try to understand them and hold on to them, the simple
+ * pointer and offset to the original string that we use for OSC does not work.
+ * So the key difference with SGR in particular is the non-cumulative nature of
+ * OSC wrt to URL paramters (although this is not really clearly documented).
  *
  * Technically there is no closing sequence, just an empty opening sequence acts
  * like a closing sequence (what about non-empty params but empty URL?).
@@ -323,29 +338,37 @@ static struct FANSI_string get_url_param(
  * > Due to the syntax, additional parameter values cannot contain the : and ;
  * > characters either.
  *
+ * See also `parse_osc`.
  */
 
 static struct FANSI_url parse_url(const char *x) {
   const char *end, *x0 = x;
-  struct FANSI_url
-    url = {
-      .url={.val="", .len=0}, .params={.val="", .len=0}, .id={.val="", .len=0}
-    };
+  struct FANSI_url url = {
+    .url={.val="", .len=0},
+    .params={.val="", .len=0},
+    .id={.val="", .len=0},
+    .osc={.len=0, .error=0}
+  };
 
-  if(*x == ']' && *(x + 1) == '8' && *(x + 2) == ';') {
-    end = x = x0 + 3;
+  if(*(x) == '8' && *(x + 1) == ';') {
+    end = x = x0 + 2;
     // Look for end of escape tracking position of first semi-colons (subsequent
     // ones may be part of the URI).
+    //
+    // neither params nor URI must contain bytes outside of 0x20-0x7E. This is a
+    // narrower range than stricly allowed by OSC CSI.
     int semicolon = 0;
 
     while(*end && *end != '\a' && !(*end == 0x1b && *(end + 1) == '\\')) {
-      if(*end >= 0x20 && *end <= 0x7e) { // URLs allowed narrower set of bytes
+      if(*end >= 0x20 && *end <= 0x7e) {
         // All good
         if (*end == ';' && !semicolon) semicolon = end - x0;
       } else if (!(*end >= 0x08 && *end <= 0x0d)) {
-        // Invalid string
-        end = x = x0;
-        break;
+        // Invalid string, probably could break here
+        url.osc.error = 5;
+      } else {
+        // OK OSC, but non portable URL
+        url.osc.error = url.osc.error < 4 ? 4 : url.osc.error;
       }
       ++end;
     }
@@ -358,48 +381,45 @@ static struct FANSI_url parse_url(const char *x) {
         url.url = (struct FANSI_string) {url_start, end - url_start};
         url.id = get_url_param(url.params, "id=");
       }
-      // Record bytes (without initial ESC), even if no semicolon (plain OSC)
-      if(end > x0) url.bytes = end - x0 + (*end == 0x1b) + 1;
-    }
-  }
+    } else url.osc.error = 5;
+    url.osc.len = end - x0 +
+      (*end != 0) +           // consume terminator if there is one
+      (*end == 0x1b);         // consume extra byte for ST
+  } else error("Internal Error: non-URL OSC fed to URL parser.\n"); // nocov
   return url;
 }
 /*
- * Return OSC length excluding initial ESC (but including the '['), unless OSC
- * is invalid in which case return 0.
+ * Return OSC length excluding initial "ESC]"
  *
  * OSC may be terminated with either BEL or ST (BEL is not ECMA48 standard, but
  * in common use for OSC based URL anchors).
  *
  * Support of non-ASCII inside OSC (i.e. 0x08-0x0d) does not work correctly on
  * OS X terminal where they are emitted, and it is required that the start be
- * num; and if not re-emitting starts at that point.
+ * num; and if not re-emitting starts at that point.  iterm2 does it correctly.
  *
  * see parse_url for the special case parsing for iterm2 spec OSC encoded URLs.
  *
- * Returns number of bytes in OSC excluding ESC
+ * @param x pointer to first byte after "ESC]".
+ * @return number of bytes in OSC excluding opening "ESC]", and error code if
+ *   any
  */
 
-static int parse_osc(const char * x) {
-  const char * x0 = x;
-  if(*x++ != ']') error("Internal Error: OSC must start with ']'."); // nocov
-  while(*x){
-    ++x;
-    if(*x == '\a') {                            // valid end in BELL
-      break;
-    } else if(*x == 0x1b && *(x + 1) == '\\') { // valid end in ST
-      ++x;
-      break;
-    } else if (!((*x >= 0x08 && *x <= 0x0d) || (*x >= 0x20 && *x <= 0x7e))) {
-      x = x0;
-      break;  // Invalid character
+static struct FANSI_osc parse_osc(const char * x) {
+  const char * end = x;
+  struct FANSI_osc osc = {.len=0, .error=0};
+  while(*end && *end != '\a' && !(*end == 0x1b && *(end + 1) == '\\')) {
+    if (!((*end >= 0x08 && *end <= 0x0d) || (*end >= 0x20 && *end <= 0x7e))) {
+      osc.error = 5;
     }
-    ++x;
+    ++end;
   }
-  // Input string can be at most INT_MAX long
-  return (int)(x - x0);
+  if(!*end) osc.error = 5;  // Unterminated
+  osc.len = end - x +
+    (*end != 0) +           // consume terminator if there is one
+    (*end == 0x1b);         // consume extra byte for ST
+  return osc;
 }
-
 /*
  * Read a Character Off when we know it is an ascii char, this is so we have a
  * consistent way of advancing state.
@@ -483,7 +503,7 @@ static struct FANSI_state read_esc(struct FANSI_state state, int seq) {
   unsigned int err_code = 0;           // track worst error code
   int seq_start = state.pos_byte;
   int non_normalized = 0;
-  unsigned int esc_types = 0;          // 1 == normal, 2 == SGR
+  unsigned int esc_types = 0;          // 1 == CSI/OSC, 2 == SGR/URL
   struct FANSI_sgr sgr_prev = state.sgr;
   struct FANSI_url url_prev = state.url;
 
@@ -495,6 +515,9 @@ static struct FANSI_state read_esc(struct FANSI_state state, int seq) {
 
   do {
     struct FANSI_state state_prev = state;
+    // Is the current escape recognized by the `ctl` parameter?  It doesn't
+    // matter if it ends up being badly encoded or, not just that it starts out
+    // as a presumptive escape that we requested to recognize.
     int esc_recognized = 0;
 
     ++state.pos_byte;  // advance ESC
@@ -664,37 +687,36 @@ static struct FANSI_state read_esc(struct FANSI_state state, int seq) {
       state.ctl & (FANSI_CTL_OSC | FANSI_CTL_URL)
     ) {
       // - Operating System Command --------------------------------------------
+      ++state.pos_byte;  // consume ']'
       int osc_bytes = 0;
       if(
-        state.string[state.pos_byte + 1] == '8' &&
-        state.string[state.pos_byte + 2] == ';' &&
+        state.string[state.pos_byte] == '8' &&
+        state.string[state.pos_byte + 1] == ';' &&
         (state.ctl & FANSI_CTL_URL)
       ) {
         // Possible URL
+        esc_recognized = 1;
         struct FANSI_url url = parse_url(state.string + state.pos_byte);
-        osc_bytes = url.bytes;
-        if(url.bytes) state.url = url;    // success
-        else if(osc_bytes) err_code = 4;  // malformed OSC URL
-        else err_code = 5;                // Illegal OSC
+        osc_bytes = url.osc.len;
+        if(url.osc.error) err_code = url.osc.error;
+        else state.url = url;
 
         // Params other than id
         if(url.params.len && url.id.len + 3 != url.params.len)
           err_code = 2;
-
+        if(err_code < 3) esc_types |= 2U;
       } else if (state.ctl & FANSI_CTL_OSC) {
         // Other OSC
-        osc_bytes = parse_osc(state.string + state.pos_byte);
-        if(!osc_bytes) err_code = 5;      // Illegal OSC
-        else err_code = 4;                // Not URL
+        esc_recognized = 1;
+        struct FANSI_osc osc = parse_osc(state.string + state.pos_byte);
+        osc_bytes = osc.len;
+        err_code = osc.error;
+        if(err_code < 3) esc_types |= 1U;
       } else {
         // not URL and don't support OSC
         err_code = 4;                     // Not URL
       }
-      if(osc_bytes) {
-        esc_recognized = 1;
-        esc_types |= 2U;
-        state.pos_byte += osc_bytes;
-      }
+      state.pos_byte += osc_bytes;
     } else if(!state.string[state.pos_byte]) {
       // - String ends in ESC --------------------------------------------------
       state.err_code = 7;
@@ -819,14 +841,16 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
         strcpy(arg, "Encountered");
       }
       error(
-        "%s %s at index [%jd], %s%s",
+        "%s %s at index [%jd], %s",
         arg, "an invalid UTF-8 byte sequence", FANSI_ind(i),
-        "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
-        "off these warnings."
+        "see `?unhandled_ctl`."
       );
     }
-  } else if(state.use_nchar) {  // only true if in width mode
-    // Assumes valid UTF-8!
+  } else if(
+      state.width_mode == FANSI_COUNT_WIDTH ||
+      state.width_mode == FANSI_COUNT_GRAPH
+  ) {
+    // Assumes valid UTF-8!  Should have been checked.
     int cp = FANSI_utf8_to_cp(state.string + state.pos_byte, byte_size);
 
     // Hacky grapheme approximation ensures flags (RI) aren't split, sets
@@ -835,7 +859,7 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
     // (for the same reason).  This will work in many cases, provided that the
     // emoji sequences are valid and recognized by the display device.
     // Other graphemes work similarly to the extent continuation code points
-    // are zero width naturally.  Prefixes, sequence interruptors,  and other
+    // are zero width naturally.  Prefixes, sequence interruptors, and other
     // things will not work.
 
     if(cp >= 0x1F1E6 && cp <= 0x1F1FF) {         // Regional Indicator
@@ -883,7 +907,15 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
       "String with display width greater than INT_MAX at index [%jd].",
       FANSI_ind(i)
     );
-  state.pos_width += disp_size;
+  // Width is basically counting graphemes when non-zero.
+  switch(state.width_mode) {
+    case FANSI_COUNT_CHARS: ++state.pos_width; break;
+    case FANSI_COUNT_WIDTH: state.pos_width += disp_size; break;
+    case FANSI_COUNT_GRAPH: state.pos_width += disp_size > 0; break;
+    case FANSI_COUNT_BYTES: state.pos_width += byte_size; break;
+    default:
+      error("Internal Error: invalid width mode (%d).", state.width_mode); // nocov
+  }
   state.has_utf8 = 1;
   return state;
 }
@@ -967,7 +999,12 @@ onemoretime:
     );
     state.warned = 1;  // only warn once
   }
-  if(state_prev.last_zwj && state.use_nchar)
+  if(
+    state_prev.last_zwj && (
+      state.width_mode == FANSI_COUNT_WIDTH ||
+      state.width_mode == FANSI_COUNT_GRAPH
+    )
+  )
     state.pos_width = state_prev.pos_width;
 
   if(state.read_one_more && state.string[state.pos_byte])

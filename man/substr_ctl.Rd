@@ -76,7 +76,8 @@ assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
 If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
 parameter on functions that have it, or the \code{tabs_as_spaces} function, to
-turn the tabs to spaces and resolve the warning that way.}
+turn the tabs to spaces and resolve the warning that way.  At most one
+warning will be issued per element in each input vector.}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
@@ -129,14 +130,9 @@ active state closed to avoid it bleeding into other strings they may be
 prepended onto.  This does not stop state from carrying if \code{carry = TRUE}.
 See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for details.}
 
-\item{type}{character(1L) partial matching \code{c("chars", "width")}, although
-\code{type="width"} only works correctly with R >= 3.2.2.  See
-\code{\link[base:nchar]{?nchar}}. With "width", the results might be affected by
-locale changes, Unicode database updates, and logic changes for processing
-of complex graphemes.  Generally you should not rely on a specific output
-e.g. by embedding it in unit tests.  For the most part \code{fansi} (currently)
-uses the internals of \code{base::nchar(type='width')}, but there are exceptions
-and this may change in the future.}
+\item{type}{character(1L) partial matching
+\code{c("chars", "width", "graphemes")}, although types other than "chars" only
+work correctly with R >= 3.2.2.  See \code{\link[base:nchar]{?nchar}}.}
 
 \item{round}{character(1L) partial matching
 \code{c("start", "stop", "both", "neither")}, controls how to resolve
@@ -160,10 +156,10 @@ x (after possible coercion and re-encoding to UTF-8).
 }
 \description{
 \code{substr_ctl} is a drop-in replacement for \code{substr}.  Performance is
-slightly slower than \code{substr}.  CSI SGR sequences will be included in the
-substrings to reflect the format of the substring when it was embedded in
-the source string.  Additionally, other \emph{Control Sequences} specified in
-\code{ctl} are treated as zero-width.
+slightly slower than \code{substr}, and more so for \code{type = 'width'}.  CSI SGR
+sequences will be included in the substrings to reflect the format of the
+substring when it was embedded in the source string.  Additionally, other
+\emph{Control Sequences} specified in \code{ctl} are treated as zero-width.
 }
 \details{
 \code{substr2_ctl} adds the ability to retrieve substrings based on display width
@@ -185,11 +181,43 @@ use "stop" as the \code{round} value.  "neither" would cause all partial
 characters to be dropped irrespective whether they correspond to \code{start} or
 \code{stop}, and "both" could cause all of them to be included.
 
-These functions map string lengths accounting for CSI SGR sequence semantics
-to the naive length calculations, and then use the mapping in conjunction
-with \code{\link[base:substr]{base::substr()}} to extract the string.  This concept is borrowed
-directly from Gábor Csárdi's \code{crayon} package, although the implementation of
-the calculation is different.
+These functions map string lengths accounting for \emph{Control Sequence}
+semantics to the naive length calculations, and then use the mapping in
+conjunction with \code{\link[base:substr]{base::substr()}} to extract the string.  This concept is
+borrowed directly from Gábor Csárdi's \code{crayon} package, although the
+implementation of the calculation is different.
+}
+\note{
+Non-ASCII strings are converted to and returned in UTF-8 encoding.
+Width calculations will not work properly in R < 3.2.2.
+
+If \code{stop} < \code{start}, the return value is always an empty string.
+}
+\section{Output Stability}{
+
+
+Several factors could affect the exact output produced by \code{fansi}
+functions across versions of \code{fansi}, \code{R}, and/or across systems.
+\strong{In general it is likely best not to rely on the exact \code{fansi} output,
+e.g. by embedding it in tests.}
+
+Width and grapheme calculations depend on locale, Unicode database
+version, and grapheme processing logic which likely will change in the
+future, among other things.  For the most part \code{fansi} (currently) uses
+the internals of \code{base::nchar(type='width')}, but there are exceptions
+and this may change in the future.
+
+How a particular display format is encoded in \emph{Control Sequences} is
+not guaranteed to be stable across \code{fansi} versions, although we will
+strive to keep the rendered appearance stable.
+
+To maximize the odds of getting stable output set \code{normalize_state} to
+\code{TRUE} and \code{type} to \code{"chars"} in functions that allow it, and
+set \code{term.cap} to a specific set of capabilities.
+}
+
+\section{Replacement Functions}{
+
 
 Replacement functions are implemented as three substring operations, so:\preformatted{x <- "ABC"
 y <- "_."
@@ -205,21 +233,39 @@ Is treated roughly as:\preformatted{x <- paste0(
 
 Except for the \code{terminate} parameter for the trailing substring, all other
 parameters are passed from \verb{substr_ctl<-} to the internal substring calls.
-If you wish for the whole return value to be terminated you must manually add
-terminating sequences.  \code{substr_ctl} refrains from doing so to maintain the
-illusion of a string modified in place.
+The \code{start}, \code{stop}, and \code{round} arguments are translated from the provided
+values to those required for the internal substring calls.  If you wish for
+the whole return value to be terminated you must manually add terminating
+sequences.  \code{substr_ctl} refrains from doing so to maintain the illusion of a
+string modified in place.
 
 Another implication of the three substring approach is that the \code{carry}
 parameter causes state to carry within the original string and the
 replacement values independently, as if they were columns of text cut from
 different pages and pasted together.
-}
-\note{
-Non-ASCII strings are converted to and returned in UTF-8 encoding.
-Width calculations will not work properly in R < 3.2.2.
 
-If \code{stop} < \code{start}, the return value is always an empty string.
+When in \code{type = 'width'} mode, it is only guaranteed that the result will be
+no wider than the original \code{x}.  Narrower strings may result if a mixture
+of narrow and wide graphemes cannot be replaced exactly with the same \code{width}
+value, possibly because the provided \code{start}/\code{stop} values (or the
+implicit ones generated for \code{value}) do not align with grapheme boundaries.
 }
+
+\section{Graphemes}{
+
+
+\code{fansi} approximates grapheme widths and counts by using heuristics for
+grapheme breaks that work for most common graphemes, including emoji
+combining sequences.  The heuristic is known to work incorrectly with
+invalid combining sequences, prepending marks, and sequence interruptors.
+\code{fansi} does not provide a full implementation to avoid carrying a copy of
+the Unicode grapheme breaks table, and also because the hope is that R will
+add the feature itself.
+
+The \href{https://cran.r-project.org/package=utf8}{\code{utf8}} package provides a
+conforming grapheme parsing implementation.
+}
+
 \examples{
 substr_ctl("\033[42mhello\033[m world", 1, 9)
 substr_ctl("\033[42mhello\033[m world", 3, 9)

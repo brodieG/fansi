@@ -57,7 +57,7 @@ strtrim_ctl <- function(
 
   res <- .Call(
       FANSI_strwrap_csi,
-      enc2utf8(x), width,
+      enc_to_utf8(x), width,
       0L, 0L,    # indent, exdent
       "", "",    # prefix, initial
       TRUE, "",  # wrap always
@@ -95,8 +95,6 @@ strtrim2_ctl <- function(
       "Argument `width` must be a positive scalar numeric representable ",
       "as an integer."
     )
-  width <- as.integer(width)
-
   # can assume all term cap available for these purposes
   term.cap.int <- 1L
   width <- as.integer(width)
@@ -105,7 +103,7 @@ strtrim2_ctl <- function(
   # a bit inefficient to rely on strwrap, but oh well
   res <- .Call(
     FANSI_strwrap_csi,
-    enc2utf8(x), width,
+    enc_to_utf8(x), width,
     0L, 0L,    # indent, exdent
     "", "",    # prefix, initial
     TRUE, "",  # wrap always

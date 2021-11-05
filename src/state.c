@@ -96,7 +96,7 @@ struct FANSI_state FANSI_state_init_full(
     .term_cap = FANSI_term_cap_as_int(term_cap),
     .allowNA = asLogical(allowNA),
     .keepNA = asLogical(keepNA),
-    .use_nchar = asInteger(width),  // 0 for chars, 1 for width
+    .width_mode = asInteger(width),
     .ctl = FANSI_ctl_as_int(ctl),
     .arg = arg
   };
@@ -126,7 +126,7 @@ struct FANSI_state FANSI_state_reinit(
     .term_cap = state.term_cap,
     .allowNA = state.allowNA,
     .keepNA = state.keepNA,
-    .use_nchar = state.use_nchar,  // 0 for chars, 1 for width
+    .width_mode = state.width_mode,
     .ctl = state.ctl,
     .arg = state.arg
   };
@@ -263,8 +263,12 @@ static struct FANSI_state_pair state_at_pos2(
   int pos, struct FANSI_state state, int type, int is_start,
   int overshoot, int terminate, R_xlen_t i
 ) {
-  if(type != 0 && type != 1)
-    error("Internal Error: type must be 0 or 1.");  // nocov
+  switch(type) {
+    case FANSI_COUNT_CHARS:
+    case FANSI_COUNT_GRAPH:
+    case FANSI_COUNT_WIDTH: break;
+    default: error("Internal Error: invalid type (%d).", type);  // nocov
+  }
   struct FANSI_state state_res, state_restart;
   state_res = state_restart = state;
   int pos_new, pos_restart;

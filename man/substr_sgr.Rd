@@ -44,7 +44,8 @@ assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
 If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
 parameter on functions that have it, or the \code{tabs_as_spaces} function, to
-turn the tabs to spaces and resolve the warning that way.}
+turn the tabs to spaces and resolve the warning that way.  At most one
+warning will be issued per element in each input vector.}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
@@ -77,14 +78,9 @@ active state closed to avoid it bleeding into other strings they may be
 prepended onto.  This does not stop state from carrying if \code{carry = TRUE}.
 See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for details.}
 
-\item{type}{character(1L) partial matching \code{c("chars", "width")}, although
-\code{type="width"} only works correctly with R >= 3.2.2.  See
-\code{\link[base:nchar]{?nchar}}. With "width", the results might be affected by
-locale changes, Unicode database updates, and logic changes for processing
-of complex graphemes.  Generally you should not rely on a specific output
-e.g. by embedding it in unit tests.  For the most part \code{fansi} (currently)
-uses the internals of \code{base::nchar(type='width')}, but there are exceptions
-and this may change in the future.}
+\item{type}{character(1L) partial matching
+\code{c("chars", "width", "graphemes")}, although types other than "chars" only
+work correctly with R >= 3.2.2.  See \code{\link[base:nchar]{?nchar}}.}
 
 \item{round}{character(1L) partial matching
 \code{c("start", "stop", "both", "neither")}, controls how to resolve

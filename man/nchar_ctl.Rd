@@ -15,19 +15,19 @@ nchar_ctl(
   strip
 )
 
-nzchar_ctl(x, keepNA = NA, ctl = "all", warn = getOption("fansi.warn", TRUE))
+nzchar_ctl(
+  x,
+  keepNA = FALSE,
+  ctl = "all",
+  warn = getOption("fansi.warn", TRUE)
+)
 }
 \arguments{
 \item{x}{a character vector or object that can be coerced to such.}
 
-\item{type}{character(1L) partial matching \code{c("chars", "width")}, although
-\code{type="width"} only works correctly with R >= 3.2.2.  See
-\code{\link[base:nchar]{?nchar}}. With "width", the results might be affected by
-locale changes, Unicode database updates, and logic changes for processing
-of complex graphemes.  Generally you should not rely on a specific output
-e.g. by embedding it in unit tests.  For the most part \code{fansi} (currently)
-uses the internals of \code{base::nchar(type='width')}, but there are exceptions
-and this may change in the future.}
+\item{type}{character(1L) partial matching
+\code{c("chars", "width", "graphemes")}, although types other than "chars" only
+work correctly with R >= 3.2.2.  See \code{\link[base:nchar]{?nchar}}.}
 
 \item{allowNA}{logical: should \code{NA} be returned for invalid
     multibyte strings or \code{"bytes"}-encoded strings (rather than
@@ -66,7 +66,8 @@ assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
 If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
 parameter on functions that have it, or the \code{tabs_as_spaces} function, to
-turn the tabs to spaces and resolve the warning that way.}
+turn the tabs to spaces and resolve the warning that way.  At most one
+warning will be issued per element in each input vector.}
 
 \item{strip}{character, deprecated in favor of \code{ctl}.}
 }
@@ -77,16 +78,54 @@ Sequence} sequence characters.  By default newlines and other C0 control
 characters are not counted.
 }
 \details{
-\code{nchar_ctl} is just a wrapper around \code{nchar(strip_ctl(...))}.  \code{nzchar_ctl}
-is implemented in native code and is much faster than the otherwise
-equivalent \code{nzchar(strip_ctl(...))}.
+\code{nchar_ctl} and \code{nzchar_ctl} are implemented in statically compiled code, so
+in particular \code{nzchar_ctl} will be much faster than the otherwise equivalent
+\code{nzchar(strip_ctl(...))}.
 
-These functions will warn if either malformed or non-CSI escape sequences are
-encountered, as these may be incorrectly interpreted.
+These functions will warn if either malformed or escape or UTF-8 sequences
+are encountered as they may be incorrectly interpreted.
 }
 \note{
 the \code{keepNA} parameter is ignored for R < 3.2.2.
 }
+\section{Output Stability}{
+
+
+Several factors could affect the exact output produced by \code{fansi}
+functions across versions of \code{fansi}, \code{R}, and/or across systems.
+\strong{In general it is likely best not to rely on the exact \code{fansi} output,
+e.g. by embedding it in tests.}
+
+Width and grapheme calculations depend on locale, Unicode database
+version, and grapheme processing logic which likely will change in the
+future, among other things.  For the most part \code{fansi} (currently) uses
+the internals of \code{base::nchar(type='width')}, but there are exceptions
+and this may change in the future.
+
+How a particular display format is encoded in \emph{Control Sequences} is
+not guaranteed to be stable across \code{fansi} versions, although we will
+strive to keep the rendered appearance stable.
+
+To maximize the odds of getting stable output set \code{normalize_state} to
+\code{TRUE} and \code{type} to \code{"chars"} in functions that allow it, and
+set \code{term.cap} to a specific set of capabilities.
+}
+
+\section{Graphemes}{
+
+
+\code{fansi} approximates grapheme widths and counts by using heuristics for
+grapheme breaks that work for most common graphemes, including emoji
+combining sequences.  The heuristic is known to work incorrectly with
+invalid combining sequences, prepending marks, and sequence interruptors.
+\code{fansi} does not provide a full implementation to avoid carrying a copy of
+the Unicode grapheme breaks table, and also because the hope is that R will
+add the feature itself.
+
+The \href{https://cran.r-project.org/package=utf8}{\code{utf8}} package provides a
+conforming grapheme parsing implementation.
+}
+
 \examples{
 nchar_ctl("\033[31m123\a\r")
 ## with some wide characters
@@ -97,7 +136,7 @@ nchar_ctl(cn.string, type='width')
 ## Remember newlines are not counted by default
 nchar_ctl("\t\n\r")
 
-## The 'c0' value for the `ctl` argument does not include 
+## The 'c0' value for the `ctl` argument does not include
 ## newlines.
 nchar_ctl("\t\n\r", ctl="c0")
 nchar_ctl("\t\n\r", ctl=c("c0", "nl"))

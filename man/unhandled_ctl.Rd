@@ -28,7 +28,10 @@ Will return position and types of unhandled \emph{Control Sequences} in a
 character vector.  Unhandled sequences may cause \code{fansi} to interpret strings
 in a way different to your display.  See \link{fansi} for details.  Functions that
 interpret SGR/OSC URLs might omit bad SGR/OSC URLs in sequences in output
-substrings, particularly if they are leading or trailing.
+substrings, particularly if they are leading or trailing.  Some functions are
+more tolerant of bad inputs than others.  For example \code{\link{nchar_ctl}} will not
+report unsupported colors because it only cares about counts or widths.
+\code{unhandled_ctl} will report all potentially problematic sequences.
 }
 \details{
 To work around tabs present in input, you can use \code{\link{tabs_as_spaces}} or the

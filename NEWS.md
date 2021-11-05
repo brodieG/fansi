@@ -8,9 +8,11 @@
   `substr_cl` (i.e `substr_ctl<-`).
 * [#58](https://github.com/brodieG/fansi/issues/58) Add support for OSC-anchored
   URLs.
-* [#66](https://github.com/brodieG/fansi/issues/66) Improved handling of
-  graphemes in `type="width"` mode.  Flags and well formed emoji sequences
-  should have widths computed correctly in most common use cases.
+* [#66](https://github.com/brodieG/fansi/issues/66) Improved grapheme support,
+  including accounting for them in `type="width"` mode, as well as a
+  `type="graphemes"` mode to measure in graphemes instead of characters.
+  Implementation is based on heuristics designed to work in most common use
+  cases.
 * [#64](https://github.com/brodieG/fansi/issues/64) New function `normalize_sgr`
   converts compound SGR sequences into normalized form (e.g. "ESC[44;31m"
   becomes "ESC[31mESC[44m") for better compatibility with
@@ -68,11 +70,17 @@ Other changes:
   supported via the `ctl` parameter.  If CSI and OSC are indicated as not
   supported, but two byte escapes are, the two initial bytes of CSI and OSCs
   will be stripped.
+* "unknown" encoded strings are no longer translated to UTF-8 in UTF-8 locales.
 
 ### Bug Fixes
 
 * Fix `tabs_as_spaces` to handle sequential tabs, and to perform better on very
   wide strings.
+* Strings with invalid UTF-8 sequences with "unknown" declared encoding in UTF-8
+  locales now cause errors instead of being silently translated into byte
+  escaped versions (e.g. "\xf0\xc2" (2 bytes), used to be interpreted as
+  "<f0><c2>" (four characters).  These now cause errors as they would have if
+  they had had "UTF-8" declared encoding.
 
 ### Internal Changes
 

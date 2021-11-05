@@ -31,6 +31,8 @@
 #' @inheritParams substr_ctl
 #' @inheritParams base::nchar
 #' @inheritParams strip_ctl
+#' @inheritSection substr_ctl Output Stability
+#' @inheritSection substr_ctl Graphemes
 #' @note the `keepNA` parameter is ignored for R < 3.2.2.
 #' @export
 #' @inherit has_ctl seealso
@@ -67,7 +69,7 @@ nchar_ctl <- function(
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(
     x=x, ctl=ctl, warn=warn, type=type, allowNA=allowNA, keepNA=keepNA,
-    valid.types=c('chars', 'width', 'bytes'),
+    valid.types=c('chars', 'width', 'graphemes', 'bytes'),
     warn.mask=if(isTRUE(allowNA)) set_bits(5, 7) else set_bits(5, 7, 9)
   )
   nchar_ctl_internal(
