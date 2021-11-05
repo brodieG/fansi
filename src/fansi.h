@@ -473,9 +473,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP term_cap, SEXP ctl
   );
 
-  struct FANSI_ctl_pos FANSI_find_ctl(
-    struct FANSI_state state, R_xlen_t i, int one_only
-  );
+  struct FANSI_ctl_pos FANSI_find_ctl(struct FANSI_state state, R_xlen_t i);
 
   struct FANSI_state FANSI_inc_width(
     struct FANSI_state state, int inc, R_xlen_t i

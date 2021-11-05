@@ -44,7 +44,7 @@ SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn) {
       int off_init = FANSI_seek_ctl(xc);
       if(xc + off_init) {
         state.pos_byte = off_init;
-        struct FANSI_ctl_pos pos = FANSI_find_ctl(state, i, 0);
+        struct FANSI_ctl_pos pos = FANSI_find_ctl(state, i);
         res = pos.len > 0;
       }
       res_int[i] = res;

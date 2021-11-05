@@ -104,9 +104,7 @@ SEXP FANSI_add_int_ext(SEXP x, SEXP y) {
  * @param one_only give up after a single failed attempt, otherwise keep going
  *   until a recognized control sequence is found.
  */
-struct FANSI_ctl_pos FANSI_find_ctl(
-  struct FANSI_state state, R_xlen_t i, int one_only
-) {
+struct FANSI_ctl_pos FANSI_find_ctl(struct FANSI_state state, R_xlen_t i) {
   int raw_prev, pos_prev, found, err_prev;
   unsigned int warn_max = 0;
   found = 0;
@@ -120,8 +118,6 @@ struct FANSI_ctl_pos FANSI_find_ctl(
     // Known control read
     if(state.pos_raw == raw_prev) {
       found = 1;
-      break;
-    } else if (one_only) {
       break;
     }
     state.pos_byte += FANSI_seek_ctl(state.string + state.pos_byte);
