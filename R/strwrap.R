@@ -110,34 +110,12 @@ strwrap_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
-  ## modifies / creates NEW VARS in fun env
-  VAL_IN_ENV(
-    x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
+  strwrap2_ctl(
+    x=x, width=width, indent=indent,
+    exdent=exdent, prefix=prefix, simplify=simplify, initial=initial,
+    warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
     carry=carry, terminate=terminate
   )
-  VAL_WRAP_IN_ENV(width, indent, exdent, prefix, initial, pad.end="")
-  res <- .Call(
-    FANSI_strwrap_csi,
-    x, width, indent, exdent,
-    prefix, initial,
-    FALSE, "",
-    TRUE,
-    FALSE, 8L,
-    WARN.INT, TERM.CAP.INT,
-    FALSE,   # first_only
-    CTL.INT, normalize,
-    carry, terminate
-  )
-  if(simplify) {
-    if(normalize) normalize_state(unlist(res), warn=FALSE, term.cap)
-    else unlist(res)
-  } else {
-    if(normalize)
-      normalize_state_list(
-        res, warn.int=0L, term.cap.int=TERM.CAP.INT, carry=carry
-      )
-    else res
-  }
 }
 #' @export
 #' @rdname strwrap_ctl
@@ -189,7 +167,8 @@ strwrap2_ctl <- function(
     if(normalize) normalize_state(unlist(res), warn=FALSE, term.cap)
     else unlist(res)
   } else {
-    if(normalize) normalize_state_list(res, 0L, TERM.CAP.INT) else res
+    if(normalize) normalize_state_list(res, 0L, TERM.CAP.INT, carry=carry)
+    else res
   }
 }
 #' Control Sequence Aware Version of strwrap
