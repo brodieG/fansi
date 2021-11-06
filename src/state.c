@@ -110,11 +110,13 @@ struct FANSI_state FANSI_state_init_full(
 struct FANSI_state FANSI_state_reinit(
   struct FANSI_state state, SEXP x, R_xlen_t i
 ) {
-  if(i < 0 || i > XLENGTH(x))
+  if(i < 0 || i >= XLENGTH(x))
+    // nocov start
     error(
       "Internal error: state_init with out of bounds index [%jd] for strsxp.",
       FANSI_ind(i)
     );
+    // nocov end
   SEXP chrsxp = STRING_ELT(x, i);
   FANSI_check_chrsxp(chrsxp, i);
   const char * string = CHAR(chrsxp);
@@ -187,15 +189,21 @@ struct FANSI_state FANSI_reset_width(struct FANSI_state state) {
   state.pos_width = 0;
   return state;
 }
-// Error message specific to use in adding spaces for tabs.
+// Only used for tabs_as_spaces
+//
 struct FANSI_state FANSI_inc_width(
   struct FANSI_state state, int inc, R_xlen_t i
 ) {
+  if(inc < 0) error("Internal Error: inc may not be negative.");  // nocov
   if(state.pos_width > FANSI_lim.lim_int.max - inc)
+    // This error can't really trigger because when expanding tabs to spaces we
+    // already check for overflow
+    // nocov start
     error(
       "Expanding tabs will cause string to exceed INT_MAX at index [%ju].",
       FANSI_ind(i)
     );
+    // nocov end
 
   state.pos_width += inc;
   return state;

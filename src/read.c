@@ -273,10 +273,11 @@ static struct FANSI_string get_url_param(
   struct FANSI_string res = {.val="", .len=0};
   int len = 0;
   while(len <= 128 && *(param + len)) ++len;
+  // Can't test the checks, we only ever use this with 'id=' ATM
   if(*(param + len))
-    error("Internal Error: max allowed param len 128 bytes.");
+    error("Internal Error: max allowed param len 128 bytes.");  // nocov
   if(*(param + len - 1) != '=')
-    error("Internal Error: trailing param char must be '='.");
+    error("Internal Error: trailing param char must be '='.");  // nocov
 
   const char * start = params.val;
   const char * end;
@@ -890,23 +891,25 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
 
     disp_size = 1;
   }
-  // We are guaranteed that strings here are at most INT_MAX bytes long, so
-  // nothing should overflow, except maybe width if we ever add some width
-  // measures that exceed byte count (like the 6 or 10 from '\u' or '\U' encoded
-  // versions of Unicode chars).  Shouldn't be an issue, but playing it safe.
   if(disp_size == NA_INTEGER) {
     state.err_code = 9;
     state.err_msg = "a malformed UTF-8 sequence";
     disp_size = byte_size = 1;
   }
+  // We are guaranteed that strings here are at most INT_MAX bytes long, so
+  // nothing should overflow, except maybe width if we ever add some width
+  // measures that exceed byte count (like the 6 or 10 from '\u' or '\U' encoded
+  // versions of Unicode chars).  Shouldn't be an issue, but playing it safe.
   state.pos_byte += byte_size;
   ++state.pos_ansi;
   ++state.pos_raw;
   if(state.pos_width > FANSI_lim.lim_int.max - disp_size)
+    // nocov start currently this can't happen
     error(
       "String with display width greater than INT_MAX at index [%jd].",
       FANSI_ind(i)
     );
+    // nocov end
   // Width is basically counting graphemes when non-zero.
   switch(state.width_mode) {
     case FANSI_COUNT_CHARS: ++state.pos_width; break;

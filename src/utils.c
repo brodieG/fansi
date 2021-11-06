@@ -74,7 +74,7 @@ void FANSI_check_limits() {
     // Unsigned
     FANSI_lim.lim_size_t.max < 1U || FANSI_lim.lim_size_t.min != 0U
   )
-    error("Invalid custom limit; contact maintainer.");
+    error("Invalid custom limit; contact maintainer.");  // nocov
 }
 
 // nocov start

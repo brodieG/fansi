@@ -580,13 +580,17 @@ void FANSI_W_sgr_close(
         FANSI_W_COPY(buff, "\033[65m");
       }
 
-      // Make sure we're not out of sync with has_style
+      // Make sure we're not out of sync with has_style; can't really test the
+      // error though as that would require accepting an input we would not
+      // close above, so this is really just a safety net.
       if(FANSI_sgr_active(sgr))
+        // nocov start
         error(
           "Internal Error: %s (clr: %d bg: %d st: %u bd: %u id %u).",
           "did not successfully close all styles",
           sgr.color, sgr.bg_color, sgr.style, sgr.border, sgr.ideogram
         );
+        // nocov end
     } else {
       // Full close
       FANSI_W_COPY(buff, "\033[0m");

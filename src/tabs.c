@@ -35,6 +35,7 @@ static int tab_width(
   while(state.pos_width >= *tab_width) {
     int stop_size = *(tab_stops + *stop_idx);
     if(stop_size < 1)
+      error("Internal Error: stop size less than 1.");  // nocov
     if(*tab_width > FANSI_lim.lim_int.max - stop_size)
       error("Integer overflow when attempting to compute tab width."); // nocov
     *tab_width += stop_size;
