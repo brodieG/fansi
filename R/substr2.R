@@ -510,12 +510,12 @@ substr_ctl_internal <- function(
     # need to check carry, do a one-pass through checking for problems
     ends <- .Call(
       FANSI_state_at_end, x, warn.int, term.cap.int, ctl.int, normalize,
-      NA_character_, "carry"
+      NA_character_, "carry", TRUE
     )
     # and now compute style at end
     ends <- .Call(
       FANSI_state_at_end, x, warn.int, term.cap.int, ctl.int, normalize,
-      carry, "x"
+      carry, "x", TRUE
     )
     x.carry <- c(carry, ends[-length(ends)])
     x <- paste0(x.carry, x)
@@ -618,7 +618,8 @@ substr_ctl_internal <- function(
 state_at_pos <- function(
   x, starts, ends, warn=getOption('fansi.warn', TRUE),
   normalize=getOption('fansi.normalize', FALSE),
-  terminate=getOption('fansi.terminate', FALSE)
+  terminate=getOption('fansi.terminate', FALSE),
+  ids=rep(seq_along(starts), 2)
 ) {
   warn.int <- warn * get_warn_all()
   is.start <- c(rep(TRUE, length(starts)), rep(FALSE, length(ends)))
@@ -633,6 +634,6 @@ state_at_pos <- function(
     1L,        # ctl="all"
     normalize,
     terminate,
-    rep(seq_along(starts), 2)
+    ids
   )
 }

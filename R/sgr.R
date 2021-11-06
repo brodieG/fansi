@@ -171,7 +171,8 @@ state_at_end <- function(
     CTL.INT,
     normalize,
     carry,
-    "x"
+    "x",
+    TRUE  # allowNA
   )
 }
 # Given an SGR, compute the sequence that closes it

@@ -458,13 +458,14 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_state_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm);
   SEXP FANSI_state_at_end_ext(
     SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry,
-    SEXP arg
+    SEXP arg, SEXP allowNA
   );
   SEXP FANSI_utf8_to_cp_ext(SEXP x);
   SEXP FANSI_bridge_state_ext(SEXP end, SEXP restart, SEXP term_cap, SEXP norm);
   SEXP FANSI_buff_test_reset();
   SEXP FANSI_buff_test_copy_overflow();
   SEXP FANSI_buff_test_mcopy_overflow();
+  SEXP FANSI_buff_test_fill_overflow();
 
   // - Internal funs -----------------------------------------------------------
 

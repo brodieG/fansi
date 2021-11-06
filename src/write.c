@@ -394,13 +394,22 @@ SEXP FANSI_buff_test_mcopy_overflow() {
   FANSI_W_mcopy(&buff, "hello!", 5, 0, "blah");
   return R_NilValue;
 }
+SEXP FANSI_buff_test_fill_overflow() {
+  struct FANSI_buff buff;
+  FANSI_INIT_BUFF(&buff);
+  FANSI_reset_buff(&buff);
+  FANSI_W_fill(&buff, '!', 4, 0, "blah");
+  FANSI_size_buff(&buff);
+  FANSI_W_fill(&buff, '!', 5, 0, "blah");
+  return R_NilValue;
+}
 /*
  * To test allocation logic is doing what is expected.  This will allocate
  * as many bytes as each value in `x` so, don't do anything crazy.
  */
 SEXP FANSI_size_buff_ext(SEXP x) {
   if(TYPEOF(x) != INTSXP)
-    error("Argument `x` must be integer.");
+    error("Argument `x` must be integer.");  // nocov
 
   R_xlen_t i, len = XLENGTH(x);
   SEXP res = PROTECT(allocVector(REALSXP, len));

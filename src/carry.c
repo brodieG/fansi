@@ -29,7 +29,8 @@ static struct FANSI_state state_at_end(
 }
 
 SEXP FANSI_state_at_end_ext(
-  SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry, SEXP arg
+  SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry, 
+  SEXP arg, SEXP allowNA
 ) {
   FANSI_val_args(x, norm, carry);
   if(TYPEOF(arg) != STRSXP || XLENGTH(arg) != 1)
@@ -50,8 +51,8 @@ SEXP FANSI_state_at_end_ext(
 
   SEXP R_true = PROTECT(ScalarLogical(1)); ++prt;
   SEXP R_zero = PROTECT(ScalarInteger(0)); ++prt;
-  SEXP allowNA, keepNA, width;
-  allowNA = keepNA = R_true;
+  SEXP keepNA, width;
+  keepNA = R_true;
   width = R_zero; // character width mode
 
   struct FANSI_state state_prev = FANSI_state_init_full(
