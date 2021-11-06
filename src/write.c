@@ -122,7 +122,7 @@
  *     FANSI_size_buff(&buff1);              // no warning
  *
  * Avoid using `R_alloc` inside _W_ functions or their children unless you reset
- * the `vmax` values before existing.  Failure to do so (e.g. if you allocate a
+ * the `vmax` values before exiting.  Failure to do so (e.g. if you allocate a
  * buffer and don't release it before return) will prevent FANSI_release_buff
  * from freeing it's own buffers.
  *
