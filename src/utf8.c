@@ -92,7 +92,7 @@ int FANSI_utf8clen(char c) {
   return 1 + utf8_table4[c & 0x3f];
 }
 /*
- * Basic validation, checks there is a zero in the right spot
+ * Perfunctory validation, checks there is a zero in the right spot
  * for the first byte, and that continuation bytes start with 10.
  *
  * Assumes correct number of continuation bytes exist and that
