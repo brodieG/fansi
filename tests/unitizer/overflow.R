@@ -106,10 +106,18 @@ unitizer_sect('misc', {
   invisible(fansi:::set_int_max(1L))
   substr_ctl("1", 2, 2)
 })
-new_max <- fansi:::set_int_max(old_max)
+fansi:::reset_limits()
 
 unitizer_sect('R_len_t', {
   old_rlent <- fansi:::set_rlent_max(5)
   tabs_as_spaces("A\tB")
   new_rlent <- fansi:::set_rlent_max(old_rlent)
+})
+fansi:::reset_limits()
+
+unitizer_sect('internal', {
+  tce(.Call(fansi:::FANSI_buff_test_reset))
+  tce(.Call(fansi:::FANSI_buff_test_copy_overflow))
+  tce(.Call(fansi:::FANSI_buff_test_mcopy_overflow))
+  tce(.Call(fansi:::FANSI_buff_test_fill_overflow))
 })

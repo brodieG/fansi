@@ -50,7 +50,6 @@ unitizer_sect("wrap/trim", {
   )
   strtrim_ctl(wrp.0, 20, carry="\033[33m")
 })
-
 unitizer_sect("normalize", {
   str.2 <- c("\033[44mhello", "wo\033[mrld", "barrow")
   normalize_state(str.2)
@@ -60,7 +59,6 @@ unitizer_sect("normalize", {
   # the close string.
   normalize_state(str.2, carry="\033[33m")
 })
-
 unitizer_sect("carry corner cases", {
   substr_ctl("", 2, 4, carry="\033[33m")
   substr_ctl("", 2, 4, carry = "\033[33m", terminate=FALSE)
@@ -87,7 +85,6 @@ unitizer_sect("carry corner cases", {
   ## leading SGR consumed and merged with carry
   strwrap_ctl(c("\033[33mA \033[4mB", "\033[44mC D"), carry=TRUE, 2)
 })
-
 unitizer_sect("terminate", {
   str.0 <- c("hel\033[33m", "wo\033[44mrld")
   substr_ctl(str.0, 2, 5, terminate=FALSE)
@@ -104,14 +101,19 @@ unitizer_sect("terminate", {
   strtrim_sgr(wrp.0, 20, terminate=FALSE)
   strtrim2_ctl(wrp.0, 20, terminate=FALSE)
   strtrim2_sgr(wrp.0, 20, terminate=FALSE)
-})
 
+  ## Error
+  strtrim2_sgr(wrp.0, 20, terminate=NA)
+})
 unitizer_sect("bridge", {
   fansi:::bridge("\033[42m", "\033[31m")
   fansi:::bridge("\033[42m", "\033[31m", normalize=TRUE)
   fansi:::bridge("", "\033[31m")
   fansi:::bridge("\033[42m", "")
   fansi:::bridge("\033[42m", "\033[42m")
+  end <- c("\033[31", "\033[41m", NA_character_, "\033[44m")
+  restart <- c("", NA_character_, "\033[45m", "\033[45m")
+  fansi:::bridge(end, restart)
 
   # this is unterminated URL
   base.st <- '%s\033]8;%s;%s\033\\'
@@ -133,4 +135,22 @@ unitizer_sect("at end / close", {
   close_state(x, normalize=TRUE)
   close_state("a\033[pb")
   close_state("a\033[pb", warn=FALSE)
+
+  # test warnings/errors without arg specified
+  state_no_arg <- function(x) {
+    fansi:::VAL_IN_ENV(x=x, warn=TRUE, term.cap="all", ctl="all", carry=TRUE)
+    tcw(
+      tce(
+        .Call(
+          fansi:::FANSI_state_at_end, x,
+          WARN.INT, TERM.CAP.INT, CTL.INT,
+          TRUE, carry,
+          NA_character_, FALSE
+    ) ) )
+  }
+  x <- "\xf0"
+  Encoding(x) <- "UTF-8"
+  state_no_arg(x)
+  y <- "\033[45phello"
+  state_no_arg(y)
 })

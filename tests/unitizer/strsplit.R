@@ -51,6 +51,7 @@ unitizer_sect('bad intputs', {
   strsplit_ctl(str.2, "", term.cap="bananas")
   strsplit_ctl(str.2, "", ctl=1:3)
   strsplit_ctl(str.2, "", ctl="bananas")
+  strsplit_ctl("a b", str.bytes)
 })
 unitizer_sect('issue 55', {
   # can't work, ideally would issue a warning, but detecting stripped
