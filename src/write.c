@@ -369,6 +369,31 @@ SEXP FANSI_size_buff_prot_test() {
   UNPROTECT(1);
   return res;
 }
+SEXP FANSI_buff_test_reset() {
+  struct FANSI_buff buff;
+  FANSI_INIT_BUFF(&buff);
+  FANSI_W_copy(&buff, "hello", 0, "blah");
+  FANSI_size_buff(&buff);
+  return R_NilValue;
+}
+SEXP FANSI_buff_test_copy_overflow() {
+  struct FANSI_buff buff;
+  FANSI_INIT_BUFF(&buff);
+  FANSI_reset_buff(&buff);
+  FANSI_W_copy(&buff, "hello", 0, "blah");
+  FANSI_size_buff(&buff);
+  FANSI_W_copy(&buff, "hello!", 0, "blah");
+  return R_NilValue;
+}
+SEXP FANSI_buff_test_mcopy_overflow() {
+  struct FANSI_buff buff;
+  FANSI_INIT_BUFF(&buff);
+  FANSI_reset_buff(&buff);
+  FANSI_W_mcopy(&buff, "hello!", 4, 0, "blah");
+  FANSI_size_buff(&buff);
+  FANSI_W_mcopy(&buff, "hello!", 5, 0, "blah");
+  return R_NilValue;
+}
 /*
  * To test allocation logic is doing what is expected.  This will allocate
  * as many bytes as each value in `x` so, don't do anything crazy.
