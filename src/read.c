@@ -685,38 +685,35 @@ static struct FANSI_state read_esc(struct FANSI_state state, int seq) {
       }
     } else if(
       state.string[state.pos_byte] == ']' &&
-      state.ctl & (FANSI_CTL_OSC | FANSI_CTL_URL)
+      state.string[state.pos_byte + 1] == '8' &&
+      state.string[state.pos_byte + 2] == ';' &&
+      (state.ctl & FANSI_CTL_URL)
     ) {
-      // - Operating System Command --------------------------------------------
-      ++state.pos_byte;  // consume ']'
+      // - OSC Encoded URL -----------------------------------------------------
+      esc_recognized = 1;
       int osc_bytes = 0;
-      if(
-        state.string[state.pos_byte] == '8' &&
-        state.string[state.pos_byte + 1] == ';' &&
-        (state.ctl & FANSI_CTL_URL)
-      ) {
-        // Possible URL
-        esc_recognized = 1;
-        struct FANSI_url url = parse_url(state.string + state.pos_byte);
-        osc_bytes = url.osc.len;
-        if(url.osc.error) err_code = url.osc.error;
-        else state.url = url;
-
-        // Params other than id
-        if(url.params.len && url.id.len + 3 != url.params.len)
-          err_code = 2;
-        if(err_code < 3) esc_types |= 2U;
-      } else if (state.ctl & FANSI_CTL_OSC) {
-        // Other OSC
-        esc_recognized = 1;
-        struct FANSI_osc osc = parse_osc(state.string + state.pos_byte);
-        osc_bytes = osc.len;
-        err_code = osc.error;
-        if(err_code < 3) esc_types |= 1U;
-      } else {
-        // not URL and don't support OSC
-        err_code = 4;                     // Not URL
-      }
+      ++state.pos_byte;  // consume ']'
+      struct FANSI_url url = parse_url(state.string + state.pos_byte);
+      osc_bytes = url.osc.len;
+      if(url.osc.error) err_code = url.osc.error;
+      else state.url = url;
+      // Params other than id
+      if(url.params.len && url.id.len + 3 != url.params.len)
+        err_code = 2;
+      if(err_code < 3) esc_types |= 2U;
+      state.pos_byte += osc_bytes;
+    } else if(
+      state.string[state.pos_byte] == ']' &&
+      (state.ctl & FANSI_CTL_OSC)
+    ) {
+      // - Other OSC System Command --------------------------------------------
+      esc_recognized = 1;
+      int osc_bytes = 0;
+      ++state.pos_byte;  // consume ']'
+      struct FANSI_osc osc = parse_osc(state.string + state.pos_byte);
+      osc_bytes = osc.len;
+      err_code = osc.error;
+      if(err_code < 3) esc_types |= 1U;
       state.pos_byte += osc_bytes;
     } else if(!state.string[state.pos_byte]) {
       // - String ends in ESC --------------------------------------------------
@@ -739,7 +736,7 @@ static struct FANSI_state read_esc(struct FANSI_state state, int seq) {
       else state.err_code = 7;
 
       // Don't process additional ESC if it is there so we keep looping
-      if(state.string[state.pos_byte] != 27)
+      if(state.string[state.pos_byte] != 0x1B)
         ++state.pos_byte;
     }
     // Did we read mixed special and non-special escapes?
