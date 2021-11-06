@@ -32,13 +32,13 @@ SEXP FANSI_state_at_end_ext(
   SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry, SEXP arg
 ) {
   FANSI_val_args(x, norm, carry);
-  if(
-    TYPEOF(arg) != STRSXP || XLENGTH(arg) != 1 ||
-    STRING_ELT(arg, 1) == NA_STRING
-  )
-    error("Internal Error: bad `arg` arg.");
+  if(TYPEOF(arg) != STRSXP || XLENGTH(arg) != 1)
+    error("Internal Error: bad `arg` arg."); // nocov
 
-  const char * arg_chr = CHAR(STRING_ELT(arg, 0));  // should be ASCII
+  const char * arg_chr;
+  // NA case for testing warn generation with no arg.
+  if(STRING_ELT(arg, 0) == NA_STRING) arg_chr = NULL;
+  else arg_chr = CHAR(STRING_ELT(arg, 0));  // should be ASCII
   int prt = 0;
   int normalize = asInteger(norm);
 
