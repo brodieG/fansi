@@ -66,7 +66,7 @@ strsplit_ctl <- function(
   if(!length(split)) split <- ""
   if(anyNA(split)) stop("Argument `split` may not contain NAs.")
   if(any(Encoding(split) == "bytes"))
-    stop("Argument `bytes` may not be \"bytes\" encoded.")
+    stop("Argument `split` may not be \"bytes\" encoded.")
   if(!is.logical(fixed)) fixed <- as.logical(fixed)
   if(length(fixed) != 1L || is.na(fixed))
     stop("Argument `fixed` must be TRUE or FALSE.")
