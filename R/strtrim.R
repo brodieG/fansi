@@ -38,39 +38,10 @@ strtrim_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
-  ## modifies / creates NEW VARS in fun env
-  VAL_IN_ENV(
-    x=x, warn=warn, ctl=ctl, normalize=normalize, carry=carry,
-    terminate=terminate
+  strtrim2_ctl(
+    x=x, width=width, warn=warn, ctl=ctl, normalize=normalize,
+    carry=carry, terminate=terminate
   )
-  if(!is.numeric(width) || length(width) != 1L || is.na(width) || width < 0)
-    stop(
-      "Argument `width` must be a positive scalar numeric representable ",
-      "as an integer."
-    )
-  width <- as.integer(width)
-  # can assume all term cap available for these purposes
-
-  term.cap.int <- 1L
-
-  # a bit inefficient to rely on strwrap, but oh well
-
-  res <- .Call(
-      FANSI_strwrap_csi,
-      enc_to_utf8(x), width,
-      0L, 0L,    # indent, exdent
-      "", "",    # prefix, initial
-      TRUE, "",  # wrap always
-      FALSE,     # strip spaces
-      FALSE, 8L,
-      WARN.INT, term.cap.int,
-      TRUE,      # first only
-      CTL.INT,
-      normalize,
-      carry,
-      terminate
-  )
-  if(normalize) normalize_state(res, warn=FALSE) else res
 }
 #' @export
 #' @rdname strtrim_ctl
