@@ -900,10 +900,7 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
   mb_err |= !valid_utf8(state.string + state.pos_byte, byte_size);
 
   if(mb_err) {
-    state.err_code = 9;
-    state.err_msg = "a malformed UTF-8 sequence";
-    disp_size = byte_size = 1;
-
+    disp_size = NA_INTEGER;  // mimic what R_nchar does on mb error
     if(!state.allowNA) {
       char arg[39];
       if(state.arg) {
@@ -964,6 +961,12 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
     // with one char
 
     disp_size = 1;
+  }
+  if(disp_size == NA_INTEGER) {
+    // Both for R_nchar and if we directly detect an mb_err
+    state.err_code = 9;
+    state.err_msg = "a malformed UTF-8 sequence";
+    disp_size = byte_size = 1;
   }
   // We are guaranteed that strings here are at most INT_MAX bytes long, so
   // nothing should overflow, except maybe width if we ever add some width
