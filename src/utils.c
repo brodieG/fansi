@@ -46,7 +46,7 @@ SEXP FANSI_set_int_max(SEXP x) {
     error("int_max value must be positive"); // nocov
 
   int old_int = FANSI_lim.lim_int.max;
-  FANSI_lim.lim_int.max = (intmax_t) x_int;
+  FANSI_lim.lim_int.max = x_int;
   return ScalarInteger(old_int);
 }
 SEXP FANSI_set_rlent_max(SEXP x) {

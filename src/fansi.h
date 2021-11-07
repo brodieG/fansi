@@ -62,26 +62,36 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   #define FANSI_ADD_INT(x, y) FANSI_add_int((x), (y), __FILE__, __LINE__)
 
   // Global variables (see utils.c)
-  // These should probably not be uintmax, this was all done originally when we
-  // thought we could feed the struct to one function, but that is not to be.
-  // (well TBD).
+  // These was originally designed hoping we could have a single struct with
+  // shared logic, but in the end it's like this...  We used to have uintmax_t
+  // and intmax_t, but removed those for performance concerns.
 
-  struct FANSI_ulimit {   // unsigned limits
+  struct FANSI_limit_int {
     const char * name;
-    uintmax_t min;
-    uintmax_t max;
+    int min;
+    int max;
   };
-  struct FANSI_slimit {   // signed limits
+  struct FANSI_limit_rlent {
     const char * name;
-    intmax_t min;
-    intmax_t max;
+    R_len_t min;
+    R_len_t max;
+  };
+  struct FANSI_limit_rxlent {
+    const char * name;
+    R_xlen_t min;
+    R_xlen_t max;
+  };
+  struct FANSI_limit_sizet {
+    const char * name;
+    size_t min;
+    size_t max;
   };
   // Update assumption checks if any of this changes
   struct FANSI_limits {
-    struct FANSI_slimit lim_int;
-    struct FANSI_slimit lim_R_len_t;
-    struct FANSI_slimit lim_R_xlen_t;
-    struct FANSI_ulimit lim_size_t;
+    struct FANSI_limit_int lim_int;
+    struct FANSI_limit_rlent lim_R_len_t;
+    struct FANSI_limit_rxlent lim_R_xlen_t;
+    struct FANSI_limit_sizet lim_size_t;
   };
   extern struct FANSI_limits FANSI_lim;
 
@@ -106,7 +116,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   /*
    * Used when computing position and size of ANSI tag with FANSI_loc
    */
-
   struct FANSI_ctl_pos {
     // Byte offset to first recognized control sequence
     int offset;
@@ -236,7 +245,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     struct FANSI_string id;      // parsed id
     struct FANSI_osc osc;
   };
-
   /*
    * Captures the SGR and OSC URL state at any particular position in a string.
    *

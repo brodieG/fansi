@@ -108,8 +108,9 @@ SEXP FANSI_check_assumptions() {
     );
 
   // We ensure strings don't exceed INT_MAX as we create them, but we do
-  // measure string length by doing end - start on pointers.
-  if(PTRDIFF_MAX < FANSI_lim.lim_int.max)
+  // measure string length by doing end - start on pointers. intmax_t to
+  // suppress compiler warning
+  if(PTRDIFF_MAX < (intmax_t)FANSI_lim.lim_int.max)
     warningcall(
       R_NilValue, err_base,
       "PTRDIFF_MAX smaller than INT_MAX", ""
