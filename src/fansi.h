@@ -103,11 +103,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int warned;        // Whether a warning was issued already.
     int reset;         // Indicate the buffer was reset as required.
   };
-  struct FANSI_string_as_utf8 {
-    const char * string;  // buffer
-    size_t len;           // size of buffer
-    int translated;       // whether translation was required
-  };
   /*
    * Used when computing position and size of ANSI tag with FANSI_loc
    */
@@ -460,7 +455,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry,
     SEXP arg, SEXP allowNA
   );
-  SEXP FANSI_utf8_to_cp_ext(SEXP x);
   SEXP FANSI_bridge_state_ext(SEXP end, SEXP restart, SEXP term_cap, SEXP norm);
   SEXP FANSI_buff_test_reset();
   SEXP FANSI_buff_test_copy_overflow();

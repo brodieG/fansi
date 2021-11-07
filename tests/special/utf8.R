@@ -448,16 +448,6 @@ unitizer_sect("html_esc", {
   x <- "\U0001F600"
   html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), x)
 })
-
-unitizer_sect("utf8 to unicode", {
-  cps <- c(
-    "a", "A", "\u0079", "\u0080", "\u07ff", "\u0800", "\uFFFF", "\U00010000",
-    "\U0010FFFF"
-  )
-  as.hexmode(.Call(fansi:::FANSI_utf8_to_cp, cps))
-  as.hexmode(.Call(fansi:::FANSI_utf8_to_cp, NULL))  # error
-  as.hexmode(.Call(fansi:::FANSI_utf8_to_cp, "ab"))  # error
-})
 unitizer_sect("graphemes", {
   # Flags
   flags <- paste0(
