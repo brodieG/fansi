@@ -501,11 +501,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_pmatch(
     SEXP x, const char ** choices, int choice_count, const char * arg_name
   );
-
-  int FANSI_utf8clen(char c);
-  int FANSI_valid_utf8(const char * chr, int bytes);
-  int FANSI_utf8_to_cp(const char * chr, int bytes);
-  struct FANSI_string_as_utf8 FANSI_string_as_utf8(SEXP x);
   struct FANSI_state FANSI_state_init(
     SEXP strsxp, SEXP warn, SEXP term_cap, R_xlen_t i, const char * arg
   );

@@ -166,7 +166,9 @@
 #'   If the problematic sequence is a tab, you can use the `tabs.as.spaces`
 #'   parameter on functions that have it, or the `tabs_as_spaces` function, to
 #'   turn the tabs to spaces and resolve the warning that way.  At most one
-#'   warning will be issued per element in each input vector.
+#'   warning will be issued per element in each input vector.  Will also warn
+#'   about some badly encoded UTF-8 strings, but a lack of UTF-8 warnings is not
+#'   a guarantee of correct encoding (use `[validUTF8]` for that).
 #' @param term.cap character a vector of the capabilities of the terminal, can
 #'   be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
 #'   starting with "38;5" or "48;5"), "truecolor" (SGR codes starting with

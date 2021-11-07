@@ -34,6 +34,99 @@
  * performance bottleneck.
  */
 
+/*- Local Structs -------------------------------------------------------------\
+\-----------------------------------------------------------------------------*/
+/*
+ * OSC derived URL info.
+ *
+ * Failed url parses designated by bytes == 0.
+ */
+static struct FANSI_osc {
+  int len;    // bytes of the entire OSC, excluding the initial ESC
+  int error;  // error, if any, one of 0, 4 or 5 (see FANSI_state.err_code).
+};
+static struct FANSI_url {
+  struct FANSI_string url;
+  struct FANSI_string params;  // unparsed param string
+  struct FANSI_string id;      // parsed id
+  struct FANSI_osc osc;
+};
+
+/*- UTF8 Helpers --------------------------------------------------------------\
+\-----------------------------------------------------------------------------*/
+
+/*
+ * Code adapted from src/main/util.c@1186, this code is actually not completely
+ * compliant, but we're just trying to match R behavior rather than the correct
+ * UTF8 decoding.
+ *
+ * Among other things note that this allows 5-6 byte encodings which are no
+ * longer valid.
+ */
+
+/* Number of additional bytes */
+
+static const unsigned char utf8_table4[] = {
+  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+  2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
+  3,3,3,3,3,3,3,3,4,4,4,4,5,5,5,5 };
+
+static int utf8clen(const char * c, int * mb_err) {
+  /* This allows through 8-bit chars 10xxxxxx, which are invalid */
+  int res = 0;
+  if ((*c & 0xc0) != 0xc0) res = 1;
+  else res = 1 + utf8_table4[*c & 0x3f];
+
+  // Make sure string doesn't end before UTF8 char supposedly does
+  for(int i = 1; i < res; ++i) {
+    if(!*(c + i)) {
+      *mb_err = 1;
+      res = i;
+      break;
+  } }
+  return res;
+}
+/*
+ * Perfunctory validation, checks there is a zero in the right spot
+ * for the first byte, and that continuation bytes start with 10.
+ *
+ * Assumes correct number of continuation bytes exist and that
+ * input was read through utf8clen.
+ *
+ * DO NOT USE AS STANDALONE UTF8 VALIDATION.
+ */
+static int valid_utf8(const char * chr, int bytes) {
+  int pass = !(*chr & (0x20 >> (bytes - 2)));
+  switch(bytes) {
+    case 4: pass &= (*(++chr) & 0xc0) == 0x80;
+    case 3: pass &= (*(++chr) & 0xc0) == 0x80;
+    case 2: pass &= (*(++chr) & 0xc0) == 0x80; break;
+    default: pass = 0;
+  }
+  return pass;
+}
+
+// Compute a unicode code point from a _valid_ UTF8 encoding
+// Assumes 0 < bytes < 7 (or else bad stuff will happen)
+
+static int utf8_to_cp(const char * chr, int bytes) {
+  int cp = 0;
+  // Lead byte (trailing bytes only contribute 6 bits each)
+  cp |=
+    (*chr & (0xff >> (bytes + (bytes > 1)))) // keep  7, 5, 4, or 3 bits
+    << (bytes - 1) * 6;                      // shift by byte count
+
+  // Trailing bytes keep trailing 6 bits
+  for(int i = bytes - 1; i > 0; --i)
+    cp |= (*(chr + bytes - i) & 0x3f) << (i - 1) * 6;
+
+  return cp;
+}
+
+/*- Helpers -------------------------------------------------------------------\
+\-----------------------------------------------------------------------------*/
+
 // Can a byte be interpreted as ASCII number?
 
 static int is_num(const char * string) {
@@ -66,6 +159,9 @@ static struct FANSI_sgr reset_sgr(struct FANSI_sgr sgr) {
   sgr.font = 0;
   return  sgr;
 }
+/*- Parsers -------------------------------------------------------------------\
+\-----------------------------------------------------------------------------*/
+
 // Store the result of reading a parameter substring token
 
 struct FANSI_tok_res {
@@ -421,6 +517,9 @@ static struct FANSI_osc parse_osc(const char * x) {
     (*end == 0x1b);         // consume extra byte for ST
   return osc;
 }
+/*- Read Interfaces -----------------------------------------------------------\
+\-----------------------------------------------------------------------------*/
+
 /*
  * Read a Character Off when we know it is an ascii char, this is so we have a
  * consistent way of advancing state.
@@ -807,27 +906,20 @@ static struct FANSI_state read_esc(struct FANSI_state state, int seq) {
  * See GENERAL NOTES atop.
  */
 static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
-  int byte_size = FANSI_utf8clen(state.string[state.pos_byte]);
-
-  // Make sure string doesn't end before UTF8 char supposedly does
-
   int mb_err = 0;
   int disp_size = 0;
   const char * mb_err_str =
     "use `validUTF8()` to find problem strings.";
 
-  for(int i = 1; i < byte_size; ++i) {
-    if(!state.string[state.pos_byte + i]) {
-      mb_err = 1;
-      byte_size = i;
-      break;
-  } }
-  mb_err |= !FANSI_valid_utf8(state.string + state.pos_byte, byte_size);
+  int byte_size = utf8clen(state.string + state.pos_byte, &mb_err);
+  mb_err |= !valid_utf8(state.string + state.pos_byte, byte_size);
 
   if(mb_err) {
-    if(state.allowNA) {
-      disp_size = NA_INTEGER;
-    } else {
+    state.err_code = 9;
+    state.err_msg = "a malformed UTF-8 sequence";
+    disp_size = byte_size = 1;
+
+    if(!state.allowNA) {
       char arg[39];
       if(state.arg) {
         if(strlen(state.arg) > 18)
@@ -849,7 +941,7 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
       state.width_mode == FANSI_COUNT_GRAPH
   ) {
     // Assumes valid UTF-8!  Should have been checked.
-    int cp = FANSI_utf8_to_cp(state.string + state.pos_byte, byte_size);
+    int cp = utf8_to_cp(state.string + state.pos_byte, byte_size);
 
     // Hacky grapheme approximation ensures flags (RI) aren't split, sets
     // skin modifiers to width zero (so greedy / not greedy searches will
@@ -887,11 +979,6 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
     // with one char
 
     disp_size = 1;
-  }
-  if(disp_size == NA_INTEGER) {
-    state.err_code = 9;
-    state.err_msg = "a malformed UTF-8 sequence";
-    disp_size = byte_size = 1;
   }
   // We are guaranteed that strings here are at most INT_MAX bytes long, so
   // nothing should overflow, except maybe width if we ever add some width
