@@ -36,21 +36,6 @@
 
 /*- Local Structs -------------------------------------------------------------\
 \-----------------------------------------------------------------------------*/
-/*
- * OSC derived URL info.
- *
- * Failed url parses designated by bytes == 0.
- */
-static struct FANSI_osc {
-  int len;    // bytes of the entire OSC, excluding the initial ESC
-  int error;  // error, if any, one of 0, 4 or 5 (see FANSI_state.err_code).
-};
-static struct FANSI_url {
-  struct FANSI_string url;
-  struct FANSI_string params;  // unparsed param string
-  struct FANSI_string id;      // parsed id
-  struct FANSI_osc osc;
-};
 
 /*- UTF8 Helpers --------------------------------------------------------------\
 \-----------------------------------------------------------------------------*/
