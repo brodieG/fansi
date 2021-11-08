@@ -29,7 +29,9 @@ to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fans
 If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
 parameter on functions that have it, or the \code{tabs_as_spaces} function, to
 turn the tabs to spaces and resolve the warning that way.  At most one
-warning will be issued per element in each input vector.}
+warning will be issued per element in each input vector.  Will also warn
+about some badly encoded UTF-8 strings, but a lack of UTF-8 warnings is not
+a guarantee of correct encoding (use \verb{[validUTF8]} for that).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
@@ -61,15 +63,14 @@ for details.}
 character vector same length as \code{x}.
 }
 \description{
-\code{state_at_end} read input strings computing the accumulated SGR and
-OSC-anchored URLs until the end of the string and outputs the active state at
-the end of it.  \code{close_state} produces the sequence that closes active SGR
-and OSC-anchored URLs at the end of the input string.  If \code{normalize = FALSE}
-(default), it will emit the reset code "ESC[0m" if any SGR is present. It is
-more interesting for closing SGRs if \code{normalize = TRUE}.  Unlike
-\code{state_at_end} and other functions \code{close_state} has no concept of \code{carry}:
-it will only emit closing sequences for states activate within an element
-that is still active at the end of that element.
+\code{state_at_end} reads through strings computing the accumulated SGR and
+OSC-anchored URLs, and outputs the active state at the end of them
+\code{close_state} produces the sequence that closes active SGR and OSC-anchored
+URLs at the end of each input string.  If \code{normalize = FALSE} (default), it
+will emit the reset code "ESC[0m" if any SGR is present. It is more
+interesting for closing SGRs if \code{normalize = TRUE}.  Unlike \code{state_at_end}
+and other functions \code{close_state} has no concept of \code{carry}: it will only
+emit closing sequences for states explicitly active at the end of a string.
 }
 \section{Output Stability}{
 
@@ -80,10 +81,10 @@ functions across versions of \code{fansi}, \code{R}, and/or across systems.
 e.g. by embedding it in tests.}
 
 Width and grapheme calculations depend on locale, Unicode database
-version, and grapheme processing logic which likely will change in the
-future, among other things.  For the most part \code{fansi} (currently) uses
-the internals of \code{base::nchar(type='width')}, but there are exceptions
-and this may change in the future.
+version, and grapheme processing logic (which is still in development), among
+other things.  For the most part \code{fansi} (currently) uses the internals of
+\code{base::nchar(type='width')}, but there are exceptions and this may change in
+the future.
 
 How a particular display format is encoded in \emph{Control Sequences} is
 not guaranteed to be stable across \code{fansi} versions, although we will

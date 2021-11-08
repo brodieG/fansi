@@ -29,6 +29,8 @@
 #' @inheritParams base::strtrim
 #' @inheritParams strwrap_ctl
 #' @inherit substr_ctl seealso
+#' @return Like [`base::strtrim`], except that _Control Sequences_ are treated
+#'   as zero width.
 #' @examples
 #' strtrim_ctl("\033[42mHello world\033[m", 6)
 

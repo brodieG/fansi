@@ -73,7 +73,7 @@
 #' @inherit has_ctl seealso
 #' @param x character vector
 #' @inheritParams substr_ctl
-#' @return data frame with as many rows as there are unhandled escape
+#' @return Data frame with as many rows as there are unhandled escape
 #'   sequences and columns containing useful information for debugging the
 #'   problem.  See details.
 #'

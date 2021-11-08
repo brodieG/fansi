@@ -19,7 +19,7 @@ it does for the \code{ctl} parameter: "all" combined with any other value means
 all terminal capabilities except that one.}
 }
 \value{
-data frame with as many rows as there are unhandled escape
+Data frame with as many rows as there are unhandled escape
 sequences and columns containing useful information for debugging the
 problem.  See details.
 }

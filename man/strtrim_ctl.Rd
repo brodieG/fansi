@@ -40,7 +40,9 @@ to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fans
 If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
 parameter on functions that have it, or the \code{tabs_as_spaces} function, to
 turn the tabs to spaces and resolve the warning that way.  At most one
-warning will be issued per element in each input vector.}
+warning will be issued per element in each input vector.  Will also warn
+about some badly encoded UTF-8 strings, but a lack of UTF-8 warnings is not
+a guarantee of correct encoding (use \verb{[validUTF8]} for that).}
 
 \item{ctl}{character, which \emph{Control Sequences} should be treated
 specially.  Special treatment is context dependent, and may include
@@ -92,6 +94,10 @@ when converting tabs to spaces.  If there are more tabs in a line than
 defined tab stops the last tab stop is re-used.  For the purposes of
 applying tab stops, each input line is considered a line and the character
 count begins from the beginning of the input line.}
+}
+\value{
+Like \code{\link[base:strtrim]{base::strtrim}}, except that \emph{Control Sequences} are treated
+as zero width.
 }
 \description{
 One difference with \code{\link[base:strtrim]{base::strtrim}} is that all C0 control characters such

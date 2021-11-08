@@ -40,6 +40,8 @@
 #' @inheritParams tabs_as_spaces
 #' @inheritParams substr_ctl
 #' @inherit substr_ctl seealso
+#' @return A character vector, or list of character vectors if `simplify` is
+#'   false.
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work properly in R < 3.2.2.
 #' @param wrap.always TRUE or FALSE (default), whether to hard wrap at requested

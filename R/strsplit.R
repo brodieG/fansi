@@ -39,7 +39,7 @@
 #' @inheritSection substr_ctl Output Stability
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work properly in R < 3.2.2.
-#' @inherit base::strsplit return
+#' @return Like [`base::strsplit`], with _Control Sequences_ excluded.
 #' @examples
 #' strsplit_ctl("\033[31mhello\033[42m world!", " ")
 #'

@@ -497,14 +497,14 @@ fwl <- function(..., end='<END>\033[0m') {
 
 #' Default Arg Helper Funs
 #'
-#' Terminal capabilities are assumed to include bright and 256 color SGR codes,
-#' and will detect 24 bit color support based on the `COLORTERM` environment
+#' Terminal capabilities are assumed to include bright and 256 color SGR codes.
+#' 24 bit color support is detected based on the `COLORTERM` environment
 #' variable.
 #'
 #' Default CSS may exceed or fail to cover the interline distance when two lines
 #' have background colors.  To ensure lines are exactly touching use
 #' inline-block, although that has its own issues.  Otherwise specify your own
-#' values.
+#' CSS.
 #'
 #' @seealso [`term_cap_test`].
 #' @export

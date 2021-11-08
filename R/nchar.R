@@ -34,8 +34,7 @@
 #' @inheritSection substr_ctl Output Stability
 #' @inheritSection substr_ctl Graphemes
 #' @inherit base::nchar return
-#' @return Like [`base::nchar`], except that _Control Sequences_ are excluded
-#'   from the counts.
+#' @return Like [`base::nchar`], with _Control Sequences_ excluded.
 #' @note The `keepNA` parameter is ignored for R < 3.2.2.
 #' @export
 #' @inherit has_ctl seealso

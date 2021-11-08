@@ -49,7 +49,7 @@
 #'
 #' `fansi` handles most common _Control Sequences_ in its parsing
 #' algorithms, but it is not a conforming implementation of ECMA-48.  For
-#' example, there are non-CSI escape sequences that may be longer than two
+#' example, there are non-CSI/OSC escape sequences that may be longer than two
 #' characters, but `fansi` will (incorrectly) treat them as if they were
 #' two characters long.  There are many more unimplemented ECMA-48
 #' specifications.

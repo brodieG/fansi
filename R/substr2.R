@@ -55,10 +55,10 @@
 #' e.g. by embedding it in tests.**
 #'
 #' Width and grapheme calculations depend on locale, Unicode database
-#' version, and grapheme processing logic which likely will change in the
-#' future, among other things.  For the most part `fansi` (currently) uses
-#' the internals of `base::nchar(type='width')`, but there are exceptions
-#' and this may change in the future.
+#' version, and grapheme processing logic (which is still in development), among
+#' other things.  For the most part `fansi` (currently) uses the internals of
+#' `base::nchar(type='width')`, but there are exceptions and this may change in
+#' the future.
 #'
 #' How a particular display format is encoded in _Control Sequences_ is
 #' not guaranteed to be stable across `fansi` versions, although we will
@@ -111,7 +111,7 @@
 #' invalid combining sequences, prepending marks, and sequence interruptors.
 #' `fansi` does not provide a full implementation to avoid carrying a copy of
 #' the Unicode grapheme breaks table, and also because the hope is that R will
-#' add the feature itself.
+#' add the feature eventually itself.
 #'
 #' The [`utf8`](https://cran.r-project.org/package=utf8) package provides a
 #' conforming grapheme parsing implementation.
@@ -197,7 +197,7 @@
 #'   prepended onto.  This does not stop state from carrying if `carry = TRUE`.
 #'   See the "State Interactions" section of [`?fansi`][fansi] for details.
 #' @param value a character vector or object that can be coerced to such.
-#' @return a character vector of the same length and with the same attributes as
+#' @return A character vector of the same length and with the same attributes as
 #'   x (after possible coercion and re-encoding to UTF-8).
 #' @examples
 #' substr_ctl("\033[42mhello\033[m world", 1, 9)

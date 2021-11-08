@@ -16,7 +16,9 @@ to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fans
 If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
 parameter on functions that have it, or the \code{tabs_as_spaces} function, to
 turn the tabs to spaces and resolve the warning that way.  At most one
-warning will be issued per element in each input vector.}
+warning will be issued per element in each input vector.  Will also warn
+about some badly encoded UTF-8 strings, but a lack of UTF-8 warnings is not
+a guarantee of correct encoding (use \verb{[validUTF8]} for that).}
 }
 \value{
 logical of same length as \code{x}; NA values in \code{x} result in NA values
