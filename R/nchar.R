@@ -33,7 +33,10 @@
 #' @inheritParams strip_ctl
 #' @inheritSection substr_ctl Output Stability
 #' @inheritSection substr_ctl Graphemes
-#' @note the `keepNA` parameter is ignored for R < 3.2.2.
+#' @inherit base::nchar return
+#' @return Like [`base::nchar`], except that _Control Sequences_ are excluded
+#'   from the counts.
+#' @note The `keepNA` parameter is ignored for R < 3.2.2.
 #' @export
 #' @inherit has_ctl seealso
 #' @examples
@@ -98,13 +101,18 @@ nchar_ctl_internal <- function(
 ) {
   term.cap.int <- 1L
   R.ver.gte.3.2.2 <- R.ver.gte.3.2.2 # "import" symbol from namespace
-  if(R.ver.gte.3.2.2)
+  res <- if(R.ver.gte.3.2.2)
     .Call(
       FANSI_nchar_esc,
       x, type.int, keepNA, allowNA,
       warn.int, term.cap.int, ctl.int, z
     )
   else nchar(stripped, type=type, allowNA=allowNA) # nocov
+
+  dim(res) <- dim(x)
+  dimnames(res) <- dimnames(x)
+  names(res) <- names(x)
+  res
 }
 
 #' Control Sequence Aware Version of nchar
