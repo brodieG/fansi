@@ -188,25 +188,6 @@ struct FANSI_state FANSI_reset_width(struct FANSI_state state) {
   state.pos_width = 0;
   return state;
 }
-// Only used for tabs_as_spaces
-//
-struct FANSI_state FANSI_inc_width(
-  struct FANSI_state state, int inc, R_xlen_t i
-) {
-  if(inc < 0) error("Internal Error: inc may not be negative.");  // nocov
-  if(state.pos_width > FANSI_lim.lim_int.max - inc)
-    // This error can't really trigger because when expanding tabs to spaces we
-    // already check for overflow
-    // nocov start
-    error(
-      "Expanding tabs will cause string to exceed INT_MAX at index [%ju].",
-      FANSI_ind(i)
-    );
-    // nocov end
-
-  state.pos_width += inc;
-  return state;
-}
 /*
  * Reset the position counters
  *
@@ -354,7 +335,7 @@ int FANSI_sgr_comp_color(
     target.bg_color_extra[3] == current.bg_color_extra[3]
   );
 }
-int FANSI_sgr_comp_basic(
+static int FANSI_sgr_comp_basic(
   struct FANSI_sgr target, struct FANSI_sgr current
 ) {
   // 1023 is '11 1111 1111' in binary, so this will grab the last ten bits
@@ -362,7 +343,7 @@ int FANSI_sgr_comp_basic(
   return FANSI_sgr_comp_color(target, current) ||
     (target.style & 1023) != (current.style & 1023);
 }
-int FANSI_sgr_comp(struct FANSI_sgr target, struct FANSI_sgr current) {
+static int FANSI_sgr_comp(struct FANSI_sgr target, struct FANSI_sgr current) {
   return !(
     !FANSI_sgr_comp_basic(target, current) &&
     target.style == current.style &&

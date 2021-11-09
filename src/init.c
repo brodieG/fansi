@@ -17,6 +17,7 @@
 
 #include "fansi.h"
 #include <R_ext/Rdynload.h>
+#include <R_ext/Visibility.h>
 
 static const
 R_CallMethodDef callMethods[] = {
@@ -58,7 +59,7 @@ R_CallMethodDef callMethods[] = {
   {NULL, NULL, 0}
 };
 
-void R_init_fansi(DllInfo *info)
+void attribute_visible R_init_fansi(DllInfo *info)
 {
  /* Register the .C and .Call routines.
     No .Fortran() or .External() routines,

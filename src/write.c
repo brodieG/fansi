@@ -308,7 +308,6 @@ void FANSI_reset_buff(struct FANSI_buff * buff) {
  * Purely for testing if the prev/self scheme used by size_buff works as
  * intended.
  */
-
 static void prot_test_help(
   int size, const char * lbl, struct FANSI_buff * buff, SEXP res, R_xlen_t i
 ) {

@@ -17,6 +17,23 @@
 
 #include "fansi.h"
 
+static struct FANSI_state FANSI_inc_width(
+  struct FANSI_state state, int inc, R_xlen_t i
+) {
+  if(inc < 0) error("Internal Error: inc may not be negative.");  // nocov
+  if(state.pos_width > FANSI_lim.lim_int.max - inc)
+    // This error can't really trigger because when expanding tabs to spaces we
+    // already check for overflow
+    // nocov start
+    error(
+      "Expanding tabs will cause string to exceed INT_MAX at index [%ju].",
+      FANSI_ind(i)
+    );
+    // nocov end
+
+  state.pos_width += inc;
+  return state;
+}
 /*
  * Determine how many spaces tab width should be
  *

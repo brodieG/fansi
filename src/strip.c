@@ -16,6 +16,20 @@
  */
 
 #include "fansi.h"
+
+static void FANSI_check_chr_size(char * start, char * end, R_xlen_t i) {
+  if(end - start > FANSI_lim.lim_int.max) {
+    // Can't get to this point with a string that violates, AFAICT
+    // nocov start
+    error(
+      "Internal Error: %s at index [%jd] (3).",
+      "attempting to write string longer than INT_MAX",
+      FANSI_ind(i)
+    );
+    // nocov end
+  }
+}
+
 /*
  * Strips ANSI tags from input
  *

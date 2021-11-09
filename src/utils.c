@@ -34,6 +34,7 @@
   .lim_R_xlen_t={.name="R_XLEN_T", .min=0, .max=R_XLEN_T_MAX}, \
   .lim_size_t={.name="SIZE", .min=0, .max=SIZE_MAX}            \
 }
+// See also check_limits in assumptions.c
 struct FANSI_limits FANSI_lim = LIM_INIT;
 
 SEXP FANSI_set_int_max(SEXP x) {
@@ -64,18 +65,6 @@ SEXP FANSI_reset_limits() {
   FANSI_lim = LIM_INIT;
   return ScalarLogical(1);
 }
-void FANSI_check_limits() {
-  if(
-    // Signed
-    FANSI_lim.lim_int.max < 1 || FANSI_lim.lim_int.min > -1 ||
-    FANSI_lim.lim_R_len_t.max < 1 || FANSI_lim.lim_R_len_t.min != 0 ||
-    FANSI_lim.lim_R_xlen_t.max < 1 || FANSI_lim.lim_R_xlen_t.min != 0 ||
-    // Unsigned
-    FANSI_lim.lim_size_t.max < 1U || FANSI_lim.lim_size_t.min != 0U
-  )
-    error("Invalid custom limit; contact maintainer.");  // nocov
-}
-
 // nocov start
 // used only for debugging
 SEXP FANSI_get_int_max() {
@@ -139,7 +128,7 @@ struct FANSI_ctl_pos FANSI_find_ctl(struct FANSI_state state, R_xlen_t i) {
     .offset = pos_prev, .len = res, .warn_max=warn_max
   };
 }
-int FANSI_maybe_ctl(const char x) {
+static int FANSI_maybe_ctl(const char x) {
   // Controls range from 0000 0001 (0x01) to 0001 1111 (0x1F), plus 0x7F;
   // We don't treat C1 controls as specials, apparently
   return x && (!(x & (~0x1F)) || x == 0x7F);
@@ -341,18 +330,6 @@ intmax_t FANSI_ind(R_xlen_t i) {
   return ind + 1;
 }
 
-void FANSI_check_chr_size(char * start, char * end, R_xlen_t i) {
-  if(end - start > FANSI_lim.lim_int.max) {
-    // Can't get to this point with a string that violates, AFAICT
-    // nocov start
-    error(
-      "Internal Error: %s at index [%jd] (3).",
-      "attempting to write string longer than INT_MAX",
-      FANSI_ind(i)
-    );
-    // nocov end
-  }
-}
 /*
  * Check Whether String Would Overflow if Appended To
  *

@@ -117,15 +117,12 @@ struct FANSI_state FANSI_carry_init(
   UNPROTECT(prt);
   return state_carry;
 }
-
-
 /*
  * Compute Sequences to Transition from `end` to `restart`
  *
  * Very similar logic to used in `normalize`, intended to  handle the
  * `substr_ctl(..., carry=TRUE, terminate=FALSE)` case.
  */
-
 static int bridge(
   struct FANSI_buff * buff,
   struct FANSI_state end,

@@ -16,8 +16,9 @@
  */
 
 #include "fansi.h"
-// Which styles actuall produce HTML
 
+// Which styles actuall produce HTML
+// DANGER: make sure not to add so many as to risk unsigned int overflow
 static const unsigned int css_html_style[8] = {
   1, 2, 3, 4, 5, 6,
   // 7,                // Inverse doesn't actually produces a style

@@ -479,10 +479,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   );
 
   struct FANSI_ctl_pos FANSI_find_ctl(struct FANSI_state state, R_xlen_t i);
-
-  struct FANSI_state FANSI_inc_width(
-    struct FANSI_state state, int inc, R_xlen_t i
-  );
   struct FANSI_state FANSI_reset_pos(struct FANSI_state state);
   struct FANSI_state FANSI_reset_width(struct FANSI_state state);
 
@@ -499,9 +495,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   void FANSI_check_buff(struct FANSI_buff buff, R_xlen_t i, int strict);
   void FANSI_reset_buff(struct FANSI_buff * buff);
 
-  int FANSI_pmatch(
-    SEXP x, const char ** choices, int choice_count, const char * arg_name
-  );
   struct FANSI_state FANSI_state_init(
     SEXP strsxp, SEXP warn, SEXP term_cap, R_xlen_t i, const char * arg
   );
@@ -533,7 +526,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   void FANSI_W_url(
     struct FANSI_buff * buff, struct FANSI_url url, int normalize, R_xlen_t i
   );
-
   void FANSI_W_sgr_close(
     struct FANSI_buff * buff, struct FANSI_sgr sgr, int normalize, R_xlen_t i
   );
@@ -560,11 +552,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   // Utilities
   int FANSI_seek_ctl(const char * x);
-  int FANSI_maybe_ctl(const char x);
   void FANSI_print(char * x);
   void FANSI_interrupt(R_xlen_t i);
   intmax_t FANSI_ind(R_xlen_t i);
-  void FANSI_check_chr_size(char * start, char * end, R_xlen_t i);
   SEXP FANSI_mkChar0(char * start, char * end, cetype_t enc, R_xlen_t i);
   SEXP FANSI_mkChar(struct FANSI_buff buff, cetype_t enc, R_xlen_t i);
   SEXP FANSI_reset_limits();
