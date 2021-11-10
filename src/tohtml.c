@@ -5,8 +5,7 @@
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 2 of the License, or
- * (at your option) any later version.
+ * the Free Software Foundation, either version 2 or 3 of the License.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -17,8 +16,9 @@
  */
 
 #include "fansi.h"
-// Which styles actuall produce HTML
 
+// Which styles actuall produce HTML
+// DANGER: make sure not to add so many as to risk unsigned int overflow
 static const unsigned int css_html_style[8] = {
   1, 2, 3, 4, 5, 6,
   // 7,                // Inverse doesn't actually produces a style

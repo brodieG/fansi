@@ -4,8 +4,7 @@
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
-## the Free Software Foundation, either version 2 of the License, or
-## (at your option) any later version.
+## the Free Software Foundation, either version 2 or 3 of the License.
 ##
 ## This program is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -33,7 +32,9 @@
 #' @inheritParams strip_ctl
 #' @inheritSection substr_ctl Output Stability
 #' @inheritSection substr_ctl Graphemes
-#' @note the `keepNA` parameter is ignored for R < 3.2.2.
+#' @inherit base::nchar return
+#' @return Like [`base::nchar`], with _Control Sequences_ excluded.
+#' @note The `keepNA` parameter is ignored for R < 3.2.2.
 #' @export
 #' @inherit has_ctl seealso
 #' @examples
@@ -98,13 +99,18 @@ nchar_ctl_internal <- function(
 ) {
   term.cap.int <- 1L
   R.ver.gte.3.2.2 <- R.ver.gte.3.2.2 # "import" symbol from namespace
-  if(R.ver.gte.3.2.2)
+  res <- if(R.ver.gte.3.2.2)
     .Call(
       FANSI_nchar_esc,
       x, type.int, keepNA, allowNA,
       warn.int, term.cap.int, ctl.int, z
     )
   else nchar(stripped, type=type, allowNA=allowNA) # nocov
+
+  dim(res) <- dim(x)
+  dimnames(res) <- dimnames(x)
+  names(res) <- names(x)
+  res
 }
 
 #' Control Sequence Aware Version of nchar

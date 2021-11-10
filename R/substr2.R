@@ -4,8 +4,7 @@
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
-## the Free Software Foundation, either version 2 of the License, or
-## (at your option) any later version.
+## the Free Software Foundation, either version 2 or 3 of the License.
 ##
 ## This program is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -55,10 +54,10 @@
 #' e.g. by embedding it in tests.**
 #'
 #' Width and grapheme calculations depend on locale, Unicode database
-#' version, and grapheme processing logic which likely will change in the
-#' future, among other things.  For the most part `fansi` (currently) uses
-#' the internals of `base::nchar(type='width')`, but there are exceptions
-#' and this may change in the future.
+#' version, and grapheme processing logic (which is still in development), among
+#' other things.  For the most part `fansi` (currently) uses the internals of
+#' `base::nchar(type='width')`, but there are exceptions and this may change in
+#' the future.
 #'
 #' How a particular display format is encoded in _Control Sequences_ is
 #' not guaranteed to be stable across `fansi` versions, although we will
@@ -111,7 +110,7 @@
 #' invalid combining sequences, prepending marks, and sequence interruptors.
 #' `fansi` does not provide a full implementation to avoid carrying a copy of
 #' the Unicode grapheme breaks table, and also because the hope is that R will
-#' add the feature itself.
+#' add the feature eventually itself.
 #'
 #' The [`utf8`](https://cran.r-project.org/package=utf8) package provides a
 #' conforming grapheme parsing implementation.
@@ -166,7 +165,9 @@
 #'   If the problematic sequence is a tab, you can use the `tabs.as.spaces`
 #'   parameter on functions that have it, or the `tabs_as_spaces` function, to
 #'   turn the tabs to spaces and resolve the warning that way.  At most one
-#'   warning will be issued per element in each input vector.
+#'   warning will be issued per element in each input vector.  Will also warn
+#'   about some badly encoded UTF-8 strings, but a lack of UTF-8 warnings is not
+#'   a guarantee of correct encoding (use `[validUTF8]` for that).
 #' @param term.cap character a vector of the capabilities of the terminal, can
 #'   be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
 #'   starting with "38;5" or "48;5"), "truecolor" (SGR codes starting with
@@ -195,7 +196,7 @@
 #'   prepended onto.  This does not stop state from carrying if `carry = TRUE`.
 #'   See the "State Interactions" section of [`?fansi`][fansi] for details.
 #' @param value a character vector or object that can be coerced to such.
-#' @return a character vector of the same length and with the same attributes as
+#' @return A character vector of the same length and with the same attributes as
 #'   x (after possible coercion and re-encoding to UTF-8).
 #' @examples
 #' substr_ctl("\033[42mhello\033[m world", 1, 9)
@@ -510,12 +511,12 @@ substr_ctl_internal <- function(
     # need to check carry, do a one-pass through checking for problems
     ends <- .Call(
       FANSI_state_at_end, x, warn.int, term.cap.int, ctl.int, normalize,
-      NA_character_, "carry"
+      NA_character_, "carry", TRUE
     )
     # and now compute style at end
     ends <- .Call(
       FANSI_state_at_end, x, warn.int, term.cap.int, ctl.int, normalize,
-      carry, "x"
+      carry, "x", TRUE
     )
     x.carry <- c(carry, ends[-length(ends)])
     x <- paste0(x.carry, x)
@@ -618,7 +619,8 @@ substr_ctl_internal <- function(
 state_at_pos <- function(
   x, starts, ends, warn=getOption('fansi.warn', TRUE),
   normalize=getOption('fansi.normalize', FALSE),
-  terminate=getOption('fansi.terminate', FALSE)
+  terminate=getOption('fansi.terminate', FALSE),
+  ids=rep(seq_along(starts), 2)
 ) {
   warn.int <- warn * get_warn_all()
   is.start <- c(rep(TRUE, length(starts)), rep(FALSE, length(ends)))
@@ -633,6 +635,6 @@ state_at_pos <- function(
     1L,        # ctl="all"
     normalize,
     terminate,
-    rep(seq_along(starts), 2)
+    ids
   )
 }

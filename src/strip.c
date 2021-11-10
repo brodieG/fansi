@@ -5,8 +5,7 @@
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 2 of the License, or
- * (at your option) any later version.
+ * the Free Software Foundation, either version 2 or 3 of the License.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -17,6 +16,20 @@
  */
 
 #include "fansi.h"
+
+static void FANSI_check_chr_size(char * start, char * end, R_xlen_t i) {
+  if(end - start > FANSI_lim.lim_int.max) {
+    // Can't get to this point with a string that violates, AFAICT
+    // nocov start
+    error(
+      "Internal Error: %s at index [%jd] (3).",
+      "attempting to write string longer than INT_MAX",
+      FANSI_ind(i)
+    );
+    // nocov end
+  }
+}
+
 /*
  * Strips ANSI tags from input
  *
@@ -91,7 +104,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     struct FANSI_ctl_pos pos_prev = {0, 0, 0};
 
     while(1) {
-      struct FANSI_ctl_pos pos = FANSI_find_ctl(state, i, 0);
+      struct FANSI_ctl_pos pos = FANSI_find_ctl(state, i);
       if(pos.warn_max && state.warn) state.warned = 1;
       if(pos.len) {
         has_ansi = 1;
@@ -269,17 +282,7 @@ SEXP FANSI_process(
           special = special_len = 0;
         }
       }
-      /*
-      Rprintf(
-        "pr_st: %d %d to_strip: %d j: %d spc: %d %d %d strip_this: %d chr: %c\n",
-        para_start, newlines, to_strip, j,
-        space, space_prev, space_start,
-        strip_this,
-        (string[j] ? string[j] : '~')
-      );
-      */
       // transcribe string if:
-      // Rprintf("chr j %02d %03x special %d ctl %d strip %d spc %d spc_start %d tostrip %d\n", j, string[j], special, state.ctl, to_strip, space, space_start, to_strip);
       if(
         // we've hit something that we don't need to strip, and we have accrued
         // characters to strip (more than one space, or more than two spaces if
@@ -297,7 +300,6 @@ SEXP FANSI_process(
         // string end and we've already stripped previously or ending in spaces
         (line_end && (strip_this || space_start))
       ) {
-        // Rprintf("  write\n");
         // need to copy entire STRSXP since we haven't done that yet
         if(!strip_any) {
           REPROTECT(res = duplicate(input), ipx);
@@ -330,9 +332,7 @@ SEXP FANSI_process(
           j_last -       // less last time we copied
           to_strip;      // less extra stuff to strip
 
-         // Rprintf("  copy_bytes %d copy_to %d strip %d\n", copy_bytes, copy_to, to_strip0);
         if(copy_bytes) {
-          // Rprintf("  woff %d roff %d bytes %d\n", buff_track - buff->buff, string_start - string, copy_bytes);
           FANSI_W_MCOPY(buff, string_start, copy_bytes);
         }
         // Instead of all the trailing spaces etc we skip, write one or two
@@ -344,16 +344,12 @@ SEXP FANSI_process(
         // Anything that is not a space/tab/nl that was considered non-breaking
         // with respect to trailing white space should be copied at end
         // otherwise unmodified.
-        // Rprintf("  Trail jl %d copy %d copy_to %d\n", j_last, copy_bytes, copy_to);
         int copy_end = j_last + copy_bytes;
         for(int k = copy_end; k < copy_end + to_strip0; ++k) {
-          // Rprintf("  %03d %02x %d", k, string[k], is_special(string[k]));
           if(is_special(string[k])) {
             state.pos_byte = k;
             state = FANSI_read_next(state, i, 1);
             int bytes = state.pos_byte - k;
-            // Rprintf("  pos %d k %d bytes %d\n", state.pos_byte, k, bytes);
-            // Rprintf("  s woff %d roff %d bytes %d\n", buff_track - buff->buff, string_start - string + k, bytes);
             FANSI_W_MCOPY(buff, string + k, bytes);
             k += bytes - 1;
           }

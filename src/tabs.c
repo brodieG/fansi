@@ -5,8 +5,7 @@
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 2 of the License, or
- * (at your option) any later version.
+ * the Free Software Foundation, either version 2 or 3 of the License.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -18,6 +17,23 @@
 
 #include "fansi.h"
 
+static struct FANSI_state FANSI_inc_width(
+  struct FANSI_state state, int inc, R_xlen_t i
+) {
+  if(inc < 0) error("Internal Error: inc may not be negative.");  // nocov
+  if(state.pos_width > FANSI_lim.lim_int.max - inc)
+    // This error can't really trigger because when expanding tabs to spaces we
+    // already check for overflow
+    // nocov start
+    error(
+      "Expanding tabs will cause string to exceed INT_MAX at index [%ju].",
+      FANSI_ind(i)
+    );
+    // nocov end
+
+  state.pos_width += inc;
+  return state;
+}
 /*
  * Determine how many spaces tab width should be
  *
@@ -35,6 +51,7 @@ static int tab_width(
   while(state.pos_width >= *tab_width) {
     int stop_size = *(tab_stops + *stop_idx);
     if(stop_size < 1)
+      error("Internal Error: stop size less than 1.");  // nocov
     if(*tab_width > FANSI_lim.lim_int.max - stop_size)
       error("Integer overflow when attempting to compute tab width."); // nocov
     *tab_width += stop_size;

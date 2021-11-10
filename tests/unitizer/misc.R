@@ -5,13 +5,23 @@ unitizer_sect("term_cap_test", {
   tct <- term_cap_test()
   tct
   fansi_lines(LETTERS, step=6)
-})
-unitizer_sect("digits", {
-  ints <- c(-100L, -9999L, -1L, 0L, 1L, 9L, 10L, 99L, 100L, 101L, 9999L)
-  cbind(
-    ints,
-    fansi:::digits_in_int(ints)
-  )
+
+  # should only be one warning at index 1
+  local({
+    tc <- getOption('fansi.term.cap')
+    col <- Sys.getenv('COLORTERM', unset=NA)
+    on.exit({
+      options(fansi.term.cap=tc)
+      if(is.na(col)) suppressWarnings(Sys.unsetenv("COLORTERM"))
+      else Sys.setenv(COLORTERM=col)
+    })
+    options(fansi.term.cap=NULL)
+    suppressWarnings(Sys.unsetenv("COLORTERM"))
+    string <- "a\033[38;2;50;50;50m"
+    substr_ctl(c(string, ""), 1, 10)
+    Sys.setenv(COLORTERM="truecolor")
+    substr_ctl(c("", string), 1, 10)
+  })
 })
 unitizer_sect("add_int", {
   fansi:::add_int(1, 1)
@@ -231,10 +241,14 @@ unitizer_sect("hooks", {
   set_knit_hooks(h.1, class=letters)
   set_knit_hooks(h.1, which=c('output', 'message', 'output'))
 })
-unitizer_sect("fansi lines", {
+unitizer_sect("output funs", {
   fansi_lines(1:3)
   fansi_lines(1:3, step='hello')
+  capture.output(fwl("\033[43mhello"))
 })
 unitizer_sect("unique_chr", {
   fansi:::unique_chr(rep("o\033[31m ", 2))
+})
+unitizer_sect("validation", {
+  fansi:::VAL_IN_ENV(booboo="error")
 })

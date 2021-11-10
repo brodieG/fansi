@@ -1,0 +1,3 @@
+LIBRARY fansi.dll
+EXPORTS
+ R_init_fansi

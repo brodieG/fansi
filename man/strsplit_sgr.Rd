@@ -50,7 +50,9 @@ to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fans
 If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
 parameter on functions that have it, or the \code{tabs_as_spaces} function, to
 turn the tabs to spaces and resolve the warning that way.  At most one
-warning will be issued per element in each input vector.}
+warning will be issued per element in each input vector.  Will also warn
+about some badly encoded UTF-8 strings, but a lack of UTF-8 warnings is not
+a guarantee of correct encoding (use \verb{[validUTF8]} for that).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
@@ -84,16 +86,7 @@ prepended onto.  This does not stop state from carrying if \code{carry = TRUE}.
 See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for details.}
 }
 \value{
-A list of the same length as \code{x}, the \code{i}-th element of which
-  contains the vector of splits of \code{x[i]}.
-
-  If any element of \code{x} or \code{split} is declared to be in UTF-8
-  (see \code{\link[base]{Encoding}}), all non-ASCII character strings in the
-  result will be in UTF-8 and have their encoding declared as UTF-8.
-  (This also holds if any element is declared to be Latin-1 except in a
-  Latin-1 locale.)
-  For \code{perl = TRUE, useBytes = FALSE} all non-ASCII strings in a
-  multibyte locale are translated to UTF-8.
+Like \code{\link[base:strsplit]{base::strsplit}}, with \emph{Control Sequences} excluded.
 }
 \description{
 This function is deprecated in favor of the \link[=strsplit_ctl]{\verb{_ctl} flavor}.

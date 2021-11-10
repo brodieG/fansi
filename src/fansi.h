@@ -5,8 +5,7 @@ This file is part of "fansi - ANSI Control Sequence Aware String Functions"
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 2 of the License, or
-(at your option) any later version.
+the Free Software Foundation, either version 2 or 3 of the License.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -62,26 +61,36 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   #define FANSI_ADD_INT(x, y) FANSI_add_int((x), (y), __FILE__, __LINE__)
 
   // Global variables (see utils.c)
-  // These should probably not be uintmax, this was all done originally when we
-  // thought we could feed the struct to one function, but that is not to be.
-  // (well TBD).
+  // These was originally designed hoping we could have a single struct with
+  // shared logic, but in the end it's like this...  We used to have uintmax_t
+  // and intmax_t, but removed those for performance concerns.
 
-  struct FANSI_ulimit {
+  struct FANSI_limit_int {
     const char * name;
-    uintmax_t min;
-    uintmax_t max;
+    int min;
+    int max;
   };
-  struct FANSI_slimit {
+  struct FANSI_limit_rlent {
     const char * name;
-    intmax_t min;
-    intmax_t max;
+    R_len_t min;
+    R_len_t max;
+  };
+  struct FANSI_limit_rxlent {
+    const char * name;
+    R_xlen_t min;
+    R_xlen_t max;
+  };
+  struct FANSI_limit_sizet {
+    const char * name;
+    size_t min;
+    size_t max;
   };
   // Update assumption checks if any of this changes
   struct FANSI_limits {
-    struct FANSI_slimit lim_int;
-    struct FANSI_slimit lim_R_len_t;
-    struct FANSI_slimit lim_R_xlen_t;
-    struct FANSI_ulimit lim_size_t;
+    struct FANSI_limit_int lim_int;
+    struct FANSI_limit_rlent lim_R_len_t;
+    struct FANSI_limit_rxlent lim_R_xlen_t;
+    struct FANSI_limit_sizet lim_size_t;
   };
   extern struct FANSI_limits FANSI_lim;
 
@@ -103,15 +112,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int warned;        // Whether a warning was issued already.
     int reset;         // Indicate the buffer was reset as required.
   };
-  struct FANSI_string_as_utf8 {
-    const char * string;  // buffer
-    size_t len;           // size of buffer
-    int translated;       // whether translation was required
-  };
   /*
    * Used when computing position and size of ANSI tag with FANSI_loc
    */
-
   struct FANSI_ctl_pos {
     // Byte offset to first recognized control sequence
     int offset;
@@ -241,7 +244,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     struct FANSI_string id;      // parsed id
     struct FANSI_osc osc;
   };
-
   /*
    * Captures the SGR and OSC URL state at any particular position in a string.
    *
@@ -429,16 +431,15 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   SEXP FANSI_cleave(SEXP x);
   SEXP FANSI_order(SEXP x);
-  SEXP FANSI_sort_int(SEXP x);
   SEXP FANSI_sort_chr(SEXP x);
 
   SEXP FANSI_check_assumptions();
-  SEXP FANSI_digits_in_int_ext(SEXP y);
   SEXP FANSI_unique_chr(SEXP x);
 
   SEXP FANSI_add_int_ext(SEXP x, SEXP y);
 
   SEXP FANSI_set_int_max(SEXP x);
+  SEXP FANSI_set_rlent_max(SEXP x);
   SEXP FANSI_get_int_max();
   SEXP FANSI_get_warn_all();
   SEXP FANSI_esc_html(SEXP x, SEXP what);
@@ -459,10 +460,13 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   SEXP FANSI_state_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm);
   SEXP FANSI_state_at_end_ext(
     SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry,
-    SEXP arg
+    SEXP arg, SEXP allowNA
   );
-  SEXP FANSI_utf8_to_cp_ext(SEXP x);
   SEXP FANSI_bridge_state_ext(SEXP end, SEXP restart, SEXP term_cap, SEXP norm);
+  SEXP FANSI_buff_test_reset();
+  SEXP FANSI_buff_test_copy_overflow();
+  SEXP FANSI_buff_test_mcopy_overflow();
+  SEXP FANSI_buff_test_fill_overflow();
 
   // - Internal funs -----------------------------------------------------------
 
@@ -474,13 +478,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP term_cap, SEXP ctl
   );
 
-  struct FANSI_ctl_pos FANSI_find_ctl(
-    struct FANSI_state state, R_xlen_t i, int one_only
-  );
-
-  struct FANSI_state FANSI_inc_width(
-    struct FANSI_state state, int inc, R_xlen_t i
-  );
+  struct FANSI_ctl_pos FANSI_find_ctl(struct FANSI_state state, R_xlen_t i);
   struct FANSI_state FANSI_reset_pos(struct FANSI_state state);
   struct FANSI_state FANSI_reset_width(struct FANSI_state state);
 
@@ -497,15 +495,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   void FANSI_check_buff(struct FANSI_buff buff, R_xlen_t i, int strict);
   void FANSI_reset_buff(struct FANSI_buff * buff);
 
-  int FANSI_pmatch(
-    SEXP x, const char ** choices, int choice_count, const char * arg_name
-  );
-
-  int FANSI_utf8clen(char c);
-  int FANSI_valid_utf8(const char * chr, int bytes);
-  int FANSI_utf8_to_cp(const char * chr, int bytes);
-  int FANSI_digits_in_int(int x);
-  struct FANSI_string_as_utf8 FANSI_string_as_utf8(SEXP x);
   struct FANSI_state FANSI_state_init(
     SEXP strsxp, SEXP warn, SEXP term_cap, R_xlen_t i, const char * arg
   );
@@ -537,7 +526,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   void FANSI_W_url(
     struct FANSI_buff * buff, struct FANSI_url url, int normalize, R_xlen_t i
   );
-
   void FANSI_W_sgr_close(
     struct FANSI_buff * buff, struct FANSI_sgr sgr, int normalize, R_xlen_t i
   );
@@ -564,14 +552,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   // Utilities
   int FANSI_seek_ctl(const char * x);
-  int FANSI_maybe_ctl(const char x);
   void FANSI_print(char * x);
   void FANSI_interrupt(R_xlen_t i);
   intmax_t FANSI_ind(R_xlen_t i);
-  void FANSI_check_chr_size(char * start, char * end, R_xlen_t i);
   SEXP FANSI_mkChar0(char * start, char * end, cetype_t enc, R_xlen_t i);
   SEXP FANSI_mkChar(struct FANSI_buff buff, cetype_t enc, R_xlen_t i);
-  SEXP FANSI_mkChar2(struct FANSI_buff buff, cetype_t enc, R_xlen_t i);
   SEXP FANSI_reset_limits();
   void FANSI_check_limits();
 

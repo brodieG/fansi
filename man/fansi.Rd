@@ -39,7 +39,7 @@ terminated with BEL ("\\a") in addition to ST ("ESC\\").
 
 \code{fansi} handles most common \emph{Control Sequences} in its parsing
 algorithms, but it is not a conforming implementation of ECMA-48.  For
-example, there are non-CSI escape sequences that may be longer than two
+example, there are non-CSI/OSC escape sequences that may be longer than two
 characters, but \code{fansi} will (incorrectly) treat them as if they were
 two characters long.  There are many more unimplemented ECMA-48
 specifications.
@@ -51,10 +51,10 @@ does not support it.
 
 The special treatment of \emph{Control Sequences} is to compute their
 display/character width as zero.  For the SGR subset of the CSI sequences and
-\href{#osc-anchored-urls}{OSC-anchored URLs}, \code{fansi} will also parse, interpret,
-and reapply the sequences to the text as needed.  Whether a particular type
-of \emph{Control Sequence} is treated specially can be specified via the \code{ctl}
-parameter to the \code{fansi} functions that have it.
+OSC-anchored URLs, \code{fansi} will also parse, interpret, and reapply the
+sequences to the text as needed.  Whether a particular type of \emph{Control
+Sequence} is treated specially can be specified via the \code{ctl} parameter to
+the \code{fansi} functions that have it.
 }
 
 \section{CSI SGR Control Sequences}{
@@ -115,6 +115,11 @@ of the string and prepend all the accumulated tags up to beginning of a
 substring to the substring.  In many case the bulk of those accumulated tags
 will be irrelevant as their effects will have been superseded by subsequent
 tags.
+
+\code{fansi} assumes that CSI SGR sequences should be interpreted in cumulative
+"Graphic Rendition Combination Mode".  This means new SGR sequences add to
+rather than replace previous ones, although in some cases the effect is the
+same as replacement (e.g. if you have a color active and pick another one).
 }
 
 \section{OSC Anchored URLs}{
@@ -130,8 +135,8 @@ anchors in HTML, so \code{fansi} interprets them and outputs or terminates them 
 needed.  For example:\preformatted{"\\033]8;;xy.z\\033\\\\LINK\\033]8;;\\033\\\\"
 }
 
-Might be interpreted as \href{x.z}{LINK}.  To make The encoding pattern clearer,
-we replace "\033]" with "<OSC>" and "\033\\" with ">ST<" below:\preformatted{<OSC>8;;URL<ST>LINK TEXT<OSC>8;;<ST>
+Might be interpreted as \href{x.z}{LINK}.  To make the encoding pattern clearer,
+we replace "\033]" with "<OSC>" and "\033\\\\" with "<ST>" below:\preformatted{<OSC>8;;URL<ST>LINK TEXT<OSC>8;;<ST>
 }
 }
 

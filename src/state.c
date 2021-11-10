@@ -1,12 +1,11 @@
 /*
  * Copyright (C) 2021  Brodie Gaslam
  *
- *  This file is part of "fansi - ANSI Control Sequence Aware String Functions"
+ * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 2 of the License, or
- * (at your option) any later version.
+ * the Free Software Foundation, either version 2 or 3 of the License.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -110,11 +109,13 @@ struct FANSI_state FANSI_state_init_full(
 struct FANSI_state FANSI_state_reinit(
   struct FANSI_state state, SEXP x, R_xlen_t i
 ) {
-  if(i < 0 || i > XLENGTH(x))
+  if(i < 0 || i >= XLENGTH(x))
+    // nocov start
     error(
       "Internal error: state_init with out of bounds index [%jd] for strsxp.",
       FANSI_ind(i)
     );
+    // nocov end
   SEXP chrsxp = STRING_ELT(x, i);
   FANSI_check_chrsxp(chrsxp, i);
   const char * string = CHAR(chrsxp);
@@ -185,19 +186,6 @@ struct FANSI_state FANSI_state_init_ctl(
 
 struct FANSI_state FANSI_reset_width(struct FANSI_state state) {
   state.pos_width = 0;
-  return state;
-}
-// Error message specific to use in adding spaces for tabs.
-struct FANSI_state FANSI_inc_width(
-  struct FANSI_state state, int inc, R_xlen_t i
-) {
-  if(state.pos_width > FANSI_lim.lim_int.max - inc)
-    error(
-      "Expanding tabs will cause string to exceed INT_MAX at index [%ju].",
-      FANSI_ind(i)
-    );
-
-  state.pos_width += inc;
   return state;
 }
 /*
@@ -306,34 +294,6 @@ static struct FANSI_state_pair state_at_pos2(
   return (struct FANSI_state_pair){.cur=state_res, .restart=state_restart};
 }
 /*
- * We always include the size of the delimiter; could be a problem that this
- * isn't the actual size, but rather the maximum size (i.e. we always assume
- * three bytes even if the numbers don't get into three digits).
- */
-int FANSI_color_size(int color, int * color_extra) {
-  int size = 0;
-  if(color == 8 && color_extra[0] == 2) {
-    size = 3 + 2 +
-      FANSI_digits_in_int(color_extra[1]) + 1 +
-      FANSI_digits_in_int(color_extra[2]) + 1 +
-      FANSI_digits_in_int(color_extra[3]) + 1;
-  } else if (color == 8 && color_extra[0] == 5) {
-    size = 3 + 2 +
-      FANSI_digits_in_int(color_extra[1]) + 1;
-  } else if (color == 8) {
-    error("Internal Error: unexpected compound color format");   // nocov
-  } else if (color >= 0 && color < 10) {
-    size = 3;
-  } else if (color >= 90 && color <= 97) {
-    size = 3;
-  } else if (color >= 100 && color <= 107) {
-    size = 4;
-  } else if (color > 0) {
-    error("Internal Error: unexpected color format"); // nocov
-  }
-  return size;
-}
-/*
  * Generate the tag corresponding to the state and write it out as a NULL
  * terminated string.
  */
@@ -375,7 +335,7 @@ int FANSI_sgr_comp_color(
     target.bg_color_extra[3] == current.bg_color_extra[3]
   );
 }
-int FANSI_sgr_comp_basic(
+static int FANSI_sgr_comp_basic(
   struct FANSI_sgr target, struct FANSI_sgr current
 ) {
   // 1023 is '11 1111 1111' in binary, so this will grab the last ten bits
@@ -383,7 +343,7 @@ int FANSI_sgr_comp_basic(
   return FANSI_sgr_comp_color(target, current) ||
     (target.style & 1023) != (current.style & 1023);
 }
-int FANSI_sgr_comp(struct FANSI_sgr target, struct FANSI_sgr current) {
+static int FANSI_sgr_comp(struct FANSI_sgr target, struct FANSI_sgr current) {
   return !(
     !FANSI_sgr_comp_basic(target, current) &&
     target.style == current.style &&

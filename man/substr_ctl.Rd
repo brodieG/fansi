@@ -77,7 +77,9 @@ to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fans
 If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
 parameter on functions that have it, or the \code{tabs_as_spaces} function, to
 turn the tabs to spaces and resolve the warning that way.  At most one
-warning will be issued per element in each input vector.}
+warning will be issued per element in each input vector.  Will also warn
+about some badly encoded UTF-8 strings, but a lack of UTF-8 warnings is not
+a guarantee of correct encoding (use \verb{[validUTF8]} for that).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
@@ -151,7 +153,7 @@ count begins from the beginning of the input line.}
 \item{value}{a character vector or object that can be coerced to such.}
 }
 \value{
-a character vector of the same length and with the same attributes as
+A character vector of the same length and with the same attributes as
 x (after possible coercion and re-encoding to UTF-8).
 }
 \description{
@@ -202,10 +204,10 @@ functions across versions of \code{fansi}, \code{R}, and/or across systems.
 e.g. by embedding it in tests.}
 
 Width and grapheme calculations depend on locale, Unicode database
-version, and grapheme processing logic which likely will change in the
-future, among other things.  For the most part \code{fansi} (currently) uses
-the internals of \code{base::nchar(type='width')}, but there are exceptions
-and this may change in the future.
+version, and grapheme processing logic (which is still in development), among
+other things.  For the most part \code{fansi} (currently) uses the internals of
+\code{base::nchar(type='width')}, but there are exceptions and this may change in
+the future.
 
 How a particular display format is encoded in \emph{Control Sequences} is
 not guaranteed to be stable across \code{fansi} versions, although we will
@@ -260,7 +262,7 @@ combining sequences.  The heuristic is known to work incorrectly with
 invalid combining sequences, prepending marks, and sequence interruptors.
 \code{fansi} does not provide a full implementation to avoid carrying a copy of
 the Unicode grapheme breaks table, and also because the hope is that R will
-add the feature itself.
+add the feature eventually itself.
 
 The \href{https://cran.r-project.org/package=utf8}{\code{utf8}} package provides a
 conforming grapheme parsing implementation.

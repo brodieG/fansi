@@ -4,8 +4,7 @@
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
-## the Free Software Foundation, either version 2 of the License, or
-## (at your option) any later version.
+## the Free Software Foundation, either version 2 or 3 of the License.
 ##
 ## This program is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -29,6 +28,8 @@
 #' @inheritParams base::strtrim
 #' @inheritParams strwrap_ctl
 #' @inherit substr_ctl seealso
+#' @return Like [`base::strtrim`], except that _Control Sequences_ are treated
+#'   as zero width.
 #' @examples
 #' strtrim_ctl("\033[42mHello world\033[m", 6)
 
@@ -38,39 +39,10 @@ strtrim_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
-  ## modifies / creates NEW VARS in fun env
-  VAL_IN_ENV(
-    x=x, warn=warn, ctl=ctl, normalize=normalize, carry=carry,
-    terminate=terminate
+  strtrim2_ctl(
+    x=x, width=width, warn=warn, ctl=ctl, normalize=normalize,
+    carry=carry, terminate=terminate
   )
-  if(!is.numeric(width) || length(width) != 1L || is.na(width) || width < 0)
-    stop(
-      "Argument `width` must be a positive scalar numeric representable ",
-      "as an integer."
-    )
-  width <- as.integer(width)
-  # can assume all term cap available for these purposes
-
-  term.cap.int <- 1L
-
-  # a bit inefficient to rely on strwrap, but oh well
-
-  res <- .Call(
-      FANSI_strwrap_csi,
-      enc_to_utf8(x), width,
-      0L, 0L,    # indent, exdent
-      "", "",    # prefix, initial
-      TRUE, "",  # wrap always
-      FALSE,     # strip spaces
-      FALSE, 8L,
-      WARN.INT, term.cap.int,
-      TRUE,      # first only
-      CTL.INT,
-      normalize,
-      carry,
-      terminate
-  )
-  if(normalize) normalize_state(res, warn=FALSE) else res
 }
 #' @export
 #' @rdname strtrim_ctl

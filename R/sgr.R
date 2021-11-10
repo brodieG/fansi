@@ -4,8 +4,7 @@
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
-## the Free Software Foundation, either version 2 of the License, or
-## (at your option) any later version.
+## the Free Software Foundation, either version 2 or 3 of the License.
 ##
 ## This program is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -132,15 +131,14 @@ has_sgr <- function(x, warn=getOption('fansi.warn', TRUE))
 
 #' Utilities for Managing CSI and OSC State  In Strings
 #'
-#' `state_at_end` read input strings computing the accumulated SGR and
-#' OSC-anchored URLs until the end of the string and outputs the active state at
-#' the end of it.  `close_state` produces the sequence that closes active SGR
-#' and OSC-anchored URLs at the end of the input string.  If `normalize = FALSE`
-#' (default), it will emit the reset code "ESC[0m" if any SGR is present. It is
-#' more interesting for closing SGRs if `normalize = TRUE`.  Unlike
-#' `state_at_end` and other functions `close_state` has no concept of `carry`:
-#' it will only emit closing sequences for states activate within an element
-#' that is still active at the end of that element.
+#' `state_at_end` reads through strings computing the accumulated SGR and
+#' OSC-anchored URLs, and outputs the active state at the end of them
+#' `close_state` produces the sequence that closes active SGR and OSC-anchored
+#' URLs at the end of each input string.  If `normalize = FALSE` (default), it
+#' will emit the reset code "ESC[0m" if any SGR is present. It is more
+#' interesting for closing SGRs if `normalize = TRUE`.  Unlike `state_at_end`
+#' and other functions `close_state` has no concept of `carry`: it will only
+#' emit closing sequences for states explicitly active at the end of a string.
 #'
 #' @export
 #' @inheritParams substr_ctl
@@ -171,7 +169,8 @@ state_at_end <- function(
     CTL.INT,
     normalize,
     carry,
-    "x"
+    "x",
+    TRUE  # allowNA
   )
 }
 # Given an SGR, compute the sequence that closes it

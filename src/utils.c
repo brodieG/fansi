@@ -5,8 +5,7 @@
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 2 of the License, or
- * (at your option) any later version.
+ * the Free Software Foundation, either version 2 or 3 of the License.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -35,6 +34,7 @@
   .lim_R_xlen_t={.name="R_XLEN_T", .min=0, .max=R_XLEN_T_MAX}, \
   .lim_size_t={.name="SIZE", .min=0, .max=SIZE_MAX}            \
 }
+// See also check_limits in assumptions.c
 struct FANSI_limits FANSI_lim = LIM_INIT;
 
 SEXP FANSI_set_int_max(SEXP x) {
@@ -46,25 +46,25 @@ SEXP FANSI_set_int_max(SEXP x) {
     error("int_max value must be positive"); // nocov
 
   int old_int = FANSI_lim.lim_int.max;
-  FANSI_lim.lim_int.max = (intmax_t) x_int;
+  FANSI_lim.lim_int.max = x_int;
   return ScalarInteger(old_int);
+}
+SEXP FANSI_set_rlent_max(SEXP x) {
+  if(TYPEOF(x) != INTSXP || XLENGTH(x) != 1)
+    error("invalid R_len_t_max value");  // nocov
+  int x_R_len_t = asInteger(x);
+
+  if(x_R_len_t < 1)
+    error("R_len_t_max value must be positive"); // nocov
+
+  int old_R_len_t = FANSI_lim.lim_R_len_t.max;
+  FANSI_lim.lim_R_len_t.max = (intmax_t) x_R_len_t;
+  return ScalarInteger(old_R_len_t);
 }
 SEXP FANSI_reset_limits() {
   FANSI_lim = LIM_INIT;
   return ScalarLogical(1);
 }
-void FANSI_check_limits() {
-  if(
-    // Signed
-    FANSI_lim.lim_int.max < 1 || FANSI_lim.lim_int.min > -1 ||
-    FANSI_lim.lim_R_len_t.max < 1 || FANSI_lim.lim_R_len_t.min != 0 ||
-    FANSI_lim.lim_R_xlen_t.max < 1 || FANSI_lim.lim_R_xlen_t.min != 0 ||
-    // Unsigned
-    FANSI_lim.lim_size_t.max < 1U || FANSI_lim.lim_size_t.min != 0U
-  )
-    error("Invalid custom limit; contact maintainer.");
-}
-
 // nocov start
 // used only for debugging
 SEXP FANSI_get_int_max() {
@@ -104,9 +104,7 @@ SEXP FANSI_add_int_ext(SEXP x, SEXP y) {
  * @param one_only give up after a single failed attempt, otherwise keep going
  *   until a recognized control sequence is found.
  */
-struct FANSI_ctl_pos FANSI_find_ctl(
-  struct FANSI_state state, R_xlen_t i, int one_only
-) {
+struct FANSI_ctl_pos FANSI_find_ctl(struct FANSI_state state, R_xlen_t i) {
   int raw_prev, pos_prev, found, err_prev;
   unsigned int warn_max = 0;
   found = 0;
@@ -121,8 +119,6 @@ struct FANSI_ctl_pos FANSI_find_ctl(
     if(state.pos_raw == raw_prev) {
       found = 1;
       break;
-    } else if (one_only) {
-      break;
     }
     state.pos_byte += FANSI_seek_ctl(state.string + state.pos_byte);
   }
@@ -132,7 +128,7 @@ struct FANSI_ctl_pos FANSI_find_ctl(
     .offset = pos_prev, .len = res, .warn_max=warn_max
   };
 }
-int FANSI_maybe_ctl(const char x) {
+static int FANSI_maybe_ctl(const char x) {
   // Controls range from 0000 0001 (0x01) to 0001 1111 (0x1F), plus 0x7F;
   // We don't treat C1 controls as specials, apparently
   return x && (!(x & (~0x1F)) || x == 0x7F);
@@ -148,35 +144,6 @@ int FANSI_seek_ctl(const char * x) {
   if(x - x0 > FANSI_lim.lim_int.max)
     error("Internal error: sought past INT_MAX, should not happen.");  // nocov
   return (x - x0);
-}
-
-
-/*
- * Compute how many digits are in a number
- *
- * Add an extra character for negative integers.
- */
-
-int FANSI_digits_in_int(int x) {
-  int num = 1;
-  if(x < 0) {
-    ++num;
-    x = -x;
-  }
-  while((x = (x / 10))) ++num;
-  return num;
-}
-SEXP FANSI_digits_in_int_ext(SEXP y) {
-  if(TYPEOF(y) != INTSXP) error("Internal Error: required int.");
-
-  R_xlen_t ylen = XLENGTH(y);
-  SEXP res = PROTECT(allocVector(INTSXP, ylen));
-
-  for(R_xlen_t i = 0; i < ylen; ++i)
-    INTEGER(res)[i] = FANSI_digits_in_int(INTEGER(y)[i]);
-
-  UNPROTECT(1);
-  return(res);
 }
 /*
  * Compresses the ctl vector into a single integer by encoding each value of
@@ -210,70 +177,17 @@ int FANSI_term_cap_as_int(SEXP term_cap) {
   for(R_xlen_t i = 0; i < XLENGTH(term_cap); ++i) {
     int term_cap_val = INTEGER(term_cap)[i] - 2;
     if(term_cap_val > 2)
-      error("Internal Error: max term_cap value allowed is 2.");
+      error("Internal Error: max term_cap value allowed is 2."); // nocov
     if(term_cap_val < 0) flip_bits = 1;
     else term_cap_int |= 1 << term_cap_val;
   }
   if(flip_bits) term_cap_int ^= FANSI_TERM_CAP_ALL;
   return term_cap_int;
 }
-SEXP FANSI_term_cap_as_int_ext(SEXP term_cap) {
-  return ScalarInteger(FANSI_term_cap_as_int(term_cap));
-}
 
 SEXP FANSI_get_warn_all() {
   return ScalarInteger(FANSI_WARN_ALL);
 }
-
-
-/*
- * Partial match a single string byte by byte
- *
- * @param x a scalar STRSXP
- * @param choices an array of strings to match against
- * @param choice_count how many elements there are in array
- * @param arg_name the name of the argument to use in an error message if
- *   the match fails.
- * @return the position in choices that partial matches x, on a 0-index basis
- *   (ie. 0 == 1st, 1 == 2nd, etc.)
- */
-// nocov start
-int FANSI_pmatch(
-  SEXP x, const char ** choices, int choice_count, const char * arg_name
-) {
-  error("remove nocov if we start to use this");
-  if(TYPEOF(x) != STRSXP || XLENGTH(x) != 1)
-    error("Argument `%s` must be a length 1 character vector.", arg_name);
-
-  SEXP x_chrsxp = STRING_ELT(x, 0);
-  const char * x_chr = CHAR(x_chrsxp);
-
-  if(!LENGTH(x_chrsxp))
-    error("Argument `%s` may not be an empty string.", arg_name);
-
-  int match_count = choice_count;
-  int last_match_index = -1;
-
-  for(int i = 0; i < choice_count; ++i) {
-    if(!strncmp(x_chr, choices[i], LENGTH(x_chrsxp))) {
-      last_match_index = i;
-      --match_count;
-    }
-  }
-  if(match_count > 1) {
-    error(
-      "Argument `%s` matches more than one of the possible choices.",
-      arg_name
-    );
-  } else if(!match_count) {
-    error("Argument `%s` does not match any of the valid choices.", arg_name);
-  }
-  // success
-
-  return last_match_index;
-}
-// nocov end
-
 // concept borrowed from utf8-lite, but is not great because we're
 // still doing the calculation every iteration.  Probably okay though, the
 // alternative is just too much of a pain.
@@ -354,32 +268,6 @@ SEXP FANSI_order(SEXP x) {
   UNPROTECT(1);
   return res;
 }
-/*
- * Equivalent to `sort`, but less overhead.  May not be faster for longer
- * vectors but since we call it potentially repeatedly via our initial version
- * of strsplit, we want to do this to make somewhat less sub-optimal
- */
-// nocov start
-static int cmpfun2 (const void * p, const void * q) {
-  int a = *(int *) p;
-  int b = *(int *) q;
-  return(a > b ? 1 : (a < b ? -1 : 0));
-}
-SEXP FANSI_sort_int(SEXP x) {
-  error("get rid of nocov if we start using");
-  if(TYPEOF(x) != INTSXP)
-    error("Internal error: this order only supports ints.");  // nocov
-
-  R_xlen_t len = XLENGTH(x);
-
-  SEXP res = PROTECT(duplicate(x));
-
-  qsort(INTEGER(res), (size_t) len, sizeof(int), cmpfun2);
-
-  UNPROTECT(1);
-  return res;
-}
-// nocov end
 struct datum2 {SEXP val; R_xlen_t idx;};
 
 static int cmpfun3 (const void * p, const void * q) {
@@ -442,18 +330,6 @@ intmax_t FANSI_ind(R_xlen_t i) {
   return ind + 1;
 }
 
-void FANSI_check_chr_size(char * start, char * end, R_xlen_t i) {
-  if(end - start > FANSI_lim.lim_int.max) {
-    // Can't get to this point with a string that violates, AFAICT
-    // nocov start
-    error(
-      "Internal Error: %s at index [%jd] (3).",
-      "attempting to write string longer than INT_MAX",
-      FANSI_ind(i)
-    );
-    // nocov end
-  }
-}
 /*
  * Check Whether String Would Overflow if Appended To
  *
@@ -497,12 +373,13 @@ static SEXP mkChar_core(
   // PTRDIFF_MAX known to be >= INT_MAX (assumptions), and string should not
   // be longer than INT_MAX, so no overflow possible here.
 
-  if(buff.len > FANSI_lim.lim_R_len_t.max)
+  if(buff.len > FANSI_lim.lim_R_len_t.max) {
     error(
       "%s at index [%jd].",
       "Attempting to create CHARSXP longer than R_LEN_T_MAX",
       FANSI_ind(i)
     );
+  }
 
   // Annoyingly mkCharLenCE accepts int parameter instead of R_len_t, so we need
   // to check that too.
@@ -525,13 +402,8 @@ SEXP FANSI_mkChar0(
   struct FANSI_buff buff = {.buff0=start, .buff=end, .len=end - start};
   return mkChar_core(buff, enc, i, 0);
 }
-
 SEXP FANSI_mkChar(struct FANSI_buff buff, cetype_t enc, R_xlen_t i) {
   return mkChar_core(buff, enc, i, 1);
-}
-// Unstrict check, for use with tabs_as_spaces that over-allocs.
-SEXP FANSI_mkChar2(struct FANSI_buff buff, cetype_t enc, R_xlen_t i) {
-  return mkChar_core(buff, enc, i, 0);
 }
 
 static int is_tf(SEXP x) {
@@ -550,7 +422,8 @@ void FANSI_val_args(SEXP x, SEXP norm, SEXP carry) {
     error("Argument `carry` must be scalar character.");         // nocov
   if(!is_tf(norm)) error("Argument `norm` must be TRUE or FALSE.");  // nocov
 }
-
+// Utilitiy fun
+// nocov start
 
 void FANSI_print(char * x) {
   if(x) {
@@ -563,3 +436,4 @@ void FANSI_print(char * x) {
     Rprintf("\n");
   }
 }
+// nocov end

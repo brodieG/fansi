@@ -47,6 +47,8 @@ unitizer_sect("errors and warnings", {
   normalize_state(x, term.cap=character())
   ## no warning
   normalize_state(x, term.cap=c('bright', '256', 'truecolor'))
+  substr_ctl(x, 1, 2, normalize="yeah baby")
+  substr_ctl(x, 1, 2, normalize=NA)
 })
 unitizer_sect("in functions", {
   string1 <- "hello \033[33;44mblue world"
@@ -56,6 +58,7 @@ unitizer_sect("in functions", {
   strwrap_ctl(string1, 11, normalize=TRUE)
   strwrap_ctl(string2, 11, normalize=TRUE)
   strwrap_ctl(string3, 11, normalize=TRUE)
+  strwrap_ctl(string3, 11, normalize=TRUE, simplify=FALSE)
   strwrap2_ctl(string3, 11, normalize=TRUE, pad.end=" ")
 
   strwrap_sgr(string3, 11, normalize=TRUE)

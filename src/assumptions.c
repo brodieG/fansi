@@ -5,8 +5,7 @@
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 2 of the License, or
- * (at your option) any later version.
+ * the Free Software Foundation, either version 2 or 3 of the License.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -29,6 +28,17 @@
  *
  * returns TRUE on success, but throws warnings.
  */
+static void check_limits() {
+  if(
+    // Signed
+    FANSI_lim.lim_int.max < 1 || FANSI_lim.lim_int.min > -1 ||
+    FANSI_lim.lim_R_len_t.max < 1 || FANSI_lim.lim_R_len_t.min != 0 ||
+    FANSI_lim.lim_R_xlen_t.max < 1 || FANSI_lim.lim_R_xlen_t.min != 0 ||
+    // Unsigned
+    FANSI_lim.lim_size_t.max < 1U || FANSI_lim.lim_size_t.min != 0U
+  )
+    error("Invalid custom limit; contact maintainer.");  // nocov
+}
 // nocov start
 // by definition none of the errors should be thrown, so no sense in
 // covering this
@@ -37,7 +47,7 @@ SEXP FANSI_check_assumptions() {
     "Failed system assumption: %s%s; please contact maintainer.";
 
   // Check custom limits
-  FANSI_check_limits();
+  check_limits();
 
   // Otherwise bit twiddling assumptions may not work as expected?
   if(CHAR_BIT != 8)
@@ -108,8 +118,9 @@ SEXP FANSI_check_assumptions() {
     );
 
   // We ensure strings don't exceed INT_MAX as we create them, but we do
-  // measure string length by doing end - start on pointers.
-  if(PTRDIFF_MAX < FANSI_lim.lim_int.max)
+  // measure string length by doing end - start on pointers. intmax_t to
+  // suppress compiler warning
+  if(PTRDIFF_MAX < (intmax_t)FANSI_lim.lim_int.max)
     warningcall(
       R_NilValue, err_base,
       "PTRDIFF_MAX smaller than INT_MAX", ""

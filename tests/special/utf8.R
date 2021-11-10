@@ -186,9 +186,13 @@ unitizer_sect("Corner cases", {
   fansi:::state_at_pos(utf8.bad, 1, 7)
   fansi:::state_at_pos(utf8.bad, 5, 10)
 
+  ## Weird indices
+  fansi:::state_at_pos("he\033[42mllo", 1, 7, ids=c(1, 1))
+  fansi:::state_at_pos("he\033[42mllo", 1, 7, ids=c("1", "1"))
+
   # Need to use `tryCatch` because the warnings vascillate for no rhyme or
   # reason between showing the call and not.  Seems to be triggered by
-  # re-installing package. now we're stuff with the try business to circumvent
+  # re-installing package. now we're stuck with the try business to circumvent
   # that variability.
 
   tryCatch(
@@ -441,15 +445,8 @@ unitizer_sect("issue 54 ctd", {
   sgr_to_html(string4)
 })
 unitizer_sect("html_esc", {
-  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "\U0001F600")
-})
-
-unitizer_sect("utf8 to unicode", {
-  cps <- c(
-    "a", "A", "\u0079", "\u0080", "\u07ff", "\u0800", "\uFFFF", "\U00010000",
-    "\U0010FFFF"
-  )
-  as.hexmode(.Call(fansi:::FANSI_utf8_to_cp, cps))
+  x <- "\U0001F600"
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), x)
 })
 unitizer_sect("graphemes", {
   # Flags
@@ -578,4 +575,13 @@ unitizer_sect("replacement and width", {
   x0
   substr2_ctl(x1, starts, ends, type='width', round='stop') <- emo.4
   x1
+
+  # Can't reduce size of replacement to fit
+  emo.7 <- "\U0001F600_\U0001F600"
+  emo.7a <- "\U0001F600"
+  `substr2_ctl<-`(emo.7, 3, 3, type='width', round='stop', emo.7a)
+  # Here we can
+  `substr2_ctl<-`(emo.7, 3, 3, type='width', round='stop', "##")
+  # Corner case
+  `substr2_ctl<-`(emo.7a, 2, 1, type='width', round='both', emo.7a)
 })

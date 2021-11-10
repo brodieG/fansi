@@ -146,10 +146,14 @@ unitizer_sect('tohtml', {
 })
 unitizer_sect('osc', {
   # Non-URL OSC
-
   nchar_ctl("\033]hello \aworld")
   nchar_ctl("\033]hello \033\\world")
-  nchar_ctl("\033]hello\x80\033\\world")
+  # but don't support OSC (interpret as 2 char ESC)
+  nchar_ctl("\033]hello \033\\world", ctl=c('all', 'osc'))
+
+  x <- "\033]hello\x80\033\\world"
+  Encoding(x) <- "UTF-8"
+  nchar_ctl(x)
   nchar_ctl("\033]hello world")
 })
 

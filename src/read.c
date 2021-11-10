@@ -5,8 +5,7 @@
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 2 of the License, or
- * (at your option) any later version.
+ * the Free Software Foundation, either version 2 or 3 of the License.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -33,6 +32,84 @@
  * limited (but we have not checked).  It is a todo to see if this is a
  * performance bottleneck.
  */
+
+/*- Local Structs -------------------------------------------------------------\
+\-----------------------------------------------------------------------------*/
+
+/*- UTF8 Helpers --------------------------------------------------------------\
+\-----------------------------------------------------------------------------*/
+
+/*
+ * Code adapted from src/main/util.c@1186, this code is actually not completely
+ * compliant, but we're just trying to match R behavior rather than the correct
+ * UTF8 decoding.
+ *
+ * Among other things note that this allows 5-6 byte encodings which are no
+ * longer valid.
+ */
+
+/* Number of additional bytes */
+
+static const unsigned char utf8_table4[] = {
+  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+  2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
+  3,3,3,3,3,3,3,3,4,4,4,4,5,5,5,5 };
+
+static int utf8clen(const char * c, int * mb_err) {
+  /* This allows through 8-bit chars 10xxxxxx, which are invalid */
+  int res = 0;
+  if ((*c & 0xc0) != 0xc0) res = 1;
+  else res = 1 + utf8_table4[*c & 0x3f];
+
+  // Make sure string doesn't end before UTF8 char supposedly does
+  for(int i = 1; i < res; ++i) {
+    if(!*(c + i)) {
+      *mb_err = 1;
+      res = i;
+      break;
+  } }
+  return res;
+}
+/*
+ * Perfunctory validation, checks there is a zero in the right spot
+ * for the first byte, and that continuation bytes start with 10.
+ *
+ * Assumes correct number of continuation bytes exist and that
+ * input was read through utf8clen.
+ *
+ * DO NOT USE AS STANDALONE UTF8 VALIDATION.
+ */
+static int valid_utf8(const char * chr, int bytes) {
+  int pass = !(*chr & (0x20 >> (bytes - 2)));
+  switch(bytes) {
+    case 4: pass &= (*(++chr) & 0xc0) == 0x80;
+    case 3: pass &= (*(++chr) & 0xc0) == 0x80;
+    case 2: pass &= (*(++chr) & 0xc0) == 0x80; break;
+    default: pass = 0;
+  }
+  return pass;
+}
+
+// Compute a unicode code point from a _valid_ UTF8 encoding
+// Assumes 0 < bytes < 7 (or else bad stuff will happen)
+
+static int utf8_to_cp(const char * chr, int bytes) {
+  int cp = 0;
+  // Lead byte (trailing bytes only contribute 6 bits each)
+  cp |=
+    (*chr & (0xff >> (bytes + (bytes > 1)))) // keep  7, 5, 4, or 3 bits
+    << (bytes - 1) * 6;                      // shift by byte count
+
+  // Trailing bytes keep trailing 6 bits
+  for(int i = bytes - 1; i > 0; --i)
+    cp |= (*(chr + bytes - i) & 0x3f) << (i - 1) * 6;
+
+  return cp;
+}
+
+/*- Helpers -------------------------------------------------------------------\
+\-----------------------------------------------------------------------------*/
 
 // Can a byte be interpreted as ASCII number?
 
@@ -66,6 +143,9 @@ static struct FANSI_sgr reset_sgr(struct FANSI_sgr sgr) {
   sgr.font = 0;
   return  sgr;
 }
+/*- Parsers -------------------------------------------------------------------\
+\-----------------------------------------------------------------------------*/
+
 // Store the result of reading a parameter substring token
 
 struct FANSI_tok_res {
@@ -273,10 +353,11 @@ static struct FANSI_string get_url_param(
   struct FANSI_string res = {.val="", .len=0};
   int len = 0;
   while(len <= 128 && *(param + len)) ++len;
+  // Can't test the checks, we only ever use this with 'id=' ATM
   if(*(param + len))
-    error("Internal Error: max allowed param len 128 bytes.");
+    error("Internal Error: max allowed param len 128 bytes.");  // nocov
   if(*(param + len - 1) != '=')
-    error("Internal Error: trailing param char must be '='.");
+    error("Internal Error: trailing param char must be '='.");  // nocov
 
   const char * start = params.val;
   const char * end;
@@ -420,6 +501,9 @@ static struct FANSI_osc parse_osc(const char * x) {
     (*end == 0x1b);         // consume extra byte for ST
   return osc;
 }
+/*- Read Interfaces -----------------------------------------------------------\
+\-----------------------------------------------------------------------------*/
+
 /*
  * Read a Character Off when we know it is an ascii char, this is so we have a
  * consistent way of advancing state.
@@ -684,38 +768,35 @@ static struct FANSI_state read_esc(struct FANSI_state state, int seq) {
       }
     } else if(
       state.string[state.pos_byte] == ']' &&
-      state.ctl & (FANSI_CTL_OSC | FANSI_CTL_URL)
+      state.string[state.pos_byte + 1] == '8' &&
+      state.string[state.pos_byte + 2] == ';' &&
+      (state.ctl & FANSI_CTL_URL)
     ) {
-      // - Operating System Command --------------------------------------------
-      ++state.pos_byte;  // consume ']'
+      // - OSC Encoded URL -----------------------------------------------------
+      esc_recognized = 1;
       int osc_bytes = 0;
-      if(
-        state.string[state.pos_byte] == '8' &&
-        state.string[state.pos_byte + 1] == ';' &&
-        (state.ctl & FANSI_CTL_URL)
-      ) {
-        // Possible URL
-        esc_recognized = 1;
-        struct FANSI_url url = parse_url(state.string + state.pos_byte);
-        osc_bytes = url.osc.len;
-        if(url.osc.error) err_code = url.osc.error;
-        else state.url = url;
-
-        // Params other than id
-        if(url.params.len && url.id.len + 3 != url.params.len)
-          err_code = 2;
-        if(err_code < 3) esc_types |= 2U;
-      } else if (state.ctl & FANSI_CTL_OSC) {
-        // Other OSC
-        esc_recognized = 1;
-        struct FANSI_osc osc = parse_osc(state.string + state.pos_byte);
-        osc_bytes = osc.len;
-        err_code = osc.error;
-        if(err_code < 3) esc_types |= 1U;
-      } else {
-        // not URL and don't support OSC
-        err_code = 4;                     // Not URL
-      }
+      ++state.pos_byte;  // consume ']'
+      struct FANSI_url url = parse_url(state.string + state.pos_byte);
+      osc_bytes = url.osc.len;
+      if(url.osc.error) err_code = url.osc.error;
+      else state.url = url;
+      // Params other than id
+      if(url.params.len && url.id.len + 3 != url.params.len)
+        err_code = 2;
+      if(err_code < 3) esc_types |= 2U;
+      state.pos_byte += osc_bytes;
+    } else if(
+      state.string[state.pos_byte] == ']' &&
+      (state.ctl & FANSI_CTL_OSC)
+    ) {
+      // - Other OSC System Command --------------------------------------------
+      esc_recognized = 1;
+      int osc_bytes = 0;
+      ++state.pos_byte;  // consume ']'
+      struct FANSI_osc osc = parse_osc(state.string + state.pos_byte);
+      osc_bytes = osc.len;
+      err_code = osc.error;
+      if(err_code < 3) esc_types |= 1U;
       state.pos_byte += osc_bytes;
     } else if(!state.string[state.pos_byte]) {
       // - String ends in ESC --------------------------------------------------
@@ -738,7 +819,7 @@ static struct FANSI_state read_esc(struct FANSI_state state, int seq) {
       else state.err_code = 7;
 
       // Don't process additional ESC if it is there so we keep looping
-      if(state.string[state.pos_byte] != 27)
+      if(state.string[state.pos_byte] != 0x1B)
         ++state.pos_byte;
     }
     // Did we read mixed special and non-special escapes?
@@ -809,27 +890,17 @@ static struct FANSI_state read_esc(struct FANSI_state state, int seq) {
  * See GENERAL NOTES atop.
  */
 static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
-  int byte_size = FANSI_utf8clen(state.string[state.pos_byte]);
-
-  // Make sure string doesn't end before UTF8 char supposedly does
-
   int mb_err = 0;
   int disp_size = 0;
   const char * mb_err_str =
     "use `validUTF8()` to find problem strings.";
 
-  for(int i = 1; i < byte_size; ++i) {
-    if(!state.string[state.pos_byte + i]) {
-      mb_err = 1;
-      byte_size = i;
-      break;
-  } }
-  mb_err |= !FANSI_valid_utf8(state.string + state.pos_byte, byte_size);
+  int byte_size = utf8clen(state.string + state.pos_byte, &mb_err);
+  mb_err |= !valid_utf8(state.string + state.pos_byte, byte_size);
 
   if(mb_err) {
-    if(state.allowNA) {
-      disp_size = NA_INTEGER;
-    } else {
+    disp_size = NA_INTEGER;  // mimic what R_nchar does on mb error
+    if(!state.allowNA) {
       char arg[39];
       if(state.arg) {
         if(strlen(state.arg) > 18)
@@ -851,7 +922,7 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
       state.width_mode == FANSI_COUNT_GRAPH
   ) {
     // Assumes valid UTF-8!  Should have been checked.
-    int cp = FANSI_utf8_to_cp(state.string + state.pos_byte, byte_size);
+    int cp = utf8_to_cp(state.string + state.pos_byte, byte_size);
 
     // Hacky grapheme approximation ensures flags (RI) aren't split, sets
     // skin modifiers to width zero (so greedy / not greedy searches will
@@ -890,23 +961,26 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
 
     disp_size = 1;
   }
-  // We are guaranteed that strings here are at most INT_MAX bytes long, so
-  // nothing should overflow, except maybe width if we ever add some width
-  // measures that exceed byte count (like the 6 or 10 from '\u' or '\U' encoded
-  // versions of Unicode chars).  Shouldn't be an issue, but playing it safe.
   if(disp_size == NA_INTEGER) {
+    // Both for R_nchar and if we directly detect an mb_err
     state.err_code = 9;
     state.err_msg = "a malformed UTF-8 sequence";
     disp_size = byte_size = 1;
   }
+  // We are guaranteed that strings here are at most INT_MAX bytes long, so
+  // nothing should overflow, except maybe width if we ever add some width
+  // measures that exceed byte count (like the 6 or 10 from '\u' or '\U' encoded
+  // versions of Unicode chars).  Shouldn't be an issue, but playing it safe.
   state.pos_byte += byte_size;
   ++state.pos_ansi;
   ++state.pos_raw;
   if(state.pos_width > FANSI_lim.lim_int.max - disp_size)
+    // nocov start currently this can't happen
     error(
       "String with display width greater than INT_MAX at index [%jd].",
       FANSI_ind(i)
     );
+    // nocov end
   // Width is basically counting graphemes when non-zero.
   switch(state.width_mode) {
     case FANSI_COUNT_CHARS: ++state.pos_width; break;

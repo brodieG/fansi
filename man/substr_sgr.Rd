@@ -45,7 +45,9 @@ to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fans
 If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
 parameter on functions that have it, or the \code{tabs_as_spaces} function, to
 turn the tabs to spaces and resolve the warning that way.  At most one
-warning will be issued per element in each input vector.}
+warning will be issued per element in each input vector.  Will also warn
+about some badly encoded UTF-8 strings, but a lack of UTF-8 warnings is not
+a guarantee of correct encoding (use \verb{[validUTF8]} for that).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
@@ -97,7 +99,7 @@ applying tab stops, each input line is considered a line and the character
 count begins from the beginning of the input line.}
 }
 \value{
-a character vector of the same length and with the same attributes as
+A character vector of the same length and with the same attributes as
 x (after possible coercion and re-encoding to UTF-8).
 }
 \description{

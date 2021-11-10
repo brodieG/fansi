@@ -4,8 +4,7 @@
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
-## the Free Software Foundation, either version 2 of the License, or
-## (at your option) any later version.
+## the Free Software Foundation, either version 2 or 3 of the License.
 ##
 ## This program is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -40,6 +39,8 @@
 #' @inheritParams tabs_as_spaces
 #' @inheritParams substr_ctl
 #' @inherit substr_ctl seealso
+#' @return A character vector, or list of character vectors if `simplify` is
+#'   false.
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work properly in R < 3.2.2.
 #' @param wrap.always TRUE or FALSE (default), whether to hard wrap at requested
@@ -110,30 +111,12 @@ strwrap_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
-  ## modifies / creates NEW VARS in fun env
-  VAL_IN_ENV(
-    x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
+  strwrap2_ctl(
+    x=x, width=width, indent=indent,
+    exdent=exdent, prefix=prefix, simplify=simplify, initial=initial,
+    warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
     carry=carry, terminate=terminate
   )
-  VAL_WRAP_IN_ENV(width, indent, exdent, prefix, initial, pad.end="")
-  res <- .Call(
-    FANSI_strwrap_csi,
-    x, width, indent, exdent,
-    prefix, initial,
-    FALSE, "",
-    TRUE,
-    FALSE, 8L,
-    WARN.INT, TERM.CAP.INT,
-    FALSE,   # first_only
-    CTL.INT, normalize,
-    carry, terminate
-  )
-  if(simplify) {
-    if(normalize) normalize_state(unlist(res), warn=FALSE, term.cap)
-    else unlist(res)
-  } else {
-    if(normalize) normalize_state_list(res, 0L, TERM.CAP.INT) else res
-  }
 }
 #' @export
 #' @rdname strwrap_ctl
@@ -185,7 +168,8 @@ strwrap2_ctl <- function(
     if(normalize) normalize_state(unlist(res), warn=FALSE, term.cap)
     else unlist(res)
   } else {
-    if(normalize) normalize_state_list(res, 0L, TERM.CAP.INT) else res
+    if(normalize) normalize_state_list(res, 0L, TERM.CAP.INT, carry=carry)
+    else res
   }
 }
 #' Control Sequence Aware Version of strwrap

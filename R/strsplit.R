@@ -4,8 +4,7 @@
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
-## the Free Software Foundation, either version 2 of the License, or
-## (at your option) any later version.
+## the Free Software Foundation, either version 2 or 3 of the License.
 ##
 ## This program is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -39,7 +38,7 @@
 #' @inheritSection substr_ctl Output Stability
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work properly in R < 3.2.2.
-#' @inherit base::strsplit return
+#' @return Like [`base::strsplit`], with _Control Sequences_ excluded.
 #' @examples
 #' strsplit_ctl("\033[31mhello\033[42m world!", " ")
 #'
@@ -66,7 +65,7 @@ strsplit_ctl <- function(
   if(!length(split)) split <- ""
   if(anyNA(split)) stop("Argument `split` may not contain NAs.")
   if(any(Encoding(split) == "bytes"))
-    stop("Argument `bytes` may not be \"bytes\" encoded.")
+    stop("Argument `split` may not be \"bytes\" encoded.")
   if(!is.logical(fixed)) fixed <- as.logical(fixed)
   if(length(fixed) != 1L || is.na(fixed))
     stop("Argument `fixed` must be TRUE or FALSE.")

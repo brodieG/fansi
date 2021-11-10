@@ -5,8 +5,7 @@
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 2 of the License, or
- * (at your option) any later version.
+ * the Free Software Foundation, either version 2 or 3 of the License.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -29,16 +28,17 @@ static struct FANSI_state state_at_end(
 }
 
 SEXP FANSI_state_at_end_ext(
-  SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry, SEXP arg
+  SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry, 
+  SEXP arg, SEXP allowNA
 ) {
   FANSI_val_args(x, norm, carry);
-  if(
-    TYPEOF(arg) != STRSXP || XLENGTH(arg) != 1 ||
-    STRING_ELT(arg, 1) == NA_STRING
-  )
-    error("Internal Error: bad `arg` arg.");
+  if(TYPEOF(arg) != STRSXP || XLENGTH(arg) != 1)
+    error("Internal Error: bad `arg` arg."); // nocov
 
-  const char * arg_chr = CHAR(STRING_ELT(arg, 0));  // should be ASCII
+  const char * arg_chr;
+  // NA case for testing warn generation with no arg.
+  if(STRING_ELT(arg, 0) == NA_STRING) arg_chr = NULL;
+  else arg_chr = CHAR(STRING_ELT(arg, 0));  // should be ASCII
   int prt = 0;
   int normalize = asInteger(norm);
 
@@ -50,8 +50,8 @@ SEXP FANSI_state_at_end_ext(
 
   SEXP R_true = PROTECT(ScalarLogical(1)); ++prt;
   SEXP R_zero = PROTECT(ScalarInteger(0)); ++prt;
-  SEXP allowNA, keepNA, width;
-  allowNA = keepNA = R_true;
+  SEXP keepNA, width;
+  keepNA = R_true;
   width = R_zero; // character width mode
 
   struct FANSI_state state_prev = FANSI_state_init_full(
@@ -117,15 +117,12 @@ struct FANSI_state FANSI_carry_init(
   UNPROTECT(prt);
   return state_carry;
 }
-
-
 /*
  * Compute Sequences to Transition from `end` to `restart`
  *
  * Very similar logic to used in `normalize`, intended to  handle the
  * `substr_ctl(..., carry=TRUE, terminate=FALSE)` case.
  */
-
 static int bridge(
   struct FANSI_buff * buff,
   struct FANSI_state end,

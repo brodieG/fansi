@@ -5,8 +5,7 @@
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 2 of the License, or
- * (at your option) any later version.
+ * the Free Software Foundation, either version 2 or 3 of the License.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -122,7 +121,7 @@
  *     FANSI_size_buff(&buff1);              // no warning
  *
  * Avoid using `R_alloc` inside _W_ functions or their children unless you reset
- * the `vmax` values before existing.  Failure to do so (e.g. if you allocate a
+ * the `vmax` values before exiting.  Failure to do so (e.g. if you allocate a
  * buffer and don't release it before return) will prevent FANSI_release_buff
  * from freeing it's own buffers.
  *
@@ -252,9 +251,9 @@ size_t FANSI_size_buff0(struct FANSI_buff * buff, int size) {
     if(!buff->len_alloc) {
       // in theory little penalty to ask this minimum
       if(size_req < 128 && FANSI_lim.lim_int.max >= 127)
-        size_alloc = 128;
+        size_alloc = 128;      // includes space for NULL
       else
-        size_alloc = size_req;
+        size_alloc = size_req; // includes space for NULL
     } else {
       // More generic case
       if(buff->len_alloc > buff_max - buff->len_alloc) {
@@ -309,7 +308,6 @@ void FANSI_reset_buff(struct FANSI_buff * buff) {
  * Purely for testing if the prev/self scheme used by size_buff works as
  * intended.
  */
-
 static void prot_test_help(
   int size, const char * lbl, struct FANSI_buff * buff, SEXP res, R_xlen_t i
 ) {
@@ -369,13 +367,47 @@ SEXP FANSI_size_buff_prot_test() {
   UNPROTECT(1);
   return res;
 }
+SEXP FANSI_buff_test_reset() {
+  struct FANSI_buff buff;
+  FANSI_INIT_BUFF(&buff);
+  FANSI_W_copy(&buff, "hello", 0, "blah");
+  FANSI_size_buff(&buff);
+  return R_NilValue;
+}
+SEXP FANSI_buff_test_copy_overflow() {
+  struct FANSI_buff buff;
+  FANSI_INIT_BUFF(&buff);
+  FANSI_reset_buff(&buff);
+  FANSI_W_copy(&buff, "hello", 0, "blah");
+  FANSI_size_buff(&buff);
+  FANSI_W_copy(&buff, "hello!", 0, "blah");
+  return R_NilValue;
+}
+SEXP FANSI_buff_test_mcopy_overflow() {
+  struct FANSI_buff buff;
+  FANSI_INIT_BUFF(&buff);
+  FANSI_reset_buff(&buff);
+  FANSI_W_mcopy(&buff, "hello!", 4, 0, "blah");
+  FANSI_size_buff(&buff);
+  FANSI_W_mcopy(&buff, "hello!", 5, 0, "blah");
+  return R_NilValue;
+}
+SEXP FANSI_buff_test_fill_overflow() {
+  struct FANSI_buff buff;
+  FANSI_INIT_BUFF(&buff);
+  FANSI_reset_buff(&buff);
+  FANSI_W_fill(&buff, '!', 4, 0, "blah");
+  FANSI_size_buff(&buff);
+  FANSI_W_fill(&buff, '!', 5, 0, "blah");
+  return R_NilValue;
+}
 /*
  * To test allocation logic is doing what is expected.  This will allocate
  * as many bytes as each value in `x` so, don't do anything crazy.
  */
 SEXP FANSI_size_buff_ext(SEXP x) {
   if(TYPEOF(x) != INTSXP)
-    error("Argument `x` must be integer.");
+    error("Argument `x` must be integer.");  // nocov
 
   R_xlen_t i, len = XLENGTH(x);
   SEXP res = PROTECT(allocVector(REALSXP, len));
@@ -555,13 +587,17 @@ void FANSI_W_sgr_close(
         FANSI_W_COPY(buff, "\033[65m");
       }
 
-      // Make sure we're not out of sync with has_style
+      // Make sure we're not out of sync with has_style; can't really test the
+      // error though as that would require accepting an input we would not
+      // close above, so this is really just a safety net.
       if(FANSI_sgr_active(sgr))
+        // nocov start
         error(
           "Internal Error: %s (clr: %d bg: %d st: %u bd: %u id %u).",
           "did not successfully close all styles",
           sgr.color, sgr.bg_color, sgr.style, sgr.border, sgr.ideogram
         );
+        // nocov end
     } else {
       // Full close
       FANSI_W_COPY(buff, "\033[0m");

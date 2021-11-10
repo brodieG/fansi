@@ -4,8 +4,7 @@
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
-## the Free Software Foundation, either version 2 of the License, or
-## (at your option) any later version.
+## the Free Software Foundation, either version 2 or 3 of the License.
 ##
 ## This program is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -49,7 +48,7 @@
 #'
 #' `fansi` handles most common _Control Sequences_ in its parsing
 #' algorithms, but it is not a conforming implementation of ECMA-48.  For
-#' example, there are non-CSI escape sequences that may be longer than two
+#' example, there are non-CSI/OSC escape sequences that may be longer than two
 #' characters, but `fansi` will (incorrectly) treat them as if they were
 #' two characters long.  There are many more unimplemented ECMA-48
 #' specifications.
@@ -144,7 +143,7 @@
 #' ```
 #'
 #' Might be interpreted as [LINK](x.z).  To make the encoding pattern clearer,
-#' we replace "\033]" with "&lt;OSC&gt;" and "\033\\\\" with "&gt;ST&lt;" below:
+#' we replace "\033]" with "&lt;OSC&gt;" and "\033\\\\" with "&lt;ST&gt;" below:
 #'
 #' ```
 #' <OSC>8;;URL<ST>LINK TEXT<OSC>8;;<ST>

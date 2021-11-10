@@ -4,8 +4,7 @@
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
-## the Free Software Foundation, either version 2 of the License, or
-## (at your option) any later version.
+## the Free Software Foundation, either version 2 or 3 of the License.
 ##
 ## This program is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -34,7 +33,6 @@ esc_color_code_to_html <- function(x) {
 }
 
 check_assumptions <- function() .Call(FANSI_check_assumptions)  # nocov
-digits_in_int <- function(x) .Call(FANSI_digits_in_int, x)
 
 add_int <- function(x, y) .Call(FANSI_add_int, as.integer(x), as.integer(y))
 
@@ -46,6 +44,8 @@ sort_chr <- function(x) .Call(FANSI_sort_chr, x)
 
 set_int_max <- function(x) .Call(FANSI_set_int_max, as.integer(x)[1])
 get_int_max <- function(x) .Call(FANSI_get_int_max)  # nocov for debug only
+set_rlent_max <- function(x) .Call(FANSI_set_rlent_max, as.integer(x)[1])
+
 reset_limits <- function(x) .Call(FANSI_reset_limits)
 
 get_warn_all <- function(x) .Call(FANSI_get_warn_all)
@@ -112,12 +112,9 @@ VAL_IN_ENV <- function(
     if(length(which.byte <- which(Encoding(x) == "bytes")))
       stop2(
         "Argument `x` contains a \"bytes\" encoded string at index [",
-        which.byte[1],"] ",
-        if(length(which.byte) > 1) {
-          sprintf(
-            "and %d other%s ", which.byte - 1, if(which.byte > 2) "s" else ""
-        ) },
-        "which is not supported."
+        which.byte[1],"]",
+        if(length(which.byte) > 1) "and others, " else ", ",
+        "which is disallowed."
       )
     args[['x']] <- x
   }
@@ -267,5 +264,5 @@ enc_to_utf8 <- function(x) {
     translate <- enc != "unknown" & enc != "UTF-8"
     x[translate] <- enc2utf8(x[translate])
     x
-  } else enc2utf8(x)
+  } else enc2utf8(x) # nocov tested manually
 }

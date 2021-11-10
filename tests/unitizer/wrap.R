@@ -195,6 +195,7 @@ unitizer_sect("wrap2", {
 
   hello.9b <- "\033[41mhello\n\nworld."
   strwrap2_ctl(hello.9b, 8, pad.end=" ")
+  strwrap2_ctl(hello.9b, 8, pad.end=0)
 
   ## Leading spaces
 
@@ -380,6 +381,9 @@ unitizer_sect("corner cases", {
   ## Correctly strip trailing space
   strwrap_ctl("A \033[31mB\033[39m", 3)
 
+  ## Don't double warn w/ leading strip
+  strwrap2_ctl("\033[35phello \033[35p world", 5, strip.spaces=FALSE)
+
 })
 unitizer_sect("bad inputs", {
   strwrap_ctl(1:3)
@@ -397,21 +401,6 @@ unitizer_sect("bad inputs", {
   strwrap_ctl(hello2.0, ctl=1:3)
   strwrap_ctl(hello2.0, ctl="bananas")
 
-  strwrap2_ctl(1:3)
-  strwrap2_ctl(hello2.0, width="35")
-  strwrap2_ctl(hello2.0, width=NA_integer_)
-  strwrap2_ctl(hello2.0, indent=NA_integer_)
-  strwrap2_ctl(hello2.0, indent=-3)
-  strwrap2_ctl(hello2.0, exdent=-3)
-  strwrap2_ctl(hello2.0, exdent=1:3)
-  strwrap2_ctl(hello2.0, prefix=1:3)
-  strwrap2_ctl(hello2.0, initial=1:3)
-  strwrap2_ctl(hello2.0, warn=NULL)
-  strwrap2_ctl(hello2.0, term.cap=1:3)
-  strwrap2_ctl(hello2.0, term.cap="bananas")
-  strwrap2_ctl(hello2.0, ctl=1:3)
-  strwrap2_ctl(hello2.0, ctl="bananas")
-
   strwrap2_ctl(hello2.0, wrap.always=1:3)
   strwrap2_ctl(hello2.0, wrap.always=NA)
   strwrap2_ctl(hello2.0, tabs.as.spaces=NA)
@@ -420,5 +409,12 @@ unitizer_sect("bad inputs", {
   strwrap2_ctl(hello2.0, tab.stops=0)
   strwrap2_ctl(hello2.0, strip.spaces=1:3)
   strwrap2_ctl(hello2.0, tabs.as.spaces=TRUE, strip.spaces=TRUE)
+  strwrap2_ctl(hello2.0, pad.end=letters)
 
+  bytes <- "\xf0\xe3"
+  Encoding(bytes) <- "bytes"
+  strwrap_ctl(hello2.0, prefix=bytes)
+  strwrap_ctl(hello2.0, initial=bytes)
+  strwrap2_ctl(hello2.0, pad.end=bytes)
+  strwrap_ctl(c(hello2.0, bytes))
 })

@@ -4,8 +4,7 @@
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
-## the Free Software Foundation, either version 2 of the License, or
-## (at your option) any later version.
+## the Free Software Foundation, either version 2 or 3 of the License.
 ##
 ## This program is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -164,10 +163,10 @@ fansi_lines <- function(txt, step=1) {
 #'   "<", ">", "&", "'", or "\"".  These characters are special in HTML contexts
 #'   and will be substituted by their HTML entity code.  By default, all
 #'   special characters are escaped, but in many cases "<>&" or even "<>" might
-#'   be sufficient.  @return `x`, but with the `what` characters replaced by
-#'   their HTML entity codes, and Encoding set to UTF-8 if non-ASCII input are
-#'   present in `x`.
-#' @return x possibly re-encoded to UTF8, with `what` characters escaped.
+#'   be sufficient.
+#'  @return `x`, but with the `what` characters replaced by their HTML entity
+#'    codes.
+#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @examples
 #' html_esc("day > night")
 #' html_esc("<SPAN>hello world</SPAN>")
@@ -497,14 +496,14 @@ fwl <- function(..., end='<END>\033[0m') {
 
 #' Default Arg Helper Funs
 #'
-#' Terminal capabilities are assumed to include bright and 256 color SGR codes,
-#' and will detect 24 bit color support based on the `COLORTERM` environment
+#' Terminal capabilities are assumed to include bright and 256 color SGR codes.
+#' 24 bit color support is detected based on the `COLORTERM` environment
 #' variable.
 #'
 #' Default CSS may exceed or fail to cover the interline distance when two lines
 #' have background colors.  To ensure lines are exactly touching use
 #' inline-block, although that has its own issues.  Otherwise specify your own
-#' values.
+#' CSS.
 #'
 #' @seealso [`term_cap_test`].
 #' @export
