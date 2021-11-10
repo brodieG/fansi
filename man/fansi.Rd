@@ -136,7 +136,7 @@ needed.  For example:\preformatted{"\\033]8;;xy.z\\033\\\\LINK\\033]8;;\\033\\\\
 }
 
 Might be interpreted as \href{x.z}{LINK}.  To make the encoding pattern clearer,
-we replace "\033]" with "<OSC>" and "\033\\\\" with ">ST<" below:\preformatted{<OSC>8;;URL<ST>LINK TEXT<OSC>8;;<ST>
+we replace "\033]" with "<OSC>" and "\033\\\\" with "<ST>" below:\preformatted{<OSC>8;;URL<ST>LINK TEXT<OSC>8;;<ST>
 }
 }
 

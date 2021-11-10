@@ -251,9 +251,9 @@ size_t FANSI_size_buff0(struct FANSI_buff * buff, int size) {
     if(!buff->len_alloc) {
       // in theory little penalty to ask this minimum
       if(size_req < 128 && FANSI_lim.lim_int.max >= 127)
-        size_alloc = 128;
+        size_alloc = 128;      // includes space for NULL
       else
-        size_alloc = size_req;
+        size_alloc = size_req; // includes space for NULL
     } else {
       // More generic case
       if(buff->len_alloc > buff_max - buff->len_alloc) {

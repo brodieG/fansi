@@ -163,10 +163,10 @@ fansi_lines <- function(txt, step=1) {
 #'   "<", ">", "&", "'", or "\"".  These characters are special in HTML contexts
 #'   and will be substituted by their HTML entity code.  By default, all
 #'   special characters are escaped, but in many cases "<>&" or even "<>" might
-#'   be sufficient.  @return `x`, but with the `what` characters replaced by
-#'   their HTML entity codes, and Encoding set to UTF-8 if non-ASCII input are
-#'   present in `x`.
-#' @return x possibly re-encoded to UTF8, with `what` characters escaped.
+#'   be sufficient.
+#'  @return `x`, but with the `what` characters replaced by their HTML entity
+#'    codes.
+#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @examples
 #' html_esc("day > night")
 #' html_esc("<SPAN>hello world</SPAN>")

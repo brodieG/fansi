@@ -143,7 +143,7 @@
 #' ```
 #'
 #' Might be interpreted as [LINK](x.z).  To make the encoding pattern clearer,
-#' we replace "\033]" with "&lt;OSC&gt;" and "\033\\\\" with "&gt;ST&lt;" below:
+#' we replace "\033]" with "&lt;OSC&gt;" and "\033\\\\" with "&lt;ST&gt;" below:
 #'
 #' ```
 #' <OSC>8;;URL<ST>LINK TEXT<OSC>8;;<ST>
