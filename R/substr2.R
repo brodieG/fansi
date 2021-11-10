@@ -535,11 +535,16 @@ substr_ctl_internal <- function(
   # x.scalar is likely needed for strsplit (but not sure, this is after the fact
   # documentation)
   x.scalar <- length(x) == 1
-  x.u <- if(x.scalar) x else unique_chr(x)
-  ids <- if(x.scalar) seq_along(s.s.valid) else seq_along(x)
+  # x.u <- if(x.scalar) x else unique_chr(x)
+  if(x.scalar) x <- rep(x, length.out=length(s.s.valid))
+  ids <- seq_along(x)
+  elems.l <- split(ids * s.s.valid, x)
 
-  for(u in x.u) {
-    elems <- which(x == u & s.s.valid)
+  for(i in seq_along(elems.l)) {
+    elems <- elems.l[[i]]
+    elems <- elems[elems > 0]
+    if(!length(elems)) next
+    u <- x[elems[1L]]
     elems.len <- length(elems)
     # we want to specify minimum number of position/width elements
     e.start <- start[elems] - 1L
