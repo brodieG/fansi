@@ -18,9 +18,11 @@
 #include "fansi.h"
 
 SEXP FANSI_substr(
-  SEXP x, SEXP start, SEXP stop, SEXP type,
-  SEXP rnd, SEXP warn,
-  SEXP term_cap, SEXP ctl, SEXP norm,
+  SEXP x,
+  SEXP start, SEXP stop,
+  SEXP type, SEXP rnd,
+  SEXP warn, SEXP term_cap,
+  SEXP ctl, SEXP norm,
   SEXP carry, SEXP terminate
 ) {
   if(TYPEOF(start) != INTSXP) error("Internal Error: invalid `start`.");// nocov
@@ -31,7 +33,7 @@ SEXP FANSI_substr(
 
   if(TYPEOF(norm) != LGLSXP || XLENGTH(norm) != 1)
     error("Internal Error: invalid `norm`."); // nocov
-  int normalize = asLogical(rnd);
+  int normalize = asLogical(norm);
   if(normalize != 1 && normalize != 0)
     error("Internal Error: invalid `norm`."); // nocov
 
@@ -54,7 +56,7 @@ SEXP FANSI_substr(
   int do_carry = STRING_ELT(carry, 0) != NA_STRING;
   struct FANSI_state state_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
 
-  SEXP res = PROTECT(allocVector(STRSXP, len));
+  SEXP res = PROTECT(allocVector(STRSXP, len)); ++prt;
 
   int * start_i = INTEGER(start);
   int * stop_i = INTEGER(stop);
@@ -103,13 +105,27 @@ SEXP FANSI_substr(
 
     // - Start Point -----------------------------------------------------------
 
-    // Recall `start` and `stop` are in 1-index
+    // Recall `start` and `stop` are in 1-index, here we're greedy eating zero
+    // width things.
     while(state.string[state.pos_byte] && state.pos_width < start_ii) {
-      if(state.pos_width > state_prev.pos_width) state_prev = state;
+      state_prev = state;
       state = FANSI_read_next(state, i, 1);
     }
-    if(state_prev.pos_width == start_ii - 1) {
-      // Prev read matches exactly the target point
+    /*
+    Rprintf(
+      "startii %d stopii %d, w %d b %d c %d\n",
+      start_ii,
+      stop_ii,
+      state.pos_width,
+      state.pos_byte,
+      state.string[state.pos_byte]
+    );
+    */
+    if(
+      state_prev.pos_width == start_ii - 1 &&
+      state_prev.string[state_prev.pos_byte]
+    ) {
+      // Prev read matches exactly the target point, and not past end
       state_start = state_prev;
     } else if (
       state.pos_width > start_ii - 1 &&
@@ -144,12 +160,16 @@ SEXP FANSI_substr(
 
     // - End Point -------------------------------------------------------------
 
+    state_prev.warned = state.warned; // double warnings.
     state = state_prev;
     while(state.string[state.pos_byte] && state.pos_width <= stop_ii) {
-      if(state.pos_width > state_prev.pos_width) state_prev = state;
+      // Only move the end point forward if we add non-CTL elements, this is so
+      // that trailing controls are not consumed, but zero width chars are
+      if(state.pos_raw > state_prev.pos_raw) state_prev = state;
       state = FANSI_read_next(state, i, 1);
     }
-    if(state_prev.pos_width == stop_ii) {
+    if(state_prev.pos_width == stop_ii || state.pos_raw == state_prev.pos_raw) {
+      // Favor state_prev to avoid including trailing controls
       state_stop = state_prev;
     } else if (
       state.pos_width > stop_ii &&
@@ -169,7 +189,7 @@ SEXP FANSI_substr(
           error("Internal Error: invalid `rnd` value.");  // nocov
       }
     } else if (!state.string[state.pos_byte]) {
-      // String finished, use a stop
+      // String finished, use as stop
       state_stop = state;
     } else error("Internal Error: unexpected branch finding start."); // nocov
 
@@ -185,6 +205,16 @@ SEXP FANSI_substr(
     int needs_cl_sgr = terminate && FANSI_sgr_active(state_stop.sgr);
     int needs_cl_url = terminate && FANSI_url_active(state_stop.url);
 
+    /*
+    Rprintf(
+      "  pos %d %d - %d %d - %d %d, %d %d\n",
+      state_start.pos_byte,
+      state_stop.pos_byte,
+      state_start.pos_width,
+      state_stop.pos_width,
+      needs_st_sgr, needs_st_url, needs_cl_sgr, needs_cl_url
+    );
+    */
     // Measure/Write loop (see src/write.c), this is adapted from wrap.c
     const char * err_msg = "Writing line";
 
@@ -196,7 +226,7 @@ SEXP FANSI_substr(
 
       // Actual string, remember state_stop.pos_byte is one past what we need
       const char * string = state_start.string + state_start.pos_byte;
-      int bytes = state_stop.pos_byte - state_stop.pos_byte;
+      int bytes = state_stop.pos_byte - state_start.pos_byte;
       FANSI_W_MCOPY(&buff, string, bytes);
 
       // And turn off CSI styles if needed
