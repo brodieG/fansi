@@ -286,8 +286,7 @@ substr2_ctl <- function(
     type.int=TYPE.INT,
     tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops,
     warn.int=WARN.INT, term.cap.int=TERM.CAP.INT,
-    round.start=round == 'start' || round == 'both',
-    round.stop=round == 'stop' || round == 'both',
+    round.int=ROUND.INT,
     x.len=X.LEN,
     ctl.int=CTL.INT, normalize=normalize,
     carry=carry, terminate=terminate
@@ -346,8 +345,6 @@ substr2_ctl <- function(
   ncv <- nchar_ctl(value, type=type, ctl=ctl, warn=FALSE)
   end.start <- pmin(stop + 1L, start + ncv)
   end.end <- rep(.Machine[['integer.max']], X.LEN)
-  round.start <- round == 'start' || round == 'both'
-  round.stop <- round == 'stop' || round == 'both'
 
   # Rely on warning with `mid` and `end` to catch all warnings.
   # Possible optim here: the `begin` and `end` substrings could be done as part
@@ -355,7 +352,7 @@ substr2_ctl <- function(
 
   begin <- substr_ctl_internal(
     x, rep(1L, X.LEN), start - 1L, type.int=TYPE.INT,
-    round.start=round.start, round.stop=round.stop,
+    round.int=ROUND.INT,
     tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=0L,
     term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
     carry=carry, terminate=terminate
@@ -363,7 +360,7 @@ substr2_ctl <- function(
   end <- substr_ctl_internal(
     x, end.start, end.end,
     type.int=TYPE.INT,
-    round.start=round.start, round.stop=round.stop,
+    round.int=ROUND.INT,
     tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=WARN.INT,
     term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
     carry=carry, terminate=FALSE
@@ -372,7 +369,7 @@ substr2_ctl <- function(
   mid <- substr_ctl_internal(
     value, rep(1L, X.LEN), stop - start + 1L,
     type.int=TYPE.INT,
-    round.start=round.start, round.stop=round.stop,
+    round.int=ROUND.INT,
     tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=WARN.INT,
     term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
     carry=carry, terminate=terminate
@@ -397,7 +394,7 @@ substr2_ctl <- function(
       mid2 <- substr_ctl_internal(
         value[mid.again], rep(1L, sum(mid.again)), (stop - start)[mid.again],
         type.int=TYPE.INT,
-        round.start=round.start, round.stop=round.stop,
+        round.int=ROUND.INT,
         tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=0L,
         term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
         carry=carry, terminate=terminate
@@ -418,7 +415,7 @@ substr2_ctl <- function(
           x[end.again], pmax(end.start[end.again] - ncbad[end.again], 1L),
           end.end[end.again],
           type.int=TYPE.INT,
-          round.start=round.start, round.stop=round.stop,
+          round.int=ROUND.INT,
           tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=0L,
           term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
           carry=carry, terminate=FALSE
@@ -480,7 +477,7 @@ substr2_sgr <- function(
 
 ## All parameters must have been processed by VAL_IN_ENV.
 
-substr_ctl_internal <- function(
+substr_ctl_internal_bck <- function(
   x, start, stop, type.int, round, tabs.as.spaces,
   tab.stops, warn.int, term.cap.int, round.start, round.stop,
   x.len, ctl.int, normalize, carry, terminate
@@ -612,9 +609,9 @@ substr_ctl_internal <- function(
   ) } }
   res
 }
-substr_ctl_internal2 <- function(
+substr_ctl_internal <- function(
   x, start, stop, type.int, round.int, tabs.as.spaces,
-  tab.stops, warn.int, term.cap.int, round.start, round.stop,
+  tab.stops, warn.int, term.cap.int,
   x.len, ctl.int, normalize, carry, terminate
 ) {
   if(tabs.as.spaces)
@@ -626,8 +623,8 @@ substr_ctl_internal2 <- function(
 
   .Call(FANSI_substr,
     x, start, stop, type.int,
-    reound.int, warn.int,
-    term.cap.int, ctl.int, norm,
+    round.int, warn.int,
+    term.cap.int, ctl.int, normalize,
     carry, terminate
   )
 }
