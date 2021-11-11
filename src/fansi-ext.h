@@ -62,7 +62,7 @@ SEXP FANSI_nchar(
 
 SEXP FANSI_cleave(SEXP x);
 SEXP FANSI_order(SEXP x);
-SEXP FANSI_sort_chr(SEXP x);
+SEXP FANSI_sort_chr_ext(SEXP x);
 
 SEXP FANSI_check_assumptions();
 SEXP FANSI_unique_chr(SEXP x);

@@ -37,7 +37,7 @@ R_CallMethodDef callMethods[] = {
   {"add_int", (DL_FUNC) &FANSI_add_int_ext, 2},
   {"cleave", (DL_FUNC) &FANSI_cleave, 1},
   {"order", (DL_FUNC) &FANSI_order, 1},
-  {"sort_chr", (DL_FUNC) &FANSI_sort_chr, 1},
+  {"sort_chr", (DL_FUNC) &FANSI_sort_chr_ext, 1},
   {"set_int_max", (DL_FUNC) &FANSI_set_int_max, 1},
   {"get_int_max", (DL_FUNC) &FANSI_get_int_max, 0},
   {"set_rlent_max", (DL_FUNC) &FANSI_set_rlent_max, 1},

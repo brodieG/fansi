@@ -319,6 +319,10 @@ SEXP FANSI_sort_chr(SEXP x) {
   }
   return res;
 }
+SEXP FANSI_sort_chr_ext(SEXP x) {
+  return FANSI_sort_chr(x);
+}
+
 /*
  * So we can use a consistent integer type in printing possibly large indeces.
  *
