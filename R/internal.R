@@ -231,7 +231,6 @@ VAL_IN_ENV <- function(
     # correctly
     start <- rep(as.integer(args[['start']]), length.out=x.len)
     stop <- rep(as.integer(args[['stop']]), length.out=x.len)
-    start[start < 1L] <- 1L
     args[['start']] <- start
     args[['stop']] <- stop
     args[['X.LEN']] <- x.len
