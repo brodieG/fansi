@@ -624,31 +624,12 @@ substr_ctl_internal2 <- function(
       term.cap.int, ctl.int
     )
 
-  x.carry <- character(length(x))
-  if(!is.na(carry)) {
-    # need to check carry, do a one-pass through checking for problems
-    ends <- .Call(
-      FANSI_state_at_end, x, warn.int, term.cap.int, ctl.int, normalize,
-      NA_character_, "carry", TRUE
-    )
-    # and now compute style at end
-    ends <- .Call(
-      FANSI_state_at_end, x, warn.int, term.cap.int, ctl.int, normalize,
-      carry, "x", TRUE
-    )
-    x.carry <- c(carry, ends[-length(ends)])
-    x <- paste0(x.carry, x)
-  }
-  # Need to warn here as during substringing we might not see the end.
-  warn.int <- warn.int * is.na(carry)
-
   .Call(FANSI_substr,
     x, start, stop, type.int,
     reound.int, warn.int,
     term.cap.int, ctl.int, norm,
     carry, terminate
-  ) {
-  }
+  )
 }
 
 ## Need to expose this so we can test bad UTF8 handling because substr will
