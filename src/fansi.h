@@ -15,14 +15,13 @@ GNU General Public License for more details.
 Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 */
 
+#ifndef _FANSI_H
+#define _FANSI_H
+
 #include <stdint.h>
 #include <R.h>
 #include <Rinternals.h>
 #include <Rversion.h>
-
-
-#ifndef _FANSI_H
-#define _FANSI_H
 
   // - Constants / Macros ------------------------------------------------------
 
@@ -55,6 +54,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   #define FANSI_COUNT_WIDTH   1
   #define FANSI_COUNT_GRAPH   2
   #define FANSI_COUNT_BYTES   3
+
+  #define FANSI_RND_START     1
+  #define FANSI_RND_STOP      2
+  #define FANSI_RND_BOTH      3
+  #define FANSI_RND_NEITHER   4
 
   // macros
 
@@ -294,7 +298,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     // Most of the objecs below are 1/0 could be a bitfield?  Or at a minimum as
     // a char?
 
-    // Are there bytes outside of 0-127
+    // Are there bytes outside of 0-127.  Actually records the start byte
+    // position of the last utf8 character seen, which is useful to determine if
+    // later substrings do not contain UTF-8.
     int has_utf8;
 
     // Info on last element read
@@ -391,82 +397,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     const char * string;
     cetype_t type;
   };
-
-  // - External funs -----------------------------------------------------------
-
-  SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn);
-  SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn);
-  SEXP FANSI_state_at_pos_ext(
-    SEXP x, SEXP pos, SEXP type,
-    SEXP overshoot, SEXP is_start, SEXP warn, SEXP term_cap, SEXP ctl,
-    SEXP norm, SEXP terminate, SEXP ids
-  );
-  SEXP FANSI_strwrap_ext(
-    SEXP x, SEXP width,
-    SEXP indent, SEXP exdent,
-    SEXP prefix, SEXP initial,
-    SEXP wrap_always, SEXP pad_end,
-    SEXP strip_spaces,
-    SEXP tabs_as_spaces, SEXP tab_stops,
-    SEXP warn, SEXP term_cap,
-    SEXP first_only,
-    SEXP ctl, SEXP norm, SEXP carry,
-    SEXP terminate
-  );
-  SEXP FANSI_process_ext(SEXP input, SEXP term_cap, SEXP ctl);
-  SEXP FANSI_tabs_as_spaces_ext(
-    SEXP vec, SEXP tab_stops, SEXP warn, SEXP term_cap, SEXP ctl
-  );
-  SEXP FANSI_color_to_html_ext(SEXP x);
-  SEXP FANSI_esc_to_html(
-    SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes, SEXP carry
-  );
-  SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap);
-
-  SEXP FANSI_nchar(
-    SEXP x, SEXP type, SEXP keepNA, SEXP allowNA,
-    SEXP warn, SEXP term_cap, SEXP ctl, SEXP z
-  );
-  // utility / testing
-
-  SEXP FANSI_cleave(SEXP x);
-  SEXP FANSI_order(SEXP x);
-  SEXP FANSI_sort_chr(SEXP x);
-
-  SEXP FANSI_check_assumptions();
-  SEXP FANSI_unique_chr(SEXP x);
-
-  SEXP FANSI_add_int_ext(SEXP x, SEXP y);
-
-  SEXP FANSI_set_int_max(SEXP x);
-  SEXP FANSI_set_rlent_max(SEXP x);
-  SEXP FANSI_get_int_max();
-  SEXP FANSI_get_warn_all();
-  SEXP FANSI_esc_html(SEXP x, SEXP what);
-
-  SEXP FANSI_normalize_state_ext(
-    SEXP x, SEXP warn, SEXP term_cap, SEXP carry
-  );
-  SEXP FANSI_normalize_state_list_ext(
-    SEXP x, SEXP warn, SEXP term_cap, SEXP carry
-  );
-
-  SEXP FANSI_size_buff_ext(SEXP x);
-  SEXP FANSI_size_buff_prot_test();
-
-  SEXP FANSI_check_enc_ext(SEXP x, SEXP i);
-  SEXP FANSI_ctl_as_int_ext(SEXP ctl);
-
-  SEXP FANSI_state_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm);
-  SEXP FANSI_state_at_end_ext(
-    SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry,
-    SEXP arg, SEXP allowNA
-  );
-  SEXP FANSI_bridge_state_ext(SEXP end, SEXP restart, SEXP term_cap, SEXP norm);
-  SEXP FANSI_buff_test_reset();
-  SEXP FANSI_buff_test_copy_overflow();
-  SEXP FANSI_buff_test_mcopy_overflow();
-  SEXP FANSI_buff_test_fill_overflow();
 
   // - Internal funs -----------------------------------------------------------
 
@@ -582,4 +512,4 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
               Rboolean allowNA, Rboolean keepNA, const char* msg_name);
   #endif
 
-#endif
+#endif  /* _FANSI_EXT */

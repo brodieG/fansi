@@ -15,7 +15,7 @@
  * Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
  */
 
-#include "fansi.h"
+#include "fansi-ext.h"
 #include <R_ext/Rdynload.h>
 #include <R_ext/Visibility.h>
 
