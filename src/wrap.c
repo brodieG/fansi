@@ -207,7 +207,7 @@ static SEXP writeline(
   // Now create the charsxp and append to the list, start by determining
   // what encoding to use.
   cetype_t chr_type = CE_NATIVE;
-  if((state_bound.has_utf8 > state_start.pos_byte) || pre_dat.has_utf8))
+  if((state_bound.has_utf8 > state_start.pos_byte) || pre_dat.has_utf8)
     chr_type = CE_UTF8;
   return FANSI_mkChar(*buff, chr_type, i);
 }

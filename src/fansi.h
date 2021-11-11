@@ -487,7 +487,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   intmax_t FANSI_ind(R_xlen_t i);
   SEXP FANSI_mkChar0(char * start, char * end, cetype_t enc, R_xlen_t i);
   SEXP FANSI_mkChar(struct FANSI_buff buff, cetype_t enc, R_xlen_t i);
-  SEXP FANSI_reset_limits();
   void FANSI_check_limits();
 
   int FANSI_check_append(int cur, int extra, const char * msg, R_xlen_t i);

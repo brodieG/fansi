@@ -99,4 +99,6 @@ SEXP FANSI_buff_test_copy_overflow();
 SEXP FANSI_buff_test_mcopy_overflow();
 SEXP FANSI_buff_test_fill_overflow();
 
+SEXP FANSI_reset_limits();
+
 #endif  /* _FANSI_EXT_H */

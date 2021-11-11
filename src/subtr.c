@@ -23,11 +23,17 @@ SEXP FANSI_substr(
   SEXP term_cap, SEXP ctl, SEXP norm,
   SEXP carry, SEXP terminate
 ) {
-  if(TYPEOF(start) != INTSXP)) error("Internal Error: invalid `start`.");// nocov
-  if(TYPEOF(stop) != INTSXP)) error("Internal Error: invalid `stop`.");  // nocov
-  if(TYPEOF(rnd) != INTSXP) || XLENGTH(rnd) != 1)
+  if(TYPEOF(start) != INTSXP) error("Internal Error: invalid `start`.");// nocov
+  if(TYPEOF(stop) != INTSXP) error("Internal Error: invalid `stop`.");  // nocov
+  if(TYPEOF(rnd) != INTSXP || XLENGTH(rnd) != 1)
     error("Internal Error: invalid `rnd`."); // nocov
   int rnd_i = asInteger(rnd);
+
+  if(TYPEOF(norm) != LGLSXP || XLENGTH(norm) != 1)
+    error("Internal Error: invalid `norm`."); // nocov
+  int normalize = asLogical(rnd);
+  if(normalize != 1 && normalize != 0)
+    error("Internal Error: invalid `norm`."); // nocov
 
   R_xlen_t len = XLENGTH(x);
   R_xlen_t start_l = XLENGTH(start);
@@ -36,29 +42,25 @@ SEXP FANSI_substr(
   // Unclear whether recycling explicitly is better / worse than taking the
   // modulo.  Presumably it is worse, but since modulo is often division maybe
   // not.  But then maybe ALTREP helps (probably not, INTEGER()) might defeat it.
-  // Need to confirm modulo on 1 and on a number greater are fast.
+  // Need to confirm modulo on 1 and on a number greater are fast.  Right now we
+  // recycle explicitly in VAL_IN_ENV
   if(len != start_l || len != stop_l)
-    error("Internal Error: start/stop not same length as x.")  // nocov
+    error("Internal Error: start/stop not same length as x."); // nocov
 
-  if(len && !start_l)
-    error("Argument `start` cannot be zero length.");
-  if(len && !stop_l)
-    error("Argument `stop` cannot be zero length.");
-
+  int prt = 0;
   SEXP R_false = PROTECT(ScalarLogical(0)); ++prt;
 
   // Prep for carry
   int do_carry = STRING_ELT(carry, 0) != NA_STRING;
   struct FANSI_state state_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
-  int prt = 0;
 
   SEXP res = PROTECT(allocVector(STRSXP, len));
 
-  int start_i = INTEGER(start);
-  int stop_i = INTEGER(stop);
+  int * start_i = INTEGER(start);
+  int * stop_i = INTEGER(stop);
 
   struct FANSI_state state, state_prev, state_start, state_stop;
-  struct FANSI_buff buff,
+  struct FANSI_buff buff;
   FANSI_INIT_BUFF(&buff);
 
   for(R_xlen_t i = 0; i < len; ++i) {
@@ -66,7 +68,7 @@ SEXP FANSI_substr(
     if(!i) {
       // Handle interaction with carry
       SEXP allowNA, keepNA;
-      allowNA = keepNA = 0;
+      allowNA = keepNA = R_false;
       state = FANSI_state_init_full(
         x, warn, term_cap, allowNA, keepNA, type, ctl, i, "x"
       );
@@ -75,7 +77,7 @@ SEXP FANSI_substr(
         case FANSI_COUNT_WIDTH:
         case FANSI_COUNT_GRAPH:
           break;
-        default error("Internal Error: invalid type for `substr`."); // nocov
+        default: error("Internal Error: invalid type for `substr`."); // nocov
       }
     } else {
       state = FANSI_state_reinit(state, x, i);
@@ -189,28 +191,17 @@ SEXP FANSI_substr(
     for(int k = 0; k < 2; ++k) {
       if(!k) FANSI_reset_buff(&buff);
       else   FANSI_size_buff(&buff);
-      if(needs_st_sgr) {
-        err_msg = "Adding initial SGR";
-        FANSI_W_sgr(buff, state_start.sgr, normalize, i);
-      }
-      if(needs_st_url) {
-        err_msg = "Adding initial URL";
-        FANSI_W_url(buff, state_start.url, normalize, i);
-      }
+      if(needs_st_sgr) FANSI_W_sgr(&buff, state_start.sgr, normalize, i);
+      if(needs_st_url) FANSI_W_url(&buff, state_start.url, normalize, i);
+
       // Actual string, remember state_stop.pos_byte is one past what we need
       const char * string = state_start.string + state_start.pos_byte;
       int bytes = state_stop.pos_byte - state_stop.pos_byte;
       FANSI_W_MCOPY(&buff, string, bytes);
 
       // And turn off CSI styles if needed
-      if(needs_cl_sgr) {
-        err_msg = "Adding trailing SGR";
-        FANSI_W_sgr_close(buff, state_bound.sgr, normalize, i);
-      }
-      if(needs_cl_url) {
-        err_msg = "Adding trailing URL";
-        FANSI_W_url_close(buff, state_bound.url, i);
-      }
+      if(needs_cl_sgr) FANSI_W_sgr_close(&buff, state_stop.sgr, normalize, i);
+      if(needs_cl_url) FANSI_W_url_close(&buff, state_stop.url, i);
     }
     // Now create the charsxp, start by determining
     // what encoding to use.
@@ -221,4 +212,4 @@ SEXP FANSI_substr(
   FANSI_release_buff(&buff, 1);
   UNPROTECT(prt);
   return res;
-)
+}
