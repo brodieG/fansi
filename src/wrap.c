@@ -182,14 +182,9 @@ static SEXP writeline(
   for(int k = 0; k < 2; ++k) {
     if(!k) FANSI_reset_buff(buff);
     else   FANSI_size_buff(buff);
-    if(needs_st_sgr) {
-      err_msg = "Adding initial SGR";
-      FANSI_W_sgr(buff, state_start.sgr, normalize, i);
-    }
-    if(needs_st_url) {
-      err_msg = "Adding initial URL";
-      FANSI_W_url(buff, state_start.url, normalize, i);
-    }
+    if(needs_st_sgr) FANSI_W_sgr(buff, state_start.sgr, normalize, i);
+    if(needs_st_url) FANSI_W_url(buff, state_start.url, normalize, i);
+
     // Apply indent/exdent prefix/initial
     if(pre_dat.bytes) {
       err_msg = "Adding prefix characters";
@@ -206,14 +201,8 @@ static SEXP writeline(
     FANSI_W_FILL(buff, *pad_chr, to_pad);
 
     // And turn off CSI styles if needed
-    if(needs_cl_sgr) {
-      err_msg = "Adding trailing SGR";
-      FANSI_W_sgr_close(buff, state_bound.sgr, normalize, i);
-    }
-    if(needs_cl_url) {
-      err_msg = "Adding trailing URL";
-      FANSI_W_url_close(buff, state_bound.url, i);
-    }
+    if(needs_cl_sgr) FANSI_W_sgr_close(buff, state_bound.sgr, normalize, i);
+    if(needs_cl_url) FANSI_W_url_close(buff, state_bound.url, i);
   }
   // Now create the charsxp and append to the list, start by determining
   // what encoding to use.
