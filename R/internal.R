@@ -202,6 +202,7 @@ VAL_IN_ENV <- function(
     args[['strip.spaces']] <- strip.spaces
   }
   if('round' %in% argnm) {
+    # be sure to update FANSI_RND_* defines in C code if this changes
     valid.round <- c('start', 'stop', 'both', 'neither')
     round <- args[['round']]
     if(

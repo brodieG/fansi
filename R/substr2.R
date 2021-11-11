@@ -478,11 +478,7 @@ substr2_sgr <- function(
     carry=carry, terminate=terminate
   )
 
-## @x must already have been converted to UTF8
-## @param type.int is supposed to be the matched version of type, minus 1
-##
-## Increasingly, it seems trying to re-use the crayon method instead of doing
-## everything in C was a big mistake...
+## All parameters must have been processed by VAL_IN_ENV.
 
 substr_ctl_internal <- function(
   x, start, stop, type.int, round, tabs.as.spaces,
@@ -615,6 +611,44 @@ substr_ctl_internal <- function(
         end.csi
   ) } }
   res
+}
+substr_ctl_internal2 <- function(
+  x, start, stop, type.int, round.int, tabs.as.spaces,
+  tab.stops, warn.int, term.cap.int, round.start, round.stop,
+  x.len, ctl.int, normalize, carry, terminate
+) {
+  if(tabs.as.spaces)
+    x <- .Call(
+      FANSI_tabs_as_spaces, x, tab.stops,
+      0L,  # turn off warning, will be reported later
+      term.cap.int, ctl.int
+    )
+
+  x.carry <- character(length(x))
+  if(!is.na(carry)) {
+    # need to check carry, do a one-pass through checking for problems
+    ends <- .Call(
+      FANSI_state_at_end, x, warn.int, term.cap.int, ctl.int, normalize,
+      NA_character_, "carry", TRUE
+    )
+    # and now compute style at end
+    ends <- .Call(
+      FANSI_state_at_end, x, warn.int, term.cap.int, ctl.int, normalize,
+      carry, "x", TRUE
+    )
+    x.carry <- c(carry, ends[-length(ends)])
+    x <- paste0(x.carry, x)
+  }
+  # Need to warn here as during substringing we might not see the end.
+  warn.int <- warn.int * is.na(carry)
+
+  .Call(FANSI_substr,
+    x, start, stop, type.int,
+    reound.int, warn.int,
+    term.cap.int, ctl.int, norm,
+    carry, terminate
+  ) {
+  }
 }
 
 ## Need to expose this so we can test bad UTF8 handling because substr will
