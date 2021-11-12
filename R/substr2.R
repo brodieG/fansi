@@ -115,6 +115,20 @@
 #' The [`utf8`](https://cran.r-project.org/package=utf8) package provides a
 #' conforming grapheme parsing implementation.
 #'
+#' @section Trailing _Control Sequences_:
+#'
+#' Trailing sequences are not considered part of a substring.  `fansi` models
+#' _Control Sequences_ as interstitial and affecting only subsequent characters.
+#' In order for a trailing _Control Sequence_ to be included in a substring, the
+#' `substr_ctl` command must select past the end of the string (see examples).
+#' Even when selecting past the end of a string, `fansi` will omit trailing
+#' sequences if `terminate = TRUE`, as those would be closed immediately anyway.
+#'
+#' In contrast, trailing zero-width characters that are not _Control Sequences_
+#' are kept when  `type %in% c("width", "graphemes")`.  These are modeled to
+#' blend into the preceding character (e.g. a trailing combining diacritic
+#' mark).
+#'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work properly in R < 3.2.2.
 #' @note If `stop` < `start`, the return value is always an empty string.
@@ -225,6 +239,10 @@
 #' writeLines(bleed)      # Style will bleed out of string
 #' end <- "\033[0m\n"
 #' writeLines(end)        # Stanch bleeding
+#'
+#' ## Trailing sequences omitted unless `stop` past end.
+#' substr_ctl("ABC\033[42m", 1, 3, terminate=FALSE)
+#' substr_ctl("ABC\033[42m", 1, 4, terminate=FALSE)
 #'
 #' ## Replacement functions
 #' x0<- x1 <- x2 <- x3 <- c("\033[42mABC", "\033[34mDEF")
