@@ -341,6 +341,7 @@ substr2_ctl <- function(
   # overall string length is unchanged.
   nc <- nchar_ctl(x, type=type, ctl=ctl, warn=FALSE)
   stop <- pmin(stop, nc)
+  start[start < 1L] <- 1L
   value <- rep_len(enc_to_utf8(as.character(value)), X.LEN)
   ncv <- nchar_ctl(value, type=type, ctl=ctl, warn=FALSE)
   end.start <- pmin(stop + 1L, start + ncv)

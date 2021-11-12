@@ -409,9 +409,9 @@ SEXP FANSI_mkChar0(
 SEXP FANSI_mkChar(struct FANSI_buff buff, cetype_t enc, R_xlen_t i) {
   return mkChar_core(buff, enc, i, 1);
 }
-
-static int is_tf(SEXP x) {
-  return TYPEOF(x) != LGLSXP || XLENGTH(x) != 1 ||
+// return 1 if is TRUE/FALSE
+int FANSI_is_tf(SEXP x) {
+  return TYPEOF(x) == LGLSXP && XLENGTH(x) == 1 &&
     LOGICAL(x)[0] != NA_LOGICAL;
 }
 /*
@@ -424,7 +424,8 @@ void FANSI_val_args(SEXP x, SEXP norm, SEXP carry) {
     error("Argument `x` must be character.");     // nocov
   if(TYPEOF(carry) != STRSXP || XLENGTH(carry) != 1L)
     error("Argument `carry` must be scalar character.");         // nocov
-  if(!is_tf(norm)) error("Argument `norm` must be TRUE or FALSE.");  // nocov
+  if(!FANSI_is_tf(norm))
+    error("Argument `norm` must be TRUE or FALSE.");  // nocov
 }
 // Utilitiy fun
 // nocov start

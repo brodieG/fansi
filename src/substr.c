@@ -29,13 +29,15 @@ SEXP FANSI_substr(
   if(TYPEOF(stop) != INTSXP) error("Internal Error: invalid `stop`.");  // nocov
   if(TYPEOF(rnd) != INTSXP || XLENGTH(rnd) != 1)
     error("Internal Error: invalid `rnd`."); // nocov
-  int rnd_i = asInteger(rnd);
 
-  if(TYPEOF(norm) != LGLSXP || XLENGTH(norm) != 1)
-    error("Internal Error: invalid `norm`."); // nocov
-  int normalize = asLogical(norm);
-  if(normalize != 1 && normalize != 0)
-    error("Internal Error: invalid `norm`."); // nocov
+  if(!FANSI_is_tf(terminate))
+    error("Internal Error: invalid `terminate`."); // nocov
+
+  FANSI_val_args(x, norm, carry);
+
+  int rnd_i = asInteger(rnd);
+  int norm_i = asLogical(norm);
+  int term_i = asLogical(terminate);
 
   R_xlen_t len = XLENGTH(x);
   R_xlen_t start_l = XLENGTH(start);
@@ -113,17 +115,21 @@ SEXP FANSI_substr(
     }
     /*
     Rprintf(
-      "startii %d stopii %d, w %d b %d c %d\n",
+      "startii %d stopii %d, w %d %d b %d %d c %d %d\n",
       start_ii,
       stop_ii,
       state.pos_width,
+      state_prev.pos_width,
       state.pos_byte,
-      state.string[state.pos_byte]
+      state_prev.pos_byte,
+      state.string[state.pos_byte],
+      state_prev.string[state_prev.pos_byte]
     );
     */
     if(
-      state_prev.pos_width == start_ii - 1 &&
-      state_prev.string[state_prev.pos_byte]
+      state_prev.pos_width == start_ii - 1 &&    // match target point
+      state_prev.string[state_prev.pos_byte] &&  // not past end
+      state.pos_width > state_prev.pos_width     // confirm there is more width
     ) {
       // Prev read matches exactly the target point, and not past end
       state_start = state_prev;
@@ -168,7 +174,14 @@ SEXP FANSI_substr(
       if(state.pos_raw > state_prev.pos_raw) state_prev = state;
       state = FANSI_read_next(state, i, 1);
     }
-    if(state_prev.pos_width == stop_ii || state.pos_raw == state_prev.pos_raw) {
+    if(
+      state_prev.pos_width == stop_ii ||
+      (
+        // In terminate mode, don't include escapes we're about to close anyway
+        term_i && state_prev.pos_width == state.pos_width &&
+        (FANSI_sgr_active(state_prev.sgr) || FANSI_url_active(state_prev.url))
+      )
+    ) {
       // Favor state_prev to avoid including trailing controls
       state_stop = state_prev;
     } else if (
@@ -202,17 +215,18 @@ SEXP FANSI_substr(
     // Do we need to open/close tags?
     int needs_st_sgr = FANSI_sgr_active(state_start.sgr);
     int needs_st_url = FANSI_url_active(state_start.url);
-    int needs_cl_sgr = terminate && FANSI_sgr_active(state_stop.sgr);
-    int needs_cl_url = terminate && FANSI_url_active(state_stop.url);
+    int needs_cl_sgr = term_i && FANSI_sgr_active(state_stop.sgr);
+    int needs_cl_url = term_i && FANSI_url_active(state_stop.url);
 
     /*
     Rprintf(
-      "  pos %d %d - %d %d - %d %d, %d %d\n",
+      "  pos %d %d - %d %d - %d %d, %d %d term %d\n",
       state_start.pos_byte,
       state_stop.pos_byte,
       state_start.pos_width,
       state_stop.pos_width,
-      needs_st_sgr, needs_st_url, needs_cl_sgr, needs_cl_url
+      needs_st_sgr, needs_st_url, needs_cl_sgr, needs_cl_url,
+      term_i
     );
     */
     // Measure/Write loop (see src/write.c), this is adapted from wrap.c
@@ -221,8 +235,8 @@ SEXP FANSI_substr(
     for(int k = 0; k < 2; ++k) {
       if(!k) FANSI_reset_buff(&buff);
       else   FANSI_size_buff(&buff);
-      if(needs_st_sgr) FANSI_W_sgr(&buff, state_start.sgr, normalize, i);
-      if(needs_st_url) FANSI_W_url(&buff, state_start.url, normalize, i);
+      if(needs_st_sgr) FANSI_W_sgr(&buff, state_start.sgr, norm_i, i);
+      if(needs_st_url) FANSI_W_url(&buff, state_start.url, norm_i, i);
 
       // Actual string, remember state_stop.pos_byte is one past what we need
       const char * string = state_start.string + state_start.pos_byte;
@@ -230,7 +244,7 @@ SEXP FANSI_substr(
       FANSI_W_MCOPY(&buff, string, bytes);
 
       // And turn off CSI styles if needed
-      if(needs_cl_sgr) FANSI_W_sgr_close(&buff, state_stop.sgr, normalize, i);
+      if(needs_cl_sgr) FANSI_W_sgr_close(&buff, state_stop.sgr, norm_i, i);
       if(needs_cl_url) FANSI_W_url_close(&buff, state_stop.url, i);
     }
     // Now create the charsxp, start by determining
