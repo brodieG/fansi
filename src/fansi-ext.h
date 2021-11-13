@@ -23,7 +23,7 @@ SEXP FANSI_substr(
   SEXP x, SEXP start, SEXP stop, SEXP type,
   SEXP rnd, SEXP warn,
   SEXP term_cap, SEXP ctl, SEXP norm,
-  SEXP carry, SEXP terminate
+  SEXP carry, SEXP terminate, SEXP keep
 );
 SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn);
 SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn);
