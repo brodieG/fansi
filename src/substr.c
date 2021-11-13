@@ -129,6 +129,7 @@ SEXP FANSI_substr(
       state = FANSI_read_next(state, i, 1);
     }
 
+/*
     Rprintf(
       "startii %d stopii %d, w %d %d b %d %d c %d %d\n",
       start_ii,
@@ -140,6 +141,9 @@ SEXP FANSI_substr(
       state.string[state.pos_byte],
       state_prev.string[state_prev.pos_byte]
     );
+    */
+
+
     if (!state.string[state.pos_byte]) {
       // String finished before finding start.  It wouldn't be crazy to write
       // out this state even on an otherwise empty string, but we've chosen not
@@ -151,49 +155,45 @@ SEXP FANSI_substr(
         state_carry = state;
       }
       continue;
-    } else if (
-      state_prev.pos_width == start_ii - 1 ||
-      (rnd_i == FANSI_RND_STOP || rnd_i == FANSI_RND_NEITHER)
-    ) {
+    } else if (state_prev.pos_width == start_ii - 1) {
       state_start = state_prev;
-    } else if (
-      state.pos_width >= start_ii &&
-      (rnd_i == FANSI_RND_START || rnd_i == FANSI_RND_BOTH)
-    ) {
-      // Overshot and want to keep leading char
+    } else if (rnd_i == FANSI_RND_START || rnd_i == FANSI_RND_BOTH) {
       state_start = state_prev;
-    } else error("Internal Error: unexpected start state.");
+    } else state_start = state;
 
     // - End Point -------------------------------------------------------------
 
     state_prev.warned = state.warned; // double warnings.
     state = state_prev;
 
-    // Only move the end point forward if we add non-CTL elements, this is so
-    // that trailing controls are not consumed, but zero width chars are.
+    // Keep moving the end point forward until we're clearly over the limit, or
+    // there are no non-zero width characters to consume.  Drop any trailing
+    // controls.  Some terminals (e.g. MacOS term, iterm2) treat control
+    // sequences as being out-of-band, i.e. they don't interfere with combining
+    // glyphs, etc.
     while(state.string[state.pos_byte] && state.pos_width <= stop_ii) {
       if(state.pos_raw > state_prev.pos_raw) state_prev = state;
       state = FANSI_read_next(state, i, 1);
     }
     // If we are allowed to overshoot, keep consuming zero-width non-CTL
     if(
+      state_prev.pos_width < stop_ii &&
       (rnd_i == FANSI_RND_STOP || rnd_i == FANSI_RND_BOTH) &&
       state.string[state.pos_byte]
     ) {
       do{
-        state_prev = state;
+        if(state.pos_raw > state_prev.pos_raw) state_prev = state;
         state = FANSI_read_next(state, i, 1);
       } while(
         state.string[state.pos_byte] &&
-        state.pos_width == state_prev.pos_width &&
-        state.pos_raw > state_prev.pos_raw   // non-CTL
+        state.pos_width == state_prev.pos_width
       );
     } else if(!state.string[state.pos_byte]) {
       // Ran out of string, want to include trailing controls
       state_prev = state;
     }
     state_stop = state_prev;
-
+/*
     Rprintf(
       "w %d %d b %d %d c %d %d\n",
       state.pos_width,
@@ -203,7 +203,7 @@ SEXP FANSI_substr(
       state.string[state.pos_byte],
       state_prev.string[state_prev.pos_byte]
     );
-
+*/
     if(carry_i) {
       while(state.string[state.pos_byte]) state = FANSI_read_next(state, i, 1);
       state_carry = state;
@@ -229,7 +229,7 @@ SEXP FANSI_substr(
     int x_len = (int) LENGTH(STRING_ELT(x, i));
     start_byte = keep_i == 1 ? 0 : state_start.pos_byte;
     stop_byte = keep_i == 2 ? x_len : state_stop.pos_byte;
-    /*
+/*
     Rprintf(
       "  pos %d %d - %d %d - %d %d, %d %d term %d\n",
       state_start.pos_byte,
@@ -239,7 +239,7 @@ SEXP FANSI_substr(
       needs_st_sgr, needs_st_url, needs_cl_sgr, needs_cl_url,
       term_i
     );
-    */
+*/
     // Measure/Write loop (see src/write.c), this is adapted from wrap.c
     const char * err_msg = "Writing substring";
 
