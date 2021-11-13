@@ -100,8 +100,6 @@ SEXP FANSI_substr(
       state.sgr = state_carry.sgr;
       state.url = state_carry.url;
     }
-    state_prev = state;
-
     // - Corner Cases ----------------------------------------------------------
     int start_ii = start_i[i];
     int stop_ii = stop_i[i];
@@ -117,16 +115,17 @@ SEXP FANSI_substr(
 
     // - Start Point -----------------------------------------------------------
 
+    state_prev = state;
+
     // Recall `start` and `stop` are in 1-index, here we're greedy eating zero
-    // width things. `state_start` tracks the
+    // width things. `state_prev` tracks the last valid break point.
     while(state.string[state.pos_byte] && state.pos_width < start_ii) {
-      state_prev = state;
-      // Consume any escapes, and any non-overshot chars
       if(
-        state.pos_raw == state_prev.pos_raw ||
-        state.pos_width > state_prev.pos_width
+        state.pos_raw == state_prev.pos_raw ||   // read an escape
+        state.pos_width > state_prev.pos_width   // moved column in string
       )
-        state_prev  = state;
+        state_prev = state;
+
       state = FANSI_read_next(state, i, 1);
     }
 
@@ -141,36 +140,10 @@ SEXP FANSI_substr(
       state.string[state.pos_byte],
       state_prev.string[state_prev.pos_byte]
     );
-
-    if(
-      state_prev.pos_width == start_ii - 1 &&    // match target point
-      state_prev.string[state_prev.pos_byte] &&  // not past end
-      state.pos_width > state_prev.pos_width     // confirm there is more width
-    ) {
-      // Prev read matches exactly the target point, and not past end
-      state_start = state_prev;
-    } else if (
-      state.pos_width > start_ii - 1 &&
-      state_prev.pos_width < start_ii - 1
-    ) {
-      // Overshot, chose prev or current based on round
-      switch(rnd_i) {
-        case FANSI_RND_START:
-        case FANSI_RND_BOTH:
-          state_start = state_prev;
-          break;
-        case FANSI_RND_STOP:
-        case FANSI_RND_NEITHER:
-          state_start = state;
-          break;
-        default:
-          error("Internal Error: invalid `rnd` value.");  // nocov
-      }
-    } else if (!state.string[state.pos_byte]) {
-      // String finished before finding start, so move on to next string.
-      // It wouldn't be crazy to write out this state even on an otherwise empty
-      // string, but we've chosen not to do it mostly b/c that's what the R code
-      // did.
+    if (!state.string[state.pos_byte]) {
+      // String finished before finding start.  It wouldn't be crazy to write
+      // out this state even on an otherwise empty string, but we've chosen not
+      // to do it mostly b/c that's what the R code did.
       if(carry_i) {
         while(state.string[state.pos_byte]) {
           state = FANSI_read_next(state, i, 1);
@@ -178,33 +151,48 @@ SEXP FANSI_substr(
         state_carry = state;
       }
       continue;
-    } else error("Internal Error: unexpected branch finding start."); // nocov
+    } else if (
+      state_prev.pos_width == start_ii - 1 ||
+      (rnd_i == FANSI_RND_STOP || rnd_i == FANSI_RND_NEITHER)
+    ) {
+      state_start = state_prev;
+    } else if (
+      state.pos_width >= start_ii &&
+      (rnd_i == FANSI_RND_START || rnd_i == FANSI_RND_BOTH)
+    ) {
+      // Overshot and want to keep leading char
+      state_start = state_prev;
+    } else error("Internal Error: unexpected start state.");
 
     // - End Point -------------------------------------------------------------
 
-    // Much more complicated than start point because we have to consume
-    // trailing zero-width non-control characters, which we don't need to do for
-    // the start.
-
     state_prev.warned = state.warned; // double warnings.
     state = state_prev;
-    while(
-      // Have not reached end yet
-      state.string[state.pos_byte] && state.pos_width <= stop_ii ||
-      state_prev.pos_width < stop_ii ||
-      // Overshot case
-      (
-        overshot &&
-        (term_i == FANSI_RND_STOP || term_i == FANSI_RND_BOTH)
-        state.pos_width == state_prev.pos_width &&
-        state.pos_raw > state_prev.pos_raw
-      )
-    ) {
-      // Only move the end point forward if we add non-CTL elements, this is so
-      // that trailing controls are not consumed, but zero width chars are
+
+    // Only move the end point forward if we add non-CTL elements, this is so
+    // that trailing controls are not consumed, but zero width chars are.
+    while(state.string[state.pos_byte] && state.pos_width <= stop_ii) {
       if(state.pos_raw > state_prev.pos_raw) state_prev = state;
       state = FANSI_read_next(state, i, 1);
     }
+    // If we are allowed to overshoot, keep consuming zero-width non-CTL
+    if(
+      (rnd_i == FANSI_RND_STOP || rnd_i == FANSI_RND_BOTH) &&
+      state.string[state.pos_byte]
+    ) {
+      do{
+        state_prev = state;
+        state = FANSI_read_next(state, i, 1);
+      } while(
+        state.string[state.pos_byte] &&
+        state.pos_width == state_prev.pos_width &&
+        state.pos_raw > state_prev.pos_raw   // non-CTL
+      );
+    } else if(!state.string[state.pos_byte]) {
+      // Ran out of string, want to include trailing controls
+      state_prev = state;
+    }
+    state_stop = state_prev;
 
     Rprintf(
       "w %d %d b %d %d c %d %d\n",
@@ -215,47 +203,6 @@ SEXP FANSI_substr(
       state.string[state.pos_byte],
       state_prev.string[state_prev.pos_byte]
     );
-
-    if(state.pos_raw > state_prev.pos_raw && state.pos_width <= stop_ii) {
-      // Ensure we consume zero width non-Control trailing chars
-      state_stop = state;
-    } else if(
-      state_prev.pos_width == stop_ii ||
-      (
-        term_i && state_prev.pos_width == state.pos_width &&
-        (FANSI_sgr_active(state_prev.sgr) || FANSI_url_active(state_prev.url))
-      )
-    ) {
-      // Favor state_prev to avoid including trailing controls, and
-      // in terminate mode, don't include escapes we're about to close anyway
-      state_stop = state_prev;
-    } else if (
-      state.pos_width > stop_ii &&
-      state_prev.pos_width < stop_ii
-    ) {
-
-      Rprintf(
-        "os end rnd %d pos %d prev %d\n",
-        rnd_i, state.pos_width, state_prev.pos_width
-      );
-
-      // Overshot, chose prev or current based on round
-      switch(rnd_i) {
-        case FANSI_RND_STOP:
-        case FANSI_RND_BOTH:
-          state_stop = state;
-          break;
-        case FANSI_RND_START:
-        case FANSI_RND_NEITHER:
-          state_stop = state_prev;
-          break;
-        default:
-          error("Internal Error: invalid `rnd` value.");  // nocov
-      }
-    } else if (!state.string[state.pos_byte]) {
-      // String finished, use as stop
-      state_stop = state;
-    } else error("Internal Error: unexpected branch finding start."); // nocov
 
     if(carry_i) {
       while(state.string[state.pos_byte]) state = FANSI_read_next(state, i, 1);
