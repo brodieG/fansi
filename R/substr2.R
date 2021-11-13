@@ -71,25 +71,30 @@
 #'
 #' Replacement functions are implemented as three substring operations, so:
 #' ```
-#' x <- "ABC"
+#' x <- "ABCD"
 #' y <- "_."
-#' substr_ctl(x, 2, 2, ...) <- y
+#' substr_ctl(x, 3, 3, ...) <- y
 #' ```
 #' Is treated roughly as:
 #' ```
 #' x <- paste0(
-#'   substr(x, 1, 1, ...),
-#'   substr(y, 1, 1, ...),
-#'   substr(x, 3, 3, terminate=FALSE, ...)
+#'   substr_ctl(x, 1, 2, ...),
+#'   substr_ctl(y, 1, 1, ...),
+#'   substr_ctl(x, 4, 4, ...)
 #' )
 #' ```
-#' Except for the `terminate` parameter for the trailing substring, all other
-#' parameters are passed from `substr_ctl<-` to the internal substring calls.
-#' The `start`, `stop`, and `round` arguments are translated from the provided
-#' values to those required for the internal substring calls.  If you wish for
-#' the whole return value to be terminated you must manually add terminating
-#' sequences.  `substr_ctl` refrains from doing so to maintain the illusion of a
-#' string modified in place.
+#' Except that `fansi` will not modify the beginning of the leading substring,
+#' or the end of the trailing one.  This is to maintain the illusion of a string
+#' modified in place.  In particular, this means that the `terminate` parameter
+#' only affects the boundaries between `value` substring and the containing one.
+#'
+#'
+#' for the the `terminate` parameter for the trailing substring, all
+#' other parameters are passed from `substr_ctl<-` to the internal substring
+#' calls.  The `start`, `stop`, and `round` arguments are translated from the
+#' provided values to those required for the internal substring calls.  If you
+#' wish for the whole return value to be terminated you must manually add
+#' terminating sequences.  `substr_ctl` refrains from doing so to 
 #'
 #' Another implication of the three substring approach is that the `carry`
 #' parameter causes state to carry within the original string and the
@@ -307,7 +312,7 @@ substr2_ctl <- function(
     round.int=ROUND.INT,
     x.len=X.LEN,
     ctl.int=CTL.INT, normalize=normalize,
-    carry=carry, terminate=terminate
+    carry=carry, terminate=terminate, keep=0L
   )
   res[!no.na] <- NA_character_
   res
@@ -374,7 +379,7 @@ substr2_ctl <- function(
     round.int=ROUND.INT,
     tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=0L,
     term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
-    carry=carry, terminate=terminate
+    carry=carry, terminate=terminate, keep=1L
   )
   end <- substr_ctl_internal(
     x, end.start, end.end,
@@ -382,7 +387,7 @@ substr2_ctl <- function(
     round.int=ROUND.INT,
     tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=WARN.INT,
     term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
-    carry=carry, terminate=FALSE
+    carry=carry, terminate=FALSE, keep=2L
   )
   # In no-op cases we don't need this, but it's simpler to always compute it
   mid <- substr_ctl_internal(
@@ -391,7 +396,7 @@ substr2_ctl <- function(
     round.int=ROUND.INT,
     tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=WARN.INT,
     term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
-    carry=carry, terminate=terminate
+    carry=carry, terminate=terminate, keep=0L
   )
   # In width mode it is possible for some seemingly valid replacements to end up
   # as no-ops depending on how rounding pans out.  No-ops are also possible in
@@ -416,7 +421,7 @@ substr2_ctl <- function(
         round.int=ROUND.INT,
         tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=0L,
         term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
-        carry=carry, terminate=terminate
+        carry=carry, terminate=terminate, keep=0L
       )
       ncm2 <- nchar_ctl(mid2, type=type, ctl=ctl, warn=warn)
       ncsub2 <- ncb[mid.again] + ncm2 + nce[mid.again]
@@ -437,7 +442,7 @@ substr2_ctl <- function(
           round.int=ROUND.INT,
           tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=0L,
           term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
-          carry=carry, terminate=FALSE
+          carry=carry, terminate=FALSE, keep=2L
         )
         nce2 <- nchar_ctl(end2, type=type, ctl=ctl, warn=warn)
         ncsub2 <- ncb[end.again] + ncm[end.again] + nce2
@@ -631,7 +636,7 @@ substr_ctl_internal_bck <- function(
 substr_ctl_internal <- function(
   x, start, stop, type.int, round.int, tabs.as.spaces,
   tab.stops, warn.int, term.cap.int,
-  x.len, ctl.int, normalize, carry, terminate
+  x.len, ctl.int, normalize, carry, terminate, keep
 ) {
   if(tabs.as.spaces)
     x <- .Call(
@@ -646,7 +651,8 @@ substr_ctl_internal <- function(
     type.int, round.int,
     warn.int, term.cap.int,
     ctl.int, normalize,
-    carry, terminate
+    carry, terminate,
+    keep
   )
 }
 
