@@ -205,7 +205,7 @@ SEXP FANSI_substr(
     }
     state_prev.warned = state.warned;
     // If we are allowed to overshoot, keep consuming zero-width non-CTL
-    /*
+/*
     Rprintf(
       "rnd %d p_w %d %d\n", rnd_i, state.pos_width, state_prev.pos_width
     );
@@ -221,7 +221,7 @@ SEXP FANSI_substr(
       (rnd_i == FANSI_RND_STOP || rnd_i == FANSI_RND_BOTH) &&
       state.string[state.pos_byte]
     ) {
-      // Overshot, collect trail zero width
+      // Overshot, collect trail zero width (what a mess; clean up?)
       do{
         if(state.pos_raw > state_prev.pos_raw) state_prev = state;
         state = FANSI_read_next(state, i, 1);
@@ -229,6 +229,10 @@ SEXP FANSI_substr(
         state.string[state.pos_byte] &&
         state.pos_width == state_prev.pos_width
       );
+      if(
+        state.pos_raw > state_prev.pos_raw &&
+        state.pos_width == state_prev.pos_width
+      ) state_prev = state;
       state_stop = state_prev;
     } else if(!state.string[state.pos_byte]) {
       // Ran out of string, want to include trailing controls b/c we selected
@@ -250,7 +254,7 @@ SEXP FANSI_substr(
     ) {
       state_stop = state_prev;
     } else error("Internal Error: bad `stop` state.");
-/*
+
     Rprintf(
       "w %d %d b %d %d c %d %d\n",
       state.pos_width,
@@ -260,7 +264,7 @@ SEXP FANSI_substr(
       state.string[state.pos_byte],
       state_prev.string[state_prev.pos_byte]
     );
-*/
+
 
     if(carry_i) {
       while(state.string[state.pos_byte]) state = FANSI_read_next(state, i, 1);
