@@ -125,6 +125,7 @@ unitizer_sect("Corner cases", {
   # bad sequence at beginning or end
   substr_ctl("\033[41bhello", 1, 5)
   substr_ctl("hello\033[41b", 1, 5)
+  substr_ctl("hello\033[41b", 1, 6)
 })
 unitizer_sect("Obscure escapes", {
   # illegal 38/48
@@ -287,6 +288,7 @@ unitizer_sect("Rep Funs - SGR", {
   `substr_ctl<-`(txt2, 2, 3, terminate=FALSE, "#\033[32m?-\033[0m")
   `substr_ctl<-`(txt2, 2, 3, terminate=FALSE, "#\033[0m?-")
   `substr_ctl<-`(txt1, 2, 3, terminate=FALSE, "#\033[0m?\033[45m-")
+  `substr_ctl<-`(txt1, 2, 3, terminate=FALSE, "#\033[0m\033[45m?-")
 
   txt4 <- c(txt2, txt0, "\033[39mABCD")
 
@@ -309,5 +311,4 @@ unitizer_sect("Rep Funs - SGR", {
   `substr_ctl<-`(txt4, 2, 3, terminate=FALSE, carry=TRUE, "#\033[35m?-\033[0m")
   `substr_ctl<-`(txt4, 2, 3, terminate=FALSE, carry=TRUE, "#\033[0m?-")
   `substr_ctl<-`(txt4, 2, 3, terminate=FALSE, carry=TRUE, rep4)
-
 })
