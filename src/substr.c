@@ -221,18 +221,14 @@ SEXP FANSI_substr(
       (rnd_i == FANSI_RND_STOP || rnd_i == FANSI_RND_BOTH) &&
       state.string[state.pos_byte]
     ) {
-      // Overshot, collect trail zero width (what a mess; clean up?)
-      do{
+      // Overshot, collect trail zero width.  A mess b/c we need to handle
+      // separately the case where the string ends
+      state_prev = state;
+      while(state.pos_width == state_prev.pos_width) {
         if(state.pos_raw > state_prev.pos_raw) state_prev = state;
+        if(!state.string[state.pos_byte]) break;
         state = FANSI_read_next(state, i, 1);
-      } while(
-        state.string[state.pos_byte] &&
-        state.pos_width == state_prev.pos_width
-      );
-      if(
-        state.pos_raw > state_prev.pos_raw &&
-        state.pos_width == state_prev.pos_width
-      ) state_prev = state;
+      }
       state_stop = state_prev;
     } else if(!state.string[state.pos_byte]) {
       // Ran out of string, want to include trailing controls b/c we selected
