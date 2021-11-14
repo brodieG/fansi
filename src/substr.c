@@ -126,9 +126,24 @@ SEXP FANSI_substr(
       )
         state_prev = state;
 
-      state = FANSI_read_next(state, i, 1);
-    }
+      // Read all zero width following next char in addition to next char
+      struct FANSI_state state_tmp;
+      state = state_tmp = FANSI_read_next(state, i, 1);
+      while(
+        state_tmp.pos_width == state.pos_width &&
+        state_tmp.string[state_tmp.pos_byte]
+      ) {
+        state = state_tmp;
+        state_tmp = FANSI_read_next(state_tmp, i, 1);
+      }
+      if(
+        !state_tmp.string[state_tmp.pos_byte] &&
+        state_tmp.pos_width == state.pos_width
+      )
+        state = state_tmp;
 
+      state.warned = state_tmp.warned;
+    }
 /*
     Rprintf(
       "startii %d stopii %d, w %d %d b %d %d c %d %d\n",
@@ -141,10 +156,23 @@ SEXP FANSI_substr(
       state.string[state.pos_byte],
       state_prev.string[state_prev.pos_byte]
     );
-    */
-
-
-    if (!state.string[state.pos_byte]) {
+*/
+    if (state_prev.pos_width == start_ii - 1) {
+      state_start = state_prev;
+    } else if (state.pos_width >= start_ii) {
+      // Overshot
+      if(!(rnd_i == FANSI_RND_START || rnd_i == FANSI_RND_BOTH)) {
+        // Not okay, collect trail zero width
+        do{
+          if(state.pos_raw > state_prev.pos_raw) state_prev = state;
+          state = FANSI_read_next(state, i, 1);
+        } while(
+          state.string[state.pos_byte] &&
+          state.pos_width == state_prev.pos_width
+        );
+      }
+      state_start = state_prev;
+    } else if (!state.string[state.pos_byte]) {
       // String finished before finding start.  It wouldn't be crazy to write
       // out this state even on an otherwise empty string, but we've chosen not
       // to do it mostly b/c that's what the R code did.
@@ -155,11 +183,11 @@ SEXP FANSI_substr(
         state_carry = state;
       }
       continue;
-    } else if (state_prev.pos_width == start_ii - 1) {
-      state_start = state_prev;
     } else if (rnd_i == FANSI_RND_START || rnd_i == FANSI_RND_BOTH) {
       state_start = state_prev;
     } else state_start = state;
+
+    // Rprintf("start %d %d\n", state_start.pos_byte, state_start.pos_width);
 
     // - End Point -------------------------------------------------------------
 
@@ -175,12 +203,25 @@ SEXP FANSI_substr(
       if(state.pos_raw > state_prev.pos_raw) state_prev = state;
       state = FANSI_read_next(state, i, 1);
     }
+    state_prev.warned = state.warned;
     // If we are allowed to overshoot, keep consuming zero-width non-CTL
+    /*
+    Rprintf(
+      "rnd %d p_w %d %d\n", rnd_i, state.pos_width, state_prev.pos_width
+    );
+*/
     if(
+      state_prev.pos_width == stop_ii &&
+      (state.pos_width > stop_ii || state.pos_raw == state_prev.pos_raw)
+    ) {
+      // Finished exactly, did not add any interesting chars
+      state_stop = state_prev;
+    } else if(
       state_prev.pos_width < stop_ii &&
       (rnd_i == FANSI_RND_STOP || rnd_i == FANSI_RND_BOTH) &&
       state.string[state.pos_byte]
     ) {
+      // Overshot, collect trail zero width
       do{
         if(state.pos_raw > state_prev.pos_raw) state_prev = state;
         state = FANSI_read_next(state, i, 1);
@@ -188,11 +229,27 @@ SEXP FANSI_substr(
         state.string[state.pos_byte] &&
         state.pos_width == state_prev.pos_width
       );
+      state_stop = state_prev;
     } else if(!state.string[state.pos_byte]) {
-      // Ran out of string, want to include trailing controls
-      state_prev = state;
-    }
-    state_stop = state_prev;
+      // Ran out of string, want to include trailing controls b/c we selected
+      // past end of string, but not SGR/OSC if terminating
+      if(term_i) {
+        struct FANSI_state state_tmp = state_prev;
+        while(state_tmp.string[state_tmp.pos_byte]) {
+          state_tmp = FANSI_read_next(state_tmp, i, 1);
+          if(!state_tmp.last_special) state_prev = state_tmp;
+        }
+        state_stop = state_prev;
+        state_stop.warned = state_tmp.warned;
+      } else {
+        state_stop = state;
+      }
+    } else if(
+      state_prev.pos_width < stop_ii && state.pos_width > stop_ii &&
+      !(rnd_i == FANSI_RND_STOP || rnd_i == FANSI_RND_BOTH)
+    ) {
+      state_stop = state_prev;
+    } else error("Internal Error: bad `stop` state.");
 /*
     Rprintf(
       "w %d %d b %d %d c %d %d\n",
@@ -204,6 +261,7 @@ SEXP FANSI_substr(
       state_prev.string[state_prev.pos_byte]
     );
 */
+
     if(carry_i) {
       while(state.string[state.pos_byte]) state = FANSI_read_next(state, i, 1);
       state_carry = state;
@@ -229,7 +287,8 @@ SEXP FANSI_substr(
     int x_len = (int) LENGTH(STRING_ELT(x, i));
     start_byte = keep_i == 1 ? 0 : state_start.pos_byte;
     stop_byte = keep_i == 2 ? x_len : state_stop.pos_byte;
-/*
+
+    /**
     Rprintf(
       "  pos %d %d - %d %d - %d %d, %d %d term %d\n",
       state_start.pos_byte,
