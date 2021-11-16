@@ -18,15 +18,43 @@
 #' `substr_ctl` is a drop-in replacement for `substr`.  Performance is
 #' slightly slower than `substr`, and more so for `type = 'width'`.  CSI SGR
 #' sequences will be included in the substrings to reflect the format of the
-#' substring when it was embedded in the source string.  Additionally, other
-#' _Control Sequences_ specified in `ctl` are treated as zero-width.
+#' substring when it was embedded in the source string.  `substr2_ctl` adds the
+#' ability to retrieve substrings based on display width in addition to the
+#' normal character width.  `substr2_ctl` also provides the option to convert
+#' tabs to spaces with [`tabs_as_spaces`] prior to taking substrings.
 #'
-#' `substr2_ctl` adds the ability to retrieve substrings based on display width
-#' in addition to the normal character width.  `substr2_ctl` also provides the
-#' option to convert tabs to spaces with [`tabs_as_spaces`] prior to taking
-#' substrings.
+#' @section Position Semantics:
 #'
-#' Because exact substrings on anything other than character width cannot be
+#' When computing substrings, _Normal_ (non-control) characters are considered
+#' to occupy positions in strings, whereas _Control Sequences_ occupy the
+#' interstices between them.  The string `"hello-\033[31mworld\033[m!"` is
+#' interpreted as:
+#'
+#' ```
+#'  0                 1
+#'  1 2 3 4 5 6 7 8 9 0 1 2
+#'  h e l l o -|w o r l d|!
+#'             ^         ^
+#'             \033[31m  \033[m
+#' ```
+#'
+#' `start` indices reference the interstice preceding the corresponding
+#' character position, and `stop` the **character** following it.  Thus each
+#' substring will capture the same number of characters as interstices from the
+#' original.  An implication is that _Control Sequences_ starting after the
+#' last character in the substring are excluded from the substring.
+#'
+#' If `terminate = FALSE` and `stop` is past the last character in the string,
+#' trailing _Control Sequences_ are included in the substring.  If `terminate =
+#' TRUE`, `fansi` always strips trailing control sequences as they would be
+#' immediately closed anyway.
+#'
+#' _Control Sequences_ affect all subsequent characters in a string, so even
+#' though active _Control Sequences_ before the first character of the substring
+#' are not technically _in_ the substring, `fansi` will prepend them so the
+#' substring presents consistent with _Control Sequence_ formatting semantics.
+#'
+#' Because exact substrings on anything other than character count cannot be
 #' guaranteed (e.g. as a result of multi-byte encodings, or double display-width
 #' characters) `substr2_ctl` must make assumptions on how to resolve provided
 #' `start`/`stop` values that are infeasible and does so via the `round`
@@ -40,11 +68,25 @@
 #' characters to be dropped irrespective whether they correspond to `start` or
 #' `stop`, and "both" could cause all of them to be included.
 #'
-#' These functions map string lengths accounting for _Control Sequence_
-#' semantics to the naive length calculations, and then use the mapping in
-#' conjunction with [base::substr()] to extract the string.  This concept is
-#' borrowed directly from Gábor Csárdi's `crayon` package, although the
-#' implementation of the calculation is different.
+#' For example, if we consider "WW" to be a single wide character, and "n" to be
+#' a single narrow one:
+#'
+#' ```
+#'       12345
+#' x <- "WWnWW"
+#'substr_ctl(x, 2, 4, type='width' round='start')    -> "WWn"
+#'substr_ctl(x, 2, 4, type='width' round='stop')     -> "nWW"
+#'substr_ctl(x, 2, 4, type='width' round='neither')  -> "n"
+#'substr_ctl(x, 2, 4, type='width' round='both')     -> "WWnWW"
+#' ```
+#'
+#' A number of _Normal_ characters such as combining diacritic marks have
+#' reported width of zero.  These are typically displayed overlaid on top of the
+#' preceding glyph, as in the case of `"e\u301"` forming `"é"`.  Unlike _Control
+#' Sequences_ which also have reported width of zero, zero-width _Normal_
+#' characters are grouped with the last preceding non-zero width _Normal_
+#' character.  This behavior is incorrect for rare zero-width _Normal_
+#' characters such as prepending marks (see "Output Stability" and "Graphemes").
 #'
 #' @section Output Stability:
 #'
@@ -87,14 +129,15 @@
 #' or the end of the trailing one.  This is to maintain the illusion of a string
 #' modified in place.  In particular, this means that the `terminate` parameter
 #' only affects the boundaries between `value` substring and the containing one.
-#'
-#'
+
+## UPDATE DOCS
+
 #' for the the `terminate` parameter for the trailing substring, all
 #' other parameters are passed from `substr_ctl<-` to the internal substring
 #' calls.  The `start`, `stop`, and `round` arguments are translated from the
 #' provided values to those required for the internal substring calls.  If you
 #' wish for the whole return value to be terminated you must manually add
-#' terminating sequences.  `substr_ctl` refrains from doing so to 
+#' terminating sequences.  `substr_ctl` refrains from doing so to
 #'
 #' Another implication of the three substring approach is that the `carry`
 #' parameter causes state to carry within the original string and the
@@ -119,20 +162,6 @@
 #'
 #' The [`utf8`](https://cran.r-project.org/package=utf8) package provides a
 #' conforming grapheme parsing implementation.
-#'
-#' @section Trailing _Control Sequences_:
-#'
-#' Trailing sequences are not considered part of a substring.  `fansi` models
-#' _Control Sequences_ as interstitial and affecting only subsequent characters.
-#' In order for a trailing _Control Sequence_ to be included in a substring, the
-#' `substr_ctl` command must select past the end of the string (see examples).
-#' Even when selecting past the end of a string, `fansi` will omit trailing
-#' sequences if `terminate = TRUE`, as those would be closed immediately anyway.
-#'
-#' In contrast, trailing zero-width characters that are not _Control Sequences_
-#' are kept when  `type %in% c("width", "graphemes")`.  These are modeled to
-#' blend into the preceding character (e.g. a trailing combining diacritic
-#' mark).
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work properly in R < 3.2.2.
@@ -208,7 +237,10 @@
 #'   state at the end of a line.  If FALSE each vector element is interpreted as
 #'   if there were no active state when it begins.  If character, then the
 #'   active state at the end of the `carry` string is carried into the first
-#'   element of `x`.  See the "State Interactions" section of [`?fansi`][fansi]
+#'   element of `x`.  Semantically, the carried state is injected in the
+#'   interstice between an imaginary zeroeth character and the first character
+#'   of a vector element.  See the "Position Semantics" section of
+#'   [`substr_ctl`] and the "State Interactions" section of [`?fansi`][fansi]
 #'   for details.
 #' @param terminate TRUE (default) or FALSE whether substrings should have
 #'   active state closed to avoid it bleeding into other strings they may be
