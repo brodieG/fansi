@@ -123,7 +123,7 @@ struct FANSI_state FANSI_carry_init(
  * Very similar logic to used in `normalize`, intended to  handle the
  * `substr_ctl(..., carry=TRUE, terminate=FALSE)` case.
  */
-static int bridge(
+int FANSI_W_bridge(
   struct FANSI_buff * buff,
   struct FANSI_state end,
   struct FANSI_state restart,
@@ -198,12 +198,12 @@ SEXP FANSI_bridge_state_ext(SEXP end, SEXP restart, SEXP term_cap, SEXP norm) {
     FANSI_reset_buff(&buff);
 
     // Measure
-    int len = bridge(&buff, st_end, st_rst, normalize, i);
+    int len = FANSI_W_bridge(&buff, st_end, st_rst, normalize, i);
     if(len < 0) continue;
 
     // Write
     FANSI_size_buff(&buff);
-    bridge(&buff, st_end, st_rst, normalize, i);
+    FANSI_W_bridge(&buff, st_end, st_rst, normalize, i);
 
     SEXP reschr = PROTECT(FANSI_mkChar(buff, CE_NATIVE, i));
     SET_STRING_ELT(res, i, reschr);

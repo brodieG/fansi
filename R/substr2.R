@@ -647,7 +647,7 @@ substr_ctl_internal <- function(
 
   .Call(FANSI_substr,
     x,
-    start, stop,
+    start, stop, NULL,
     type.int, round.int,
     warn.int, term.cap.int,
     ctl.int, normalize,

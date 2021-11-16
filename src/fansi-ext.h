@@ -20,10 +20,14 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #include <Rinternals.h>
 
 SEXP FANSI_substr(
-  SEXP x, SEXP start, SEXP stop, SEXP type,
-  SEXP rnd, SEXP warn,
-  SEXP term_cap, SEXP ctl, SEXP norm,
-  SEXP carry, SEXP terminate, SEXP keep
+  SEXP x,
+  SEXP start, SEXP stop,
+  SEXP value,
+  SEXP type, SEXP rnd,
+  SEXP warn, SEXP term_cap,
+  SEXP ctl, SEXP norm,
+  SEXP carry, SEXP terminate,
+  SEXP keep
 );
 SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn);
 SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn);
