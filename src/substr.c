@@ -57,8 +57,7 @@ static SEXP substr_one(
 
     state->warned = state_tmp.warned;
   }
-  /*
-  Rprintf(
+  /*Rprintf(
     "startii %d stopii %d, w %d %d b %d %d c %d %d\n",
     start,
     stop,
@@ -68,8 +67,7 @@ static SEXP substr_one(
     state_prev.pos_byte,
     state->string[state->pos_byte],
     state_prev.string[state_prev.pos_byte]
-  );
-  */
+  );*/
   if (state_prev.pos_width == start - 1) {
     state_start = state_prev;
   } else if (state->pos_width >= start) {
@@ -86,7 +84,7 @@ static SEXP substr_one(
     }
     state_start = state_prev;
   } else if (!state->string[state->pos_byte]) {
-    return mkChar("");
+    state_start = *state;
   } else if (rnd_i == FANSI_RND_START || rnd_i == FANSI_RND_BOTH) {
     state_start = state_prev;
   } else state_start = *state;
@@ -95,8 +93,8 @@ static SEXP substr_one(
 
   // - End Point -------------------------------------------------------------
 
-  state_prev.warned = state->warned; // double warnings.
-  *state = state_prev;
+  state_start.warned = state->warned; // double warnings.
+  *state = state_prev = state_start;
 
   // Keep moving the end point forward until we're clearly over the limit, or
   // there are no non-zero width characters to consume.  Drop any trailing
@@ -153,24 +151,37 @@ static SEXP substr_one(
     !(rnd_i == FANSI_RND_STOP || rnd_i == FANSI_RND_BOTH)
   ) {
     state_stop = state_prev;
-  } else error("Internal Error: bad `stop` state.");
+  } else error("Internal Error: bad `stop` state."); // nocov
+  if(state_start.pos_byte > state_stop.pos_byte) {
+    error("Internal Error: bad `stop` state 2."); // nocov
+  }
   /*
   Rprintf(
-    "w %d %d b %d %d c %d %d\n",
+    "w %d %d b %d %d c %d %d startb %d stopb %d\n",
     state->pos_width,
     state_prev.pos_width,
     state->pos_byte,
     state_prev.pos_byte,
     state->string[state->pos_byte],
-    state_prev.string[state_prev.pos_byte]
+    state_prev.string[state_prev.pos_byte],
+    state_start.pos_byte,
+    state_stop.pos_byte
   );
   */
   // - Extract ---------------------------------------------------------------
 
-  // Do we need to open/close tags?  Never open / close tags for lead / trail
-  // substrings in replacement mode.
-  int needs_cl_sgr = keep_i != 2 && term_i && FANSI_sgr_active(state_stop.sgr);
-  int needs_cl_url = keep_i != 2 && term_i && FANSI_url_active(state_stop.url);
+  // Do we need to close tags?  Never close tags for trail substrings in
+  // replacement mode.  Empty strings in terminate mode won't have tags open.
+  int empty_string = state_stop.pos_byte == state_start.pos_byte;
+  int needs_close = keep_i != 2 && term_i && !empty_string;
+  int needs_cl_sgr = needs_close && FANSI_sgr_active(state_stop.sgr);
+  int needs_cl_url = needs_close && FANSI_url_active(state_stop.url);
+
+  // Adjust start/end points for keep mode for replacement substrings
+  // Does not affect empty_string calculation.
+  int start_byte, stop_byte;
+  start_byte = keep_i == 1 ? 0 : state_start.pos_byte;
+  stop_byte = keep_i == 2 ? x_len : state_stop.pos_byte;
 
   /*
   int needs_st_sgr = keep_i != 1 && FANSI_sgr_active(state_start.sgr);
@@ -182,23 +193,6 @@ static SEXP substr_one(
   )
     continue;
   */
-
-  // Adjust start/end points for keep mode for replacement substrings
-  int start_byte, stop_byte;
-  start_byte = keep_i == 1 ? 0 : state_start.pos_byte;
-  stop_byte = keep_i == 2 ? x_len : state_stop.pos_byte;
-
-  /**
-  Rprintf(
-    "  pos %d %d - %d %d - %d %d, %d %d term %d\n",
-    state_start.pos_byte,
-    state_stop.pos_byte,
-    state_start.pos_width,
-    state_stop.pos_width,
-    needs_st_sgr, needs_st_url, needs_cl_sgr, needs_cl_url,
-    term_i
-  );
-  */
   // Measure/Write loop (see src/write.c), this is adapted from wrap.c
   const char * err_msg = "Writing substring";
 
@@ -206,8 +200,9 @@ static SEXP substr_one(
     if(!k) FANSI_reset_buff(buff);
     else   FANSI_size_buff(buff);
 
-    // Use bridge do write opening styles
-    if(keep_i != 1)
+    // Use bridge do write opening styles to account for potential carry and
+    // similar in the input state.
+    if(keep_i != 1 && !(term_i && empty_string))
       FANSI_W_bridge(buff, state_anchor, state_start, norm_i, i);
 
     // Actual string, remember state_stop.pos_byte is one past what we need

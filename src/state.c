@@ -296,6 +296,9 @@ static struct FANSI_state_pair state_at_pos2(
 /*
  * Generate the tag corresponding to the state and write it out as a NULL
  * terminated string.
+ *
+ * @return the byte after the last one written, typically set to zero.  For the
+ *   start of the string: buff->buff0
  */
 char * FANSI_state_as_chr(
   struct FANSI_buff *buff, struct FANSI_state state, int normalize, R_xlen_t i
