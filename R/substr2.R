@@ -586,7 +586,7 @@ substr_ctl_internal_bck <- function(
 substr_ctl_internal <- function(
   x, start, stop, type.int, round.int, tabs.as.spaces,
   tab.stops, warn.int, term.cap.int,
-  x.len, ctl.int, normalize, carry, terminate,
+  x.len, ctl.int, normalize, carry, terminate
 ) {
   if(tabs.as.spaces)
     x <- .Call(
