@@ -165,7 +165,8 @@ VAL_IN_ENV <- function(
       stop2("Argument `carry` must be logical or character.")
     if(is.na(carry))
       stop2("Argument `carry` may not be NA.")
-
+    if('value' %in% argnm && !is.logical(carry))
+      stop2("Argumetn `carry` must be TRUE or FALSE in replacement mode.")
     if(is.logical(carry)) if(carry) carry <- "" else carry = NA_character_
     args[['carry']] <- carry
   }

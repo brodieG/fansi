@@ -972,7 +972,7 @@ static struct FANSI_state read_utf8(struct FANSI_state state, R_xlen_t i) {
   // measures that exceed byte count (like the 6 or 10 from '\u' or '\U' encoded
   // versions of Unicode chars).  Shouldn't be an issue, but playing it safe.
   state.pos_byte += byte_size;
-  state.has_utf8 = state.pos_byte;
+  state.has_utf8 = state.pos_byte;  // record after so no ambiguity about 0
   ++state.pos_ansi;
   ++state.pos_raw;
   if(state.pos_width > FANSI_lim.lim_int.max - disp_size)

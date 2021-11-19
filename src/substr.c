@@ -16,123 +16,136 @@
  */
 
 #include "fansi.h"
+
+static int has_8bit(const char * x) {
+  while((unsigned char)(*x) > 0 && (unsigned char)(*x) < 0xff) ++x;
+  return !(*x)
+}
+
 /*
- * @param state modified by reference.
+ * Compute start and end states for a single substring.  Results are "returned"
+ * by modifying the by-ref structs.
+ *
+ * @param state_start starting state, will be overwritten.
+ * @param state_stop write only.
+ * @return width of substring, in whatever width units have been selected.
  */
 
-static SEXP substr_one(
-  struct FANSI_state * state, struct FANSI_buff * buff, R_xlen_t i,
-  int start, int stop, int rnd_i, int norm_i, int term_i, int keep_i,
+static int substr_calc_points(
+  struct FANSI_state * state_start, struct FANSI_state * state_stop,
+  R_xlen_t i, int start, int stop, int rnd_i, int norm_i, int term_i,
   int x_len
 ) {
+  *state_stop = *state_start;
+
   // - Start Point -----------------------------------------------------------
 
-  struct FANSI_state state_prev, state_anchor, state_start, state_stop;
-  state_anchor = state_prev = *state;
+  struct FANSI_state state, state_prev, state_anchor;
+  state_anchor = state_prev = state = *state_start;
 
   // Recall `start` and `stop` are in 1-index, here we're greedy eating zero
   // width things. `state_prev` tracks the last valid break point.
-  while(state->string[state->pos_byte] && state->pos_width < start) {
+  while(state.string[state.pos_byte] && state.pos_width < start) {
     if(
-      state->pos_raw == state_prev.pos_raw ||   // read an escape
-      state->pos_width > state_prev.pos_width   // moved column in string
+      state.pos_raw == state_prev.pos_raw ||   // read an escape
+      state.pos_width > state_prev.pos_width   // moved column in string
     )
-      state_prev = *state;
+      state_prev = state;
 
     // Read all zero width following next char in addition to next char
     struct FANSI_state state_tmp;
-    *state = state_tmp = FANSI_read_next(*state, i, 1);
+    state = state_tmp = FANSI_read_next(state, i, 1);
     while(
-      state_tmp.pos_width == state->pos_width &&
+      state_tmp.pos_width == state.pos_width &&
       state_tmp.string[state_tmp.pos_byte]
     ) {
-      *state = state_tmp;
+      state = state_tmp;
       state_tmp = FANSI_read_next(state_tmp, i, 1);
     }
     if(
       !state_tmp.string[state_tmp.pos_byte] &&
-      state_tmp.pos_width == state->pos_width
+      state_tmp.pos_width == state.pos_width
     )
-      *state = state_tmp;
+      state = state_tmp;
 
-    state->warned = state_tmp.warned;
+    state.warned = state_tmp.warned;
   }
   /*Rprintf(
     "startii %d stopii %d, w %d %d b %d %d c %d %d\n",
     start,
     stop,
-    state->pos_width,
+    state.pos_width,
     state_prev.pos_width,
-    state->pos_byte,
+    state.pos_byte,
     state_prev.pos_byte,
-    state->string[state->pos_byte],
+    state.string[state.pos_byte],
     state_prev.string[state_prev.pos_byte]
   );*/
   if (state_prev.pos_width == start - 1) {
-    state_start = state_prev;
-  } else if (state->pos_width >= start) {
+    *state_start = state_prev;
+  } else if (state.pos_width >= start) {
     // Overshot
     if(!(rnd_i == FANSI_RND_START || rnd_i == FANSI_RND_BOTH)) {
       // Not okay, collect trail zero width
       do{
-        if(state->pos_raw > state_prev.pos_raw) state_prev = *state;
-        *state = FANSI_read_next(*state, i, 1);
+        if(state.pos_raw > state_prev.pos_raw) state_prev = state;
+        state = FANSI_read_next(state, i, 1);
       } while(
-        state->string[state->pos_byte] &&
-        state->pos_width == state_prev.pos_width
+        state.string[state.pos_byte] &&
+        state.pos_width == state_prev.pos_width
       );
     }
-    state_start = state_prev;
-  } else if (!state->string[state->pos_byte]) {
-    state_start = *state;
+    *state_start = state_prev;
+  } else if (!state.string[state.pos_byte]) {
+    *state_start = state;
   } else if (rnd_i == FANSI_RND_START || rnd_i == FANSI_RND_BOTH) {
-    state_start = state_prev;
-  } else state_start = *state;
+    *state_start = state_prev;
+  } else *state_start = state;
 
   // Rprintf("start %d %d\n", state_start.pos_byte, state_start.pos_width);
 
   // - End Point -------------------------------------------------------------
 
-  state_start.warned = state->warned; // double warnings.
-  *state = state_prev = state_start;
+  *state_start.warned = state.warned; // double warnings.
+  state = state_prev = *state_start;
 
   // Keep moving the end point forward until we're clearly over the limit, or
   // there are no non-zero width characters to consume.  Drop any trailing
   // controls.  Some terminals (e.g. MacOS term, iterm2) treat control
   // sequences as being out-of-band, i.e. they don't interfere with combining
   // glyphs, etc.
-  while(state->string[state->pos_byte] && state->pos_width <= stop) {
-    if(state->pos_raw > state_prev.pos_raw) state_prev = *state;
-    *state = FANSI_read_next(*state, i, 1);
+  while(state.string[state.pos_byte] && state.pos_width <= stop) {
+    if(state.pos_raw > state_prev.pos_raw) state_prev = state;
+    state = FANSI_read_next(state, i, 1);
   }
-  state_prev.warned = state->warned;
+  state_prev.warned = state.warned;
   // If we are allowed to overshoot, keep consuming zero-width non-CTL
   /*
   Rprintf(
-    "rnd %d p_w %d %d\n", rnd_i, state->pos_width, state_prev.pos_width
+    "rnd %d p_w %d %d\n", rnd_i, state.pos_width, state_prev.pos_width
   );
   */
   if(
     state_prev.pos_width == stop &&
-    (state->pos_width > stop || state->pos_raw == state_prev.pos_raw)
+    (state.pos_width > stop || state.pos_raw == state_prev.pos_raw)
   ) {
     // Finished exactly, did not add any interesting chars
-    state_stop = state_prev;
+    *state_stop = state_prev;
   } else if(
     state_prev.pos_width < stop &&
     (rnd_i == FANSI_RND_STOP || rnd_i == FANSI_RND_BOTH) &&
-    state->string[state->pos_byte]
+    state.string[state.pos_byte]
   ) {
     // Overshot, collect trail zero width.  A mess b/c we need to handle
     // separately the case where the string ends
-    state_prev = *state;
-    while(state->pos_width == state_prev.pos_width) {
-      if(state->pos_raw > state_prev.pos_raw) state_prev = *state;
-      if(!state->string[state->pos_byte]) break;
-      *state = FANSI_read_next(*state, i, 1);
+    state_prev = state;
+    while(state.pos_width == state_prev.pos_width) {
+      if(state.pos_raw > state_prev.pos_raw) state_prev = state;
+      if(!state.string[state.pos_byte]) break;
+      state = FANSI_read_next(state, i, 1);
     }
-    state_stop = state_prev;
-  } else if(!state->string[state->pos_byte]) {
+    *state_stop = state_prev;
+  } else if(!state.string[state.pos_byte]) {
     // Ran out of string, want to include trailing controls b/c we selected
     // past end of string, but not SGR/OSC if terminating
     if(term_i) {
@@ -141,73 +154,77 @@ static SEXP substr_one(
         state_tmp = FANSI_read_next(state_tmp, i, 1);
         if(!state_tmp.last_special) state_prev = state_tmp;
       }
-      state_stop = state_prev;
-      state_stop.warned = state_tmp.warned;
+      *state_stop = state_prev;
+      state_stop->warned = state_tmp.warned;
     } else {
-      state_stop = *state;
+      *state_stop = state;
     }
   } else if(
-    state_prev.pos_width < stop && state->pos_width > stop &&
+    state_prev.pos_width < stop && state.pos_width > stop &&
     !(rnd_i == FANSI_RND_STOP || rnd_i == FANSI_RND_BOTH)
   ) {
-    state_stop = state_prev;
+    *state_stop = state_prev;
   } else error("Internal Error: bad `stop` state."); // nocov
-  if(state_start.pos_byte > state_stop.pos_byte) {
+  if(state_start.pos_byte > state_stop->pos_byte) {
     error("Internal Error: bad `stop` state 2."); // nocov
   }
+  return state_stop->pos_width - state_start->pos_width;
   /*
   Rprintf(
     "w %d %d b %d %d c %d %d startb %d stopb %d\n",
-    state->pos_width,
+    state.pos_width,
     state_prev.pos_width,
-    state->pos_byte,
+    state.pos_byte,
     state_prev.pos_byte,
-    state->string[state->pos_byte],
+    state.string[state.pos_byte],
     state_prev.string[state_prev.pos_byte],
     state_start.pos_byte,
     state_stop.pos_byte
   );
   */
+}
+/*
+ * @param state modified by reference.
+ * @param mode whether in measure (0) or write (1) mode
+ * @return if in measure, an integer vector with the size of the substring,
+ *   otherwise the substring.
+ */
+
+static SEXP substr_one(
+  struct FANSI_state * state, struct FANSI_buff * buff, R_xlen_t i,
+  int start, int stop, int rnd_i, int norm_i, int term_i, int x_len
+) {
+  struct FANSI_state state_start, state_stop;
+  state_start = state_stop = *state;
+  substr_calc_points(
+    &state_start, &state_stop, i, start, stop,
+    rnd_i, norm_i, term_i, x_len
+  );
   // - Extract ---------------------------------------------------------------
 
   // Do we need to close tags?  Never close tags for trail substrings in
   // replacement mode.  Empty strings in terminate mode won't have tags open.
   int empty_string = state_stop.pos_byte == state_start.pos_byte;
-  int needs_close = keep_i != 2 && term_i && !empty_string;
+  int needs_close = term_i && !empty_string;
   int needs_cl_sgr = needs_close && FANSI_sgr_active(state_stop.sgr);
   int needs_cl_url = needs_close && FANSI_url_active(state_stop.url);
 
-  // Adjust start/end points for keep mode for replacement substrings
-  // Does not affect empty_string calculation.
-  int start_byte, stop_byte;
-  start_byte = keep_i == 1 ? 0 : state_start.pos_byte;
-  stop_byte = keep_i == 2 ? x_len : state_stop.pos_byte;
-
-  /*
-  int needs_st_sgr = keep_i != 1 && FANSI_sgr_active(state_start.sgr);
-  int needs_st_url = keep_i != 1 && FANSI_url_active(state_start.url);
-  // Corner case exit, nothing to write
-  if(
-    state_start.pos_byte == state_stop.pos_byte &&
-    (term_i || !(needs_st_sgr || needs_st_url))
-  )
-    continue;
-  */
   // Measure/Write loop (see src/write.c), this is adapted from wrap.c
-  const char * err_msg = "Writing substring";
 
+  SEXP res;
+  const char * err_msg = "Writing substring";
   for(int k = 0; k < 2; ++k) {
     if(!k) FANSI_reset_buff(buff);
     else   FANSI_size_buff(buff);
 
     // Use bridge do write opening styles to account for potential carry and
     // similar in the input state.
-    if(keep_i != 1 && !(term_i && empty_string))
+    if(!(term_i && empty_string))
       FANSI_W_bridge(buff, state_anchor, state_start, norm_i, i);
 
     // Actual string, remember state_stop.pos_byte is one past what we need
-    const char * string = state_start.string + start_byte;
-    int bytes = stop_byte - start_byte;
+    const char * string = state_start.string + state_start.pos_byte;
+    int bytes = state_stop.pos_byte - state_start.pos_byte;
     FANSI_W_MCOPY(buff, string, bytes);
 
     // And turn off CSI styles if needed
@@ -215,19 +232,16 @@ static SEXP substr_one(
     if(needs_cl_url) FANSI_W_url_close(buff, state_stop.url, i);
   }
   *state = state_stop;
-
-  // Now create the charsxp, start by determining what encoding to use.
   cetype_t chr_type = CE_NATIVE;
   if(state_stop.has_utf8 > state_start.pos_byte) chr_type = CE_UTF8;
-
-  return FANSI_mkChar(*buff, chr_type, i);
+  return FANSI_mkChar(*buff, chr_type, i);;
 }
 // Extract Substring (`substr_ctl`)
 
 static SEXP substr_extract(
   SEXP x, SEXP start, SEXP stop, SEXP carry,
   struct FANSI_state state, struct FANSI_buff * buff,
-  int rnd_i, int norm_i, int term_i, int keep_i
+  int rnd_i, int norm_i, int term_i
 ) {
   R_xlen_t len = XLENGTH(x);
   if(len < 1) error("Internal Error: must have at least one value.");
@@ -259,20 +273,23 @@ static SEXP substr_extract(
       SET_STRING_ELT(res, i, NA_STRING);
     } else {
       if(start_ii < 1) start_ii = 1;
-      if(stop_ii < start_ii) continue;
+      // We do the full process even if stop_ii < start_ii for consistency
       if(carry_i) {
         state.sgr = state_carry.sgr;
         state.url = state_carry.url;
       }
       int x_len = (int) LENGTH(STRING_ELT(x, i));
+      int mode = 1;           // write mode
+      int bounds[2] = {0,0};  // unused here
       SET_STRING_ELT(
         res, i,
         substr_one(
-          &state, buff, i, start_ii, stop_ii, rnd_i, norm_i, term_i, keep_i,
-          x_len
+          &state, buff, i, start_ii, stop_ii, rnd_i, norm_i, term_i,
+          x_len, mode, &bounds
       ) );
       if(carry_i) {
-        while(state.string[state.pos_byte]) state = FANSI_read_next(state, i, 1);
+        while(state.string[state.pos_byte])
+          state = FANSI_read_next(state, i, 1);
         state_carry.sgr = state.sgr;
         state_carry.url = state.url;
   } } }
@@ -281,30 +298,143 @@ static SEXP substr_extract(
 }
 // Replace Substring (`substr_ctl<-`)
 
-/*
-static SEXP substr_rep(
+static SEXP substr_replace(
   SEXP x, SEXP start, SEXP stop, SEXP value, SEXP carry,
   struct FANSI_state state, struct FANSI_buff * buff,
-  int rnd_i, int norm_i, int term_i, int keep_i
+  int rnd_i, int norm_i, int term_i
 ) {
   R_xlen_t len = XLENGTH(x);
-  if(len < 1) error("Internal Error: must have at least one value.");
+  if(len < 1)
+    error("Internal Error: must have at least one value.");    // nocov
+  if(XLENGTH(value) != len)
+    error("Internal Error: `x` and `value` length mismatch."); // nocov
+  if(TYPEOF(carry) != LGLSXP)
+    error("Internal Error: bad `carry` type in replace.");     // nocov
 
   int prt = 0;
   SEXP res = PROTECT(allocVector(STRSXP, len)); ++prt;
+  int * start_i = INTEGER(start);
+  int * stop_i = INTEGER(stop);
+  int carry_i = asLogical(carry);
 
-  // Compute `start` for `value`
-  // Compute `stop` for `value`
-  // Determine if `stop` for `value` can be honored
-  // If yes, done?
+  struct FANSI_state st_x0, st_x1, st_x_last, st_v0, st_v1, st_v_last;
+  st_x0 = st_v0 = st_x1 = st_x_last = st_v1 = st_v_last = state;
+  st_v0.arg = st_v1.arg = st_v_last = "value";
+
+  for(R_xlen_t i = 0; i < len; ++i) {
+    // - Setup -----------------------------------------------------------------
+
+    FANSI_interrupt(i);
+    // initial init done in caller as really all we're doing is setting all the
+    // fixed parameters in the object.
+    st_x0 = FANSI_state_reinit(st_x0, x, i);
+    st_v0 = FANSI_state_reinit(st_v0, v, i);
+    if(carry_i == 1) {
+      st_x0.sgr st_x_last.sgr;
+      st_x0.url st_x_last.url;
+      st_v0.sgr st_v_last.sgr;
+      st_v0.url st_v_last.url;
+    }
+    int start_ii, start_x, stop_x, start_v, stop_v;
+    start_ii = start_i[i];
+    if(start_ii < 1) start_ii = 1;
+    start_x = start_v = start_i[i];
+    stop_x = stop_v = stop_i[i];
+
+    // - Compute Lengths -------------------------------------------------------
+
+    // Remember that start/stop are 1 indexed, but bounds are "zero" indexed.
+    // (they are just a measure of width accrued prior to point).
+
+    // Initial Length Calc
+    int term_x = 0;      // always include trail for x
+    substr_calc_points(
+      &st_x0, &st_x1, i, start_x, stop_x, rnd_i, norm_i, term_x, x_len
+    );
+    substr_calc_points(
+      &st_v0, &st_v1, i, start_v, stop_v, rnd_i, norm_i, term_i, x_len
+    );
+    int size_x = st_x1.pos_width - st_x0.pos_width;
+    int size_v = st_v1.pos_width - st_v0.pos_width;
+
+    // Adjustments if substring does not fit exactly
+
+    if(size_v > size_x) {
+      // Reduce the size of the replacement by 1 to see if it fits that way.
+      // Implicit here is that the widths are all either 1 or 2, which may not
+      // be the case when a \U code is rendered (but that should only be for
+      // EncodeString, which we don't care about).
+      stop_v = stop_v - 1;
+      substr_calc_points(
+        &st_v0, &st_v1, i, start_v, stop_v, rnd_i, norm_i, term_i, x_len
+      );
+      size_v = st_v1.pos_width - st_v0.pos_width;
+    }
+    if (size_mid < size_avail) {
+      // Scooch forward trail by gap amount if replacement is too small
+      struct FANSI_state st_x11;
+      int stop_x1 = stop_x1 - (size_x - size_v);
+      substr_calc_points(
+        &st_x0, &st_x11, i, start_x, stop_x1, rnd_i, norm_i, term_x, x_len
+      );
+      int size_x1 = st_x11.pos_width - st_x0.pos_width;
+      if(size_v <= size_x1) {
+        st_x1 = st_x11;
+        stop_x = stop_x1;
+    } }
+    // - Extract String --------------------------------------------------------
+
+    SEXP res;
+    const char * err_msg = "Replacing substring";
+    const char * x1_string;
+    for(int k = 0; k < 2; ++k) {
+      if(!k) FANSI_reset_buff(buff);
+      else   FANSI_size_buff(buff);
+
+      // Copy leading string
+      FANSI_W_MCOPY(buff, st_x0.string, st_x0.pos_byte);
+      // Close leading string.
+      if(term_i && FANSI_sgr_active(state_x0.sgr))
+          FANSI_W_sgr_close(buff, state_x0.sgr, norm_i, i);
+      if(term_i && FANSI_url_active(state_x0.url))
+          FANSI_W_url_close(buff, state_x0.url, norm_i, i);
+
+      // Replacement, **lead** termination handled by manipulating the anchor.
+      FANSI_W_bridge(buff, st_v_anchor, st_v_0, norm_i, i);
+      const char * v_string = st_v0.string + st_v0.start_byte
+      int v_bytes = st_v0.stop_byte - st_v0.start_byte;
+      FANSI_W_MCOPY(buff, v_string, v_bytes);
+      if(term_i && FANSI_sgr_active(state_v1.sgr))
+          FANSI_W_sgr_close(buff, state_v1.sgr, norm_i, i);
+      if(term_i && FANSI_url_active(state_v1.url))
+          FANSI_W_url_close(buff, state_v1.url, norm_i, i);
+
+      // Trailing string, note `strlen`, string is at most INT_MAX long
+      // We do not close the trailing string.
+      FANSI_W_bridge(buff, st_x0, st_x1, norm_i, i);
+      x1_string = st_x1.string + st_x1.start_byte
+      int x_bytes = strlen(st_x1.string) - st_x1.start_byte;
+      FANSI_W_MCOPY(buff, x_string, x_bytes);
+    }
+    // - Finalize --------------------------------------------------------------
+
+    int has_utf8 = st_x0.has_utf8 || st_v1.has_utf8;
+    if(carry_i) {
+      st_x_last = st_x1;
+      while(st_x_last.string[st_x_last.pos_byte])
+        st_x_last = FANSI_read_next(st_x_last);
+      st_v_last = st_v1;
+      while(st_v_last.string[st_v_last.pos_byte])
+        st_v_last = FANSI_read_next(st_v_last);
+      has_utf8 = has_utf8 || st_x_last.has_utf8 > st_x1.pos_byte;
+    } else {
+      has_utf8 = has_utf8 || has_8bit(x_string);
+    }
+    SET_STRING_ELT(res, i, FANSI_mkChar(*buff, chr_type, i));
+  }
   UNPROTECT(prt);
   return res;
 }
-*/
-
-// @param keep 0 (normal substring), 1 (replace lead), 2 (replace trail), used
-//   to help maintain illusion of replacements happening in place (e.g. don't
-//   modify start/end, but also keep track of carry status).
 
 SEXP FANSI_substr(
   SEXP x,
@@ -313,15 +443,12 @@ SEXP FANSI_substr(
   SEXP type, SEXP rnd,
   SEXP warn, SEXP term_cap,
   SEXP ctl, SEXP norm,
-  SEXP carry, SEXP terminate,
-  SEXP keep
+  SEXP carry, SEXP terminate
 ) {
   if(TYPEOF(start) != INTSXP) error("Internal Error: invalid `start`.");// nocov
   if(TYPEOF(stop) != INTSXP) error("Internal Error: invalid `stop`.");  // nocov
   if(TYPEOF(rnd) != INTSXP || XLENGTH(rnd) != 1)
     error("Internal Error: invalid `rnd`."); // nocov
-  if(TYPEOF(keep) != INTSXP || XLENGTH(keep) != 1)
-    error("Internal Error: invalid `keep` (1)."); // nocov
   if(!FANSI_is_tf(terminate))
     error("Internal Error: invalid `terminate`."); // nocov
   if(TYPEOF(type) == INTSXP && XLENGTH(type) == 1) {
@@ -343,13 +470,6 @@ SEXP FANSI_substr(
   int rnd_i = asInteger(rnd);
   int norm_i = asLogical(norm);
   int term_i = asLogical(terminate);
-  int keep_i = asInteger(keep);  // see param doc
-
-  // To support replacement mode treatement of trailing and leading strings
-  if(keep_i < 0 || keep_i > 2)
-    error("Internal Error: invalid `keep` (2)."); // nocov
-  if(keep_i == 2 && term_i)
-    error("Internal Error: invalid `keep` - `term` combo."); // nocov
 
   R_xlen_t len = XLENGTH(x);
   R_xlen_t start_l = XLENGTH(start);
@@ -378,14 +498,12 @@ SEXP FANSI_substr(
     // Note, UNPROTECT'ed SEXPs returned below
     if(value == R_NilValue) {
       res = substr_extract(
-        x, start, stop, carry, state, &buff, rnd_i, norm_i, term_i, keep_i
+        x, start, stop, carry, state, &buff, rnd_i, norm_i, term_i,
       );
     } else {
-      res = R_NilValue;
-      // res = substr_replace(
-      //   x, start, stop, value, carry, state, &buff, rnd_i, term_i, norm_i,
-      //   keep_i
-      // );
+      res = substr_replace(
+        x, start, stop, value, carry, state, &buff, rnd_i, term_i, norm_i,
+      );
     }
   } else res = allocVector(STRSXP, len);
 

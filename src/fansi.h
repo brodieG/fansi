@@ -274,10 +274,13 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     /*
      * Position markers (all zero index).
      *
-     * - pos_byte: the byte in the string
+     * - pos_byte: the first unread byte in the string:  IMPORTANT, unlike all
+     *   the other `pos_` trackers which track how many units have already
+     *   been read, this one points to the first UNread byte (need to change
+     *   variable name).
      * - pos_byte_sgr_start: the starting position of the last sgr read, really
-     *     only intended to be used in conjuction with 'terminal' so that if we
-     *     decide not to write a terminal SGR we know where to stop instead.
+     *   only intended to be used in conjuction with 'terminal' so that if we
+     *   decide not to write a terminal SGR we know where to stop instead.
      * - pos_ansi: actual character position, different from pos_byte due to
      *   multi-byte characters (i.e. UTF-8)
      * - pos_raw: the character position after we strip the handled ANSI tags,
@@ -289,18 +292,21 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      *
      * So pos_raw is essentially the character count excluding escapes.
      */
+    int pos_byte;
+    int pos_byte_sgr_start;
     int pos_ansi;
     int pos_raw;
     int pos_width;
-    int pos_byte;
-    int pos_byte_sgr_start;
+
 
     // Most of the objecs below are 1/0 could be a bitfield?  Or at a minimum as
     // a char?
 
-    // Are there bytes outside of 0-127.  Actually records the start byte
-    // position of the last utf8 character seen, which is useful to determine if
-    // later substrings do not contain UTF-8.
+    // Are there bytes outside of 0-127 (i.e. UTF-8 since that is the only way
+    // those should show up).  Records the 0-index start byte of the **next**
+    // character **after** last-seen UTF-8 character (we don't record the start
+    // byte because that could be 0, which is ambiguous; we coud initialize this
+    // to -1 so it isn't ambiguous, but that is also fragile).
     int has_utf8;
 
     // Info on last element read
