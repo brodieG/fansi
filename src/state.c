@@ -370,11 +370,11 @@ struct FANSI_sgr FANSI_sgr_setdiff(struct FANSI_sgr old, struct FANSI_sgr new) {
   };
   if(old.color > -1 && new.color == - 1) {
     res.color = old.color;
-    memcpy(res.color_extra, old.color_extra, 4);
+    memcpy(res.color_extra, old.color_extra, sizeof(old.color_extra));
   }
   if(old.bg_color > -1 && new.bg_color == - 1) {
     res.bg_color = old.bg_color;
-    memcpy(res.bg_color_extra, old.bg_color_extra, 4);
+    memcpy(res.bg_color_extra, old.bg_color_extra, sizeof(old.bg_color_extra));
   }
   if(old.font && !new.font) res.font = old.font;
   res.style = old.style & (~new.style);
