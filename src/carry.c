@@ -130,16 +130,17 @@ int FANSI_W_bridge(
   int normalize,
   R_xlen_t i
 ) {
-  struct FANSI_sgr to_close = FANSI_sgr_setdiff(end.sgr, restart.sgr);
-
   // Any prior open styles not overriden by new one need to be closed
   // One option is to always normalize the close, but ended up preferring to be
   // consistent with the use of `normalize` as we can't actually know how the
   // closed style was closed.
+  struct FANSI_sgr to_close = FANSI_sgr_setdiff(end.sgr, restart.sgr);
   FANSI_W_sgr_close(buff, to_close, normalize, i);
 
-  // Open all new styles (an alternative would be to open only newly open ones)
-  FANSI_W_sgr(buff, restart.sgr, normalize, i);
+  // Open newly opened styles (an alternative would be to open all restart
+  // styles, but doing this is a little cleaner).
+  struct FANSI_sgr to_open = FANSI_sgr_setdiff(restart.sgr, end.sgr);
+  FANSI_W_sgr(buff, to_open, normalize, i);
 
   // Any changed URLs will need to be written (empty URL acts as a closer
   // so simpler than with SGR).
