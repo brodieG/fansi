@@ -202,6 +202,7 @@ static SEXP substr_one(
 ) {
   struct FANSI_state state_start, state_stop;
   state_start = state_stop = *state;
+  if(term_i) *state = FANSI_reset_state(*state);
   substr_calc_points(&state_start, &state_stop, i, start, stop, rnd_i, term_i);
 
   // - Extract ---------------------------------------------------------------
@@ -209,19 +210,14 @@ static SEXP substr_one(
   int empty_string = state_stop.pos_byte == state_start.pos_byte;
   if(!empty_string) {
     // Do we need to close tags?
-    int needs_close = term_i;
-    int needs_cl_sgr = needs_close && FANSI_sgr_active(state_stop.sgr);
-    int needs_cl_url = needs_close && FANSI_url_active(state_stop.url);
+    int needs_cl_sgr = term_i && FANSI_sgr_active(state_stop.sgr);
+    int needs_cl_url = term_i && FANSI_url_active(state_stop.url);
 
     // Measure/Write loop (see src/write.c), this is adapted from wrap.c
     const char * err_msg = "Writing substring";
     for(int k = 0; k < 2; ++k) {
       if(!k) FANSI_reset_buff(buff);
       else   FANSI_size_buff(buff);
-
-      struct FANSI_sgr sgra, sgrb;
-      sgra = FANSI_sgr_setdiff(state->sgr, state_start.sgr);
-      sgrb = FANSI_sgr_setdiff(state_start.sgr, state->sgr);
 
       // Use bridge do write opening styles to account for potential carry and
       // similar in the input state.

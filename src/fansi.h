@@ -418,6 +418,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   struct FANSI_ctl_pos FANSI_find_ctl(struct FANSI_state state, R_xlen_t i);
   struct FANSI_state FANSI_reset_pos(struct FANSI_state state);
   struct FANSI_state FANSI_reset_width(struct FANSI_state state);
+  struct FANSI_state FANSI_reset_state(struct FANSI_state state);
 
   void FANSI_check_chrsxp(SEXP x, R_xlen_t i);
 

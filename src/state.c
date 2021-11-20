@@ -120,21 +120,8 @@ struct FANSI_state FANSI_state_reinit(
   FANSI_check_chrsxp(chrsxp, i);
   const char * string = CHAR(chrsxp);
 
-  struct FANSI_state state_reinit;
-  state_reinit = (struct FANSI_state) {
-    .string = string,
-    .warn = state.warn,
-    .term_cap = state.term_cap,
-    .allowNA = state.allowNA,
-    .keepNA = state.keepNA,
-    .width_mode = state.width_mode,
-    .ctl = state.ctl,
-    .arg = state.arg
-  };
-  state_reinit.string = string;
-  state_reinit.sgr = (struct FANSI_sgr) {.color = -1, .bg_color = -1};
-  state_reinit.sgr_prev = (struct FANSI_sgr) {.color = -1, .bg_color = -1};
-  return state_reinit;
+  state.string = string;
+  return FANSI_reset_state(state);
 }
 // When we don't care about R_nchar width, but do care about CSI / SGR (which
 // means, we only really care about SGR since all CSI does is affect width calc).
@@ -207,7 +194,25 @@ struct FANSI_state FANSI_reset_pos(struct FANSI_state state) {
   state.non_normalized = 0;
   return state;
 }
-
+/*
+ * Reset state without changing index/string
+ */
+struct FANSI_state FANSI_reset_state(struct FANSI_state state) {
+  struct FANSI_state state_reinit;
+  state_reinit = (struct FANSI_state) {
+    .string = state.string,
+    .warn = state.warn,
+    .term_cap = state.term_cap,
+    .allowNA = state.allowNA,
+    .keepNA = state.keepNA,
+    .width_mode = state.width_mode,
+    .ctl = state.ctl,
+    .arg = state.arg
+  };
+  state_reinit.sgr = (struct FANSI_sgr) {.color = -1, .bg_color = -1};
+  state_reinit.sgr_prev = (struct FANSI_sgr) {.color = -1, .bg_color = -1};
+  return state_reinit;
+}
 /*
  * Compute the state given a character position (raw position)
  *
