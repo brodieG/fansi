@@ -341,13 +341,14 @@ static SEXP substr_replace(
 
     // Remember that start/stop are 1 indexed, but bounds are "zero" indexed.
     // (they are just a measure of width accrued prior to point).
-    int start_ii, start_x, stop_x, start_v, stop_v;
+    int start_ii, stop_ld, start_tr, start_v, stop_v;
     start_ii = start_i[i];
     if(start_ii < 1) start_ii = 1;
-    start_x = start_i[i];
-    stop_x = stop_i[i];
+    // ld = lead, tr = trail
+    stop_ld = start_i[i];
+    start_tr = stop_i[i] + 1;
     start_v = 1;
-    stop_v = stop_x - start_x + 1;
+    stop_v = start_tr - stop_ld;
 
     // - Compute Lengths -------------------------------------------------------
 
@@ -355,21 +356,18 @@ static SEXP substr_replace(
     // REMOVING, so logic is a bit weird.
     //
     // In: substr_ctl(x, 3, 5) <- v
-    //
+    //   1 2 3 4 5 6
     //  .x.x.x.x.x.x.x.x      .v.v.v
-    //      |    |            |    |
-    //      x0   x1           v0   v1
+    //     |       |           |   |
+    //     x0      x1          v0  v1
 
     // We want the values in _x0 and _x1, using _xtmp as dummy, and only reading
-    // one position in trail since we just care about the beginning of trail.
+    // one position in tr_ since we just care about the beginning of tr_.
     // Leading portion of x
-    substr_calc_points(&st_xtmp, &st_x0, i, 1, start_x - 1, rnd_i, term_i);
-    // Trailing portion of x, we just need the first byte position since we're
-    // going to copy the entire string after that.
-    int start_x_trail = stop_x + 1;
-    substr_calc_points(
-      &st_x1, &st_xtmp, i, start_x_trail, start_x_trail, rnd_i, term_i
-    );
+    substr_calc_points(&st_xtmp, &st_x0, i, 1, stop_ld - 1, rnd_i, term_i);
+    // trail of x, we just need the first character position since
+    // we're going to copy the entire string after that.
+    substr_calc_points(&st_x1, &st_xtmp, i, start_tr, start_tr, rnd_i, term_i);
     // More straightforward for the `value`
     substr_calc_points(&st_v0, &st_v1, i, start_v, stop_v, rnd_i, term_i);
 
@@ -393,9 +391,9 @@ static SEXP substr_replace(
     if (size_v < size_x) {
       // Scooch forward trail by gap amount if replacement is too small
       struct FANSI_state st_x11 = st_x0;
-      int start_x_trail2 = start_x_trail - (size_x - size_v);
+      int start_tr2 = start_tr - (size_x - size_v);
       substr_calc_points(
-        &st_x11, &st_xtmp, i, start_x_trail2, start_x_trail2, rnd_i, term_i
+        &st_x11, &st_xtmp, i, start_tr2, start_tr2, rnd_i, term_i
       );
       int size_x1 = st_x11.pos_width - st_x0.pos_width;
       if(size_v <= size_x1) {
