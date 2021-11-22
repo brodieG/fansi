@@ -214,7 +214,6 @@ static SEXP substr_one(
   if(term_i) *state = FANSI_reset_state(*state);
   else *state = ref;
 
-  //Rprintf("start %d stop %d\n", start, stop);
   substr_calc_points(&state_start, &state_stop, i, start, stop, rnd_i, term_i);
 
   // - Extract ---------------------------------------------------------------
@@ -237,10 +236,17 @@ static SEXP substr_one(
       FANSI_W_bridge(buff, *state, state_start, norm_i, i, err_msg);
 
       // Actual string, remember state_stop.pos_byte is one past what we need
-      const char * string = state_start.string + state_start.pos_byte;
-      int bytes = state_stop.pos_byte - state_start.pos_byte;
-      FANSI_W_MCOPY(buff, string, bytes);
-
+      int normed = -1;
+      if(norm_i) {
+        struct FANSI_state state_tmp = state_start;
+        normed =
+          FANSI_W_normalize(buff, &state_tmp, state_stop.pos_byte, i, err_msg);
+      }
+      if(normed < 0){
+        const char * string = state_start.string + state_start.pos_byte;
+        int bytes = state_stop.pos_byte - state_start.pos_byte;
+        FANSI_W_MCOPY(buff, string, bytes);
+      }
       // And turn off CSI styles if needed
       if(needs_cl_sgr) FANSI_W_sgr_close(buff, state_stop.sgr, norm_i, i);
       if(needs_cl_url) FANSI_W_url_close(buff, state_stop.url, i);

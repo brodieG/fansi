@@ -25,10 +25,12 @@
  * @param buff if NULL, computes the size required, if not writes it.
  * @param *state state by reference so that we can recover the changed state
  *   info from reading for use in the `carry` case.
+ * @param stop pos_byte corresponding to the position to stop normalizing.
  */
 
-static int normalize(
-  struct FANSI_buff * buff, struct FANSI_state *state, R_xlen_t i
+int FANSI_W_normalize(
+  struct FANSI_buff * buff, struct FANSI_state *state,
+  int stop, R_xlen_t i, const char * err_msg
 ) {
   struct FANSI_state state_int, state_prev;
   state_int = state_prev  = *state;
@@ -36,18 +38,21 @@ static int normalize(
   string_prev = string_last = string = state_int.string + state_int.pos_byte;
   int any_to_exp = 0;
 
-  const char * err_msg = "Normalizing SGR";
-
-  // Logic based on FANSI_esc_to_html
+  // Logic originally based on FANSI_esc_to_html, adapted for explicit stop
 
   // Find other ESCs
   while(1) {
     string = strchr(string_prev, 0x1b);
     if(!string) string = string_prev + strlen(string_prev);
     state_int.pos_byte = (string - state_int.string);
-
-    // We encountered an ESC
-    if(*string && *string == 0x1b) {
+    if(state_int.pos_byte >= stop) {
+      // Overshot target length
+      if(any_to_exp) {
+        FANSI_W_MCOPY(buff, string_last, stop - (string_last - state->string));
+      }
+      break;
+    } else if (*string && *string == 0x1b) {
+      // We encountered an ESC
       state_prev = state_int;
       state_int = FANSI_read_next(state_int, i, 1);
       // Any special sequence will be re-written.  In some cases, we don't need
@@ -57,14 +62,15 @@ static int normalize(
         any_to_exp = 1;
         // stuff prior to SGR/URL
         FANSI_W_MCOPY(buff, string_last, string - string_last);
+        // Actual SGR
         FANSI_W_bridge(buff, state_prev, state_int, 1, i, err_msg);
 
         // Keep track of the last point we copied
         string_last = state_int.string + state_int.pos_byte;
       }
       string = state_int.string + state_int.pos_byte;
-    }
-    else if (*string == 0) {
+    } else if (*string == 0) {
+      // We ran out of string
       if(any_to_exp) {
         FANSI_W_MCOPY(buff, string_last, string - string_last);
       }
@@ -95,6 +101,7 @@ static SEXP normalize_state_int(
   int do_carry = STRING_ELT(carry, 0) != NA_STRING;
   struct FANSI_state state_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
   struct FANSI_state state_start, state;
+  const char * err_msg = "Normalizing state";
 
   for(R_xlen_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i + index0);
@@ -114,7 +121,7 @@ static SEXP normalize_state_int(
     state_start = state;
 
     FANSI_reset_buff(buff);
-    int len = normalize(buff, &state, i);
+    int len = FANSI_W_normalize(buff, &state, (int)LENGTH(chrsxp), i, err_msg);
     state_carry.sgr = state.sgr;
     state_carry.url = state.url;
 
@@ -125,7 +132,7 @@ static SEXP normalize_state_int(
     FANSI_size_buff(buff);
     state = state_start;
     state.warned = 1;  // avoid double warnings
-    normalize(buff, &state, i);
+    FANSI_W_normalize(buff, &state, (int)LENGTH(chrsxp), i, err_msg);
 
     cetype_t chr_type = getCharCE(chrsxp);
     SEXP reschr = PROTECT(FANSI_mkChar(*buff, chr_type, i));
