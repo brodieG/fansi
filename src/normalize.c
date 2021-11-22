@@ -30,7 +30,8 @@
 static int normalize(
   struct FANSI_buff * buff, struct FANSI_state *state, R_xlen_t i
 ) {
-  struct FANSI_state state_int = *state;
+  struct FANSI_state state_int, state_prev;
+  state_int = state_prev  = *state;
   const char * string, * string_prev, * string_last;
   string_prev = string_last = string = state_int.string + state_int.pos_byte;
   int any_to_exp = 0;
@@ -47,6 +48,7 @@ static int normalize(
 
     // We encountered an ESC
     if(*string && *string == 0x1b) {
+      state_prev = state_int;
       state_int = FANSI_read_next(state_int, i, 1);
       // Any special sequence will be re-written.  In some cases, we don't need
       // to do so, but even when things are already normalized, the order of the
@@ -55,22 +57,7 @@ static int normalize(
         any_to_exp = 1;
         // stuff prior to SGR/URL
         FANSI_W_MCOPY(buff, string_last, string - string_last);
-
-        // Any prior open styles not overriden by new one need to be closed
-        struct FANSI_sgr to_close =
-          FANSI_sgr_setdiff(state_int.sgr_prev, state_int.sgr);
-
-        FANSI_W_sgr_close(buff, to_close, 1, i);
-
-        // Any newly open styles will need to be opened
-        struct FANSI_sgr to_open =
-          FANSI_sgr_setdiff(state_int.sgr, state_int.sgr_prev);
-        FANSI_W_sgr(buff, to_open, 1, i);
-
-        // Any changed URLs will need to be written (empty URL acts as a closer
-        // so simpler than with SGR).
-        if(FANSI_url_comp(state_int.url, state_int.url_prev))
-          FANSI_W_url(buff, state_int.url, 1, i);
+        FANSI_W_bridge(buff, state_prev, state_int, 1, i, err_msg);
 
         // Keep track of the last point we copied
         string_last = state_int.string + state_int.pos_byte;

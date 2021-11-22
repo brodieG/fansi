@@ -38,21 +38,16 @@
 #'             \033[31m  \033[m
 #' ```
 #'
-#' `start` indices reference the interstice preceding the corresponding
-#' character position, and `stop` the **character** following it.  Thus each
-#' substring will capture the same number of characters as interstices from the
-#' original.  An implication is that _Control Sequences_ starting after the
-#' last character in the substring are excluded from the substring.
-#'
-#' If `terminate = FALSE` and `stop` is past the last character in the string,
-#' trailing _Control Sequences_ are included in the substring.  If `terminate =
-#' TRUE`, `fansi` always strips trailing control sequences as they would be
-#' immediately closed anyway.
-#'
-#' _Control Sequences_ affect all subsequent characters in a string, so even
-#' though active _Control Sequences_ before the first character of the substring
-#' are not technically _in_ the substring, `fansi` will prepend them so the
-#' substring presents consistent with _Control Sequence_ formatting semantics.
+#' `start` and `stop` reference character positions so they never explicitly
+#' select for the interstitial _Control Sequences_.  The latter are implicitly
+#' selected if they appear in interstices after the first character and before
+#' the last.  Additionally, because _Control Sequences_ affect all subsequent
+#' characters in a string, any active _Control Sequence_, whether opened just
+#' before a character or much before, will be reflected in the state `fansi`
+#' prepends to the beginning of each substring.  It is possible to select
+#' _Control Sequences_ at the end of a string by specifying `stop` values past
+#' the end of the string, although this will only produce a visible result if
+#' `terminate` is set to `FALSE`.
 #'
 #' Because exact substrings on anything other than character count cannot be
 #' guaranteed (e.g. as a result of multi-byte encodings, or double display-width
@@ -83,10 +78,11 @@
 #' A number of _Normal_ characters such as combining diacritic marks have
 #' reported width of zero.  These are typically displayed overlaid on top of the
 #' preceding glyph, as in the case of `"e\u301"` forming `"é"`.  Unlike _Control
-#' Sequences_ which also have reported width of zero, zero-width _Normal_
-#' characters are grouped with the last preceding non-zero width _Normal_
-#' character.  This behavior is incorrect for rare zero-width _Normal_
-#' characters such as prepending marks (see "Output Stability" and "Graphemes").
+#' Sequences_, which also have reported width of zero, `fansi` groups zero-width
+#' _Normal_ characters with the last preceding non-zero width _Normal_
+#' character.  This is not the right thing to do for some rare zero-width
+#' _Normal_ characters such as prepending marks (see "Output Stability" and
+#' "Graphemes").
 #'
 #' @section Output Stability:
 #'
@@ -116,9 +112,9 @@
 #' designated by `start` and `stop`.  In general, `fansi` will not modify the
 #' beginning or ends of the strings in `x`, so `terminate` only affects the
 #' boundaries between the original substring and the spliced one.  While you can
-#' use `terminate = FALSE` in replacement mode, this is unlikely to produce
-#' useful results as the code internally treats state in `x` and `value` as
-#' independent.
+#' use `terminate = FALSE` in replacement mode, this only makes sense to do if
+#' only one of `x` or `value` contains _Control Sequences_.  `fansi` will not
+#' account for any interactions of state in `x` and `value`.
 #'
 #' The `carry` parameter causes state to carry within the original string and
 #' the replacement values independently, as if they were columns of text cut
@@ -370,6 +366,9 @@ substr2_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
+  # More restrictive carry
+  if(!is.logical(carry) || length(carry) != 1 || is.na(carry))
+    stop("Argument `carry` must be TRUE or FALSE.")
   # So warning are issued here
   start <- as.integer(start)
   stop <- as.integer(stop)
@@ -377,9 +376,8 @@ substr2_ctl <- function(
   x0 <- x
   VAL_IN_ENV(
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
-    carry=carry, terminate=terminate, tab.stops=tab.stops,
-    tabs.as.spaces=tabs.as.spaces, round=round, start=start,
-    stop=stop, type=type
+    tab.stops=tab.stops, tabs.as.spaces=tabs.as.spaces, round=round, start=start,
+    stop=stop, type=type, carry=carry
   )
   # In replace mode we shouldn't change the encoding
   if(!all(enc.diff <- Encoding(x) ==  Encoding(x0)))
@@ -389,7 +387,6 @@ substr2_ctl <- function(
       "`substr_ctl<-` (replacement form).  Illegal value at position ",
       min(which(enc.diff)), "."
     )
-
   # Adjust `stop` to be no longer than end of string, also need to make sure the
   # overall string length is unchanged.
   value <- as.character(value)
@@ -398,9 +395,9 @@ substr2_ctl <- function(
   res <- .Call(FANSI_substr,
     x,
     start, stop, value,
-    type.int, round.int,
-    warn.int, term.cap.int,
-    ctl.int, normalize,
+    TYPE.INT, ROUND.INT,
+    WARN.INT, TERM.CAP.INT,
+    CTL.INT, normalize,
     carry, terminate
   )
   attributes(res) <- attributes(x)

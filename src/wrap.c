@@ -182,7 +182,7 @@ static SEXP writeline(
   for(int k = 0; k < 2; ++k) {
     if(!k) FANSI_reset_buff(buff);
     else   FANSI_size_buff(buff);
-    if(needs_st_sgr) FANSI_W_sgr(buff, state_start.sgr, normalize, i);
+    if(needs_st_sgr) FANSI_W_sgr(buff, state_start.sgr, normalize, 1, i);
     if(needs_st_url) FANSI_W_url(buff, state_start.url, normalize, i);
 
     // Apply indent/exdent prefix/initial

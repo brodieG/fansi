@@ -449,7 +449,12 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_sgr_active(struct FANSI_sgr sgr);
   int FANSI_url_active(struct FANSI_url url);
   int FANSI_sgr_comp_color(struct FANSI_sgr target, struct FANSI_sgr current);
-  struct FANSI_sgr FANSI_sgr_setdiff(struct FANSI_sgr old, struct FANSI_sgr new);
+  struct FANSI_sgr FANSI_sgr_setdiff(
+    struct FANSI_sgr old, struct FANSI_sgr new, int mode
+  );
+  struct FANSI_sgr FANSI_sgr_intersect(
+    struct FANSI_sgr old, struct FANSI_sgr new
+  );
   int FANSI_url_comp(struct FANSI_url target, struct FANSI_url current);
 
   struct FANSI_state FANSI_read_next(
@@ -459,7 +464,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   // "Writing" functions
   void FANSI_W_sgr(
-    struct FANSI_buff * buff, struct FANSI_sgr sgr, int normalize, R_xlen_t i
+    struct FANSI_buff * buff, struct FANSI_sgr sgr, int normalize,
+    int enclose, R_xlen_t i
   );
   void FANSI_W_url(
     struct FANSI_buff * buff, struct FANSI_url url, int normalize, R_xlen_t i
@@ -483,7 +489,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   );
   int FANSI_W_bridge(
     struct FANSI_buff * buff, struct FANSI_state end,
-    struct FANSI_state restart, int normalize, R_xlen_t i
+    struct FANSI_state restart, int normalize, R_xlen_t i,
+    const char * err_msg
   );
 
   // Macro versions require `len`, `i`, and `err_msg` defined in scope.
@@ -496,6 +503,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   // Utilities
   int FANSI_seek_ctl(const char * x);
   void FANSI_print(char * x);
+  void FANSI_print_state(struct FANSI_state x);
+  void FANSI_print_sgr(struct FANSI_sgr s);
   void FANSI_interrupt(R_xlen_t i);
   intmax_t FANSI_ind(R_xlen_t i);
   SEXP FANSI_mkChar0(char * start, char * end, cetype_t enc, R_xlen_t i);

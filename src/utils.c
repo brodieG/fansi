@@ -441,4 +441,27 @@ void FANSI_print(char * x) {
     Rprintf("\n");
   }
 }
+void FANSI_print_sgr(struct FANSI_sgr s) {
+  Rprintf(
+    "  color: %d %d %d;%d;%d bgcolor: %d %d %d;%d;%d\n",
+    s.color, s.color_extra[0],
+    s.color_extra[1], s.color_extra[2], s.color_extra[3],
+    s.bg_color, s.bg_color_extra[0],
+    s.bg_color_extra[1], s.bg_color_extra[2], s.bg_color_extra[3]
+  );
+  Rprintf(
+    "  style %x ideogram %x  border %x font %d\n",
+    s.style, s.ideogram, s.border, s.font
+  );
+}
+void FANSI_print_state(struct FANSI_state x) {
+  Rprintf("- State -------\n");
+  FANSI_print_sgr(x.sgr);
+  Rprintf(
+    "  pos: b %d r %d a %d w %d\n",
+    x.pos_byte, x.pos_raw, x.pos_ansi, x.pos_width
+  );
+  Rprintf("  warn %d err %x\n", x.warn, x.err_code);
+  Rprintf("- End State ---\n");
+}
 // nocov end

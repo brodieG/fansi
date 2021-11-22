@@ -28,7 +28,7 @@ static struct FANSI_state state_at_end(
 }
 
 SEXP FANSI_state_at_end_ext(
-  SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry, 
+  SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry,
   SEXP arg, SEXP allowNA
 ) {
   FANSI_val_args(x, norm, carry);
@@ -128,20 +128,52 @@ int FANSI_W_bridge(
   struct FANSI_state end,
   struct FANSI_state restart,
   int normalize,
-  R_xlen_t i
+  R_xlen_t i,
+  const char * err_msg
 ) {
-  // Any prior open styles not overriden by new one need to be closed
-  // One option is to always normalize the close, but ended up preferring to be
-  // consistent with the use of `normalize` as we can't actually know how the
-  // closed style was closed.
-  struct FANSI_sgr to_close = FANSI_sgr_setdiff(end.sgr, restart.sgr);
-  FANSI_W_sgr_close(buff, to_close, normalize, i);
+  // Fairly different logic for normalize vs not because in normalize we can
+  // rely on an e.g. color change to change a pre-existing color, whereas in
+  // non-normalize we close explicitly and need to re-open.
+  struct FANSI_sgr to_close, to_open;
+  to_close = FANSI_sgr_setdiff(end.sgr, restart.sgr, !normalize);
+  to_open = FANSI_sgr_setdiff(restart.sgr, end.sgr, !normalize);
 
-  // Open newly opened styles (an alternative would be to open all restart
-  // styles, but doing this is a little cleaner).
-  struct FANSI_sgr to_open = FANSI_sgr_setdiff(restart.sgr, end.sgr);
-  FANSI_W_sgr(buff, to_open, normalize, i);
+  if(!normalize) {
+    // We need to combine all the style tokens, which means we need to write the
+    // enclosing \033[ and m separately depending on what needs to change.
+    // renew are all the things that exist both in old and new that need to be
+    // re-opened after an all-close.
+    struct FANSI_sgr renew;
+    // If we close everything, we need to re-open the stuff that was active
+    renew = FANSI_sgr_intersect(end.sgr, restart.sgr);
+    /*
+    Rprintf("to_open %d to_close %d renew %d\n",
+      FANSI_sgr_active(to_open),
+      FANSI_sgr_active(to_close),
+      FANSI_sgr_active(renew)
+      );
+    */
+    int active_open = FANSI_sgr_active(to_open);
+    int active_close = FANSI_sgr_active(to_close);
 
+    if(active_open && active_close) {
+      FANSI_W_COPY(buff, "\033[0;");
+      FANSI_W_sgr(buff, renew, normalize, 0, i);
+      FANSI_W_sgr(buff, to_open, normalize, 0, i);
+      if(buff->buff) *((buff->buff) - 1) = 'm';
+    } else if (active_close) {
+      FANSI_W_COPY(buff, "\033[0;");
+      FANSI_W_sgr(buff, renew, normalize, 0, i);
+      if(buff->buff) *((buff->buff) - 1) = 'm';
+    } else {
+      FANSI_W_sgr(
+        buff, FANSI_sgr_setdiff(restart.sgr, end.sgr, 0), normalize, 1, i
+      );
+    }
+  } else {
+    FANSI_W_sgr_close(buff, to_close, normalize, i);
+    FANSI_W_sgr(buff, to_open, normalize, 1, i);
+  }
   // Any changed URLs will need to be written (empty URL acts as a closer
   // so simpler than with SGR).
   if(FANSI_url_comp(end.url, restart.url))
@@ -199,12 +231,13 @@ SEXP FANSI_bridge_state_ext(SEXP end, SEXP restart, SEXP term_cap, SEXP norm) {
     FANSI_reset_buff(&buff);
 
     // Measure
-    int len = FANSI_W_bridge(&buff, st_end, st_rst, normalize, i);
+    const char * err_msg = "Bridging state";
+    int len = FANSI_W_bridge(&buff, st_end, st_rst, normalize, i, err_msg);
     if(len < 0) continue;
 
     // Write
     FANSI_size_buff(&buff);
-    FANSI_W_bridge(&buff, st_end, st_rst, normalize, i);
+    FANSI_W_bridge(&buff, st_end, st_rst, normalize, i, err_msg);
 
     SEXP reschr = PROTECT(FANSI_mkChar(buff, CE_NATIVE, i));
     SET_STRING_ELT(res, i, reschr);
