@@ -219,12 +219,7 @@ static SEXP substr_one(
 
   // - Extract ---------------------------------------------------------------
 
-  /*
-  Rprintf("STATE\n");
-  FANSI_print_sgr(state->sgr);
-  Rprintf("START\n");
-  FANSI_print_sgr(state_start.sgr);
-  */
+  SEXP res;
   int empty_string = state_stop.pos_byte == state_start.pos_byte;
   if(!(empty_string && term_i) && stop >= start) {
     // Do we need to close tags?
@@ -249,12 +244,16 @@ static SEXP substr_one(
       // And turn off CSI styles if needed
       if(needs_cl_sgr) FANSI_W_sgr_close(buff, state_stop.sgr, norm_i, i);
       if(needs_cl_url) FANSI_W_url_close(buff, state_stop.url, i);
-  } }
+    }
+    cetype_t chr_type = CE_NATIVE;
+    if(state_stop.has_utf8 > state_start.pos_byte) chr_type = CE_UTF8;
+    res = FANSI_mkChar(*buff, chr_type, i);
+  } else {
+    res = R_BlankString;
+  }
   // Carry handled in `substr_extract`
   *state = state_stop;
-  cetype_t chr_type = CE_NATIVE;
-  if(state_stop.has_utf8 > state_start.pos_byte) chr_type = CE_UTF8;
-  return FANSI_mkChar(*buff, chr_type, i);;
+  return res;
 }
 // Extract Substring (`substr_ctl`)
 
