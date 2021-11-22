@@ -197,6 +197,24 @@ static int substr_calc_points(
   */
   return state_stop->pos_width - state_start->pos_width;
 }
+static int W_normalize_or_copy(
+  struct FANSI_buff *buff, struct FANSI_state state, int norm_i,
+  int stop, R_xlen_t i
+) {
+  const char * err_msg;
+  err_msg = "Normalizing substring";
+  int res = -1;
+  int start = state.pos_byte;
+  if(norm_i) res = FANSI_W_normalize(buff, &state, stop, i, err_msg);
+  err_msg = "Extracting substring";
+  if(res < 0){
+    const char * string = state.string + start;
+    int bytes = stop - start;
+    res = FANSI_W_MCOPY(buff, string, bytes);
+  }
+  return res;
+}
+
 /*
  * @param state modified by reference.
  * @param state_ref state at end of previous extracted substring.
@@ -236,17 +254,8 @@ static SEXP substr_one(
       FANSI_W_bridge(buff, *state, state_start, norm_i, i, err_msg);
 
       // Actual string, remember state_stop.pos_byte is one past what we need
-      int normed = -1;
-      if(norm_i) {
-        struct FANSI_state state_tmp = state_start;
-        normed =
-          FANSI_W_normalize(buff, &state_tmp, state_stop.pos_byte, i, err_msg);
-      }
-      if(normed < 0){
-        const char * string = state_start.string + state_start.pos_byte;
-        int bytes = state_stop.pos_byte - state_start.pos_byte;
-        FANSI_W_MCOPY(buff, string, bytes);
-      }
+      W_normalize_or_copy(buff, state_start, norm_i, state_stop.pos_byte, i);
+
       // And turn off CSI styles if needed
       if(needs_cl_sgr) FANSI_W_sgr_close(buff, state_stop.sgr, norm_i, i);
       if(needs_cl_url) FANSI_W_url_close(buff, state_stop.url, i);
@@ -448,9 +457,7 @@ static SEXP substr_replace(
 
       // Replacement, **lead** termination handled by manipulating the anchor.
       FANSI_W_bridge(buff, st_vref, st_v0, norm_i, i, err_msg);
-      const char * v_string = st_v0.string + st_v0.pos_byte;
-      int v_bytes = st_v1.pos_byte - st_v0.pos_byte;
-      FANSI_W_MCOPY(buff, v_string, v_bytes);
+      W_normalize_or_copy(buff, st_v0, norm_i, st_v1.pos_byte, i);
       if(term_i && FANSI_sgr_active(st_v1.sgr))
         FANSI_W_sgr_close(buff, st_v1.sgr, norm_i, i);
       if(term_i && FANSI_url_active(st_v1.url))
