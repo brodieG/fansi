@@ -351,10 +351,12 @@ static SEXP substr_replace(
   int * start_i = INTEGER(start);
   int * stop_i = INTEGER(stop);
   int carry_i = STRING_ELT(carry, 0) != NA_STRING;
+  int write_ld, write_tr, write_md;
+  write_ld = write_tr = write_md = 0;
 
-  struct FANSI_state st_x0, st_x1, st_xtmp, st_xlast, st_xref,
+  struct FANSI_state st_x0, st_x1, st_x2, st_xlast, st_xref,
                      st_v0, st_v1, st_vlast, st_vref;
-  st_xtmp = st_x1 = st_xlast = st_xref =
+  st_x2 = st_x1 = st_xlast = st_xref =
     st_v0 = st_v1 = st_vlast = st_vref = state;
   st_v0.arg = st_v1.arg = st_vlast.arg = st_vref.arg = "value";
 
@@ -362,11 +364,11 @@ static SEXP substr_replace(
     // - Setup -----------------------------------------------------------------
 
     FANSI_interrupt(i);
-    // Reference state is the end of the last substring.
-    if(!term_i) st_vref = st_v1;
+    // Reference state is the end of the last written substring.
+    if(!term_i && write_md) st_vref = st_v1;
     // initial init done in caller as really all we're doing is setting all the
     // fixed parameters in the object.
-    st_x0 = FANSI_state_reinit(st_xtmp, x, i);
+    st_x0 = FANSI_state_reinit(st_x2, x, i);
     st_v0 = FANSI_state_reinit(st_v0, value, i);
     if(carry_i == 1) {
       st_x0.sgr = st_xlast.sgr;
@@ -374,16 +376,15 @@ static SEXP substr_replace(
       st_v0.sgr = st_vlast.sgr;
       st_v0.url = st_vlast.url;
     }
-    st_xtmp = st_x1 = st_x0;
+    st_x2 = st_x1 = st_x0;
 
     // Remember that start/stop are 1 indexed, but bounds are "zero" indexed.
     // (they are just a measure of width accrued prior to point).
     int start_ii, stop_ii, stop_ld, start_tr, start_v, stop_v;
     start_ii = start_i[i];
-    if(start_ii < 1) start_ii = 1;
     stop_ii = stop_i[i];
     // ld = lead, tr = trail
-    stop_ld = start_i[i];
+    stop_ld = start_ii < 1 ? 1 : start_ii;
     start_tr = stop_ii + 1;
     start_v = 1;
     stop_v = start_tr - stop_ld;
@@ -399,13 +400,13 @@ static SEXP substr_replace(
     //     |       |           |   |
     //     x0      x1          v0  v1
 
-    // We want the values in _x0 and _x1, using _xtmp as dummy, and only reading
-    // one position in tr_ since we just care about the beginning of tr_.
-    // Leading portion of x
-    substr_calc_points(&st_xtmp, &st_x0, i, 1, stop_ld - 1, rnd_i, term_i);
+    // We want the values in _x0 and _x1, using _x2 as dummy in the first call
+    // as we don't care about preserving the very start point.  We don't need to
+    // read the entire trail, we just need to check it has at leas one "char".
+    substr_calc_points(&st_x2, &st_x0, i, 1, stop_ld - 1, rnd_i, term_i);
     // trail of x, we just need the first character position since
     // we're going to copy the entire string after that.
-    substr_calc_points(&st_x1, &st_xtmp, i, start_tr, start_tr, rnd_i, term_i);
+    substr_calc_points(&st_x1, &st_x2, i, start_tr, start_tr, rnd_i, term_i);
     // More straightforward for the `value`
     substr_calc_points(&st_v0, &st_v1, i, start_v, stop_v, rnd_i, term_i);
 
@@ -425,77 +426,96 @@ static SEXP substr_replace(
         // Reduction didn't work, collapse size_v;
         st_v1 = st_v0;
         size_v = 0;
+        stop_v = start_v - 1;
     } }
     if (size_v < size_x) {
       // Scooch forward trail by gap amount if replacement is too small
-      struct FANSI_state st_x11 = st_x0;
-      int start_tr2 = start_tr - (size_x - size_v);
+      struct FANSI_state st_x11, st_x21;
+      st_x11 = st_x0;
+      int start_tr2 = st_x1.pos_width - (size_x - size_v) + 1;
       substr_calc_points(
-        &st_x11, &st_xtmp, i, start_tr2, start_tr2, rnd_i, term_i
+        &st_x11, &st_x21, i, start_tr2, start_tr, rnd_i, term_i
       );
       int size_x1 = st_x11.pos_width - st_x0.pos_width;
+      /*
+      Rprintf("x0 %d %d x1 %d %d x11 %d %d\n",
+        st_x0.pos_byte,st_x0.pos_width,
+        st_x1.pos_byte,st_x1.pos_width,
+        st_x11.pos_byte,st_x11.pos_width
+      );
+      Rprintf("size x %d x1 %d v %d\n", size_x, size_x1, size_v);
+      Rprintf("start_tr %d start_tr2 %d\n", start_tr, start_tr2);
+      */
       if(size_v <= size_x1) {
+        start_tr = start_tr2;
+        // We explicilty do not reset _x2 as that doesn't move
         st_x1 = st_x11;
     } }
     // - Extract String --------------------------------------------------------
 
+    // Which portions of the strings are we actually writing out?
+    // tr = trail, ld = lead, md = mid (`value`).  The semantics are
+    // "what you selected gets replaced", so that lead/trail sequences are left
+    // in unless you clearly select past them on each side.
+    write_ld = start_ii > 0 && (st_x0.pos_raw > 0 || !term_i);
+    write_md =
+      (stop_ii >= start_ii) && (st_v1.pos_byte > st_v0.pos_byte || !term_i);
+    write_tr = (start_tr - 1) <= st_x2.pos_width; // stop_ii isn't scooched
+
+    // We've done unncessary work for the cases where the things to write are
+    // empty, but easier to keep things straight this way.
     const char * err_msg = "Replacing substring";
-    const char * x1_string;
+    const char * x1_string = "";
 
-    for(int k = 0; k < 2; ++k) {
-      if(!k) FANSI_reset_buff(buff);
-      else   FANSI_size_buff(buff);
+    if(write_md) {
+      for(int k = 0; k < 2; ++k) {
+        if(!k) FANSI_reset_buff(buff);
+        else   FANSI_size_buff(buff);
 
-      // Copy leading string
-      FANSI_W_MCOPY(buff, st_x0.string, st_x0.pos_byte);
-      // Close leading string.
-      if(term_i && FANSI_sgr_active(st_x0.sgr)) {
-        FANSI_W_sgr_close(buff, st_x0.sgr, norm_i, i);
+        // Lead
+        if(write_ld) {
+          FANSI_W_MCOPY(buff, st_x0.string, st_x0.pos_byte);
+          if(term_i && FANSI_sgr_active(st_x0.sgr)) {
+            FANSI_W_sgr_close(buff, st_x0.sgr, norm_i, i);
+          }
+          if(term_i && FANSI_url_active(st_x0.url))
+            FANSI_W_url_close(buff, st_x0.url, i);
+        }
+        // Replacement
+        if(write_md) {
+          FANSI_W_bridge(buff, st_vref, st_v0, norm_i, i, err_msg);
+          W_normalize_or_copy(buff, st_v0, norm_i, st_v1.pos_byte, i);
+          if(term_i && FANSI_sgr_active(st_v1.sgr))
+            FANSI_W_sgr_close(buff, st_v1.sgr, norm_i, i);
+          if(term_i && FANSI_url_active(st_v1.url))
+            FANSI_W_url_close(buff, st_v1.url, i);
+        }
+        // Trailing string
+        if(write_tr) {
+          if(write_ld && !term_i) st_xref = st_x0;
+          FANSI_W_bridge(buff, st_xref, st_x1, norm_i, i, err_msg);
+          int x_bytes = strlen(st_x1.string) - st_x1.pos_byte;
+          x1_string = st_x1.string + st_x1.pos_byte;
+          FANSI_W_MCOPY(buff, x1_string, x_bytes);
+        }
       }
-      if(term_i && FANSI_url_active(st_x0.url))
-        FANSI_W_url_close(buff, st_x0.url, i);
-
-      // Replacement, **lead** termination handled by manipulating the anchor.
-      FANSI_W_bridge(buff, st_vref, st_v0, norm_i, i, err_msg);
-      W_normalize_or_copy(buff, st_v0, norm_i, st_v1.pos_byte, i);
-      if(term_i && FANSI_sgr_active(st_v1.sgr))
-        FANSI_W_sgr_close(buff, st_v1.sgr, norm_i, i);
-      if(term_i && FANSI_url_active(st_v1.url))
-        FANSI_W_url_close(buff, st_v1.url, i);
-
-      // Trailing string, note `strlen`, string is at most INT_MAX long
-      // We do not close the trailing string.
-      if(!term_i) st_xref = st_x0;
-      FANSI_W_bridge(buff, st_xref, st_x1, norm_i, i, err_msg);
-      x1_string = st_x1.string + st_x1.pos_byte;
-      int x_bytes = strlen(st_x1.string) - st_x1.pos_byte;
-      FANSI_W_MCOPY(buff, x1_string, x_bytes);
-    }
-    // - Finalize --------------------------------------------------------------
-
-    int has_utf8 = st_x1.has_utf8 || st_v1.has_utf8;
-    if(carry_i) {
-      st_xlast = st_x1;
-      while(st_xlast.string[st_xlast.pos_byte])
-        st_xlast = FANSI_read_next(st_xlast, i, 0);
-      st_vlast = st_v1;
-      while(st_vlast.string[st_vlast.pos_byte])
-        st_vlast = FANSI_read_next(st_vlast, i, 0);
-      has_utf8 = has_utf8 || st_xlast.has_utf8 > st_x0.pos_byte;
-    } else {
-      has_utf8 = has_utf8 || has_8bit(x1_string);
-    }
-    cetype_t chr_type = CE_NATIVE;
-    if(has_utf8) chr_type = CE_UTF8;
-
-    // We check stop < start at last minute even though it would save a lot of
-    // work to do it earlier because all the logic above is known to work, and
-    // it would require special handling of carry/etc if we were to skip chunks
-    // of it.  Also, it is expected stop < start will be rare.
-    if(stop_ii < start_ii) {
-      SET_STRING_ELT(res, i, STRING_ELT(x, i));
-    } else {
+      int has_utf8 = st_x1.has_utf8 || st_v1.has_utf8;
+      if(carry_i) {
+        st_xlast = st_x1;
+        while(st_xlast.string[st_xlast.pos_byte])
+          st_xlast = FANSI_read_next(st_xlast, i, 0);
+        st_vlast = st_v1;
+        while(st_vlast.string[st_vlast.pos_byte])
+          st_vlast = FANSI_read_next(st_vlast, i, 0);
+        has_utf8 = has_utf8 || st_xlast.has_utf8 > st_x0.pos_byte;
+      } else {
+        has_utf8 = has_utf8 || has_8bit(x1_string);
+      }
+      cetype_t chr_type = CE_NATIVE;
+      if(has_utf8) chr_type = CE_UTF8;
       SET_STRING_ELT(res, i, FANSI_mkChar(*buff, chr_type, i));
+    } else {
+      SET_STRING_ELT(res, i, STRING_ELT(x, i));
     }
   }
   UNPROTECT(prt);
