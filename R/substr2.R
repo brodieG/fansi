@@ -109,12 +109,14 @@
 #'
 #' Semantics for replacement functions have the additional requirement that the
 #' result appear as if it is the input modified in place between the positions
-#' designated by `start` and `stop`.  In general, `fansi` will not modify the
-#' beginning or ends of the strings in `x`, so `terminate` only affects the
-#' boundaries between the original substring and the spliced one.  While you can
-#' use `terminate = FALSE` in replacement mode, this only makes sense to do if
-#' only one of `x` or `value` contains _Control Sequences_.  `fansi` will not
-#' account for any interactions of state in `x` and `value`.
+#' designated by `start` and `stop`.  `terminate` only affects the boundaries
+#' between the original substring and the spliced one, `normalize` only affects
+#' the same boundaries and `value`, `tabs.as.spaces` only affects `value`, and
+#' `x` must be ASCII only or marked "UTF-8".
+#'
+#' `terminate = FALSE` only makes sense in replacement mode if only one of `x`
+#' or `value` contains _Control Sequences_.  `fansi` will not account for any
+#' interactions of state in `x` and `value`.
 #'
 #' The `carry` parameter causes state to carry within the original string and
 #' the replacement values independently, as if they were columns of text cut
@@ -125,7 +127,7 @@
 #' When in `type = 'width'` mode, it is only guaranteed that the result will be
 #' no wider than the original `x`.  Narrower strings may result if a mixture
 #' of narrow and wide graphemes cannot be replaced exactly with the same `width`
-#' value, possibly because the provided `start`/`stop` values (or the
+#' value, possibly because the provided `start` and `stop` values (or the
 #' implicit ones generated for `value`) do not align with grapheme boundaries.
 #'
 #' @section Graphemes:
