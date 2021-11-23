@@ -401,7 +401,6 @@ struct FANSI_sgr FANSI_sgr_setdiff(
   return res;
 }
 /*
- * To concord with setdiff, changes in color are considered the same
  */
 struct FANSI_sgr FANSI_sgr_intersect(
   struct FANSI_sgr old, struct FANSI_sgr new
