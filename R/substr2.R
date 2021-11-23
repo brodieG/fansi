@@ -389,9 +389,14 @@ substr2_ctl <- function(
       "`substr_ctl<-` (replacement form).  Illegal value at position ",
       min(which(enc.diff)), "."
     )
-  # Adjust `stop` to be no longer than end of string, also need to make sure the
-  # overall string length is unchanged.
+
   value <- as.character(value)
+  if(tabs.as.spaces)
+    value <- .Call(
+      FANSI_tabs_as_spaces, value, tab.stops,
+      0L,  # turn off warning, will be reported later
+      TERM.CAP.INT, CTL.INT
+    )
   value <- rep_len(enc_to_utf8(value), X.LEN)
 
   res <- .Call(FANSI_substr,
