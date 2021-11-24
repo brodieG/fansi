@@ -100,6 +100,9 @@ unitizer_sect('misc', {
   # this is from trying to create result matrix names, so need longer than that
   # to test other stuff
   substr_ctl("\033[43mA B", 5, 5)
+  # substr int max long?
+  substr_ctl("12345", 1, 5)
+  substr_ctl("123456", 1, 6)
 
   ## this caused a segfault due to missing comma in error(...), but with change
   ## to returning R_BlankString not a thing anymore

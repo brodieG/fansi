@@ -146,6 +146,10 @@ unitizer_sect("bridge", {
 
   fansi:::bridge(paste0("\033[42m", u0), "\033[31m")
   fansi:::bridge("\033[31m", paste0("\033[42m", u0))
+
+  # in replace
+  txt <- c("A\033[31mBC", "D\033[39mE\033[42mF")
+  `substr_ctl<-`(txt, 2, 2, "?", normalize=TRUE, carry=TRUE)
 })
 unitizer_sect("at end / close", {
   x <- c("a\033[31mb", "c", "\033[42md")

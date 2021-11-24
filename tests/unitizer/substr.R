@@ -269,6 +269,11 @@ unitizer_sect("Rep Funs - Equivalence", {
   identical(`substr_ctl<-`(txt2, 2, 3, '_'), `substr<-`(txt2, 2, 3, '_'))
   identical(`substr_ctl<-`(txt2, 2, 3, rep1), `substr<-`(txt2, 2, 3, rep1))
   identical(`substr_ctl<-`(txt2, 2, 3, rep2), `substr<-`(txt2, 2, 3, rep2))
+
+  txt3a <- txt3b <- c("ABC", "ABC")
+  substr(txt3a[2], 2, 2) <- "_"
+  substr_ctl(txt3b[2], 2, 2) <- "_"
+  identical(txt3a, txt3b)
 })
 
 unitizer_sect("Rep Funs - SGR", {
