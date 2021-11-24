@@ -356,7 +356,6 @@ unitizer_sect("utf8clen", {
 })
 unitizer_sect("wrap corner cases", {
   # With UTF8
-
   pre.2 <- "\x1b[32m\xd0\x9f \x1b[0m"
   ini.2 <- "\x1b[33m\xd1\x80 \x1b[0m"
   hello.8c <- "hello Привет world"
@@ -374,9 +373,6 @@ unitizer_sect("wrap corner cases", {
   wrap.csi.4 <- strwrap_ctl(hello.8c, 15, prefix=pre.2, initial=ini.2)
   wrap.csi.4
 
-  # wrap.nrm.4 <- strwrap(hello.8c, 15, prefix=pre.3, initial=ini.3)
-  # identical(strip_ctl(wrap.csi.4, "sgr"), wrap.nrm.4)
-
   utf8.chr <- "\u76F4"
   strwrap2_ctl(utf8.chr, 1, wrap.always=TRUE)
   strwrap2_ctl(utf8.chr, 2, wrap.always=TRUE)
@@ -390,18 +386,20 @@ unitizer_sect("wrap corner cases", {
   strwrap_ctl(utf8.bad, 10)
 
   # bad prefix values
-
   utf8.bad.2 <- "\xF0"
   Encoding(utf8.bad.2) <- "UTF-8"
 
   tcw(strwrap_ctl("hello world", 6, prefix=utf8.bad.2))
   suppressWarnings(strwrap_ctl("hello world", 6, prefix=utf8.bad.2))
-  #
-  # Byte encoded strings not allowed
 
+  # Byte encoded strings not allowed
   bytes <- "\xC0\xB1\xF0\xB1\xC0\xB1\xC0\xB1"
   Encoding(bytes) <- "bytes"
   tce(strwrap_ctl(bytes))
+
+  # Encoding captured correctly
+  Encoding(strwrap_ctl("hell\u00F8 world", 5))
+  Encoding(strwrap_ctl("hello w\u00F8rld", 5))
 })
 unitizer_sect("wrap with wide UTF8 and ESC", {
   wrap.mix <- strwrap_ctl(lorem.mix, 25)
