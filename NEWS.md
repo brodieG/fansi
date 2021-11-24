@@ -4,6 +4,11 @@
 
 ### Features
 
+* [#74](https://github.com/brodieG/fansi/issues/74)`substr_ctl` and related
+  functions are now all-C instead of a combination of C offset computations and
+  R level `substr` operations.  This greatly improves performance, particularly
+  for vectors with many distinct strings.  Despite documentation claiming
+  otherwise, `substr_ctl` was quite slow in that case.
 * [#26](https://github.com/brodieG/fansi/issues/26) Add replacement forms of
   `substr_cl` (i.e `substr_ctl<-`).
 * [#58](https://github.com/brodieG/fansi/issues/58) Add support for OSC-anchored
@@ -64,6 +69,7 @@ finicky C string manipulation code.
 
 Other changes:
 
+* `substr_ctl` errors instead of just warning on invalid UTF-8 sequences.
 * CSI sequences with more than one "intermediate" byte are now considered valid,
   even though they are likely to be very rare.
 * `strip_ctl` only warns with malformed CSI and OSC if they are reported as
@@ -71,6 +77,8 @@ Other changes:
   supported, but two byte escapes are, the two initial bytes of CSI and OSCs
   will be stripped.
 * "unknown" encoded strings are no longer translated to UTF-8 in UTF-8 locales.
+* `nchar_ctl` now preserves `dim`, `dimnames`, and `names` as the base functions
+  do.
 
 ### Bug Fixes
 
@@ -81,6 +89,8 @@ Other changes:
   escaped versions (e.g. "\xf0\xc2" (2 bytes), used to be interpreted as
   "<f0><c2>" (four characters).  These now cause errors as they would have if
   they had had "UTF-8" declared encoding.
+* In some cases true colors of form "38;2;x;x;x" and "48;2;x;x;x" would only be
+  partially transcribed.
 
 ### Internal Changes
 
