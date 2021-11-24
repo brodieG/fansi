@@ -321,6 +321,12 @@ static SEXP strwrap(
     if(!end) state_next = FANSI_read_next(state_next, index, 1);
     state.warned = state_bound.warned = state_next.warned;// avoid 2x warning
 
+    // Always strip trailing SGR to behave same way as substr_ctl, except if not
+    // actually last characters in string..
+    int strip_trail_sgr =
+       state.last_special &&
+      !((*pad_chr) && state.pos_width < width_tar);
+
     // detect word boundaries and paragraph starts; we need to track
     // state_bound for the special case where we are in strip space mode
     // and we happen to hit the width in a two space sequence such as we might
@@ -331,10 +337,6 @@ static SEXP strwrap(
     // Recall that if `strip_spaces == TRUE` string will have already been
     // processed to remove sequential spaces (except those following sentence
     // end).
-
-    int strip_trail_sgr =
-      state.last_special && terminate &&
-      (!(*pad_chr) || state.pos_width == width_tar);
 
     if(
       state.string[state.pos_byte] == ' ' ||
