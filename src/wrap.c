@@ -29,7 +29,7 @@ struct FANSI_prefix_dat {
   int bytes;            // bytes, excluding NULL terminator
   // how many indent/exdent bytes are included in string, width, and bytes
   int indent;
-  int has_utf8;         // whether utf8 contains value > 127
+  int has_utf8;         // see FANSI_state
   int warn;             // warning issued while stripping
 };
 /*
@@ -58,7 +58,7 @@ static struct FANSI_prefix_dat make_pre(
     .string=state.string,
     .width=state.pos_width,
     .bytes=state.pos_byte,
-    .has_utf8=state.pos_ansi < state.pos_byte,
+    .has_utf8=state.has_utf8,
     .indent=0
   };
 }
@@ -176,20 +176,15 @@ static SEXP writeline(
   int needs_cl_sgr = terminate && FANSI_sgr_active(state_bound.sgr);
   int needs_cl_url = terminate && FANSI_url_active(state_bound.url);
 
-  // Measure/Write loop (see src/write.c)
+  // Measure/Write loop (see src/write.c).  Very similar code in substr.c
   const char * err_msg = "Writing line";
 
   for(int k = 0; k < 2; ++k) {
     if(!k) FANSI_reset_buff(buff);
     else   FANSI_size_buff(buff);
-    if(needs_st_sgr) {
-      err_msg = "Adding initial SGR";
-      FANSI_W_sgr(buff, state_start.sgr, normalize, i);
-    }
-    if(needs_st_url) {
-      err_msg = "Adding initial URL";
-      FANSI_W_url(buff, state_start.url, normalize, i);
-    }
+    if(needs_st_sgr) FANSI_W_sgr(buff, state_start.sgr, normalize, 1, i);
+    if(needs_st_url) FANSI_W_url(buff, state_start.url, normalize, i);
+
     // Apply indent/exdent prefix/initial
     if(pre_dat.bytes) {
       err_msg = "Adding prefix characters";
@@ -206,19 +201,14 @@ static SEXP writeline(
     FANSI_W_FILL(buff, *pad_chr, to_pad);
 
     // And turn off CSI styles if needed
-    if(needs_cl_sgr) {
-      err_msg = "Adding trailing SGR";
-      FANSI_W_sgr_close(buff, state_bound.sgr, normalize, i);
-    }
-    if(needs_cl_url) {
-      err_msg = "Adding trailing URL";
-      FANSI_W_url_close(buff, state_bound.url, i);
-    }
+    if(needs_cl_sgr) FANSI_W_sgr_close(buff, state_bound.sgr, normalize, i);
+    if(needs_cl_url) FANSI_W_url_close(buff, state_bound.url, i);
   }
   // Now create the charsxp and append to the list, start by determining
   // what encoding to use.
   cetype_t chr_type = CE_NATIVE;
-  if((state_bound.has_utf8 || pre_dat.has_utf8)) chr_type = CE_UTF8;
+  if((state_bound.has_utf8 > state_start.pos_byte) || pre_dat.has_utf8)
+    chr_type = CE_UTF8;
   return FANSI_mkChar(*buff, chr_type, i);
 }
 /*

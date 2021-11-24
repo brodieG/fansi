@@ -60,8 +60,23 @@ unitizer_sect("normalize", {
   normalize_state(str.2, carry="\033[33m")
 })
 unitizer_sect("carry corner cases", {
-  substr_ctl("", 2, 4, carry="\033[33m")
-  substr_ctl("", 2, 4, carry = "\033[33m", terminate=FALSE)
+  substr_ctl("", 2, 3, carry="\033[33m")
+  # Empty, because carry is presumed to exist open previously.
+  substr_ctl("", 2, 3, carry="\033[33m", terminate=FALSE)
+  # This requires a close
+  substr_ctl("\033[39m", 2, 3, carry="\033[33m", terminate=FALSE)
+  # This requires a close
+  substr_ctl("\033[39m", 2, 3, carry="\033[33m", terminate=FALSE, normalize=TRUE)
+
+  substr_ctl("", 0, 1, carry="\033[33m")
+  substr_ctl("", 0, 1, carry="\033[33m", terminate=FALSE)
+  # Should close because we do request one character
+  substr_ctl("\033[39m", 0, 1, carry="\033[33m", terminate=FALSE)
+  substr_ctl("", 0, 0, carry="\033[33m")
+  substr_ctl("", 0, 0, carry="\033[33m", terminate=FALSE)
+  # No close because we read nothing at all
+  substr_ctl("\033[39m", 0, 0, carry="\033[33m", terminate=FALSE)
+
   substr_ctl(character(), 2, 4, carry="\033[33m")
   substr_ctl(NA, 2, 4, carry="\033[33m")
   substr_ctl(environment(), 2, 4, carry="\033[33m")
@@ -71,6 +86,15 @@ unitizer_sect("carry corner cases", {
   substr_ctl(str.0, 2, 4, carry=character())
   substr_ctl(str.0, 2, 4, carry=1)
   substr_ctl(str.0, 2, 4, carry=Inf)
+
+  ## Carrying of other SGRs
+  sgrs <- c(
+    "A\033[31mB", "C\033[1mD", "E\033[4mF",
+    "G\033[13mH", "I\033[62mJ", "K\033[39mL",
+    "M\033[52mN", "O\033[65mP", "Q\033[22mR",
+    "S\033[24mT", "T\033[54mU", "V\033[10mW"
+  )
+  substr_ctl(sgrs, 2, 2, carry=TRUE)
 
   normalize_state(str.2, carry=NA_character_)
   normalize_state(str.2, carry=character())
@@ -122,6 +146,10 @@ unitizer_sect("bridge", {
 
   fansi:::bridge(paste0("\033[42m", u0), "\033[31m")
   fansi:::bridge("\033[31m", paste0("\033[42m", u0))
+
+  # in replace
+  txt <- c("A\033[31mBC", "D\033[39mE\033[42mF")
+  `substr_ctl<-`(txt, 2, 2, "?", normalize=TRUE, carry=TRUE)
 })
 unitizer_sect("at end / close", {
   x <- c("a\033[31mb", "c", "\033[42md")

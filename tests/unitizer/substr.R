@@ -125,6 +125,11 @@ unitizer_sect("Corner cases", {
   # bad sequence at beginning or end
   substr_ctl("\033[41bhello", 1, 5)
   substr_ctl("hello\033[41b", 1, 5)
+  substr_ctl("hello\033[41b", 1, 6)
+
+  # Re-issue when state change out of substring
+  str.4 <- c("A\033[45mB", "A")
+  substr_ctl(str.4, 1, 1, carry=TRUE, terminate=FALSE)
 })
 unitizer_sect("Obscure escapes", {
   # illegal 38/48
@@ -241,6 +246,10 @@ unitizer_sect("Rep Funs - Equivalence", {
   identical(`substr_ctl<-`(txt0, 2, 1, "#"), `substr<-`(txt0, 2, 1, "#"))
   identical(`substr_ctl<-`(txt0, 10, 12, "#"), `substr<-`(txt0, 10, 12, "#"))
   identical(`substr_ctl<-`(txt0, 2, 3, "#"), `substr<-`(txt0, 2, 3, "#"))
+
+  identical(`substr_ctl<-`(txt0, 1, 5, "#"), `substr<-`(txt0, 1, 5, "#"))
+  identical(`substr_ctl<-`(txt0, 0, 5, "#"), `substr<-`(txt0, 0, 5, "#"))
+
   ## Bug in R means we can't use identical
   `substr_ctl<-`(txt0, 0, -1, "#")
 
@@ -260,6 +269,11 @@ unitizer_sect("Rep Funs - Equivalence", {
   identical(`substr_ctl<-`(txt2, 2, 3, '_'), `substr<-`(txt2, 2, 3, '_'))
   identical(`substr_ctl<-`(txt2, 2, 3, rep1), `substr<-`(txt2, 2, 3, rep1))
   identical(`substr_ctl<-`(txt2, 2, 3, rep2), `substr<-`(txt2, 2, 3, rep2))
+
+  txt3a <- txt3b <- c("ABC", "ABC")
+  substr(txt3a[2], 2, 2) <- "_"
+  substr_ctl(txt3b[2], 2, 2) <- "_"
+  identical(txt3a, txt3b)
 })
 
 unitizer_sect("Rep Funs - SGR", {
@@ -287,6 +301,8 @@ unitizer_sect("Rep Funs - SGR", {
   `substr_ctl<-`(txt2, 2, 3, terminate=FALSE, "#\033[32m?-\033[0m")
   `substr_ctl<-`(txt2, 2, 3, terminate=FALSE, "#\033[0m?-")
   `substr_ctl<-`(txt1, 2, 3, terminate=FALSE, "#\033[0m?\033[45m-")
+  `substr_ctl<-`(txt1, 2, 3, terminate=FALSE, "#\033[0m\033[45m?-")
+
 
   txt4 <- c(txt2, txt0, "\033[39mABCD")
 
@@ -295,11 +311,14 @@ unitizer_sect("Rep Funs - SGR", {
   `substr_ctl<-`(txt4, 2, 3, c("#", "?"))
   `substr_ctl<-`(txt4, 2, 3, c("#", "?", "$"))
 
-  ## Lengths + Carry
+  ## Lengths + Carry; note sequences in middle of `value` boundary are treated
+  ## differently than on the ends.
   `substr_ctl<-`(txt4, 2, 2, carry=TRUE, "#")
   `substr_ctl<-`(txt4, 2, 3, carry=TRUE, "#\033[32m?-")
   `substr_ctl<-`(txt4, 2, 3, carry=TRUE, "#\033[42m?-\033[0m")
   `substr_ctl<-`(txt4, 2, 3, carry=TRUE, "#\033[0m?-")
+  ## Weirdness here because the 39 in value causes re-issue of 45.  This is
+  ## correct; a consequence of the mess of termintate=FALSE in replace mode.
   rep4 <- c("\033[32m_\033[45m", ".-", "\033[39m__")
   `substr_ctl<-`(txt4, 2, 3, carry=TRUE, rep4)
 
@@ -310,4 +329,47 @@ unitizer_sect("Rep Funs - SGR", {
   `substr_ctl<-`(txt4, 2, 3, terminate=FALSE, carry=TRUE, "#\033[0m?-")
   `substr_ctl<-`(txt4, 2, 3, terminate=FALSE, carry=TRUE, rep4)
 
+  ## Reference for bridge against end of prior `value` substring
+  txt5 <- c("ABD", "DFG")
+  `substr_ctl<-`(txt5, 2, 2, ".\033[45m", carry=TRUE, terminate=FALSE)
+
+  ## Tabs
+  txt6 <- "A123456789B"
+  `substr2_ctl<-`(txt6, 2, 9, "\t", tabs.as.spaces=TRUE)
+  `substr2_ctl<-`(txt6, 2, 3, "\t", tabs.as.spaces=TRUE)
+  `substr2_ctl<-`(txt6, 2, 10, "\t", tabs.as.spaces=TRUE)
+
+  ## Encodings
+  txt7a <- "\u0160os"
+  txt7b <- "sos"
+  txt7c <- "so\u0160"
+  Encoding(`substr_ctl<-`(txt7a, 1, 1, "\u0161"))
+  Encoding(`substr_ctl<-`(txt7a, 1, 1, "s"))
+  Encoding(`substr_ctl<-`(txt7a, 2, 2, "\u0161"))
+  Encoding(`substr_ctl<-`(txt7a, 2, 2, "s"))
+  Encoding(`substr_ctl<-`(txt7b, 2, 2, "\u0161"))
+  Encoding(`substr_ctl<-`(txt7b, 2, 2, "s"))
+  Encoding(`substr_ctl<-`(txt7c, 3, 3, "\u0161"))
+  Encoding(`substr_ctl<-`(txt7c, 3, 3, "s"))
+
 })
+unitizer_sect("Rep Funs - Corner Cases", {
+  ## Include trail when selecting past end of `value`
+  `substr_ctl<-`(txt2, 1, 3, terminate=FALSE, "#\033[32m?\033[0m")
+
+  ## Include trail when selecting past end of `x`.  It's a bit odd that even
+  ## with only the two char replacement, we can suppress the trailing ESC.
+  txt8 <- "\033[32mAB\033[45m"
+  `substr_ctl<-`(txt8, 1, 2, "12")
+  `substr_ctl<-`(txt8, 1, 2, "12", terminate=FALSE)
+  `substr_ctl<-`(txt8, 1, 3, "12")
+  `substr_ctl<-`(txt8, 1, 3, "1")
+  `substr_ctl<-`(txt8, 1, 3, "")
+  `substr_ctl<-`(txt8, 1, 3, "123")
+  `substr_ctl<-`(txt8, 0, 2, "12")
+  `substr_ctl<-`(txt8, 0, 3, "12")
+
+  ## Zero width gets inserted
+  `substr_ctl<-`(txt8, 1, 3, "\033[1m", terminate=FALSE)
+})
+

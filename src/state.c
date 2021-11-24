@@ -120,21 +120,8 @@ struct FANSI_state FANSI_state_reinit(
   FANSI_check_chrsxp(chrsxp, i);
   const char * string = CHAR(chrsxp);
 
-  struct FANSI_state state_reinit;
-  state_reinit = (struct FANSI_state) {
-    .string = string,
-    .warn = state.warn,
-    .term_cap = state.term_cap,
-    .allowNA = state.allowNA,
-    .keepNA = state.keepNA,
-    .width_mode = state.width_mode,
-    .ctl = state.ctl,
-    .arg = state.arg
-  };
-  state_reinit.string = string;
-  state_reinit.sgr = (struct FANSI_sgr) {.color = -1, .bg_color = -1};
-  state_reinit.sgr_prev = (struct FANSI_sgr) {.color = -1, .bg_color = -1};
-  return state_reinit;
+  state.string = string;
+  return FANSI_reset_state(state);
 }
 // When we don't care about R_nchar width, but do care about CSI / SGR (which
 // means, we only really care about SGR since all CSI does is affect width calc).
@@ -207,7 +194,25 @@ struct FANSI_state FANSI_reset_pos(struct FANSI_state state) {
   state.non_normalized = 0;
   return state;
 }
-
+/*
+ * Reset state without changing index/string
+ */
+struct FANSI_state FANSI_reset_state(struct FANSI_state state) {
+  struct FANSI_state state_reinit;
+  state_reinit = (struct FANSI_state) {
+    .string = state.string,
+    .warn = state.warn,
+    .term_cap = state.term_cap,
+    .allowNA = state.allowNA,
+    .keepNA = state.keepNA,
+    .width_mode = state.width_mode,
+    .ctl = state.ctl,
+    .arg = state.arg
+  };
+  state_reinit.sgr = (struct FANSI_sgr) {.color = -1, .bg_color = -1};
+  state_reinit.sgr_prev = (struct FANSI_sgr) {.color = -1, .bg_color = -1};
+  return state_reinit;
+}
 /*
  * Compute the state given a character position (raw position)
  *
@@ -296,16 +301,19 @@ static struct FANSI_state_pair state_at_pos2(
 /*
  * Generate the tag corresponding to the state and write it out as a NULL
  * terminated string.
+ *
+ * @return the byte after the last one written, typically set to zero.  For the
+ *   start of the string: buff->buff0
  */
 char * FANSI_state_as_chr(
   struct FANSI_buff *buff, struct FANSI_state state, int normalize, R_xlen_t i
 ) {
   FANSI_reset_buff(buff);
-  FANSI_W_sgr(buff, state.sgr, normalize, i);
+  FANSI_W_sgr(buff, state.sgr, normalize, 1, i);
   if(state.url.url.len) FANSI_W_url(buff, state.url, normalize, i);
 
   FANSI_size_buff(buff);
-  FANSI_W_sgr(buff, state.sgr, normalize, i);
+  FANSI_W_sgr(buff, state.sgr, normalize, 1, i);
   if(state.url.url.len) FANSI_W_url(buff, state.url, normalize, i);
   return buff->buff;
 }
@@ -358,25 +366,60 @@ static int FANSI_sgr_comp(struct FANSI_sgr target, struct FANSI_sgr current) {
  * This is so that we can then generate the closing SGRs required to transition
  * from one state to the other (used for diff).
  *
- * A color change is not considered a missing style as the new color would just
- * ovewrite the old.
+ * @param mode 0 to explicitly close/open styles that will be overriden (e.g.
+ *   color), and 1 to do so implicityly
  */
-struct FANSI_sgr FANSI_sgr_setdiff(struct FANSI_sgr old, struct FANSI_sgr new) {
+struct FANSI_sgr FANSI_sgr_setdiff(
+  struct FANSI_sgr old, struct FANSI_sgr new, int mode
+) {
   struct FANSI_sgr res = {
     .color=-1, .bg_color=-1, .style=0, .border=0, .ideogram=0, .font=0
   };
-  if(old.color > -1 && new.color == - 1) {
+  if(
+    (!mode && old.color != new.color) ||
+    (mode && old.color > -1 && new.color == -1)
+  ) {
     res.color = old.color;
-    memcpy(res.color_extra, old.color_extra, 4);
+    memcpy(res.color_extra, old.color_extra, sizeof(old.color_extra));
   }
-  if(old.bg_color > -1 && new.bg_color == - 1) {
+  if(
+    (!mode && old.bg_color != new.bg_color) ||
+    (mode && old.bg_color > -1 && new.bg_color == -1)
+  ) {
     res.bg_color = old.bg_color;
-    memcpy(res.bg_color_extra, old.bg_color_extra, 4);
+    memcpy(res.bg_color_extra, old.bg_color_extra, sizeof(old.bg_color_extra));
   }
-  if(old.font && !new.font) res.font = old.font;
+  if(
+    (!mode && old.font != new.font) ||
+    (mode && old.font && !new.font)
+  ) {
+    res.font = old.font;
+  }
   res.style = old.style & (~new.style);
   res.border = old.border & (~new.border);
   res.ideogram = old.ideogram & (~new.ideogram);
+  return res;
+}
+/*
+ */
+struct FANSI_sgr FANSI_sgr_intersect(
+  struct FANSI_sgr old, struct FANSI_sgr new
+) {
+  struct FANSI_sgr res = {
+    .color=-1, .bg_color=-1, .style=0, .border=0, .ideogram=0, .font=0
+  };
+  if(old.color == new.color) {
+    res.color = new.color;
+    memcpy(res.color_extra, new.color_extra, sizeof(new.color_extra));
+  }
+  if(old.bg_color == new.bg_color) {
+    res.bg_color = new.bg_color;
+    memcpy(res.bg_color_extra, new.bg_color_extra, sizeof(new.bg_color_extra));
+  }
+  if(old.font == new.font) res.font = new.font;
+  res.style = old.style & new.style;
+  res.border = old.border & new.border;
+  res.ideogram = old.ideogram & new.ideogram;
   return res;
 }
 

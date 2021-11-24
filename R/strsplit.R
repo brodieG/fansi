@@ -58,7 +58,7 @@ strsplit_ctl <- function(
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
-    carry=carry, terminate=terminate
+    carry=carry, terminate=terminate, round="start"
   )
   if(is.null(split)) split <- ""
   split <- enc_to_utf8(as.character(split))
@@ -124,9 +124,9 @@ strsplit_ctl <- function(
         ends <- ends[!sub.invalid]
       }
       res[[i]] <- substr_ctl_internal(
-        x=x[[i]],
+        x=rep(x[i], length.out=length(starts)),
         start=starts, stop=ends, type.int=0L,
-        round.start=TRUE, round.stop=FALSE,
+        round.int=ROUND.INT,
         tabs.as.spaces=FALSE, tab.stops=8L, warn.int=WARN.INT,
         term.cap.int=TERM.CAP.INT, x.len=length(starts),
         ctl.int=CTL.INT, normalize=normalize,

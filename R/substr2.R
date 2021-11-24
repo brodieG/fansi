@@ -18,15 +18,38 @@
 #' `substr_ctl` is a drop-in replacement for `substr`.  Performance is
 #' slightly slower than `substr`, and more so for `type = 'width'`.  CSI SGR
 #' sequences will be included in the substrings to reflect the format of the
-#' substring when it was embedded in the source string.  Additionally, other
-#' _Control Sequences_ specified in `ctl` are treated as zero-width.
+#' substring when it was embedded in the source string.  `substr2_ctl` adds the
+#' ability to retrieve substrings based on display width in addition to the
+#' normal character width.  `substr2_ctl` also provides the option to convert
+#' tabs to spaces with [`tabs_as_spaces`] prior to taking substrings.
 #'
-#' `substr2_ctl` adds the ability to retrieve substrings based on display width
-#' in addition to the normal character width.  `substr2_ctl` also provides the
-#' option to convert tabs to spaces with [`tabs_as_spaces`] prior to taking
-#' substrings.
+#' @section Position Semantics:
 #'
-#' Because exact substrings on anything other than character width cannot be
+#' When computing substrings, _Normal_ (non-control) characters are considered
+#' to occupy positions in strings, whereas _Control Sequences_ occupy the
+#' interstices between them.  The string `"hello-\033[31mworld\033[m!"` is
+#' interpreted as:
+#'
+#' ```
+#'  0                 1
+#'  1 2 3 4 5 6 7 8 9 0 1 2
+#'  h e l l o -|w o r l d|!
+#'             ^         ^
+#'             \033[31m  \033[m
+#' ```
+#'
+#' `start` and `stop` reference character positions so they never explicitly
+#' select for the interstitial _Control Sequences_.  The latter are implicitly
+#' selected if they appear in interstices after the first character and before
+#' the last.  Additionally, because _Control Sequences_ affect all subsequent
+#' characters in a string, any active _Control Sequence_, whether opened just
+#' before a character or much before, will be reflected in the state `fansi`
+#' prepends to the beginning of each substring.  It is possible to select
+#' _Control Sequences_ at the end of a string by specifying `stop` values past
+#' the end of the string, although this will only produce a visible result if
+#' `terminate` is set to `FALSE`.
+#'
+#' Because exact substrings on anything other than character count cannot be
 #' guaranteed (e.g. as a result of multi-byte encodings, or double display-width
 #' characters) `substr2_ctl` must make assumptions on how to resolve provided
 #' `start`/`stop` values that are infeasible and does so via the `round`
@@ -40,11 +63,26 @@
 #' characters to be dropped irrespective whether they correspond to `start` or
 #' `stop`, and "both" could cause all of them to be included.
 #'
-#' These functions map string lengths accounting for _Control Sequence_
-#' semantics to the naive length calculations, and then use the mapping in
-#' conjunction with [base::substr()] to extract the string.  This concept is
-#' borrowed directly from Gábor Csárdi's `crayon` package, although the
-#' implementation of the calculation is different.
+#' For example, if we consider "WW" to be a single wide character, and "n" to be
+#' a single narrow one:
+#'
+#' ```
+#'       12345
+#' x <- "WWnWW"
+#'substr_ctl(x, 2, 4, type='width' round='start')    -> "WWn"
+#'substr_ctl(x, 2, 4, type='width' round='stop')     -> "nWW"
+#'substr_ctl(x, 2, 4, type='width' round='neither')  -> "n"
+#'substr_ctl(x, 2, 4, type='width' round='both')     -> "WWnWW"
+#' ```
+#'
+#' A number of _Normal_ characters such as combining diacritic marks have
+#' reported width of zero.  These are typically displayed overlaid on top of the
+#' preceding glyph, as in the case of `"e\u301"` forming `"é"`.  Unlike _Control
+#' Sequences_, which also have reported width of zero, `fansi` groups zero-width
+#' _Normal_ characters with the last preceding non-zero width _Normal_
+#' character.  This is not the right thing to do for some rare zero-width
+#' _Normal_ characters such as prepending marks (see "Output Stability" and
+#' "Graphemes").
 #'
 #' @section Output Stability:
 #'
@@ -69,37 +107,27 @@
 #'
 #' @section Replacement Functions:
 #'
-#' Replacement functions are implemented as three substring operations, so:
-#' ```
-#' x <- "ABC"
-#' y <- "_."
-#' substr_ctl(x, 2, 2, ...) <- y
-#' ```
-#' Is treated roughly as:
-#' ```
-#' x <- paste0(
-#'   substr(x, 1, 1, ...),
-#'   substr(y, 1, 1, ...),
-#'   substr(x, 3, 3, terminate=FALSE, ...)
-#' )
-#' ```
-#' Except for the `terminate` parameter for the trailing substring, all other
-#' parameters are passed from `substr_ctl<-` to the internal substring calls.
-#' The `start`, `stop`, and `round` arguments are translated from the provided
-#' values to those required for the internal substring calls.  If you wish for
-#' the whole return value to be terminated you must manually add terminating
-#' sequences.  `substr_ctl` refrains from doing so to maintain the illusion of a
-#' string modified in place.
+#' Semantics for replacement functions have the additional requirement that the
+#' result appear as if it is the input modified in place between the positions
+#' designated by `start` and `stop`.  `terminate` only affects the boundaries
+#' between the original substring and the spliced one, `normalize` only affects
+#' the same boundaries and `value`, `tabs.as.spaces` only affects `value`, and
+#' `x` must be ASCII only or marked "UTF-8".
 #'
-#' Another implication of the three substring approach is that the `carry`
-#' parameter causes state to carry within the original string and the
-#' replacement values independently, as if they were columns of text cut from
-#' different pages and pasted together.
+#' `terminate = FALSE` only makes sense in replacement mode if only one of `x`
+#' or `value` contains _Control Sequences_.  `fansi` will not account for any
+#' interactions of state in `x` and `value`.
+#'
+#' The `carry` parameter causes state to carry within the original string and
+#' the replacement values independently, as if they were columns of text cut
+#' from different pages and pasted together.  String values for `carry` are
+#' illegal in replacement mode as it is ambiguous which of `x` or `value` they
+#' would modify (see examples).
 #'
 #' When in `type = 'width'` mode, it is only guaranteed that the result will be
 #' no wider than the original `x`.  Narrower strings may result if a mixture
 #' of narrow and wide graphemes cannot be replaced exactly with the same `width`
-#' value, possibly because the provided `start`/`stop` values (or the
+#' value, possibly because the provided `start` and `stop` values (or the
 #' implicit ones generated for `value`) do not align with grapheme boundaries.
 #'
 #' @section Graphemes:
@@ -189,7 +217,11 @@
 #'   state at the end of a line.  If FALSE each vector element is interpreted as
 #'   if there were no active state when it begins.  If character, then the
 #'   active state at the end of the `carry` string is carried into the first
-#'   element of `x`.  See the "State Interactions" section of [`?fansi`][fansi]
+#'   element of `x` (see "Replacement Functions" for differences there).
+#'   Semantically, the carried state is injected in the interstice between an
+#'   imaginary zeroeth character and the first character of a vector element.
+#'   See the "Position Semantics" section of [`substr_ctl`] and the "State
+#'   Interactions" section of [`?fansi`][fansi]
 #'   for details.
 #' @param terminate TRUE (default) or FALSE whether substrings should have
 #'   active state closed to avoid it bleeding into other strings they may be
@@ -226,6 +258,10 @@
 #' end <- "\033[0m\n"
 #' writeLines(end)        # Stanch bleeding
 #'
+#' ## Trailing sequences omitted unless `stop` past end.
+#' substr_ctl("ABC\033[42m", 1, 3, terminate=FALSE)
+#' substr_ctl("ABC\033[42m", 1, 4, terminate=FALSE)
+#'
 #' ## Replacement functions
 #' x0<- x1 <- x2 <- x3 <- c("\033[42mABC", "\033[34mDEF")
 #' substr_ctl(x1, 2, 2) <- "_"
@@ -239,6 +275,14 @@
 #' substr_ctl(x1, 2, 2, carry=TRUE) <- "\033[m_"
 #' substr_ctl(x2, 2, 2, carry=TRUE) <- "\033[45m_"
 #' writeLines(c(x0, end, x1, end, x2, end, x3, end))
+#'
+#' ## Work-around to specify carry strings in replacement mode
+#' x <- c("ABC", "DEF")
+#' val <- "#"
+#' x2 <- c("\033[42m", x)
+#' val2 <- c("\033[45m", rep_len(val, length(x)))
+#' substr_ctl(x2, 2, 2, carry=TRUE) <- val2
+#' (x <- x[-1])
 
 substr_ctl <- function(
   x, start, stop,
@@ -286,8 +330,7 @@ substr2_ctl <- function(
     type.int=TYPE.INT,
     tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops,
     warn.int=WARN.INT, term.cap.int=TERM.CAP.INT,
-    round.start=round == 'start' || round == 'both',
-    round.stop=round == 'stop' || round == 'both',
+    round.int=ROUND.INT,
     x.len=X.LEN,
     ctl.int=CTL.INT, normalize=normalize,
     carry=carry, terminate=terminate
@@ -325,115 +368,47 @@ substr2_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
-  # This would probably be better done in C, given the contortions we have to
-  # resort to here...
-
-  ## So warning are issues here
+  # More restrictive carry
+  if(!is.logical(carry) || length(carry) != 1 || is.na(carry))
+    stop("Argument `carry` must be TRUE or FALSE.")
+  # So warning are issued here
   start <- as.integer(start)
   stop <- as.integer(stop)
-  ## modifies / creates NEW VARS in fun env
+  # modifies / creates NEW VARS in fun env
+  x0 <- x
   VAL_IN_ENV(
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
-    carry=carry, terminate=terminate, tab.stops=tab.stops,
-    tabs.as.spaces=tabs.as.spaces, round=round, start=start,
-    stop=stop, type=type
+    tab.stops=tab.stops, tabs.as.spaces=tabs.as.spaces, round=round, start=start,
+    stop=stop, type=type, carry=carry
   )
-  # Adjust `stop` to be no longer than end of string, also need to make sure the
-  # overall string length is unchanged.
-  nc <- nchar_ctl(x, type=type, ctl=ctl, warn=FALSE)
-  stop <- pmin(stop, nc)
-  value <- rep_len(enc_to_utf8(as.character(value)), X.LEN)
-  ncv <- nchar_ctl(value, type=type, ctl=ctl, warn=FALSE)
-  end.start <- pmin(stop + 1L, start + ncv)
-  end.end <- rep(.Machine[['integer.max']], X.LEN)
-  round.start <- round == 'start' || round == 'both'
-  round.stop <- round == 'stop' || round == 'both'
+  # In replace mode we shouldn't change the encoding
+  if(!all(enc.diff <- Encoding(x) ==  Encoding(x0)))
+    stop(
+      "`x` may only contain ASCII or marked UTF-8 encoded strings; ",
+      "you can use `enc2utf8` to convert `x` prior to use with ",
+      "`substr_ctl<-` (replacement form).  Illegal value at position ",
+      min(which(enc.diff)), "."
+    )
 
-  # Rely on warning with `mid` and `end` to catch all warnings.
-  # Possible optim here: the `begin` and `end` substrings could be done as part
-  # of the same pass since they are using the same substrings.
+  value <- as.character(value)
+  if(tabs.as.spaces)
+    value <- .Call(
+      FANSI_tabs_as_spaces, value, tab.stops,
+      0L,  # turn off warning, will be reported later
+      TERM.CAP.INT, CTL.INT
+    )
+  value <- rep_len(enc_to_utf8(value), X.LEN)
 
-  begin <- substr_ctl_internal(
-    x, rep(1L, X.LEN), start - 1L, type.int=TYPE.INT,
-    round.start=round.start, round.stop=round.stop,
-    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=0L,
-    term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
-    carry=carry, terminate=terminate
+  res <- .Call(FANSI_substr,
+    x,
+    start, stop, value,
+    TYPE.INT, ROUND.INT,
+    WARN.INT, TERM.CAP.INT,
+    CTL.INT, normalize,
+    carry, terminate
   )
-  end <- substr_ctl_internal(
-    x, end.start, end.end,
-    type.int=TYPE.INT,
-    round.start=round.start, round.stop=round.stop,
-    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=WARN.INT,
-    term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
-    carry=carry, terminate=FALSE
-  )
-  # In no-op cases we don't need this, but it's simpler to always compute it
-  mid <- substr_ctl_internal(
-    value, rep(1L, X.LEN), stop - start + 1L,
-    type.int=TYPE.INT,
-    round.start=round.start, round.stop=round.stop,
-    tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=WARN.INT,
-    term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
-    carry=carry, terminate=terminate
-  )
-  # In width mode it is possible for some seemingly valid replacements to end up
-  # as no-ops depending on how rounding pans out.  No-ops are also possible in
-  # character mode, but we just let the normal code deal with those.
-
-  valid <- rep(TRUE, X.LEN)  # this may get changed in body of `if` statement
-  x[valid] <- if(type == 'width') {
-    ncb <- nchar_ctl(begin, type=type, ctl=ctl, warn=FALSE)
-    nce <- nchar_ctl(end, type=type, ctl=ctl, warn=FALSE)
-    ncm <- nchar_ctl(mid, type=type, ctl=ctl, warn=FALSE)
-    ncsub <- ncb + nce + ncm
-    valid <- (ncsub <= nc)
-
-    # Try to rescue some invalids by reducing the size of the replacement by 1
-    # Implicit here is that the widths are all either 1 or 2, which may not be
-    # the case when a \U code is rendered (but that should only be for
-    # EncodeString, which we don't care about).
-    if(!all(valid) && any(mid.again <- !valid & ncm > 1)) {
-      mid2 <- substr_ctl_internal(
-        value[mid.again], rep(1L, sum(mid.again)), (stop - start)[mid.again],
-        type.int=TYPE.INT,
-        round.start=round.start, round.stop=round.stop,
-        tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=0L,
-        term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
-        carry=carry, terminate=terminate
-      )
-      ncm2 <- nchar_ctl(mid2, type=type, ctl=ctl, warn=warn)
-      ncsub2 <- ncb[mid.again] + ncm2 + nce[mid.again]
-      noops2 <- ncsub2 > nc[mid.again]
-      mid[mid.again][!noops2] <- mid2[!noops2]
-      ncm[mid.again][!noops2] <- ncm2[!noops2]
-      ncsub <- ncb + nce + ncm
-      valid <- (ncsub <= nc)
-    }
-    # Try to fill in any gaps between end of mid and end by scooching end
-    # forward by the gap amount.
-    if(any(valid)) {
-      if(any(end.again <- (ncbad <- nc - ncsub) > 0L)) {
-        end2 <- substr_ctl_internal(
-          x[end.again], pmax(end.start[end.again] - ncbad[end.again], 1L),
-          end.end[end.again],
-          type.int=TYPE.INT,
-          round.start=round.start, round.stop=round.stop,
-          tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops, warn.int=0L,
-          term.cap.int=TERM.CAP.INT, ctl.int=CTL.INT, normalize=normalize,
-          carry=carry, terminate=FALSE
-        )
-        nce2 <- nchar_ctl(end2, type=type, ctl=ctl, warn=warn)
-        ncsub2 <- ncb[end.again] + ncm[end.again] + nce2
-        noops2 <- ncsub2 > nc[end.again]
-        end[end.again][!noops2] <- end2[!noops2]
-      }
-      paste0(begin[valid], mid[valid], end[valid])
-    } else character()
-  } else {
-    paste0(begin, mid, end)
-  }
-  x
+  attributes(res) <- attributes(x)
+  res
 }
 #' SGR Control Sequence Aware Version of substr
 #'
@@ -478,13 +453,9 @@ substr2_sgr <- function(
     carry=carry, terminate=terminate
   )
 
-## @x must already have been converted to UTF8
-## @param type.int is supposed to be the matched version of type, minus 1
-##
-## Increasingly, it seems trying to re-use the crayon method instead of doing
-## everything in C was a big mistake...
+## All parameters must have been processed by VAL_IN_ENV.
 
-substr_ctl_internal <- function(
+substr_ctl_internal_bck <- function(
   x, start, stop, type.int, round, tabs.as.spaces,
   tab.stops, warn.int, term.cap.int, round.start, round.stop,
   x.len, ctl.int, normalize, carry, terminate
@@ -535,11 +506,16 @@ substr_ctl_internal <- function(
   # x.scalar is likely needed for strsplit (but not sure, this is after the fact
   # documentation)
   x.scalar <- length(x) == 1
-  x.u <- if(x.scalar) x else unique_chr(x)
-  ids <- if(x.scalar) seq_along(s.s.valid) else seq_along(x)
+  # x.u <- if(x.scalar) x else unique_chr(x)
+  if(x.scalar) x <- rep(x, length.out=length(s.s.valid))
+  ids <- seq_along(x)
+  elems.l <- split(ids * s.s.valid, x)
 
-  for(u in x.u) {
-    elems <- which(x == u & s.s.valid)
+  for(i in seq_along(elems.l)) {
+    elems <- elems.l[[i]]
+    elems <- elems[elems > 0]
+    if(!length(elems)) next
+    u <- x[elems[1L]]
     elems.len <- length(elems)
     # we want to specify minimum number of position/width elements
     e.start <- start[elems] - 1L
@@ -610,6 +586,27 @@ substr_ctl_internal <- function(
         end.csi
   ) } }
   res
+}
+substr_ctl_internal <- function(
+  x, start, stop, type.int, round.int, tabs.as.spaces,
+  tab.stops, warn.int, term.cap.int,
+  x.len, ctl.int, normalize, carry, terminate
+) {
+  if(tabs.as.spaces)
+    x <- .Call(
+      FANSI_tabs_as_spaces, x, tab.stops,
+      0L,  # turn off warning, will be reported later
+      term.cap.int, ctl.int
+    )
+
+  .Call(FANSI_substr,
+    x,
+    start, stop, NULL,
+    type.int, round.int,
+    warn.int, term.cap.int,
+    ctl.int, normalize,
+    carry, terminate
+  )
 }
 
 ## Need to expose this so we can test bad UTF8 handling because substr will

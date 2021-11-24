@@ -64,7 +64,7 @@ SEXP FANSI_check_assumptions() {
   if(sizeof(size_t) > sizeof(double))
     warningcall(
       R_NilValue, err_base,
-      "size_t larger than double mauy cause alignment issues."
+      "size_t larger than double may cause alignment issues."
     );
 
   // Important for some our boundary condition assumptions, in particular that

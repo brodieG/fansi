@@ -173,13 +173,10 @@
 #' To most closely approximate what `writeLines(x)` produces on your terminal,
 #' where `x` is a stateful string, use `writeLines(fansi_fun(x, carry=TRUE,
 #' terminate=FALSE))`.  `fansi_fun` is a stand-in for any of the `fansi` string
-#' manipulation functions.  Note that even with a "null-op" such as
+#' manipulation functions.  Note that even with a seeming "null-op" such as
 #' `substr_ctl(x, 1, nchar_ctl(x), carry=TRUE, terminate=FALSE)` the output
 #' control sequences may not match the input ones, but the output _should_ look
-#' the same if displayed to the terminal.  With these settings `fansi` will
-#' re-open active state on each new element even if a terminal would naturally
-#' carry them over.  This is to allow the user to manually terminate elements
-#' without losing carried state on the next element.
+#' the same if displayed to the terminal.
 #'
 #' `fansi` strings will be affected by any active state in strings they are
 #' appended to.  There are no parameters to control what happens in this case,
@@ -193,7 +190,7 @@
 #' described in [`?normalize_state`][normalize_state] that is sub-optimal.
 #'
 #' If you intend to combine stateful `fansi` manipulated strings with your own,
-#' it may be best to set `normalize = TRUE` for best compatibility (see
+#' it may be best to set `normalize = TRUE` for improved compatibility (see
 #' [`?normalize_state`][normalize_state].)
 #'
 #' @section Terminal Quirks:

@@ -1,6 +1,12 @@
 library(fansi)
 
 unitizer_sect("basic splits", {
+  str.0 <- c("hello world", "goodbye moon")
+  identical(strsplit(str.0[1], " "), strsplit_ctl(str.0[1], " "))
+  identical(strsplit(str.0, "h"), strsplit_ctl(str.0, "h"))
+  identical(strsplit(str.0, "m"), strsplit_ctl(str.0, "m"))
+  identical(strsplit(str.0, "g"), strsplit_ctl(str.0, "g"))
+
   str.1 <- "hello\033[31m world"
   str.2 <- "\033[42m hello\033[m world, Goodbye Moon"
   strsplit_ctl(str.1, " ")

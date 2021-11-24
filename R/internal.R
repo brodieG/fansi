@@ -165,7 +165,8 @@ VAL_IN_ENV <- function(
       stop2("Argument `carry` must be logical or character.")
     if(is.na(carry))
       stop2("Argument `carry` may not be NA.")
-
+    if('value' %in% argnm && !is.logical(carry))
+      stop2("Argumetn `carry` must be TRUE or FALSE in replacement mode.")
     if(is.logical(carry)) if(carry) carry <- "" else carry = NA_character_
     args[['carry']] <- carry
   }
@@ -202,6 +203,7 @@ VAL_IN_ENV <- function(
     args[['strip.spaces']] <- strip.spaces
   }
   if('round' %in% argnm) {
+    # be sure to update FANSI_RND_* defines in C code if this changes
     valid.round <- c('start', 'stop', 'both', 'neither')
     round <- args[['round']]
     if(
@@ -230,7 +232,6 @@ VAL_IN_ENV <- function(
     # correctly
     start <- rep(as.integer(args[['start']]), length.out=x.len)
     stop <- rep(as.integer(args[['stop']]), length.out=x.len)
-    start[start < 1L] <- 1L
     args[['start']] <- start
     args[['stop']] <- stop
     args[['X.LEN']] <- x.len

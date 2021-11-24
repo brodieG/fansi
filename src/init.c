@@ -15,7 +15,7 @@
  * Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
  */
 
-#include "fansi.h"
+#include "fansi-ext.h"
 #include <R_ext/Rdynload.h>
 #include <R_ext/Visibility.h>
 
@@ -24,6 +24,7 @@ R_CallMethodDef callMethods[] = {
   {"has_csi", (DL_FUNC) &FANSI_has, 3},
   {"strip_csi", (DL_FUNC) &FANSI_strip, 3},
   {"strwrap_csi", (DL_FUNC) &FANSI_strwrap_ext, 18},
+  {"substr", (DL_FUNC) &FANSI_substr, 12},
   {"state_at_pos_ext", (DL_FUNC) &FANSI_state_at_pos_ext, 11},
   {"process", (DL_FUNC) &FANSI_process_ext, 3},
   {"check_assumptions", (DL_FUNC) &FANSI_check_assumptions, 0},
@@ -36,7 +37,7 @@ R_CallMethodDef callMethods[] = {
   {"add_int", (DL_FUNC) &FANSI_add_int_ext, 2},
   {"cleave", (DL_FUNC) &FANSI_cleave, 1},
   {"order", (DL_FUNC) &FANSI_order, 1},
-  {"sort_chr", (DL_FUNC) &FANSI_sort_chr, 1},
+  {"sort_chr", (DL_FUNC) &FANSI_sort_chr_ext, 1},
   {"set_int_max", (DL_FUNC) &FANSI_set_int_max, 1},
   {"get_int_max", (DL_FUNC) &FANSI_get_int_max, 0},
   {"set_rlent_max", (DL_FUNC) &FANSI_set_rlent_max, 1},

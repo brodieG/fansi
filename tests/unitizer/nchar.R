@@ -33,10 +33,16 @@ unitizer_sect('basic tests', {
     nchar_ctl(na.world, keepNA=TRUE, type='bytes'),
     nchar(na.world, keepNA=TRUE, type='bytes')
   )
+  w.names <- c(a='hello', b='world')
+  identical(nchar_ctl(w.names), nchar(w.names))
+  w.dim <- matrix(
+    letters[1:6], 2, 3, dimnames=list(X=LETTERS[2:3], Y=LETTERS[24:26])
+  )
+  identical(nchar_ctl(w.dim), nchar(w.dim))
 
   # Strip equivalence
   hw.sgr <- c(
-    'hello', 'wo\033[42mrld', '\033[31m', 'mo\non', 'star\033[p', 
+    'hello', 'wo\033[42mrld', '\033[31m', 'mo\non', 'star\033[p',
     'link: \033]8;;xy.z\033\\hello\033]8;;\033\\ world'
   )
   identical(nchar_ctl(hw.sgr), nchar(strip_ctl(hw.sgr)))

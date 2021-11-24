@@ -15,14 +15,13 @@ GNU General Public License for more details.
 Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 */
 
+#ifndef _FANSI_H
+#define _FANSI_H
+
 #include <stdint.h>
 #include <R.h>
 #include <Rinternals.h>
 #include <Rversion.h>
-
-
-#ifndef _FANSI_H
-#define _FANSI_H
 
   // - Constants / Macros ------------------------------------------------------
 
@@ -55,6 +54,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   #define FANSI_COUNT_WIDTH   1
   #define FANSI_COUNT_GRAPH   2
   #define FANSI_COUNT_BYTES   3
+
+  #define FANSI_RND_START     1
+  #define FANSI_RND_STOP      2
+  #define FANSI_RND_BOTH      3
+  #define FANSI_RND_NEITHER   4
 
   // macros
 
@@ -270,10 +274,13 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     /*
      * Position markers (all zero index).
      *
-     * - pos_byte: the byte in the string
+     * - pos_byte: the first unread byte in the string:  IMPORTANT, unlike all
+     *   the other `pos_` trackers which track how many units have already
+     *   been read, this one points to the first UNread byte (need to change
+     *   variable name).
      * - pos_byte_sgr_start: the starting position of the last sgr read, really
-     *     only intended to be used in conjuction with 'terminal' so that if we
-     *     decide not to write a terminal SGR we know where to stop instead.
+     *   only intended to be used in conjuction with 'terminal' so that if we
+     *   decide not to write a terminal SGR we know where to stop instead.
      * - pos_ansi: actual character position, different from pos_byte due to
      *   multi-byte characters (i.e. UTF-8)
      * - pos_raw: the character position after we strip the handled ANSI tags,
@@ -285,16 +292,21 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      *
      * So pos_raw is essentially the character count excluding escapes.
      */
+    int pos_byte;
+    int pos_byte_sgr_start;
     int pos_ansi;
     int pos_raw;
     int pos_width;
-    int pos_byte;
-    int pos_byte_sgr_start;
+
 
     // Most of the objecs below are 1/0 could be a bitfield?  Or at a minimum as
     // a char?
 
-    // Are there bytes outside of 0-127
+    // Are there bytes outside of 0-127 (i.e. UTF-8 since that is the only way
+    // those should show up).  Records the 0-index start byte of the **next**
+    // character **after** last-seen UTF-8 character (we don't record the start
+    // byte because that could be 0, which is ambiguous; we coud initialize this
+    // to -1 so it isn't ambiguous, but that is also fragile).
     int has_utf8;
 
     // Info on last element read
@@ -392,82 +404,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     cetype_t type;
   };
 
-  // - External funs -----------------------------------------------------------
-
-  SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn);
-  SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn);
-  SEXP FANSI_state_at_pos_ext(
-    SEXP x, SEXP pos, SEXP type,
-    SEXP overshoot, SEXP is_start, SEXP warn, SEXP term_cap, SEXP ctl,
-    SEXP norm, SEXP terminate, SEXP ids
-  );
-  SEXP FANSI_strwrap_ext(
-    SEXP x, SEXP width,
-    SEXP indent, SEXP exdent,
-    SEXP prefix, SEXP initial,
-    SEXP wrap_always, SEXP pad_end,
-    SEXP strip_spaces,
-    SEXP tabs_as_spaces, SEXP tab_stops,
-    SEXP warn, SEXP term_cap,
-    SEXP first_only,
-    SEXP ctl, SEXP norm, SEXP carry,
-    SEXP terminate
-  );
-  SEXP FANSI_process_ext(SEXP input, SEXP term_cap, SEXP ctl);
-  SEXP FANSI_tabs_as_spaces_ext(
-    SEXP vec, SEXP tab_stops, SEXP warn, SEXP term_cap, SEXP ctl
-  );
-  SEXP FANSI_color_to_html_ext(SEXP x);
-  SEXP FANSI_esc_to_html(
-    SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes, SEXP carry
-  );
-  SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap);
-
-  SEXP FANSI_nchar(
-    SEXP x, SEXP type, SEXP keepNA, SEXP allowNA,
-    SEXP warn, SEXP term_cap, SEXP ctl, SEXP z
-  );
-  // utility / testing
-
-  SEXP FANSI_cleave(SEXP x);
-  SEXP FANSI_order(SEXP x);
-  SEXP FANSI_sort_chr(SEXP x);
-
-  SEXP FANSI_check_assumptions();
-  SEXP FANSI_unique_chr(SEXP x);
-
-  SEXP FANSI_add_int_ext(SEXP x, SEXP y);
-
-  SEXP FANSI_set_int_max(SEXP x);
-  SEXP FANSI_set_rlent_max(SEXP x);
-  SEXP FANSI_get_int_max();
-  SEXP FANSI_get_warn_all();
-  SEXP FANSI_esc_html(SEXP x, SEXP what);
-
-  SEXP FANSI_normalize_state_ext(
-    SEXP x, SEXP warn, SEXP term_cap, SEXP carry
-  );
-  SEXP FANSI_normalize_state_list_ext(
-    SEXP x, SEXP warn, SEXP term_cap, SEXP carry
-  );
-
-  SEXP FANSI_size_buff_ext(SEXP x);
-  SEXP FANSI_size_buff_prot_test();
-
-  SEXP FANSI_check_enc_ext(SEXP x, SEXP i);
-  SEXP FANSI_ctl_as_int_ext(SEXP ctl);
-
-  SEXP FANSI_state_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm);
-  SEXP FANSI_state_at_end_ext(
-    SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, SEXP norm, SEXP carry,
-    SEXP arg, SEXP allowNA
-  );
-  SEXP FANSI_bridge_state_ext(SEXP end, SEXP restart, SEXP term_cap, SEXP norm);
-  SEXP FANSI_buff_test_reset();
-  SEXP FANSI_buff_test_copy_overflow();
-  SEXP FANSI_buff_test_mcopy_overflow();
-  SEXP FANSI_buff_test_fill_overflow();
-
   // - Internal funs -----------------------------------------------------------
 
   SEXP FANSI_process(
@@ -477,10 +413,12 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     SEXP vec, SEXP tab_stops, struct FANSI_buff * buff, SEXP warn,
     SEXP term_cap, SEXP ctl
   );
+  SEXP FANSI_sort_chr(SEXP x);
 
   struct FANSI_ctl_pos FANSI_find_ctl(struct FANSI_state state, R_xlen_t i);
   struct FANSI_state FANSI_reset_pos(struct FANSI_state state);
   struct FANSI_state FANSI_reset_width(struct FANSI_state state);
+  struct FANSI_state FANSI_reset_state(struct FANSI_state state);
 
   void FANSI_check_chrsxp(SEXP x, R_xlen_t i);
 
@@ -511,7 +449,12 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   int FANSI_sgr_active(struct FANSI_sgr sgr);
   int FANSI_url_active(struct FANSI_url url);
   int FANSI_sgr_comp_color(struct FANSI_sgr target, struct FANSI_sgr current);
-  struct FANSI_sgr FANSI_sgr_setdiff(struct FANSI_sgr old, struct FANSI_sgr new);
+  struct FANSI_sgr FANSI_sgr_setdiff(
+    struct FANSI_sgr old, struct FANSI_sgr new, int mode
+  );
+  struct FANSI_sgr FANSI_sgr_intersect(
+    struct FANSI_sgr old, struct FANSI_sgr new
+  );
   int FANSI_url_comp(struct FANSI_url target, struct FANSI_url current);
 
   struct FANSI_state FANSI_read_next(
@@ -521,7 +464,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   // "Writing" functions
   void FANSI_W_sgr(
-    struct FANSI_buff * buff, struct FANSI_sgr sgr, int normalize, R_xlen_t i
+    struct FANSI_buff * buff, struct FANSI_sgr sgr, int normalize,
+    int enclose, R_xlen_t i
   );
   void FANSI_W_url(
     struct FANSI_buff * buff, struct FANSI_url url, int normalize, R_xlen_t i
@@ -543,6 +487,16 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     struct FANSI_buff * buff, const char tmp, int times,
     R_xlen_t i, const char * err_msg
   );
+  int FANSI_W_bridge(
+    struct FANSI_buff * buff, struct FANSI_state end,
+    struct FANSI_state restart, int normalize, R_xlen_t i,
+    const char * err_msg
+  );
+  int FANSI_W_normalize(
+    struct FANSI_buff * buff, struct FANSI_state *state,
+    int stop, R_xlen_t i, const char * err_msg
+  );
+
   // Macro versions require `len`, `i`, and `err_msg` defined in scope.
   #define FANSI_W_COPY(A, B) FANSI_W_copy((A), (B), i, err_msg)
   #define FANSI_W_MCOPY(A, B, C) FANSI_W_mcopy(\
@@ -553,11 +507,12 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   // Utilities
   int FANSI_seek_ctl(const char * x);
   void FANSI_print(char * x);
+  void FANSI_print_state(struct FANSI_state x);
+  void FANSI_print_sgr(struct FANSI_sgr s);
   void FANSI_interrupt(R_xlen_t i);
   intmax_t FANSI_ind(R_xlen_t i);
   SEXP FANSI_mkChar0(char * start, char * end, cetype_t enc, R_xlen_t i);
   SEXP FANSI_mkChar(struct FANSI_buff buff, cetype_t enc, R_xlen_t i);
-  SEXP FANSI_reset_limits();
   void FANSI_check_limits();
 
   int FANSI_check_append(int cur, int extra, const char * msg, R_xlen_t i);
@@ -570,6 +525,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   struct FANSI_state FANSI_carry_init(
     SEXP carry, SEXP warn, SEXP term_cap, SEXP ctl
   );
+  int FANSI_is_tf(SEXP x);
 
   // - Compatibility -----------------------------------------------------------
 
@@ -582,4 +538,4 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
               Rboolean allowNA, Rboolean keepNA, const char* msg_name);
   #endif
 
-#endif
+#endif  /* _FANSI_EXT */

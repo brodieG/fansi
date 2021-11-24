@@ -693,9 +693,13 @@ static char * color_token(
  * Set buff to NULL to get size instead of writing.
  *
  * Return how many needed / written bytes.
+ *
+ * @param enclose whether to include leading \033 and trailing m, only applies
+ *   if !normalize
  */
 void FANSI_W_sgr(
-  struct FANSI_buff * buff, struct FANSI_sgr sgr, int normalize, R_xlen_t i
+  struct FANSI_buff * buff, struct FANSI_sgr sgr, int normalize,
+  int enclose, R_xlen_t i
 ) {
   /****************************************************\
   | IMPORTANT:                                         |
@@ -713,7 +717,7 @@ void FANSI_W_sgr(
   char tmp[6] = {0};
 
   if(FANSI_sgr_active(sgr)) {
-    if(!normalize) FANSI_W_COPY(buff, "\033[");
+    if(!normalize && enclose) FANSI_W_COPY(buff, "\033[");
     // styles
     char tokval[2] = {0};
     for(unsigned int i = 1; i < 10; i++) {
@@ -773,7 +777,7 @@ void FANSI_W_sgr(
       FANSI_W_COPY(buff, make_token(tmp, tokval, normalize));
     }
     // Finalize (replace trailing ';' with 'm')
-    if(buff->buff) {
+    if(buff->buff && enclose) {
       *((buff->buff) - 1) = 'm';
     }
   }

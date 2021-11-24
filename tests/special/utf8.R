@@ -195,26 +195,18 @@ unitizer_sect("Corner cases", {
   # re-installing package. now we're stuck with the try business to circumvent
   # that variability.
 
-  tryCatch(
-    substr2_ctl(utf8.bad, 1, 7, type='width'),
-    warning=function(e) conditionMessage(e)
-  )
+  tce(substr2_ctl(utf8.bad, 1, 7, type='width'))
   # # need to remove for changes in R3.6.0
   # substr2_ctl(utf8.bad, 1, 7, type='width', warn=FALSE)
-  tryCatch(
-    substr2_ctl(utf8.bad, 5, 10, type='width'),
-    warning=function(e) conditionMessage(e)
-  )
+  tce(substr2_ctl(utf8.bad, 5, 10, type='width'))
+
   # # need to remove for changes in R3.6.0
   # substr2_ctl(utf8.bad, 5, 10, type='width', warn=FALSE)
   # ends early
 
   chrs.2 <- "hello\xee"
   Encoding(chrs.2) <- "UTF-8"
-  tryCatch(
-    substr2_ctl(chrs.2, 1, 10, type='width'),
-    warning=function(e) conditionMessage(e)
-  )
+  tce(substr2_ctl(chrs.2, 1, 10, type='width'))
   # # need to remove for changes in R3.6.0
   # substr2_ctl(chrs.2, 1, 10, type='width', warn=FALSE)
 
@@ -245,6 +237,10 @@ unitizer_sect("Corner cases", {
   substr2_ctl(b.t.c, 1, 4, type='width')
   substr2_ctl(b.t.c, 0, 5, type='width')
   substr2_ctl(b.t.c, 5, 5, type='width')
+
+  substr_ctl(b.t.c, 0, 4, terminate=FALSE)
+  substr2_ctl(b.t.c, 1, 4, terminate=FALSE, type='width')
+
 })
 unitizer_sect("nchar", {
   chr.dia <- 'A\u030A'
@@ -521,6 +517,34 @@ unitizer_sect("graphemes", {
   substr2_ctl(emo.5, 2, 3, type='width')
   nchar_ctl(emo.5, type='width')
   nchar_ctl(emo.5, type='grapheme')
+
+  # Lead/Trail controls
+  emo.0.1 <- paste0(
+    "\033[33m", substr2_ctl(emo.0, 1, 1, type='graphemes'), "\033[45m"
+  )
+  substr2_ctl(emo.0.1, 2, 2, type='width')
+  substr2_ctl(emo.0.1, 2, 2, type='width', terminate=FALSE)
+  substr2_ctl(emo.0.1, 1, 1, type='width', round='stop')
+  substr2_ctl(emo.0.1, 1, 3, type='width')
+  substr2_ctl(emo.0.1, 1, 3, type='width', terminate=FALSE)
+  substr2_ctl(emo.0.1, 1, 3, type='width', round='stop')
+
+  # keep some trailing SGR because a non-special control intercedes
+  emo.0.2 <- paste0(emo.0.1, "\a")
+  substr2_ctl(emo.0.2, 1, 3, type='width', round='start')
+  emo.0.3 <- paste0(emo.0.1, "\a\033]8;;x.yz\033\\")
+  substr2_ctl(emo.0.3, 1, 3, type='width', round='start')
+
+  # Lead/Trail OSC
+  emo.0.4 <- paste0(
+    "\033]8;;x.yz\033\\",
+    substr2_ctl(emo.0, 1, 1, type='graphemes'),
+    "\033]8;;w.ww\033\\", "\a", "\033[42m"
+  )
+  substr2_ctl(emo.0.4, 1, 3, type='width')
+  substr2_ctl(emo.0.4, 1, 3, type='width', terminate=FALSE)
+  substr2_ctl(emo.0.4, 1, 2, type='width', terminate=FALSE)
+  substr2_ctl(emo.0.4, 1, 2, type='width')
 })
 unitizer_sect("replacement and width", {
   # weird, but correct, should be white haired light brown baby, but at least

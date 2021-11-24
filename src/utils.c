@@ -319,6 +319,10 @@ SEXP FANSI_sort_chr(SEXP x) {
   }
   return res;
 }
+SEXP FANSI_sort_chr_ext(SEXP x) {
+  return FANSI_sort_chr(x);
+}
+
 /*
  * So we can use a consistent integer type in printing possibly large indeces.
  *
@@ -405,9 +409,9 @@ SEXP FANSI_mkChar0(
 SEXP FANSI_mkChar(struct FANSI_buff buff, cetype_t enc, R_xlen_t i) {
   return mkChar_core(buff, enc, i, 1);
 }
-
-static int is_tf(SEXP x) {
-  return TYPEOF(x) != LGLSXP || XLENGTH(x) != 1 ||
+// return 1 if is TRUE/FALSE
+int FANSI_is_tf(SEXP x) {
+  return TYPEOF(x) == LGLSXP && XLENGTH(x) == 1 &&
     LOGICAL(x)[0] != NA_LOGICAL;
 }
 /*
@@ -420,7 +424,8 @@ void FANSI_val_args(SEXP x, SEXP norm, SEXP carry) {
     error("Argument `x` must be character.");     // nocov
   if(TYPEOF(carry) != STRSXP || XLENGTH(carry) != 1L)
     error("Argument `carry` must be scalar character.");         // nocov
-  if(!is_tf(norm)) error("Argument `norm` must be TRUE or FALSE.");  // nocov
+  if(!FANSI_is_tf(norm))
+    error("Argument `norm` must be TRUE or FALSE.");  // nocov
 }
 // Utilitiy fun
 // nocov start
@@ -435,5 +440,28 @@ void FANSI_print(char * x) {
         Rprintf("%c", *(x + i));
     Rprintf("\n");
   }
+}
+void FANSI_print_sgr(struct FANSI_sgr s) {
+  Rprintf(
+    "  color: %d %d %d;%d;%d bgcolor: %d %d %d;%d;%d\n",
+    s.color, s.color_extra[0],
+    s.color_extra[1], s.color_extra[2], s.color_extra[3],
+    s.bg_color, s.bg_color_extra[0],
+    s.bg_color_extra[1], s.bg_color_extra[2], s.bg_color_extra[3]
+  );
+  Rprintf(
+    "  style %x ideogram %x  border %x font %d\n",
+    s.style, s.ideogram, s.border, s.font
+  );
+}
+void FANSI_print_state(struct FANSI_state x) {
+  Rprintf("- State -------\n");
+  FANSI_print_sgr(x.sgr);
+  Rprintf(
+    "  pos: b %d r %d a %d w %d\n",
+    x.pos_byte, x.pos_raw, x.pos_ansi, x.pos_width
+  );
+  Rprintf("  warn %d err %x\n", x.warn, x.err_code);
+  Rprintf("- End State ---\n");
 }
 // nocov end
