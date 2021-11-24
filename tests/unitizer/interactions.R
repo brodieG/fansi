@@ -49,6 +49,10 @@ unitizer_sect("wrap/trim", {
     "with \033[4mdark itentions and a yappy dog."
   )
   strtrim_ctl(wrp.0, 20, carry="\033[33m")
+
+  wrp.2 <- c("hello \033[42mworld", "goodnight\033[49m moon", "oh \033[39mboy")
+  strwrap_ctl(wrp.2, 10, carry="\033[35m", simplify=FALSE)
+  strwrap_ctl(wrp.2, 10, carry="\033[35m", simplify=FALSE, terminate=FALSE)
 })
 unitizer_sect("normalize", {
   str.2 <- c("\033[44mhello", "wo\033[mrld", "barrow")
