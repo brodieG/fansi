@@ -122,6 +122,7 @@ static struct FANSI_prefix_dat drop_pre_indent(struct FANSI_prefix_dat dat) {
 
 static SEXP writeline(
   struct FANSI_state state_bound, struct FANSI_state state_start,
+  struct FANSI_state state_last_bound,
   struct FANSI_buff * buff,
   struct FANSI_prefix_dat pre_dat,
   int tar_width, const char * pad_chr,
@@ -171,19 +172,16 @@ static SEXP writeline(
     error("Internal Error: negative line width.");  // nocov
 
   // Do we need to open/close tags?
-  int needs_st_sgr = FANSI_sgr_active(state_start.sgr);
-  int needs_st_url = FANSI_url_active(state_start.url);
   int needs_cl_sgr = terminate && FANSI_sgr_active(state_bound.sgr);
   int needs_cl_url = terminate && FANSI_url_active(state_bound.url);
 
   // Measure/Write loop (see src/write.c).  Very similar code in substr.c
   const char * err_msg = "Writing line";
-
   for(int k = 0; k < 2; ++k) {
     if(!k) FANSI_reset_buff(buff);
     else   FANSI_size_buff(buff);
-    if(needs_st_sgr) FANSI_W_sgr(buff, state_start.sgr, normalize, 1, i);
-    if(needs_st_url) FANSI_W_url(buff, state_start.url, normalize, i);
+
+    FANSI_W_bridge(buff, state_last_bound, state_start, normalize, i, err_msg);
 
     // Apply indent/exdent prefix/initial
     if(pre_dat.bytes) {
@@ -280,8 +278,11 @@ static SEXP strwrap(
     state.sgr = state_carry->sgr;
     state.url = state_carry->url;
   }
-  struct FANSI_state state_start, state_bound, state_prev, state_tmp;
-  state_start = state_bound = state_prev = state;
+  struct FANSI_state state_start, state_bound, state_prev, state_tmp,
+    state_last_bound;
+  state_start = state_bound = state_prev = state_last_bound = state;
+  // Blank anchor state in terminate mode
+  if(terminate) state_last_bound = FANSI_reset_state(state_last_bound);
   R_xlen_t size = 0;
   SEXP res_sxp;
 
@@ -321,10 +322,10 @@ static SEXP strwrap(
     if(!end) state_next = FANSI_read_next(state_next, index, 1);
     state.warned = state_bound.warned = state_next.warned;// avoid 2x warning
 
-    // Always strip trailing SGR to behave same way as substr_ctl, except if not
-    // actually last characters in string..
+    // Always strip trailing SGR to behave same way as substr_ctl, except if
+    // we're adding padding, or really at end of string.
     int strip_trail_sgr =
-       state.last_special &&
+       state.last_special && (!end || terminate) &&
       !((*pad_chr) && state.pos_width < width_tar);
 
     // detect word boundaries and paragraph starts; we need to track
@@ -414,13 +415,14 @@ static SEXP strwrap(
       // Write the string
       res_sxp = PROTECT(
         writeline(
-          state_bound, state_start, buff,
+          state_bound, state_start, state_last_bound, buff,
           para_start ? pre_first : pre_next,
           width_tar, pad_chr, index, normalize, terminate
         )
       ); ++prt;
       first_line = 0;
       last_start = state_start.pos_byte;
+      if(!terminate) state_last_bound = state_bound;
 
       // first_only for `strtrim`
       if(!first_only) {
