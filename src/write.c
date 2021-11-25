@@ -486,6 +486,20 @@ void FANSI_W_fill(
     buff->len += times;
   }
 }
+int FANSI_W_normalize_or_copy(
+  struct FANSI_buff *buff, struct FANSI_state state, int norm_i,
+  int stop, R_xlen_t i, const char * err_msg
+) {
+  int res = -1;
+  int start = state.pos_byte;
+  if(norm_i) res = FANSI_W_normalize(buff, &state, stop, i, err_msg);
+  if(res < 0){
+    const char * string = state.string + start;
+    int bytes = stop - start;
+    res = FANSI_W_MCOPY(buff, string, bytes);
+  }
+  return res;
+}
 
 /*
  * End Active Sequences

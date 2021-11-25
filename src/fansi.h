@@ -496,6 +496,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     struct FANSI_buff * buff, struct FANSI_state *state,
     int stop, R_xlen_t i, const char * err_msg
   );
+  int FANSI_W_normalize_or_copy(
+    struct FANSI_buff *buff, struct FANSI_state state, int norm_i,
+    int stop, R_xlen_t i, const char * err_msg
+  );
 
   // Macro versions require `len`, `i`, and `err_msg` defined in scope.
   #define FANSI_W_COPY(A, B) FANSI_W_copy((A), (B), i, err_msg)

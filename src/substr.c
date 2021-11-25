@@ -197,23 +197,6 @@ static int substr_calc_points(
   */
   return state_stop->pos_width - state_start->pos_width;
 }
-static int W_normalize_or_copy(
-  struct FANSI_buff *buff, struct FANSI_state state, int norm_i,
-  int stop, R_xlen_t i
-) {
-  const char * err_msg;
-  err_msg = "Normalizing substring";
-  int res = -1;
-  int start = state.pos_byte;
-  if(norm_i) res = FANSI_W_normalize(buff, &state, stop, i, err_msg);
-  err_msg = "Extracting substring";
-  if(res < 0){
-    const char * string = state.string + start;
-    int bytes = stop - start;
-    res = FANSI_W_MCOPY(buff, string, bytes);
-  }
-  return res;
-}
 
 /*
  * @param state modified by reference.
@@ -254,7 +237,8 @@ static SEXP substr_one(
       FANSI_W_bridge(buff, *state, state_start, norm_i, i, err_msg);
 
       // Actual string, remember state_stop.pos_byte is one past what we need
-      W_normalize_or_copy(buff, state_start, norm_i, state_stop.pos_byte, i);
+      int stop = state_stop.pos_byte;
+      FANSI_W_normalize_or_copy(buff, state_start, norm_i, stop, i);
 
       // And turn off CSI styles if needed
       if(needs_cl_sgr) FANSI_W_sgr_close(buff, state_stop.sgr, norm_i, i);
