@@ -481,7 +481,7 @@ static struct FANSI_url parse_url(const char *x) {
  * OSC may be terminated with either BEL or ST (BEL is not ECMA48 standard, but
  * in common use for OSC based URL anchors).
  *
- * Support of non-ASCII inside OSC (i.e. 0x08-0x0d) does not work correctly on
+ * Support of C0 inside OSC (i.e. 0x08-0x0d) does not work correctly on
  * OS X terminal where they are emitted, and it is required that the start be
  * num; and if not re-emitting starts at that point.  iterm2 does it correctly.
  *

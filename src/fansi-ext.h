@@ -61,6 +61,8 @@ SEXP FANSI_nchar(
   SEXP x, SEXP type, SEXP keepNA, SEXP allowNA,
   SEXP warn, SEXP term_cap, SEXP ctl, SEXP z
 );
+FANSI_trimws(SEXP x, SEXP which, SEXP ctl, SEXP warn);
+
 // utility / testing
 
 SEXP FANSI_cleave(SEXP x);
