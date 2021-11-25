@@ -38,6 +38,8 @@ static void FANSI_check_chr_size(char * start, char * end, R_xlen_t i) {
  * Since we do not use FANSI_read_next, we don't care about conversions to
  * UTF8.
  *
+ * Code copied into trimws.c.
+ *
  * Warn was used pre 1.0 to request to return warn info in attributes e.g. by
  * setting it to two, but that feature was dropped in favor of bit-encoded
  * warning levels.

@@ -27,6 +27,12 @@
  *   INT_MAX, so we do not check for overflow (this is checked on state init)
  *   except for width.
  *
+ * In many cases it is possible to bypass `FANSI_read_next` by e.g. incrementing
+ * the `pos_byte` offset.  Typically this is done when we don't care about thing
+ * such as UTF-8 or widths.  In these caess, care should be taken to ensure none
+ * of the subsequent uses of the state object rely on the specific states that
+ * `FANSI_read_next` leaves it in.
+ *
  * Functions sometimes use the large `FANSI_state` object, but the hope is that
  * with them static the compilers will do nice things and the overhead will be
  * limited (but we have not checked).  It is a todo to see if this is a
