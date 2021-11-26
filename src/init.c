@@ -57,7 +57,7 @@ R_CallMethodDef callMethods[] = {
   {"buff_test_fill_overflow", (DL_FUNC) &FANSI_buff_test_fill_overflow, 0},
   {"state_at_end", (DL_FUNC) &FANSI_state_at_end_ext, 8},
   {"bridge_state", (DL_FUNC) &FANSI_bridge_state_ext, 4},
-  {"trimws", (DL_FUNC) &FANSI_trimws, 4},
+  {"trimws", (DL_FUNC) &FANSI_trimws, 6},
   {NULL, NULL, 0}
 };
 

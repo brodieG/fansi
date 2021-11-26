@@ -12,21 +12,28 @@
 #'   become possible to change this parameter.
 #' @return The input with white space removed as described.
 #' @examples
-#' trimw_ws(" \033[31m\thello world\t\033[39m  ")
+#' trimws_ctl(" \033[31m\thello world\t\033[39m  ")
 
 trimws_ctl <- function(
   x, which = c("both", "left", "right"), whitespace = "[ \t\r\n]",
-  ctl='all', warn=getOption('fansi.warn', TRUE)
+  warn=getOption('fansi.warn', TRUE),
+  term.cap=getOption('fansi.term.cap', dflt_term_cap()),
+  ctl='all', normalize=getOption('fansi.normalize', FALSE)
 ) {
   if(!identical(whitespace,  "[ \t\r\n]"))
     stop("Argument `whitespace` may only be set to \"[ \\t\\r\\n]\".")
-  VAL_IN_ENV(x=x, ctl=ctl, warn=warn);
+  # modifies/adds vars in env
+  VAL_IN_ENV(x=x, ctl=ctl, warn=warn, term.cap=term.cap, normalize=normalize);
   valid.which <- c("both", "left", "right")
   if(
-    !is.character(which) || length(which) != 1 ||
-    is.na(which.int <- pmatch(which, valid.which))
+    !is.character(which) || length(which[1]) != 1 ||
+    is.na(which.int <- pmatch(which[1], valid.which))
   )
-    stop("Argument `which` must partial match one of ", deparse(valid.which))
+    stop(
+      "Argument `which` must partial match one of ", deparse(valid.which), "."
+    )
 
-  .Call(FANSI_trimws, x, which.int, CTL.INT, WARN.INT)
+  .Call(
+    FANSI_trimws, x, which.int - 1L, WARN.INT, TERM.CAP.INT, CTL.INT, normalize
+  )
 }
