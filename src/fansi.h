@@ -298,7 +298,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int pos_raw;
     int pos_width;
 
-
     // Most of the objecs below are 1/0 could be a bitfield?  Or at a minimum as
     // a char?
 
@@ -313,6 +312,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
     int last_zwj;         // was last a Zero Width Joiner
     int last_ri;          // was last an unpaired Regional Indicator
     int last_special;     // was an sgr or osc url
+    int last_ctl;         // was a recognized ctl (and which one)
 
     // Need to read one more character before returning from read_next, used
     // right now just to avoid splitting RI flags.

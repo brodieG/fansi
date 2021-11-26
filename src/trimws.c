@@ -67,13 +67,18 @@ SEXP FANSI_trimws(
           case '\t':
             ++state.pos_byte;
             continue;
-            break;
-          case 0x1b:
-            state = FANSI_read_next(state, i, 1);
-            break;
-          default: goto ENDLEAD;
-        }
-      }
+          default:
+            if(
+              (unsigned char)state.string[state.pos_byte] >= 0x20 &&
+              (unsigned char)state.string[state.pos_byte] <= 0x7e
+            ) {
+              goto ENDLEAD;
+            } else {
+              state = FANSI_read_next(state, i, 1);
+              if(state.last_ctl) break;
+              else goto ENDLEAD;
+            }
+      } }
       ENDLEAD:
       state_lead = state;
       string_start = state_lead.pos_byte;
@@ -92,18 +97,26 @@ SEXP FANSI_trimws(
             }
             ++state.pos_byte;
             continue;
-          case 0x1b:
-            state = FANSI_read_next(state, i, 1);
-            break;
           default:
-            string_end = 0;
-            ++state.pos_byte;
-            break;
-        }
-      }
+            if(
+              (unsigned char)state.string[state.pos_byte] >= 0x20 &&
+              (unsigned char)state.string[state.pos_byte] <= 0x7e
+            ) {
+              string_end = 0;
+              ++state.pos_byte;
+            } else {
+              state = FANSI_read_next(state, i, 1);
+              if(state.last_ctl) continue;
+              else {
+                string_end = 0;
+                ++state.pos_byte;
+            } }
+      } }
       state_last = state;
-    } else {
+    }
+    if(!string_end) {
       string_end = LENGTH(x_chr);
+      state_trail = state_last;
     }
     // Do we need to write the string?
     if(string_start || string_end != LENGTH(x_chr)) {
@@ -122,13 +135,9 @@ SEXP FANSI_trimws(
           FANSI_W_sgr(&buff, state_lead.sgr, norm_i, 1, i);
           FANSI_W_url(&buff, state_lead.url, norm_i, i);
         }
-        int string_bytes = 0;
-        if(string_end) string_bytes = string_end - string_start;
-        else string_bytes = LENGTH(x_chr) - string_start;
-
         // Body of string
         FANSI_W_normalize_or_copy(
-          &buff, state_lead, norm_i, state_trail.pos_byte, i, err_msg
+          &buff, state_lead, norm_i, string_end, i, err_msg
         );
         // Trailing state
         if(string_end)
