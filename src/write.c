@@ -814,16 +814,20 @@ void FANSI_W_url(
   | See _W_sgr                                         |
   \****************************************************/
 
-  const char * err_msg = "Writing URL"; // for FANSI_W_M?COPY
-  FANSI_W_COPY(buff, "\033]8;");
-  if(normalize) {
-    if(url.id.val)
-      FANSI_W_MCOPY(buff, url.id.val, url.id.len);
-  } else if(url.params.val) {
-    FANSI_W_MCOPY(buff, url.params.val, url.params.len);
+  if(FANSI_url_active(url)) {
+    const char * err_msg = "Writing URL"; // for FANSI_W_M?COPY
+    FANSI_W_COPY(buff, "\033]8;");
+    if(normalize) {
+      if(url.id.val)
+        FANSI_W_MCOPY(buff, url.id.val, url.id.len);
+    } else if(url.params.val) {
+      FANSI_W_MCOPY(buff, url.params.val, url.params.len);
+    }
+    FANSI_W_COPY(buff, ";");
+    FANSI_W_MCOPY(buff, url.url.val, url.url.len);
+    FANSI_W_COPY(buff, "\033\\");  // ST
   }
-  FANSI_W_COPY(buff, ";");
-  FANSI_W_MCOPY(buff, url.url.val, url.url.len);
-  FANSI_W_COPY(buff, "\033\\");  // ST
+  // for debugging, buff always should have 1 byte
+  else if(buff->buff) *(buff->buff) = 0;
 }
 

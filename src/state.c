@@ -310,11 +310,11 @@ char * FANSI_state_as_chr(
 ) {
   FANSI_reset_buff(buff);
   FANSI_W_sgr(buff, state.sgr, normalize, 1, i);
-  if(state.url.url.len) FANSI_W_url(buff, state.url, normalize, i);
+  FANSI_W_url(buff, state.url, normalize, i);
 
   FANSI_size_buff(buff);
   FANSI_W_sgr(buff, state.sgr, normalize, 1, i);
-  if(state.url.url.len) FANSI_W_url(buff, state.url, normalize, i);
+  FANSI_W_url(buff, state.url, normalize, i);
   return buff->buff;
 }
 
