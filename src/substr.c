@@ -238,7 +238,7 @@ static SEXP substr_one(
 
       // Actual string, remember state_stop.pos_byte is one past what we need
       int stop = state_stop.pos_byte;
-      FANSI_W_normalize_or_copy(buff, state_start, norm_i, stop, i);
+      FANSI_W_normalize_or_copy(buff, state_start, norm_i, stop, i, err_msg);
 
       // And turn off CSI styles if needed
       if(needs_cl_sgr) FANSI_W_sgr_close(buff, state_stop.sgr, norm_i, i);
@@ -468,7 +468,9 @@ static SEXP substr_replace(
         // Replacement
         if(write_md) {
           FANSI_W_bridge(buff, st_vref, st_v0, norm_i, i, err_msg);
-          W_normalize_or_copy(buff, st_v0, norm_i, st_v1.pos_byte, i);
+          FANSI_W_normalize_or_copy(
+            buff, st_v0, norm_i, st_v1.pos_byte, i, err_msg
+          );
           if(term_i && FANSI_sgr_active(st_v1.sgr))
             FANSI_W_sgr_close(buff, st_v1.sgr, norm_i, i);
           if(term_i && FANSI_url_active(st_v1.url))
