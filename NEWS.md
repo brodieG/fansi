@@ -36,6 +36,7 @@
 * [#73](https://github.com/brodieG/fansi/issues/73) Default parameter values
   retrieved with `getOption` now always have explicit fallback values defined
   (h/t @gadenbui).
+* [#31](https://github.com/brodieG/fansi/issues/31) Add `trimws_ctl`.
 * Better warnings and error messages, including more granular messages for
   `unhandled_ctl` for adjacent _Control Sequences_.
 * `term.cap` parameter now accepts "all" as value, like the `ctl` parameter.
