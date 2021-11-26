@@ -122,7 +122,11 @@ next vector element, simulating what happens with a document with active
 state at the end of a line.  If FALSE each vector element is interpreted as
 if there were no active state when it begins.  If character, then the
 active state at the end of the \code{carry} string is carried into the first
-element of \code{x}.  See the "State Interactions" section of \code{\link[=fansi]{?fansi}}
+element of \code{x} (see "Replacement Functions" for differences there).
+Semantically, the carried state is injected in the interstice between an
+imaginary zeroeth character and the first character of a vector element.
+See the "Position Semantics" section of \code{\link{substr_ctl}} and the "State
+Interactions" section of \code{\link[=fansi]{?fansi}}
 for details.}
 
 \item{terminate}{TRUE (default) or FALSE whether substrings should have

@@ -171,10 +171,6 @@ static SEXP writeline(
   if(state_bound.pos_byte < state_start.pos_byte)
     error("Internal Error: negative line width.");  // nocov
 
-  // Do we need to open/close tags?
-  int needs_cl_sgr = terminate && FANSI_sgr_active(state_bound.sgr);
-  int needs_cl_url = terminate && FANSI_url_active(state_bound.url);
-
   // Measure/Write loop (see src/write.c).  Very similar code in substr.c
   const char * err_msg = "Writing line";
   for(int k = 0; k < 2; ++k) {
@@ -199,8 +195,8 @@ static SEXP writeline(
     FANSI_W_FILL(buff, *pad_chr, to_pad);
 
     // And turn off CSI styles if needed
-    if(needs_cl_sgr) FANSI_W_sgr_close(buff, state_bound.sgr, normalize, i);
-    if(needs_cl_url) FANSI_W_url_close(buff, state_bound.url, i);
+    if(terminate) FANSI_W_sgr_close(buff, state_bound.sgr, normalize, i);
+    if(terminate) FANSI_W_url_close(buff, state_bound.url, i);
   }
   // Now create the charsxp and append to the list, start by determining
   // what encoding to use.

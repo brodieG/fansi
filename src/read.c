@@ -27,6 +27,12 @@
  *   INT_MAX, so we do not check for overflow (this is checked on state init)
  *   except for width.
  *
+ * In many cases it is possible to bypass `FANSI_read_next` by e.g. incrementing
+ * the `pos_byte` offset.  Typically this is done when we don't care about thing
+ * such as UTF-8 or widths.  In these caess, care should be taken to ensure none
+ * of the subsequent uses of the state object rely on the specific states that
+ * `FANSI_read_next` leaves it in.
+ *
  * Functions sometimes use the large `FANSI_state` object, but the hope is that
  * with them static the compilers will do nice things and the overhead will be
  * limited (but we have not checked).  It is a todo to see if this is a
@@ -475,7 +481,7 @@ static struct FANSI_url parse_url(const char *x) {
  * OSC may be terminated with either BEL or ST (BEL is not ECMA48 standard, but
  * in common use for OSC based URL anchors).
  *
- * Support of non-ASCII inside OSC (i.e. 0x08-0x0d) does not work correctly on
+ * Support of C0 inside OSC (i.e. 0x08-0x0d) does not work correctly on
  * OS X terminal where they are emitted, and it is required that the start be
  * num; and if not re-emitting starts at that point.  iterm2 does it correctly.
  *
@@ -597,6 +603,7 @@ static struct FANSI_state read_esc(struct FANSI_state state, int seq) {
   // We only interpet sequences if they are active per .ctl, but we need to read
   // them in some cases to know what type they are to decide.
 
+  state.last_ctl = 0;
   do {
     struct FANSI_state state_prev = state;
     // Is the current escape recognized by the `ctl` parameter?  It doesn't
@@ -760,11 +767,13 @@ static struct FANSI_state read_esc(struct FANSI_state state, int seq) {
         if(state.ctl & FANSI_CTL_CSI) {
           state.sgr = state_prev.sgr;
           esc_recognized = 1;
+          state.last_ctl = FANSI_CTL_CSI;
         }
       } else if (state.ctl & FANSI_CTL_SGR) {
         // SGR tracking enabled
         esc_recognized = 1;
         esc_types |= 2U;
+        state.last_ctl = FANSI_CTL_SGR;
       }
     } else if(
       state.string[state.pos_byte] == ']' &&
@@ -783,7 +792,10 @@ static struct FANSI_state read_esc(struct FANSI_state state, int seq) {
       // Params other than id
       if(url.params.len && url.id.len + 3 != url.params.len)
         err_code = 2;
-      if(err_code < 3) esc_types |= 2U;
+      if(err_code < 3) {
+        esc_types |= 2U;
+        state.last_ctl = FANSI_CTL_URL;
+      }
       state.pos_byte += osc_bytes;
     } else if(
       state.string[state.pos_byte] == ']' &&
@@ -796,7 +808,10 @@ static struct FANSI_state read_esc(struct FANSI_state state, int seq) {
       struct FANSI_osc osc = parse_osc(state.string + state.pos_byte);
       osc_bytes = osc.len;
       err_code = osc.error;
-      if(err_code < 3) esc_types |= 1U;
+      if(err_code < 3) {
+        esc_types |= 1U;
+        state.last_ctl = FANSI_CTL_OSC;
+      }
       state.pos_byte += osc_bytes;
     } else if(!state.string[state.pos_byte]) {
       // - String ends in ESC --------------------------------------------------
@@ -838,11 +853,13 @@ static struct FANSI_state read_esc(struct FANSI_state state, int seq) {
       state.sgr_prev = sgr_prev;
       state.url_prev = url_prev;
       state.non_normalized |= non_normalized;
+      if(!state.last_ctl) state.last_ctl = FANSI_CTL_ESC;
       if(esc_types & 2U) {
         state.pos_byte_sgr_start = seq_start;
         state.last_special = 1;  // we  just read an SGR/URL, but maybe invalid
       }
     } else {
+      state.last_ctl = 0;
       state = state_prev;
       state = read_ascii(state);
     }
@@ -1012,6 +1029,7 @@ static struct FANSI_state read_c0(struct FANSI_state state) {
   ) {
     --state.pos_raw;
     --state.pos_width;
+    state.last_ctl = is_nl ? FANSI_CTL_NL : FANSI_CTL_C0;
   }
   return state;
 }
@@ -1034,8 +1052,7 @@ onemoretime:
 
   // reset flags
   state.last_zwj = state.is_sgr = state.err_code = state.read_one_more =
-  state.last_special =  0;
-  // this can only be one if the last thing read is a CSI
+    state.last_special = state.last_ctl = 0;
 
   int is_ascii = chr_val >= 0x20 && chr_val < 0x7F;
   int is_utf8 = chr_val < 0 || chr_val > 0x7f;

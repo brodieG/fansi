@@ -176,9 +176,11 @@ int FANSI_W_bridge(
   }
   // Any changed URLs will need to be written (empty URL acts as a closer
   // so simpler than with SGR).
-  if(FANSI_url_comp(end.url, restart.url))
+  if(FANSI_url_comp(end.url, restart.url)) {
+    if(!FANSI_url_active(restart.url))
+      FANSI_W_url_close(buff, end.url, i);
     FANSI_W_url(buff, restart.url, normalize, i);
-
+  }
   return buff->len;
 }
 
