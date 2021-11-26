@@ -163,13 +163,10 @@ document" interpretation.
 
 To most closely approximate what \code{writeLines(x)} produces on your terminal,
 where \code{x} is a stateful string, use \code{writeLines(fansi_fun(x, carry=TRUE, terminate=FALSE))}.  \code{fansi_fun} is a stand-in for any of the \code{fansi} string
-manipulation functions.  Note that even with a "null-op" such as
+manipulation functions.  Note that even with a seeming "null-op" such as
 \code{substr_ctl(x, 1, nchar_ctl(x), carry=TRUE, terminate=FALSE)} the output
 control sequences may not match the input ones, but the output \emph{should} look
-the same if displayed to the terminal.  With these settings \code{fansi} will
-re-open active state on each new element even if a terminal would naturally
-carry them over.  This is to allow the user to manually terminate elements
-without losing carried state on the next element.
+the same if displayed to the terminal.
 
 \code{fansi} strings will be affected by any active state in strings they are
 appended to.  There are no parameters to control what happens in this case,
@@ -183,7 +180,7 @@ SGR.  One could also just prepend "ESC[0m", but in some cases as
 described in \code{\link[=normalize_state]{?normalize_state}} that is sub-optimal.
 
 If you intend to combine stateful \code{fansi} manipulated strings with your own,
-it may be best to set \code{normalize = TRUE} for best compatibility (see
+it may be best to set \code{normalize = TRUE} for improved compatibility (see
 \code{\link[=normalize_state]{?normalize_state}}.)
 }
 

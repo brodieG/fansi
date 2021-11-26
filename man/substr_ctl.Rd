@@ -66,9 +66,9 @@ substr2_ctl(
 \arguments{
 \item{x}{a character vector or object that can be coerced to such.}
 
-\item{start}{integer.  The first element to be replaced.}
+\item{start}{integer.  The first element to be extracted or replaced.}
 
-\item{stop}{integer.  The last element to be replaced.}
+\item{stop}{integer.  The last element to be extracted or replaced.}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic \emph{Control Sequences} are encountered.  These could cause the
@@ -124,7 +124,11 @@ next vector element, simulating what happens with a document with active
 state at the end of a line.  If FALSE each vector element is interpreted as
 if there were no active state when it begins.  If character, then the
 active state at the end of the \code{carry} string is carried into the first
-element of \code{x}.  See the "State Interactions" section of \code{\link[=fansi]{?fansi}}
+element of \code{x} (see "Replacement Functions" for differences there).
+Semantically, the carried state is injected in the interstice between an
+imaginary zeroeth character and the first character of a vector element.
+See the "Position Semantics" section of \code{\link{substr_ctl}} and the "State
+Interactions" section of \code{\link[=fansi]{?fansi}}
 for details.}
 
 \item{terminate}{TRUE (default) or FALSE whether substrings should have
@@ -160,16 +164,42 @@ x (after possible coercion and re-encoding to UTF-8).
 \code{substr_ctl} is a drop-in replacement for \code{substr}.  Performance is
 slightly slower than \code{substr}, and more so for \code{type = 'width'}.  CSI SGR
 sequences will be included in the substrings to reflect the format of the
-substring when it was embedded in the source string.  Additionally, other
-\emph{Control Sequences} specified in \code{ctl} are treated as zero-width.
+substring when it was embedded in the source string.  \code{substr2_ctl} adds the
+ability to retrieve substrings based on display width in addition to the
+normal character width.  \code{substr2_ctl} also provides the option to convert
+tabs to spaces with \code{\link{tabs_as_spaces}} prior to taking substrings.
 }
-\details{
-\code{substr2_ctl} adds the ability to retrieve substrings based on display width
-in addition to the normal character width.  \code{substr2_ctl} also provides the
-option to convert tabs to spaces with \code{\link{tabs_as_spaces}} prior to taking
-substrings.
+\note{
+Non-ASCII strings are converted to and returned in UTF-8 encoding.
+Width calculations will not work properly in R < 3.2.2.
 
-Because exact substrings on anything other than character width cannot be
+If \code{stop} < \code{start}, the return value is always an empty string.
+}
+\section{Position Semantics}{
+
+
+When computing substrings, \emph{Normal} (non-control) characters are considered
+to occupy positions in strings, whereas \emph{Control Sequences} occupy the
+interstices between them.  The string \code{"hello-\\033[31mworld\\033[m!"} is
+interpreted as:\preformatted{ 0                 1
+ 1 2 3 4 5 6 7 8 9 0 1 2
+ h e l l o -|w o r l d|!
+            ^         ^
+            \\033[31m  \\033[m
+}
+
+\code{start} and \code{stop} reference character positions so they never explicitly
+select for the interstitial \emph{Control Sequences}.  The latter are implicitly
+selected if they appear in interstices after the first character and before
+the last.  Additionally, because \emph{Control Sequences} affect all subsequent
+characters in a string, any active \emph{Control Sequence}, whether opened just
+before a character or much before, will be reflected in the state \code{fansi}
+prepends to the beginning of each substring.  It is possible to select
+\emph{Control Sequences} at the end of a string by specifying \code{stop} values past
+the end of the string, although this will only produce a visible result if
+\code{terminate} is set to \code{FALSE}.
+
+Because exact substrings on anything other than character count cannot be
 guaranteed (e.g. as a result of multi-byte encodings, or double display-width
 characters) \code{substr2_ctl} must make assumptions on how to resolve provided
 \code{start}/\code{stop} values that are infeasible and does so via the \code{round}
@@ -183,18 +213,25 @@ use "stop" as the \code{round} value.  "neither" would cause all partial
 characters to be dropped irrespective whether they correspond to \code{start} or
 \code{stop}, and "both" could cause all of them to be included.
 
-These functions map string lengths accounting for \emph{Control Sequence}
-semantics to the naive length calculations, and then use the mapping in
-conjunction with \code{\link[base:substr]{base::substr()}} to extract the string.  This concept is
-borrowed directly from Gábor Csárdi's \code{crayon} package, although the
-implementation of the calculation is different.
+For example, if we consider "WW" to be a single wide character, and "n" to be
+a single narrow one:\preformatted{      12345
+x <- "WWnWW"
+substr_ctl(x, 2, 4, type='width' round='start')    -> "WWn"
+substr_ctl(x, 2, 4, type='width' round='stop')     -> "nWW"
+substr_ctl(x, 2, 4, type='width' round='neither')  -> "n"
+substr_ctl(x, 2, 4, type='width' round='both')     -> "WWnWW"
 }
-\note{
-Non-ASCII strings are converted to and returned in UTF-8 encoding.
-Width calculations will not work properly in R < 3.2.2.
 
-If \code{stop} < \code{start}, the return value is always an empty string.
+A number of \emph{Normal} characters such as combining diacritic marks have
+reported width of zero.  These are typically displayed overlaid on top of the
+preceding glyph, as in the case of \code{"e\\u301"} forming \code{"é"}.  Unlike \emph{Control
+Sequences}, which also have reported width of zero, \code{fansi} groups zero-width
+\emph{Normal} characters with the last preceding non-zero width \emph{Normal}
+character.  This is not the right thing to do for some rare zero-width
+\emph{Normal} characters such as prepending marks (see "Output Stability" and
+"Graphemes").
 }
+
 \section{Output Stability}{
 
 
@@ -221,35 +258,27 @@ set \code{term.cap} to a specific set of capabilities.
 \section{Replacement Functions}{
 
 
-Replacement functions are implemented as three substring operations, so:\preformatted{x <- "ABC"
-y <- "_."
-substr_ctl(x, 2, 2, ...) <- y
-}
+Semantics for replacement functions have the additional requirement that the
+result appear as if it is the input modified in place between the positions
+designated by \code{start} and \code{stop}.  \code{terminate} only affects the boundaries
+between the original substring and the spliced one, \code{normalize} only affects
+the same boundaries and \code{value}, \code{tabs.as.spaces} only affects \code{value}, and
+\code{x} must be ASCII only or marked "UTF-8".
 
-Is treated roughly as:\preformatted{x <- paste0(
-  substr(x, 1, 1, ...),
-  substr(y, 1, 1, ...),
-  substr(x, 3, 3, terminate=FALSE, ...)
-)
-}
+\code{terminate = FALSE} only makes sense in replacement mode if only one of \code{x}
+or \code{value} contains \emph{Control Sequences}.  \code{fansi} will not account for any
+interactions of state in \code{x} and \code{value}.
 
-Except for the \code{terminate} parameter for the trailing substring, all other
-parameters are passed from \verb{substr_ctl<-} to the internal substring calls.
-The \code{start}, \code{stop}, and \code{round} arguments are translated from the provided
-values to those required for the internal substring calls.  If you wish for
-the whole return value to be terminated you must manually add terminating
-sequences.  \code{substr_ctl} refrains from doing so to maintain the illusion of a
-string modified in place.
-
-Another implication of the three substring approach is that the \code{carry}
-parameter causes state to carry within the original string and the
-replacement values independently, as if they were columns of text cut from
-different pages and pasted together.
+The \code{carry} parameter causes state to carry within the original string and
+the replacement values independently, as if they were columns of text cut
+from different pages and pasted together.  String values for \code{carry} are
+illegal in replacement mode as it is ambiguous which of \code{x} or \code{value} they
+would modify (see examples).
 
 When in \code{type = 'width'} mode, it is only guaranteed that the result will be
 no wider than the original \code{x}.  Narrower strings may result if a mixture
 of narrow and wide graphemes cannot be replaced exactly with the same \code{width}
-value, possibly because the provided \code{start}/\code{stop} values (or the
+value, possibly because the provided \code{start} and \code{stop} values (or the
 implicit ones generated for \code{value}) do not align with grapheme boundaries.
 }
 
@@ -296,6 +325,10 @@ writeLines(bleed)      # Style will bleed out of string
 end <- "\033[0m\n"
 writeLines(end)        # Stanch bleeding
 
+## Trailing sequences omitted unless `stop` past end.
+substr_ctl("ABC\033[42m", 1, 3, terminate=FALSE)
+substr_ctl("ABC\033[42m", 1, 4, terminate=FALSE)
+
 ## Replacement functions
 x0<- x1 <- x2 <- x3 <- c("\033[42mABC", "\033[34mDEF")
 substr_ctl(x1, 2, 2) <- "_"
@@ -309,6 +342,14 @@ substr_ctl(x0, 2, 2, carry=TRUE) <- "_"
 substr_ctl(x1, 2, 2, carry=TRUE) <- "\033[m_"
 substr_ctl(x2, 2, 2, carry=TRUE) <- "\033[45m_"
 writeLines(c(x0, end, x1, end, x2, end, x3, end))
+
+## Work-around to specify carry strings in replacement mode
+x <- c("ABC", "DEF")
+val <- "#"
+x2 <- c("\033[42m", x)
+val2 <- c("\033[45m", rep_len(val, length(x)))
+substr_ctl(x2, 2, 2, carry=TRUE) <- val2
+(x <- x[-1])
 }
 \seealso{
 \code{\link[=fansi]{?fansi}} for details on how \emph{Control Sequences} are
