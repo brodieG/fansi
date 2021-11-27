@@ -276,9 +276,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      *   the other `pos_` trackers which track how many units have already
      *   been read, this one points to the first UNread byte (need to change
      *   variable name).
-     * - pos_byte_sgr_start: the starting position of the last sgr read, really
-     *   only intended to be used in conjuction with 'terminal' so that if we
-     *   decide not to write a terminal SGR we know where to stop instead.
      * - pos_ansi: actual character position, different from pos_byte due to
      *   multi-byte characters (i.e. UTF-8)
      * - pos_raw: the character position after we strip the handled ANSI tags,
@@ -291,7 +288,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
      * So pos_raw is essentially the character count excluding escapes.
      */
     int pos_byte;
-    int pos_byte_sgr_start;
     int pos_ansi;
     int pos_raw;
     int pos_width;

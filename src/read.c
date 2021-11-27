@@ -589,7 +589,6 @@ void read_esc(struct FANSI_state * state, int seq) {
     // nocov end
 
   unsigned int err_code = 0;           // track worst error code
-  int seq_start = state->pos_byte;
   int non_normalized = 0;
   unsigned int esc_types = 0;          // 1 == CSI/OSC, 2 == SGR/URL
 
@@ -849,7 +848,6 @@ void read_esc(struct FANSI_state * state, int seq) {
       state->non_normalized |= non_normalized;
       if(!state->last_ctl) state->last_ctl = FANSI_CTL_ESC;
       if(esc_types & 2U) {
-        state->pos_byte_sgr_start = seq_start;
         state->last_special = 1;  // we  just read an SGR/URL, but maybe invalid
       }
     } else {
