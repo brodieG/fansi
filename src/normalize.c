@@ -107,9 +107,8 @@ static SEXP normalize_state_int(
     FANSI_interrupt(i + index0);
     if(!i) {
       state = FANSI_state_init(x, warn, term_cap, i, "x");
-    } else {
-      state = FANSI_state_reinit(state, x, i);
-    }
+    } else FANSI_state_reinit(&state, x, i);
+
     SEXP chrsxp = STRING_ELT(x, i);
     if(chrsxp == NA_STRING) continue;
 

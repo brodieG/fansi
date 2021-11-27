@@ -106,8 +106,8 @@ struct FANSI_state FANSI_state_init_full(
  * Reduce overhead from revalidating params that are recycled across vector
  * elements from a single external function call.
  */
-struct FANSI_state FANSI_state_reinit(
-  struct FANSI_state state, SEXP x, R_xlen_t i
+void FANSI_state_reinit(
+  struct FANSI_state * state, SEXP x, R_xlen_t i
 ) {
   if(i < 0 || i >= XLENGTH(x))
     // nocov start
@@ -119,9 +119,8 @@ struct FANSI_state FANSI_state_reinit(
   SEXP chrsxp = STRING_ELT(x, i);
   FANSI_check_chrsxp(chrsxp, i);
   const char * string = CHAR(chrsxp);
-
-  state.string = string;
-  return FANSI_reset_state(state);
+  state->string = string;
+  FANSI_reset_state(state);
 }
 // When we don't care about R_nchar width, but do care about CSI / SGR (which
 // means, we only really care about SGR since all CSI does is affect width calc).
@@ -171,9 +170,8 @@ struct FANSI_state FANSI_state_init_ctl(
   return res;
 }
 
-struct FANSI_state FANSI_reset_width(struct FANSI_state state) {
-  state.pos_width = 0;
-  return state;
+void FANSI_reset_width(struct FANSI_state * state) {
+  state->pos_width = 0;
 }
 /*
  * Reset the position counters
@@ -185,33 +183,35 @@ struct FANSI_state FANSI_reset_width(struct FANSI_state state) {
  *
  * See also FANSI_state_reinit
  */
-struct FANSI_state FANSI_reset_pos(struct FANSI_state state) {
-  state.pos_byte = 0;
-  state.pos_ansi = 0;
-  state.pos_raw = 0;
-  state.pos_width = 0;
-  state.last_special = 0;
-  state.non_normalized = 0;
-  return state;
+void FANSI_reset_pos(struct FANSI_state * state) {
+  state->pos_byte = 0;
+  state->pos_ansi = 0;
+  state->pos_raw = 0;
+  state->pos_width = 0;
+  state->last_special = 0;
+  state->non_normalized = 0;
 }
 /*
  * Reset state without changing index/string
+ *
+ * This one probably doesn't benefit much of by-ref, but doing so for
+ * consistency with others.
  */
-struct FANSI_state FANSI_reset_state(struct FANSI_state state) {
+void FANSI_reset_state(struct FANSI_state * state) {
   struct FANSI_state state_reinit;
   state_reinit = (struct FANSI_state) {
-    .string = state.string,
-    .warn = state.warn,
-    .term_cap = state.term_cap,
-    .allowNA = state.allowNA,
-    .keepNA = state.keepNA,
-    .width_mode = state.width_mode,
-    .ctl = state.ctl,
-    .arg = state.arg
+    .string = state->string,
+    .warn = state->warn,
+    .term_cap = state->term_cap,
+    .allowNA = state->allowNA,
+    .keepNA = state->keepNA,
+    .width_mode = state->width_mode,
+    .ctl = state->ctl,
+    .arg = state->arg
   };
   state_reinit.sgr = (struct FANSI_sgr) {.color = -1, .bg_color = -1};
   state_reinit.sgr_prev = (struct FANSI_sgr) {.color = -1, .bg_color = -1};
-  return state_reinit;
+  *state = state_reinit;
 }
 /*
  * Compute the state given a character position (raw position)
@@ -494,9 +494,8 @@ SEXP FANSI_state_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm) {
       state = FANSI_state_init_full(
         x, warn, term_cap, R_true, R_true, R_zero, R_one, i, "x"
       );
-    } else {
-      state = FANSI_state_reinit(state, x, i);
-    }
+    } else FANSI_state_reinit(&state, x, i);
+
     SEXP x_chr = STRING_ELT(x, i);
     if(x_chr == NA_STRING || !LENGTH(x_chr)) continue;
 

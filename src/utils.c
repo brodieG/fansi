@@ -472,7 +472,7 @@ SEXP FANSI_read_all(SEXP x, SEXP warn, SEXP term_cap) {
   struct FANSI_state state;
   for(R_xlen_t i = 0; i < len; ++i) {
     if(!i) state = FANSI_state_init(x, warn, term_cap, i, "x");
-    else state = FANSI_state_reinit(state, x,  i);
+    else FANSI_state_reinit(&state, x,  i);
 
     while(state.string[state.pos_byte]) FANSI_read_next(&state, i, 1);
     res_i[i] = state.pos_width;

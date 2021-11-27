@@ -43,7 +43,7 @@ SEXP FANSI_trimws(
       state = FANSI_state_init_full(
         x, warn, term_cap, allowNA, keepNA, type, ctl, (R_xlen_t) 0, "x"
       );
-    } else state = FANSI_state_reinit(state, x, i);
+    } else FANSI_state_reinit(&state, x, i);
     state_lead = state_trail = state_last = state;
 
     SEXP x_chr = STRING_ELT(x, i);
@@ -128,7 +128,7 @@ SEXP FANSI_trimws(
       for(int k = 0; k < 2; ++k) {
         if(!k) FANSI_reset_buff(&buff);
         else   FANSI_size_buff(&buff);
-        state = FANSI_state_reinit(state, x, i);
+        FANSI_state_reinit(&state, x, i);
 
         // Any leading SGR
         if(string_start) {

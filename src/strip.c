@@ -79,7 +79,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
   for(i = 0; i < len; ++i) {
     // Now full check
     if(!i) state = FANSI_state_init_ctl(x, warn, ctl, i, "x");
-    else state = FANSI_state_reinit(state, x, i);
+    else FANSI_state_reinit(&state, x, i);
 
     SEXP x_chr = STRING_ELT(x, i);
     if(x_chr == NA_STRING) continue;
@@ -216,9 +216,8 @@ SEXP FANSI_process(
       state = FANSI_state_init_full(
         input, warn, term_cap, allowNA, keepNA, width, ctl, i, "x"
       );
-    } else {
-      state = FANSI_state_reinit(state, input, i);
-    }
+    } else FANSI_state_reinit(&state, input, i);
+
     const char * string = state.string;
     const char * string_start = string;
 

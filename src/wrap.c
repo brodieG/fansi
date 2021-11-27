@@ -278,7 +278,7 @@ static SEXP strwrap(
     state_last_bound;
   state_start = state_bound = state_prev = state_last_bound = state;
   // Blank anchor state in terminate mode
-  if(terminate) state_last_bound = FANSI_reset_state(state_last_bound);
+  if(terminate) FANSI_reset_state(&state_last_bound);
   R_xlen_t size = 0;
   SEXP res_sxp;
 
@@ -637,7 +637,7 @@ SEXP FANSI_strwrap_ext(
       state = FANSI_state_init_full(
         x, warn, term_cap, R_true, R_true, R_one, ctl, i, "x"
       );
-    } else state = FANSI_state_reinit(state, x, i);
+    } else FANSI_state_reinit(&state, x, i);
 
     FANSI_interrupt(i);
     SEXP chr = STRING_ELT(x, i);

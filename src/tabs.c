@@ -105,9 +105,8 @@ SEXP FANSI_tabs_as_spaces(
       state = FANSI_state_init_full(
         vec, warn, term_cap, allowNA, keepNA, width, ctl, i, "x"
       );
-    } else {
-      state = FANSI_state_reinit(state, vec, i);
-    }
+    } else FANSI_state_reinit(&state, vec, i);
+
     int tab_count = 0;
 
     SEXP chr = STRING_ELT(vec, i);
@@ -159,7 +158,7 @@ SEXP FANSI_tabs_as_spaces(
           extra_spaces =
             tab_width(state, tab_stops_i, len_stops, &tab_acc_width, &tab_stop);
         } else if (cur_chr == '\n') {
-          state = FANSI_reset_width(state);
+          FANSI_reset_width(&state);
           tab_acc_width = 0;
           tab_stop = 0;
         }

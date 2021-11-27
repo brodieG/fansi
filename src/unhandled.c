@@ -57,9 +57,8 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
       state = FANSI_state_init_full(
         x, no_warn, term_cap, allowNA, keepNA, width, ctl_all, i, "x"
       );
-    } else {
-      state = FANSI_state_reinit(state, x, i);
-    }
+    } else FANSI_state_reinit(&state, x, i);
+
     if(chrsxp != NA_STRING && LENGTH(chrsxp)) {
       int has_errors = 0;
 

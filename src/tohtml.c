@@ -397,7 +397,8 @@ SEXP FANSI_esc_to_html(
     else state = state_init;
 
     state.string = string;
-    struct FANSI_state state_start = FANSI_reset_pos(state);
+    struct FANSI_state state_start = state;
+    FANSI_reset_pos(&state_start);
     state.warned = 0;
     state_prev = state_init;  // but there are no styles in the string yet
 

@@ -213,7 +213,7 @@ static SEXP substr_one(
 ) {
   struct FANSI_state state_start, state_stop;
   state_start = state_stop = *state;
-  if(term_i) *state = FANSI_reset_state(*state);
+  if(term_i) FANSI_reset_state(state);
   else *state = ref;
 
   substr_calc_points(&state_start, &state_stop, i, start, stop, rnd_i, term_i);
@@ -283,7 +283,7 @@ static SEXP substr_extract(
 
   for(R_xlen_t i = 0; i < len; ++i) {
     FANSI_interrupt(i);
-    state = FANSI_state_reinit(state, x, i);
+    FANSI_state_reinit(&state, x, i);
     int start_ii = start_i[i];
     int stop_ii = stop_i[i];
     if(
@@ -348,8 +348,9 @@ static SEXP substr_replace(
     if(!term_i && write_md) st_vref = st_v1;
     // initial init done in caller as really all we're doing is setting all the
     // fixed parameters in the object.
-    st_x0 = FANSI_state_reinit(st_x2, x, i);
-    st_v0 = FANSI_state_reinit(st_v0, value, i);
+    st_x0 = st_x2;
+    FANSI_state_reinit(&st_x0, x, i);
+    FANSI_state_reinit(&st_v0, value, i);
     if(carry_i == 1) {
       st_x0.sgr = st_xlast.sgr;
       st_x0.url = st_xlast.url;

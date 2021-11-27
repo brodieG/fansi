@@ -51,9 +51,8 @@ SEXP FANSI_nchar(
       state = FANSI_state_init_full(
         x, warn, term_cap, allowNA, keepNA, type, ctl, i, "x"
       );
-    } else {
-      state = FANSI_state_reinit(state, x, i);
-    }
+    } else FANSI_state_reinit(&state, x, i);
+
     if(STRING_ELT(x, i) == R_NaString) {
       // NA case, see ?nchar, note nzchar behavior is incorrectly doc'ed
       if(
