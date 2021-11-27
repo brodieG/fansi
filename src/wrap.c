@@ -51,7 +51,7 @@ static struct FANSI_prefix_dat make_pre(
   struct FANSI_state state = FANSI_state_init_full(
     x, warn, term_cap, allowNA, keepNA, width, ctl, 0, arg
   );
-  while(state.string[state.pos_byte]) state = FANSI_read_next(state, 0, 1);
+  while(state.string[state.pos_byte]) FANSI_read_next(&state, 0, 1);
 
   UNPROTECT(prt);
   return (struct FANSI_prefix_dat) {
@@ -291,7 +291,8 @@ static SEXP strwrap(
           state_bound.string[state_bound.pos_byte] == ' ' ||
           state_bound.string[state_bound.pos_byte] == 0x1b
         ) {
-          state_tmp = FANSI_read_next(state_bound, index, 1);
+          state_tmp = state_bound;
+          FANSI_read_next(&state_tmp, index, 1);
           if(
             state_bound.string[state_bound.pos_byte] == 0x1b &&
             !state_tmp.last_special
@@ -302,7 +303,8 @@ static SEXP strwrap(
           state_bound = state_tmp;
         }
       } else if(state_bound.string[state_bound.pos_byte] == 0x1b) {
-        state_tmp = FANSI_read_next(state_bound, index, 1);
+        state_tmp = state_bound;
+        FANSI_read_next(&state_tmp, index, 1);
         if(state_tmp.last_special) state_bound = state_tmp;
         else state_bound.warned = state_tmp.warned;  // avoid double warnings
       }
@@ -315,7 +317,7 @@ static SEXP strwrap(
 
     state_next = state; // if we hit end of string, re-use state as next
     // Look ahead one element
-    if(!end) state_next = FANSI_read_next(state_next, index, 1);
+    if(!end) FANSI_read_next(&state_next, index, 1);
     state.warned = state_bound.warned = state_next.warned;// avoid 2x warning
 
     // Always strip trailing SGR to behave same way as substr_ctl, except if
@@ -406,7 +408,7 @@ static SEXP strwrap(
         ) &&
         state_bound.pos_byte < state.pos_byte
       ) {
-        state_bound = FANSI_read_next(state_bound, index, 1);
+        FANSI_read_next(&state_bound, index, 1);
       }
       // Write the string
       res_sxp = PROTECT(
@@ -429,7 +431,7 @@ static SEXP strwrap(
         // Need end state if in strtrim mode and we wish to carry
         if(carry)
           while(state.string[state.pos_byte])
-            state = FANSI_read_next(state, index, 1);
+            FANSI_read_next(&state, index, 1);
         break;
       }
 
@@ -447,7 +449,7 @@ static SEXP strwrap(
       // boundary then we're hard breaking and we reset position to the next
       // position.
       if(has_boundary && para_start) {
-        do state_bound = FANSI_read_next(state_bound, index, 1);
+        do FANSI_read_next(&state_bound, index, 1);
         while (state_bound.last_special);
       } else if(!has_boundary) {
         state_bound = state;

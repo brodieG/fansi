@@ -275,7 +275,7 @@ SEXP FANSI_process(
       if(special) { // Check that it is really special.
         int pos_prev = state.pos_byte = j;
         int pos_raw = state.pos_raw;
-        state = FANSI_read_next(state, i, 1);
+        FANSI_read_next(&state, i, 1);
 
         // Sequence is special if pos_raw does not advance
         if(state.pos_raw == pos_raw) {
@@ -350,7 +350,7 @@ SEXP FANSI_process(
         for(int k = copy_end; k < copy_end + to_strip0; ++k) {
           if(is_special(string[k])) {
             state.pos_byte = k;
-            state = FANSI_read_next(state, i, 1);
+            FANSI_read_next(&state, i, 1);
             int bytes = state.pos_byte - k;
             FANSI_W_MCOPY(buff, string + k, bytes);
             k += bytes - 1;

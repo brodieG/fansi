@@ -74,7 +74,7 @@ SEXP FANSI_trimws(
             ) {
               goto ENDLEAD;
             } else {
-              state = FANSI_read_next(state, i, 1);
+              FANSI_read_next(&state, i, 1);
               if(state.last_ctl) break;
               else goto ENDLEAD;
             }
@@ -105,7 +105,7 @@ SEXP FANSI_trimws(
               string_end = 0;
               ++state.pos_byte;
             } else {
-              state = FANSI_read_next(state, i, 1);
+              FANSI_read_next(&state, i, 1);
               if(state.last_ctl) continue;
               else {
                 string_end = 0;

@@ -275,7 +275,7 @@ static struct FANSI_state_pair state_at_pos2(
     (pos_new <= pos || pos_new == pos_restart) && state.string[state.pos_byte]
   ) {
     pos_restart = pos_new;
-    state = FANSI_read_next(state, i, 1);
+    FANSI_read_next(&state, i, 1);
     pos_new = type ? state.pos_width : state.pos_raw;
 
     // Last spot that's safe to restart from either as start or stop
@@ -500,9 +500,7 @@ SEXP FANSI_state_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm) {
     SEXP x_chr = STRING_ELT(x, i);
     if(x_chr == NA_STRING || !LENGTH(x_chr)) continue;
 
-    while(*(state.string + state.pos_byte)) {
-      state = FANSI_read_next(state, i, 1);
-    }
+    while(*(state.string + state.pos_byte)) FANSI_read_next(&state, i, 1);
     FANSI_reset_buff(&buff);
     FANSI_W_sgr_close(&buff, state.sgr, normalize, i);
     FANSI_W_url_close(&buff, state.url, i);

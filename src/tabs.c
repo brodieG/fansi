@@ -170,7 +170,7 @@ SEXP FANSI_tabs_as_spaces(
 
           // consume tab and advance, temporarily suppressing warning
           state.warn = 0;
-          state = FANSI_read_next(state, i, 1);
+          FANSI_read_next(&state, i, 1);
           state.warn = warn_old;
           cur_chr = state.string[state.pos_byte];
           state = FANSI_inc_width(state, extra_spaces, i);
@@ -179,7 +179,7 @@ SEXP FANSI_tabs_as_spaces(
           // actually write the extra spaces
           FANSI_W_FILL(buff, ' ', extra_spaces);
         } else {
-          state = FANSI_read_next(state, i, 1);
+          FANSI_read_next(&state, i, 1);
         }
         if(!cur_chr) break;
       }

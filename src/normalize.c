@@ -54,7 +54,7 @@ int FANSI_W_normalize(
     } else if (*string && *string == 0x1b) {
       // We encountered an ESC
       state_prev = state_int;
-      state_int = FANSI_read_next(state_int, i, 1);
+      FANSI_read_next(&state_int, i, 1);
       // Any special sequence will be re-written.  In some cases, we don't need
       // to do so, but even when things are already normalized, the order of the
       // elements may not be the same.

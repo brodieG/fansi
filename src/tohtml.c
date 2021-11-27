@@ -463,7 +463,7 @@ SEXP FANSI_esc_to_html(
 
         // State as html, skip if at end of string
         if(*string) {
-          state = FANSI_read_next(state, i, 1);
+          FANSI_read_next(&state, i, 1);
           string = state.string + state.pos_byte;
           // dirty hack, state.sgr_prev is not exaclty right at beginning
           state.sgr_prev = state_prev.sgr;

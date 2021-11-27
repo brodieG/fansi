@@ -56,13 +56,14 @@ static int substr_calc_points(
 
     // Read all zero width following next char in addition to next char
     struct FANSI_state state_tmp;
-    state = state_tmp = FANSI_read_next(state, i, 1);
+    FANSI_read_next(&state, i, 1);
+    state_tmp = state;
     while(
       state_tmp.pos_width == state.pos_width &&
       state_tmp.string[state_tmp.pos_byte]
     ) {
       state = state_tmp;
-      state_tmp = FANSI_read_next(state_tmp, i, 1);
+      FANSI_read_next(&state_tmp, i, 1);
     }
     if(
       !state_tmp.string[state_tmp.pos_byte] &&
@@ -98,7 +99,7 @@ static int substr_calc_points(
       // Not okay, collect trail zero width
       do{
         if(state.pos_raw > state_prev.pos_raw) state_prev = state;
-        state = FANSI_read_next(state, i, 1);
+        FANSI_read_next(&state, i, 1);
       } while(
         state.string[state.pos_byte] &&
         state.pos_width == state_prev.pos_width
@@ -125,7 +126,7 @@ static int substr_calc_points(
   // glyphs, etc.
   while(state.string[state.pos_byte] && state.pos_width <= stop) {
     if(state.pos_raw > state_prev.pos_raw) state_prev = state;
-    state = FANSI_read_next(state, i, 1);
+    FANSI_read_next(&state, i, 1);
   }
   state_prev.warned = state.warned;
   // If we are allowed to overshoot, keep consuming zero-width non-CTL
@@ -151,7 +152,7 @@ static int substr_calc_points(
     while(state.pos_width == state_prev.pos_width) {
       if(state.pos_raw > state_prev.pos_raw) state_prev = state;
       if(!state.string[state.pos_byte]) break;
-      state = FANSI_read_next(state, i, 1);
+      FANSI_read_next(&state, i, 1);
     }
     *state_stop = state_prev;
   } else if(!state.string[state.pos_byte]) {
@@ -160,7 +161,7 @@ static int substr_calc_points(
     if(term_i) {
       struct FANSI_state state_tmp = state_prev;
       while(state_tmp.string[state_tmp.pos_byte]) {
-        state_tmp = FANSI_read_next(state_tmp, i, 1);
+        FANSI_read_next(&state_tmp, i, 1);
         if(!state_tmp.last_special) state_prev = state_tmp;
       }
       *state_stop = state_prev;
@@ -271,7 +272,7 @@ static SEXP substr_extract(
     state_carry.string = CHAR(STRING_ELT(carry, 0));
     state_carry.arg = "carry";
     while(state_carry.string[state_carry.pos_byte]) {
-      state_carry = FANSI_read_next(state_carry, 0, 1);
+      FANSI_read_next(&state_carry, 0, 1);
   } }
   // For first iteration, we assume carry is active.  It may not be the case in
   // subsequent iteratins where the end of the string may not be captured in the
@@ -305,8 +306,7 @@ static SEXP substr_extract(
       ) );
       if(carry_i) {
         state_ref = state;
-        while(state.string[state.pos_byte])
-          state = FANSI_read_next(state, i, 1);
+        while(state.string[state.pos_byte]) FANSI_read_next(&state, i, 1);
         state_carry.sgr = state.sgr;
         state_carry.url = state.url;
   } } }
@@ -480,10 +480,10 @@ static SEXP substr_replace(
       if(carry_i) {
         st_xlast = st_x1;
         while(st_xlast.string[st_xlast.pos_byte])
-          st_xlast = FANSI_read_next(st_xlast, i, 0);
+          FANSI_read_next(&st_xlast, i, 0);
         st_vlast = st_v1;
         while(st_vlast.string[st_vlast.pos_byte])
-          st_vlast = FANSI_read_next(st_vlast, i, 0);
+          FANSI_read_next(&st_vlast, i, 0);
         has_utf8 = has_utf8 || st_xlast.has_utf8 > st_x0.pos_byte;
       } else {
         has_utf8 = has_utf8 || has_8bit(x1_string);

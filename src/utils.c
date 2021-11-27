@@ -113,7 +113,7 @@ struct FANSI_ctl_pos FANSI_find_ctl(struct FANSI_state state, R_xlen_t i) {
     raw_prev = state.pos_raw;
     pos_prev = state.pos_byte;
     err_prev = state.err_code;
-    state = FANSI_read_next(state, i, 1);
+    FANSI_read_next(&state, i, 1);
     if(state.err_code) warn_max |= (1U << (state.err_code - 1U));
     // Known control read
     if(state.pos_raw == raw_prev) {
@@ -464,4 +464,20 @@ void FANSI_print_state(struct FANSI_state x) {
   Rprintf("  warn %d err %x\n", x.warn, x.err_code);
   Rprintf("- End State ---\n");
 }
-// nocov end
+
+SEXP FANSI_read_all(SEXP x, SEXP warn, SEXP term_cap) {
+  R_xlen_t len = XLENGTH(x);
+  SEXP res = PROTECT(allocVector(INTSXP, len));
+  int * res_i = INTEGER(res);
+  struct FANSI_state state;
+  for(R_xlen_t i = 0; i < len; ++i) {
+    if(!i) state = FANSI_state_init(x, warn, term_cap, i, "x");
+    else state = FANSI_state_reinit(state, x,  i);
+
+    while(state.string[state.pos_byte]) FANSI_read_next(&state, i, 1);
+    res_i[i] = state.pos_width;
+  }
+  UNPROTECT(1);
+  return res;
+}
+

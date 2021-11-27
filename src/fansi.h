@@ -457,8 +457,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   );
   int FANSI_url_comp(struct FANSI_url target, struct FANSI_url current);
 
-  struct FANSI_state FANSI_read_next(
-    struct FANSI_state state, R_xlen_t i, int seq
+  void FANSI_read_next(
+    struct FANSI_state * state, R_xlen_t i, int seq
   );
   int FANSI_add_int(int x, int y, const char * file, int line);
 

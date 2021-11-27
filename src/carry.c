@@ -20,9 +20,7 @@
 static struct FANSI_state state_at_end(
   struct FANSI_state state, R_xlen_t i
 ) {
-  while(state.string[state.pos_byte]) {
-    state = FANSI_read_next(state, i, 1);
-  }
+  while(state.string[state.pos_byte]) FANSI_read_next(&state, i, 1);
   state = FANSI_reset_pos(state);
   return state;
 }

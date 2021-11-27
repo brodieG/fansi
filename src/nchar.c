@@ -68,7 +68,7 @@ SEXP FANSI_nchar(
       } else resi[i] = zz ? 1 : 2;
     } else {
       while(state.string[state.pos_byte]) {
-        state = FANSI_read_next(state, i, 1);
+        FANSI_read_next(&state, i, 1);
         // early exits
         if((zz && state.pos_raw) || state.err_code == 9) break;
       }

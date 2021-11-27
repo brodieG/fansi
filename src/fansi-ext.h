@@ -108,4 +108,6 @@ SEXP FANSI_buff_test_fill_overflow();
 
 SEXP FANSI_reset_limits();
 
+SEXP FANSI_read_all(SEXP x, SEXP warn, SEXP term_cap);
+
 #endif  /* _FANSI_EXT_H */

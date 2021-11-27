@@ -69,7 +69,7 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
 
         int esc_start = state.pos_ansi;
         int esc_start_byte = state.pos_byte;
-        state = FANSI_read_next(state, i, 0);
+        FANSI_read_next(&state, i, 0);
         if(state.err_code) {
           if(err_count == FANSI_lim.lim_int.max) {
             warning(
