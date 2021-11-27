@@ -592,8 +592,6 @@ void read_esc(struct FANSI_state * state, int seq) {
   int seq_start = state->pos_byte;
   int non_normalized = 0;
   unsigned int esc_types = 0;          // 1 == CSI/OSC, 2 == SGR/URL
-  struct FANSI_sgr sgr_prev = state->sgr;
-  struct FANSI_url url_prev = state->url;
 
   // Consume all contiguous ESC sequences, subject to some conditions (see while
   // at the end)
@@ -848,8 +846,6 @@ void read_esc(struct FANSI_state * state, int seq) {
       state->pos_ansi += byte_offset;
       // Record other ancillary info here, we don't do it outside of the loop
       // as we want to be able reset to state_prev if things don't work out.
-      state->sgr_prev = sgr_prev;
-      state->url_prev = url_prev;
       state->non_normalized |= non_normalized;
       if(!state->last_ctl) state->last_ctl = FANSI_CTL_ESC;
       if(esc_types & 2U) {

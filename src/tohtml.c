@@ -255,8 +255,9 @@ static char * oe_sgr_html_err = "Expanding SGR sequences to HTML";
  * DANGER: this is a 'W' function, see 'src/write.c' for details.
  */
 static int W_state_as_html(
-  struct FANSI_state state,
   struct FANSI_buff * buff,
+  struct FANSI_state state,
+  struct FANSI_state state_prev,
   SEXP color_classes, R_xlen_t i
 ) {
   /****************************************************\
@@ -267,12 +268,12 @@ static int W_state_as_html(
   // Not all basic styles are html styles (e.g. invert), so sgr only changes
   // on invert when current or previous also has a color style
   int has_cur_sgr = sgr_has_style_html(state.sgr);
-  int has_prev_sgr = sgr_has_style_html(state.sgr_prev);
-  int sgr_change = sgr_comp_html(state.sgr, state.sgr_prev);
+  int has_prev_sgr = sgr_has_style_html(state_prev.sgr);
+  int sgr_change = sgr_comp_html(state.sgr, state_prev.sgr);
 
   int has_cur_url = FANSI_url_active(state.url);
-  int has_prev_url = FANSI_url_active(state.url_prev);
-  int url_change = FANSI_url_comp(state.url, state.url_prev);
+  int has_prev_url = FANSI_url_active(state_prev.url);
+  int url_change = FANSI_url_comp(state.url, state_prev.url);
 
   const char * err_msg = oe_sgr_html_err;
   struct FANSI_sgr sgr = state.sgr;
@@ -440,10 +441,8 @@ SEXP FANSI_esc_to_html(
         *string && *string != 0x1b &&
         (sgr_has_style_html(state.sgr) || FANSI_url_active(state.url))
       ) {
-        // dirty hack, state.sgr_prev is not exaclty right at beginning
-        state.sgr_prev = state_prev.sgr;
-        state.url_prev = state_prev.url;
-        W_state_as_html(state, &buff, color_classes, i);
+        // dirty hack, state_prev sgr_prev is not exaclty right at beginning
+        W_state_as_html(&buff, state, state_prev, color_classes, i);
         state_prev = state;
       }
       // New in this element
@@ -466,10 +465,9 @@ SEXP FANSI_esc_to_html(
         if(*string) {
           FANSI_read_next(&state, i, 1);
           string = state.string + state.pos_byte;
-          // dirty hack, state.sgr_prev is not exaclty right at beginning
-          state.sgr_prev = state_prev.sgr;
-          state.url_prev = state_prev.url;
-          if(*string) W_state_as_html(state, &buff, color_classes, i);
+          // dirty hack, state_prev sgr_prev is not exaclty right at beginning
+          if(*string)
+            W_state_as_html(&buff, state, state_prev, color_classes, i);
 
           state_prev = state;
           has_state |=

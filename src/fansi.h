@@ -259,9 +259,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
   struct FANSI_state {
     struct FANSI_sgr sgr;
-    struct FANSI_sgr sgr_prev;
     struct FANSI_url url;
-    struct FANSI_url url_prev;
 
     const char * string;
     /*

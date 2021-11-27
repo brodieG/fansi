@@ -89,7 +89,6 @@ struct FANSI_state FANSI_state_init_full(
   // All others struct-inited to zero.
   return (struct FANSI_state) {
     .sgr = (struct FANSI_sgr) {.color = -1, .bg_color = -1},
-    .sgr_prev = (struct FANSI_sgr) {.color = -1, .bg_color = -1},
     .string = string,
     .warn = (unsigned int) warn_int,
     .term_cap = FANSI_term_cap_as_int(term_cap),
@@ -210,7 +209,6 @@ void FANSI_reset_state(struct FANSI_state * state) {
     .arg = state->arg
   };
   state_reinit.sgr = (struct FANSI_sgr) {.color = -1, .bg_color = -1};
-  state_reinit.sgr_prev = (struct FANSI_sgr) {.color = -1, .bg_color = -1};
   *state = state_reinit;
 }
 /*
