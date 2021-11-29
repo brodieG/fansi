@@ -30,11 +30,6 @@ SEXP FANSI_substr(
 );
 SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn);
 SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn);
-SEXP FANSI_state_at_pos_ext(
-  SEXP x, SEXP pos, SEXP type,
-  SEXP overshoot, SEXP is_start, SEXP warn, SEXP term_cap, SEXP ctl,
-  SEXP norm, SEXP terminate, SEXP ids
-);
 SEXP FANSI_strwrap_ext(
   SEXP x, SEXP width,
   SEXP indent, SEXP exdent,

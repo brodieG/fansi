@@ -25,7 +25,6 @@ R_CallMethodDef callMethods[] = {
   {"strip_csi", (DL_FUNC) &FANSI_strip, 3},
   {"strwrap_csi", (DL_FUNC) &FANSI_strwrap_ext, 18},
   {"substr", (DL_FUNC) &FANSI_substr, 12},
-  {"state_at_pos_ext", (DL_FUNC) &FANSI_state_at_pos_ext, 11},
   {"process", (DL_FUNC) &FANSI_process_ext, 3},
   {"check_assumptions", (DL_FUNC) &FANSI_check_assumptions, 0},
   {"tabs_as_spaces", (DL_FUNC) &FANSI_tabs_as_spaces_ext, 5},
