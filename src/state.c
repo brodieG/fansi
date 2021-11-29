@@ -28,7 +28,7 @@
  */
 struct FANSI_state FANSI_state_init_full(
   SEXP strsxp, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
-  SEXP width, SEXP ctl, R_xlen_t i, const char * arg
+  SEXP width, SEXP ctl, R_xlen_t i
 ) {
   // nocov start
   if(TYPEOF(strsxp) != STRSXP) {
@@ -105,7 +105,6 @@ struct FANSI_state FANSI_state_init_full(
   // All others struct-inited to zero.
   return (struct FANSI_state) {
     .string = string,
-    .arg = arg
     .settings = settings
   };
 }
@@ -135,7 +134,7 @@ void FANSI_state_reinit(
 // means, we only really care about SGR since all CSI does is affect width calc).
 
 struct FANSI_state FANSI_state_init(
-  SEXP strsxp, SEXP warn, SEXP term_cap, R_xlen_t i, const char * arg
+  SEXP strsxp, SEXP warn, SEXP term_cap, R_xlen_t i
 ) {
   int prt = 0;
   SEXP R_false = PROTECT(ScalarLogical(0)); ++prt;
@@ -148,8 +147,7 @@ struct FANSI_state FANSI_state_init(
     R_false, // keepNA
     R_zero,  // Don't use width by default
     R_one,   // Treat all escapes as special by default (wrong prior to v1.0)
-    i,
-    arg
+    i
   );
   UNPROTECT(prt);
   return res;
@@ -158,7 +156,7 @@ struct FANSI_state FANSI_state_init(
 // means, we only really care about SGR since all CSI does is affect width calc).
 
 struct FANSI_state FANSI_state_init_ctl(
-  SEXP strsxp, SEXP warn, SEXP ctl, R_xlen_t i, const char * arg
+  SEXP strsxp, SEXP warn, SEXP ctl, R_xlen_t i
 ) {
   int prt = 0;
   SEXP R_false = PROTECT(ScalarLogical(0)); ++prt;
@@ -172,8 +170,7 @@ struct FANSI_state FANSI_state_init_ctl(
     R_false, // keepNA
     R_zero,  // Don't use width by default
     ctl,     // Which sequences are recognized
-    i,
-    arg
+    i
   );
   UNPROTECT(prt);
   return res;
@@ -375,6 +372,7 @@ SEXP FANSI_state_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm) {
   if(TYPEOF(norm) != LGLSXP || XLENGTH(norm) != 1)
     error("Argument `normalize` should be TRUE or FALSE.");  // nocov
 
+  const char * arg = "x";
   int prt = 0;
   R_xlen_t len = xlength(x);
   SEXP res = PROTECT(allocVector(STRSXP, len)); ++prt;
@@ -396,14 +394,14 @@ SEXP FANSI_state_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm) {
     FANSI_interrupt(i);
     if(!i) {
       state = FANSI_state_init_full(
-        x, warn, term_cap, R_true, R_true, R_zero, R_one, i, "x"
+        x, warn, term_cap, R_true, R_true, R_zero, R_one, i
       );
     } else FANSI_state_reinit(&state, x, i);
 
     SEXP x_chr = STRING_ELT(x, i);
     if(x_chr == NA_STRING || !LENGTH(x_chr)) continue;
 
-    while(*(state.string + state.pos_byte)) FANSI_read_next(&state, i, 1);
+    while(*(state.string + state.pos_byte)) FANSI_read_next(&state, i, arg);
     FANSI_reset_buff(&buff);
     FANSI_W_sgr_close(&buff, state.sgr, normalize, i);
     FANSI_W_url_close(&buff, state.url, i);

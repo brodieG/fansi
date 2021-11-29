@@ -30,7 +30,7 @@
 
 int FANSI_W_normalize(
   struct FANSI_buff * buff, struct FANSI_state *state,
-  int stop, R_xlen_t i, const char * err_msg
+  int stop, R_xlen_t i, const char * err_msg, const char * arg
 ) {
   struct FANSI_state state_int, state_prev;
   state_int = state_prev  = *state;
@@ -54,7 +54,7 @@ int FANSI_W_normalize(
     } else if (*string && *string == 0x1b) {
       // We encountered an ESC
       state_prev = state_int;
-      FANSI_read_next(&state_int, i, 1);
+      FANSI_read_next(&state_int, i, arg);
       // Any special sequence will be re-written.  In some cases, we don't need
       // to do so, but even when things are already normalized, the order of the
       // elements may not be the same.
@@ -106,7 +106,7 @@ static SEXP normalize_state_int(
   for(R_xlen_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i + index0);
     if(!i) {
-      state = FANSI_state_init(x, warn, term_cap, i, "x");
+      state = FANSI_state_init(x, warn, term_cap, i);
     } else FANSI_state_reinit(&state, x, i);
 
     SEXP chrsxp = STRING_ELT(x, i);
@@ -120,7 +120,9 @@ static SEXP normalize_state_int(
     state_start = state;
 
     FANSI_reset_buff(buff);
-    int len = FANSI_W_normalize(buff, &state, (int)LENGTH(chrsxp), i, err_msg);
+    int len = FANSI_W_normalize(
+      buff, &state, (int)LENGTH(chrsxp), i, err_msg, "x"
+    );
     state_carry.sgr = state.sgr;
     state_carry.url = state.url;
 
@@ -131,7 +133,9 @@ static SEXP normalize_state_int(
     FANSI_size_buff(buff);
     state = state_start;
     state.warned = 1;  // avoid double warnings
-    FANSI_W_normalize(buff, &state, (int)LENGTH(chrsxp), i, err_msg);
+    FANSI_W_normalize(
+      buff, &state, (int)LENGTH(chrsxp), i, err_msg, "x"
+    );
 
     cetype_t chr_type = getCharCE(chrsxp);
     SEXP reschr = PROTECT(FANSI_mkChar(*buff, chr_type, i));

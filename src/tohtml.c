@@ -372,7 +372,7 @@ SEXP FANSI_esc_to_html(
   R_xlen_t x_len = XLENGTH(x);
   struct FANSI_state state, state_prev, state_init;
   SEXP empty = PROTECT(mkString(""));
-  state = FANSI_state_init(empty, warn, term_cap, (R_xlen_t) 0, "x");
+  state = FANSI_state_init(empty, warn, term_cap, (R_xlen_t) 0);
   UNPROTECT(1);
 
   state_prev = state_init = state;
@@ -463,7 +463,7 @@ SEXP FANSI_esc_to_html(
 
         // State as html, skip if at end of string
         if(*string) {
-          FANSI_read_next(&state, i, 1);
+          FANSI_read_next(&state, i, arg);
           string = state.string + state.pos_byte;
           // dirty hack, state_prev sgr_prev is not exaclty right at beginning
           if(*string)

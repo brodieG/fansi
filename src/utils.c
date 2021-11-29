@@ -104,7 +104,9 @@ SEXP FANSI_add_int_ext(SEXP x, SEXP y) {
  * @param one_only give up after a single failed attempt, otherwise keep going
  *   until a recognized control sequence is found.
  */
-struct FANSI_ctl_pos FANSI_find_ctl(struct FANSI_state state, R_xlen_t i) {
+struct FANSI_ctl_pos FANSI_find_ctl(
+  struct FANSI_state state, R_xlen_t i, const char * arg
+) {
   int raw_prev, pos_prev, found, err_prev;
   unsigned int warn_max = 0;
   found = 0;
@@ -113,7 +115,7 @@ struct FANSI_ctl_pos FANSI_find_ctl(struct FANSI_state state, R_xlen_t i) {
     raw_prev = state.pos_raw;
     pos_prev = state.pos_byte;
     err_prev = state.err_code;
-    FANSI_read_next(&state, i, 1);
+    FANSI_read_next(&state, i, arg);
     if(state.err_code) warn_max |= (1U << (state.err_code - 1U));
     // Known control read
     if(state.pos_raw == raw_prev) {
@@ -471,10 +473,10 @@ SEXP FANSI_read_all(SEXP x, SEXP warn, SEXP term_cap) {
   int * res_i = INTEGER(res);
   struct FANSI_state state;
   for(R_xlen_t i = 0; i < len; ++i) {
-    if(!i) state = FANSI_state_init(x, warn, term_cap, i, "x");
+    if(!i) state = FANSI_state_init(x, warn, term_cap, i);
     else FANSI_state_reinit(&state, x,  i);
 
-    while(state.string[state.pos_byte]) FANSI_read_next(&state, i, 1);
+    while(state.string[state.pos_byte]) FANSI_read_next(&state, i, arg);
     res_i[i] = state.pos_width;
   }
   UNPROTECT(1);

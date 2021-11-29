@@ -83,6 +83,7 @@ SEXP FANSI_tabs_as_spaces(
       error("Internal Error: stop size less than 1.");  // nocov
   }
   const char * err_msg = "Converting tabs to spaces";
+  const char * arg = "x";
   const char * source;
   int tabs_in_str = 0;
 
@@ -103,7 +104,7 @@ SEXP FANSI_tabs_as_spaces(
     FANSI_interrupt(i);
     if(!i) {
       state = FANSI_state_init_full(
-        vec, warn, term_cap, allowNA, keepNA, width, ctl, i, "x"
+        vec, warn, term_cap, allowNA, keepNA, width, ctl, i
       );
     } else FANSI_state_reinit(&state, vec, i);
 
@@ -169,7 +170,7 @@ SEXP FANSI_tabs_as_spaces(
 
           // consume tab and advance, temporarily suppressing warning
           state.warn = 0;
-          FANSI_read_next(&state, i, 1);
+          FANSI_read_next(&state, i, arg);
           state.warn = warn_old;
           cur_chr = state.string[state.pos_byte];
           state = FANSI_inc_width(state, extra_spaces, i);
@@ -178,7 +179,7 @@ SEXP FANSI_tabs_as_spaces(
           // actually write the extra spaces
           FANSI_W_FILL(buff, ' ', extra_spaces);
         } else {
-          FANSI_read_next(&state, i, 1);
+          FANSI_read_next(&state, i, arg);
         }
         if(!cur_chr) break;
       }

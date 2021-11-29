@@ -33,7 +33,7 @@ SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn) {
   struct FANSI_state state;
 
   for(R_xlen_t i = 0; i < len; ++i) {
-    if(!i) state = FANSI_state_init_ctl(x, warn, ctl, i, "x");
+    if(!i) state = FANSI_state_init_ctl(x, warn, ctl, i);
     else FANSI_state_reinit(&state, x, i);
     FANSI_interrupt(i);
     SEXP chrsxp = STRING_ELT(x, i);

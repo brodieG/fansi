@@ -18,9 +18,9 @@
 #include "fansi.h"
 
 void state_at_end(
-  struct FANSI_state *state, R_xlen_t i
+  struct FANSI_state *state, R_xlen_t i, const char * arg
 ) {
-  while(state->string[state->pos_byte]) FANSI_read_next(state, i, 1);
+  while(state->string[state->pos_byte]) FANSI_read_next(state, i, arg);
   FANSI_reset_pos(state);
 }
 
@@ -53,9 +53,9 @@ SEXP FANSI_state_at_end_ext(
 
   struct FANSI_state state_prev = FANSI_state_init_full(
     carry_string, warn, term_cap, allowNA, keepNA, width,
-    ctl, (R_xlen_t) 0, "carry"
+    ctl, (R_xlen_t) 0
   );
-  state_at_end(&state_prev, 0);
+  state_at_end(&state_prev, 0, "carry");
 
   R_xlen_t len = XLENGTH(x);
   struct FANSI_buff buff;
@@ -68,13 +68,13 @@ SEXP FANSI_state_at_end_ext(
     FANSI_interrupt(i);
     if(!i) {
       state = FANSI_state_init_full(
-        x, warn, term_cap, allowNA, keepNA, width, ctl, i, arg_chr
+        x, warn, term_cap, allowNA, keepNA, width, ctl, i
       );
     } else FANSI_state_reinit(&state, x, i);
 
     if(do_carry) state.sgr = state_prev.sgr;
 
-    state_at_end(&state, i);
+    state_at_end(&state, i, arg_chr);
     FANSI_state_as_chr(&buff, state, normalize, i);
 
     SEXP reschr = PROTECT(FANSI_mkChar(buff, CE_NATIVE, i));
@@ -107,9 +107,9 @@ struct FANSI_state FANSI_carry_init(
   // Read-in any pre-existing state to carry
   struct FANSI_state state_carry = FANSI_state_init_full(
     carry_string, warn, term_cap, allowNA, keepNA,
-    width, ctl, (R_xlen_t) 0, "carry"
+    width, ctl, (R_xlen_t) 0
   );
-  state_at_end(&state_carry, (R_xlen_t) 0);
+  state_at_end(&state_carry, (R_xlen_t) 0, "carry");
   UNPROTECT(prt);
   return state_carry;
 }
@@ -218,15 +218,15 @@ SEXP FANSI_bridge_state_ext(SEXP end, SEXP restart, SEXP term_cap, SEXP norm) {
     }
     // Do not warn here, so arg does not matter
     if(!i) {
-      st_end = FANSI_state_init(end, warn, term_cap, i, NULL);
-      state_at_end(&st_end, i);
-      st_rst = FANSI_state_init(restart, warn, term_cap, i, NULL);
-      state_at_end(&st_rst, i);
+      st_end = FANSI_state_init(end, warn, term_cap, i);
+      state_at_end(&st_end, i, NULL);
+      st_rst = FANSI_state_init(restart, warn, term_cap, i);
+      state_at_end(&st_rst, i, NULL);
     } else {
       FANSI_state_reinit(&st_end, end, i);
-      state_at_end(&st_end, i);
+      state_at_end(&st_end, i, NULL);
       FANSI_state_reinit(&st_rst, restart, i);
-      state_at_end(&st_rst, i);
+      state_at_end(&st_rst, i, NULL);
     }
     FANSI_reset_buff(&buff);
 

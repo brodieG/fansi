@@ -59,17 +59,17 @@ void FANSI_check_buff(struct FANSI_buff buff, R_xlen_t i, int strict);
 void FANSI_reset_buff(struct FANSI_buff * buff);
 
 struct FANSI_state FANSI_state_init(
-  SEXP strsxp, SEXP warn, SEXP term_cap, R_xlen_t i, const char * arg
+  SEXP strsxp, SEXP warn, SEXP term_cap, R_xlen_t i
 );
 void FANSI_state_reinit(
   struct FANSI_state * state, SEXP x, R_xlen_t i
 );
 struct FANSI_state FANSI_state_init_full(
   SEXP strsxp, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
-  SEXP width, SEXP ctl, R_xlen_t i, const char * arg
+  SEXP width, SEXP ctl, R_xlen_t i
 );
 struct FANSI_state FANSI_state_init_ctl(
-  SEXP strsxp, SEXP warn, SEXP ctl, R_xlen_t i, const char * arg
+  SEXP strsxp, SEXP warn, SEXP ctl, R_xlen_t i
 );
 int FANSI_sgr_active(struct FANSI_sgr sgr);
 int FANSI_url_active(struct FANSI_url url);
@@ -83,7 +83,7 @@ struct FANSI_sgr FANSI_sgr_intersect(
 int FANSI_url_comp(struct FANSI_url target, struct FANSI_url current);
 
 void FANSI_read_next(
-  struct FANSI_state * state, R_xlen_t i, int seq
+  struct FANSI_state * state, R_xlen_t i, const char * arg
 );
 int FANSI_add_int(int x, int y, const char * file, int line);
 
@@ -119,11 +119,11 @@ int FANSI_W_bridge(
 );
 int FANSI_W_normalize(
   struct FANSI_buff * buff, struct FANSI_state *state,
-  int stop, R_xlen_t i, const char * err_msg
+  int stop, R_xlen_t i, const char * err_msg, const char * arg
 );
 int FANSI_W_normalize_or_copy(
   struct FANSI_buff *buff, struct FANSI_state state, int norm_i,
-  int stop, R_xlen_t i, const char * err_msg
+  int stop, R_xlen_t i, const char * err_msg, const char * arg
 );
 
 // Macro versions require `len`, `i`, and `err_msg` defined in scope.

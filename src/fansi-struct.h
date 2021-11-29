@@ -173,7 +173,6 @@ struct FANSI_state {
   struct FANSI_position pos;
 
   const char * string;
-  const char * arg;     // parameter name for error messages
 
   // R level settings, see FANSI_SET_*
   unsigned int settings;

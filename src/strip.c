@@ -78,7 +78,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
 
   for(i = 0; i < len; ++i) {
     // Now full check
-    if(!i) state = FANSI_state_init_ctl(x, warn, ctl, i, "x");
+    if(!i) state = FANSI_state_init_ctl(x, warn, ctl, i);
     else FANSI_state_reinit(&state, x, i);
 
     SEXP x_chr = STRING_ELT(x, i);
@@ -214,7 +214,7 @@ SEXP FANSI_process(
     if(!i) {
       // AFAICT process only for strwrap, and testing
       state = FANSI_state_init_full(
-        input, warn, term_cap, allowNA, keepNA, width, ctl, i, "x"
+        input, warn, term_cap, allowNA, keepNA, width, ctl, i
       );
     } else FANSI_state_reinit(&state, input, i);
 
@@ -274,7 +274,7 @@ SEXP FANSI_process(
       if(special) { // Check that it is really special.
         int pos_prev = state.pos_byte = j;
         int pos_raw = state.pos_raw;
-        FANSI_read_next(&state, i, 1);
+        FANSI_read_next(&state, i, arg);
 
         // Sequence is special if pos_raw does not advance
         if(state.pos_raw == pos_raw) {
@@ -349,7 +349,7 @@ SEXP FANSI_process(
         for(int k = copy_end; k < copy_end + to_strip0; ++k) {
           if(is_special(string[k])) {
             state.pos_byte = k;
-            FANSI_read_next(&state, i, 1);
+            FANSI_read_next(&state, i, arg);
             int bytes = state.pos_byte - k;
             FANSI_W_MCOPY(buff, string + k, bytes);
             k += bytes - 1;

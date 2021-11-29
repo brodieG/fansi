@@ -563,13 +563,11 @@ void read_ascii(struct FANSI_state * state) {
  *
  * @param state must be set with .pos.x pointing to the ESC that begins the
  *   CSI sequence
- * @param seq 1 to read all abutting special escapes in one pass, 0 to read each
- *   one individually.
  * @return a state updated with the SGR sequence info and with pos.x and
  *   other position info moved to the first char after the sequence.  See
  *   details for failure modes.
  */
-void read_esc(struct FANSI_state * state, int seq) {
+void read_esc(struct FANSI_state * state) {
   if(state->string[state->pos.x] != 27)
     // nocov start
     error(
@@ -809,8 +807,10 @@ void read_esc(struct FANSI_state * state, int seq) {
       *state = state_prev;
       read_ascii(state);
     }
-  } while(state->string[state->pos.x] == 0x1b && seq);
-
+  } while(
+    state->string[state->pos.x] == 0x1b &&
+    !get_one(state->settings, FANSI_SET_ESCONE)
+  );
   // CAREFUL adding changing values to `state` after here.  State could
   // be the unwound state `state_prev`.
 
@@ -982,7 +982,7 @@ void read_c0(struct FANSI_state * state) {
  * See GENERAL NOTES atop.
  */
 void FANSI_read_next(
-  struct FANSI_state * state, R_xlen_t i, int seq
+  struct FANSI_state * state, R_xlen_t i, const char * arg
 ) {
   AGAIN:
 
@@ -1003,9 +1003,9 @@ void FANSI_read_next(
   // Normal ASCII characters
   if(is_ascii) read_ascii(state);
   // UTF8 characters (if chr_val is signed, then > 0x7f will be negative)
-  else if (is_utf8) read_utf8(state, i);
+  else if (is_utf8) read_utf8(state, i, arg);
   // ESC sequences
-  else if (chr_val == 0x1BU) read_esc(state, seq);
+  else if (chr_val == 0x1BU) read_esc(state);
   // C0 escapes (e.g. \t, \n, etc)
   else if(chr_val) read_c0(state);
 

@@ -37,6 +37,7 @@ SEXP FANSI_nchar(
   int keepNA_int = asLogical(keepNA);
   int type_int = asInteger(type);
   int zz = asLogical(z);
+  const char * arg = "x"
 
   R_xlen_t x_len = XLENGTH(x);
 
@@ -49,7 +50,7 @@ SEXP FANSI_nchar(
     FANSI_interrupt(i);
     if(!i) {
       state = FANSI_state_init_full(
-        x, warn, term_cap, allowNA, keepNA, type, ctl, i, "x"
+        x, warn, term_cap, allowNA, keepNA, type, ctl, i
       );
     } else FANSI_state_reinit(&state, x, i);
 
@@ -67,7 +68,7 @@ SEXP FANSI_nchar(
       } else resi[i] = zz ? 1 : 2;
     } else {
       while(state.string[state.pos_byte]) {
-        FANSI_read_next(&state, i, 1);
+        FANSI_read_next(&state, i, arg);
         // early exits
         if((zz && state.pos_raw) || state.err_code == 9) break;
       }

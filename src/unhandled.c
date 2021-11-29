@@ -55,8 +55,10 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
     SEXP chrsxp = STRING_ELT(x, i);
     if(!i) {
       state = FANSI_state_init_full(
-        x, no_warn, term_cap, allowNA, keepNA, width, ctl_all, i, "x"
+        x, no_warn, term_cap, allowNA, keepNA, width, ctl_all, i
       );
+      // Read one escape at a time
+      state->settings = state->settings |= FANSI_SET_ESCONE;
     } else FANSI_state_reinit(&state, x, i);
 
     if(chrsxp != NA_STRING && LENGTH(chrsxp)) {
@@ -68,7 +70,7 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
 
         int esc_start = state.pos_ansi;
         int esc_start_byte = state.pos_byte;
-        FANSI_read_next(&state, i, 0);
+        FANSI_read_next(&state, i, arg);
         if(state.err_code) {
           if(err_count == FANSI_lim.lim_int.max) {
             warning(

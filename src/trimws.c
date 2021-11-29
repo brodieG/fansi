@@ -18,7 +18,8 @@ SEXP FANSI_trimws(
   if(TYPEOF(norm) != LGLSXP || XLENGTH(norm) != 1)
     error("Internal Error: `norm` should scalar logical.");  // nocov
 
-  R_xlen_t i, len = xlength(x);
+  const char * arg = "x";
+  R_xlen_t i, len = XLENGTH(x);
   SEXP res_fin = x;
   int which_i = asInteger(which);
   if(which_i < 0 || which_i > 2)
@@ -41,7 +42,7 @@ SEXP FANSI_trimws(
       allowNA = keepNA = PROTECT(ScalarLogical(0)); ++prt;
       type = PROTECT(ScalarInteger(0)); ++prt;
       state = FANSI_state_init_full(
-        x, warn, term_cap, allowNA, keepNA, type, ctl, (R_xlen_t) 0, "x"
+        x, warn, term_cap, allowNA, keepNA, type, ctl, (R_xlen_t) 0
       );
     } else FANSI_state_reinit(&state, x, i);
     state_lead = state_trail = state_last = state;
@@ -74,7 +75,7 @@ SEXP FANSI_trimws(
             ) {
               goto ENDLEAD;
             } else {
-              FANSI_read_next(&state, i, 1);
+              FANSI_read_next(&state, i, arg);
               if(state.last_ctl) break;
               else goto ENDLEAD;
             }
@@ -105,7 +106,7 @@ SEXP FANSI_trimws(
               string_end = 0;
               ++state.pos_byte;
             } else {
-              FANSI_read_next(&state, i, 1);
+              FANSI_read_next(&state, i, arg);
               if(state.last_ctl) continue;
               else {
                 string_end = 0;
@@ -137,7 +138,7 @@ SEXP FANSI_trimws(
         }
         // Body of string
         FANSI_W_normalize_or_copy(
-          &buff, state_lead, norm_i, string_end, i, err_msg
+          &buff, state_lead, norm_i, string_end, i, err_msg, "x"
         );
         // Trailing state
         if(string_end)

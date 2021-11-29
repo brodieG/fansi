@@ -34,6 +34,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 // Offsets, but these are single bit
 #define FANSI_SET_ALLOWNA  21
 #define FANSI_SET_KEEPNA   22
+#define FANSI_SET_ESCONE   23  // consume only one ESC at a time
 
 // First shift by FANSI_SET_CTL
 #define FANSI_CTL_NL        1
