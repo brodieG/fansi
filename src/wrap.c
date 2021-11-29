@@ -58,7 +58,7 @@ static struct FANSI_prefix_dat make_pre(
     .string=state.string,
     .width=state.pos_width,
     .bytes=state.pos_byte,
-    .has_utf8=state.has_utf8,
+    .utf8=state.utf8,
     .indent=0
   };
 }
@@ -201,7 +201,7 @@ static SEXP writeline(
   // Now create the charsxp and append to the list, start by determining
   // what encoding to use.
   cetype_t chr_type = CE_NATIVE;
-  if((state_bound.has_utf8 > state_start.pos_byte) || pre_dat.has_utf8)
+  if((state_bound.utf8 > state_start.pos_byte) || pre_dat.utf8)
     chr_type = CE_UTF8;
   return FANSI_mkChar(*buff, chr_type, i);
 }

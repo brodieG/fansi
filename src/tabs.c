@@ -185,7 +185,7 @@ SEXP FANSI_tabs_as_spaces(
       // Write the CHARSXP
 
       cetype_t chr_type = CE_NATIVE;
-      if(state.has_utf8) chr_type = CE_UTF8;
+      if(state.utf8) chr_type = CE_UTF8;
       SEXP chr_sxp =
         PROTECT(FANSI_mkChar0(buff->buff0, buff->buff, chr_type, i));
       SET_STRING_ELT(res_sxp, i, chr_sxp);

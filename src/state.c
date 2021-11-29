@@ -86,17 +86,27 @@ struct FANSI_state FANSI_state_init_full(
     );
   // nocov end
 
+  unsigned int settings;
+  settings = set_rng(
+    settings, FANSI_SET_TERMCAP, FANSI_TERM_ALL, FANSI_term_cap_as_int(term_cap)
+  );
+  settings = set_rng(
+    settings, FANSI_SET_WIDTH, FANSI_COUNT_ALL, asInteger(width)
+  );
+  settings = set_rng(
+    settings, FANSI_SET_WARN, FANSI_WARN_ALL, (unsigned int) warn_int
+  );
+  settings = set_rng(
+    settings, FANSI_SET_CTL, FANSI_CTL_ALL, FANSI_ctl_as_int(ctl)
+  );
+  settings = set_one(settings, FANSI_SET_ALLOWNA, asLogical(allowNA));
+  settings = set_one(settings, FANSI_SET_KEEPNA, asLogical(keepNA));
+
   // All others struct-inited to zero.
   return (struct FANSI_state) {
-    .sgr = (struct FANSI_sgr) {.color = -1, .bg_color = -1},
     .string = string,
-    .warn = (unsigned int) warn_int,
-    .term_cap = FANSI_term_cap_as_int(term_cap),
-    .allowNA = asLogical(allowNA),
-    .keepNA = asLogical(keepNA),
-    .width_mode = asInteger(width),
-    .ctl = FANSI_ctl_as_int(ctl),
     .arg = arg
+    .settings = settings
   };
 }
 /*
@@ -170,7 +180,7 @@ struct FANSI_state FANSI_state_init_ctl(
 }
 
 void FANSI_reset_width(struct FANSI_state * state) {
-  state->pos_width = 0;
+  state->p.w = 0;
 }
 /*
  * Reset the position counters
@@ -183,12 +193,10 @@ void FANSI_reset_width(struct FANSI_state * state) {
  * See also FANSI_state_reinit
  */
 void FANSI_reset_pos(struct FANSI_state * state) {
-  state->pos_byte = 0;
-  state->pos_ansi = 0;
-  state->pos_raw = 0;
-  state->pos_width = 0;
-  state->last_special = 0;
-  state->non_normalized = 0;
+  state->pos = {0};
+  unsigned int warned = get_one(state->status, FANSI_STAT_WARNED);
+  state->status = 0U;
+  if(warned) state->status = set_one(0, FANSI_STAT_WARNED);
 }
 /*
  * Reset state without changing index/string
@@ -197,19 +205,10 @@ void FANSI_reset_pos(struct FANSI_state * state) {
  * consistency with others.
  */
 void FANSI_reset_state(struct FANSI_state * state) {
-  struct FANSI_state state_reinit;
-  state_reinit = (struct FANSI_state) {
-    .string = state->string,
-    .warn = state->warn,
-    .term_cap = state->term_cap,
-    .allowNA = state->allowNA,
-    .keepNA = state->keepNA,
-    .width_mode = state->width_mode,
-    .ctl = state->ctl,
-    .arg = state->arg
-  };
-  state_reinit.sgr = (struct FANSI_sgr) {.color = -1, .bg_color = -1};
-  *state = state_reinit;
+  state->fmt = (struct FANSI_format){0};
+  state->pos = (struct FANSI_position){0};
+  state->status = 0U;
+  state->utf8 = 0;
 }
 /*
  * Compute the state given a character position (raw position)
@@ -328,35 +327,21 @@ char * FANSI_state_as_chr(
 int FANSI_sgr_comp_color(
   struct FANSI_sgr target, struct FANSI_sgr current
 ) {
-  return !(
-    target.color == current.color &&
-    target.bg_color == current.bg_color &&
-    target.color_extra[0] == current.color_extra[0] &&
-    target.bg_color_extra[0] == current.bg_color_extra[0] &&
-    target.color_extra[1] == current.color_extra[1] &&
-    target.bg_color_extra[1] == current.bg_color_extra[1] &&
-    target.color_extra[2] == current.color_extra[2] &&
-    target.bg_color_extra[2] == current.bg_color_extra[2] &&
-    target.color_extra[3] == current.color_extra[3] &&
-    target.bg_color_extra[3] == current.bg_color_extra[3]
-  );
+  return
+    target.color.x != current.color.x  ||
+    // No padding bits in unsigned char, so memcmp okay
+    memcmp(target.bgcol.extra, current.bgcol.extra)
 }
 static int FANSI_sgr_comp_basic(
   struct FANSI_sgr target, struct FANSI_sgr current
 ) {
-  // 1023 is '11 1111 1111' in binary, so this will grab the last ten bits
-  // of the styles which are the 1-9 styles
+  // Colors, and the basic styles (1-9 color codes)
   return FANSI_sgr_comp_color(target, current) ||
-    (target.style & 1023) != (current.style & 1023);
+    (target.fmt.style & FANSI_STL_MASK1) !=
+    (current.fmt.style & FANSI_STL_MASK1);
 }
 static int FANSI_sgr_comp(struct FANSI_sgr target, struct FANSI_sgr current) {
-  return !(
-    !FANSI_sgr_comp_basic(target, current) &&
-    target.style == current.style &&
-    target.border == current.border &&
-    target.font == current.font &&
-    target.ideogram == current.ideogram
-  );
+  return FANSI_sgr_comp_color(target, current) || target.style != current.style;
 }
 /*
  * Create a new SGR that has all the styles in `old` missing from `new`.
@@ -365,37 +350,39 @@ static int FANSI_sgr_comp(struct FANSI_sgr target, struct FANSI_sgr current) {
  * from one state to the other (used for diff).
  *
  * @param mode 0 to explicitly close/open styles that will be overriden (e.g.
- *   color), and 1 to do so implicityly
+ *   color), and 1 to do so implicitly
  */
 struct FANSI_sgr FANSI_sgr_setdiff(
   struct FANSI_sgr old, struct FANSI_sgr new, int mode
 ) {
-  struct FANSI_sgr res = {
-    .color=-1, .bg_color=-1, .style=0, .border=0, .ideogram=0, .font=0
-  };
+  struct FANSI_sgr res = {0};
   if(
-    (!mode && old.color != new.color) ||
-    (mode && old.color > -1 && new.color == -1)
+    (!mode && old.color.x != new.color.x) ||
+    (mode && old.color.x && !new.color.x)
   ) {
-    res.color = old.color;
-    memcpy(res.color_extra, old.color_extra, sizeof(old.color_extra));
+    res.color.x = old.color.x;
+    memcpy(res.color.extra, old.color.extra, sizeof(old.color.extra));
   }
   if(
-    (!mode && old.bg_color != new.bg_color) ||
-    (mode && old.bg_color > -1 && new.bg_color == -1)
+    (!mode && old.bgcol.x != new.bgcol.x) ||
+    (mode && old.bgcol.x && !new.bgcol)
   ) {
-    res.bg_color = old.bg_color;
-    memcpy(res.bg_color_extra, old.bg_color_extra, sizeof(old.bg_color_extra));
+    res.bgcol.x = old.bgcol.x;
+    memcpy(res.bgcol.extra, old.bgcol.extra, sizeof(old.bgcol.extra));
   }
+  unsigned int font_old, font_new;
+  font_old = old.style & FANSI_FONT_MASK;
+  font_new = new.style & FANSI_FONT_MASK;
   if(
-    (!mode && old.font != new.font) ||
-    (mode && old.font && !new.font)
+    (!mode && (font_old != font_new)) || (mode && font_odl && !font_new)
   ) {
-    res.font = old.font;
+    res.font = font_old;
   }
-  res.style = old.style & (~new.style);
-  res.border = old.border & (~new.border);
-  res.ideogram = old.ideogram & (~new.ideogram);
+  // All non font styles are just bit flags
+  unsigned int style_old, style_new;
+  style_old = old.style & ~FANSI_FONT_MASK;
+  style_new = new.style & ~FANSI_FONT_MASK;
+  res.style |= style_old & ~style_new;
   return res;
 }
 /*
@@ -403,29 +390,33 @@ struct FANSI_sgr FANSI_sgr_setdiff(
 struct FANSI_sgr FANSI_sgr_intersect(
   struct FANSI_sgr old, struct FANSI_sgr new
 ) {
-  struct FANSI_sgr res = {
-    .color=-1, .bg_color=-1, .style=0, .border=0, .ideogram=0, .font=0
-  };
-  if(old.color == new.color) {
-    res.color = new.color;
-    memcpy(res.color_extra, new.color_extra, sizeof(new.color_extra));
+  struct FANSI_sgr res = {0};
+  if(old.color.x = new.color.x) {
+    res.color.x = new.color.x;
+    memcpy(res.color.extra, new.color.extra, sizeof(new.color.extra));
   }
-  if(old.bg_color == new.bg_color) {
-    res.bg_color = new.bg_color;
-    memcpy(res.bg_color_extra, new.bg_color_extra, sizeof(new.bg_color_extra));
+  if(old.bgcol.x = new.bgcol.x) {
+    res.bgcol.x = new.bgcol.x;
+    memcpy(res.bgcol.extra, new.bgcol.extra, sizeof(new.bgcol.extra));
   }
-  if(old.font == new.font) res.font = new.font;
-  res.style = old.style & new.style;
-  res.border = old.border & new.border;
-  res.ideogram = old.ideogram & new.ideogram;
+
+  unsigned int font_old, font_new;
+  font_old = old.style & FANSI_FONT_MASK;
+  font_new = new.style & FANSI_FONT_MASK;
+  if(font_old == font_new) {
+    res.font = font_new;
+  }
+  // All non font styles are just bit flags
+  unsigned int style_old, style_new;
+  style_old = old.style & ~FANSI_FONT_MASK;
+  style_new = new.style & ~FANSI_FONT_MASK;
+  res.style |= style_old & style_new;
   return res;
 }
 
 // Keep synchronized with `sgr_close`
 int FANSI_sgr_active(struct FANSI_sgr sgr) {
-  return
-    sgr.style || sgr.color >= 0 || sgr.bg_color >= 0 ||
-    sgr.font || sgr.border || sgr.ideogram;
+  return sgr.style || sgr.color.x || sgr.bgcol.x;
 }
 // Keep synchronized with `url_close`
 int FANSI_url_active(struct FANSI_url url) {

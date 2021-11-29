@@ -22,518 +22,149 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #include <R.h>
 #include <Rinternals.h>
 #include <Rversion.h>
+#include "fansi-cnst.h"
+#include "fansi-struct.h"
 
-  // - Constants / Macros ------------------------------------------------------
+// macros
 
-  // CAREFUL with these; if we get close to INT_MAX with 2^x we can have
-  // problems with signed/unsigned bit shifts.  Shouldn't be anywhere close to
-  // that but something to keep in mind
+#define FANSI_ADD_INT(x, y) FANSI_add_int((x), (y), __FILE__, __LINE__)
 
-  #define FANSI_CTL_NL 1
-  #define FANSI_CTL_C0 2
-  #define FANSI_CTL_SGR 4
-  #define FANSI_CTL_CSI 8
-  #define FANSI_CTL_ESC 16
-  #define FANSI_CTL_URL 32
-  #define FANSI_CTL_OSC 64
+// - Internal funs -----------------------------------------------------------
 
-  #define FANSI_CTL_ALL 127 // 1 + 2 + 4 + 8 + 16 == 2^0 + 2^1 + 2^2 + 2^3 + 2^4
+SEXP FANSI_process(
+  SEXP input, SEXP term_cap, SEXP ctl, struct FANSI_buff *buff
+);
+SEXP FANSI_tabs_as_spaces(
+  SEXP vec, SEXP tab_stops, struct FANSI_buff * buff, SEXP warn,
+  SEXP term_cap, SEXP ctl
+);
+SEXP FANSI_sort_chr(SEXP x);
 
-  #define FANSI_TERM_CAP_ALL 7 // 1 + 2 + 4
+struct FANSI_ctl_pos FANSI_find_ctl(struct FANSI_state state, R_xlen_t i);
+void FANSI_reset_pos(struct FANSI_state * state);
+void FANSI_reset_width(struct FANSI_state * state);
+void FANSI_reset_state(struct FANSI_state * state);
 
-  #define FANSI_STYLE_MAX 12 // 12 is double underline
+void FANSI_check_chrsxp(SEXP x, R_xlen_t i);
 
-  #define FANSI_TERM_BRIGHT 1
-  #define FANSI_TERM_256 2
-  #define FANSI_TERM_TRUECOLOR 4
+int FANSI_term_cap_as_int(SEXP term_cap);
+int FANSI_ctl_as_int(SEXP ctl);
 
-  #define FANSI_WARN_ALL    511 // ... 0001 1111 1111
-  #define FANSI_WARN_CSIBAD 336 // ... 0001 0101 0000
+void FANSI_init_buff(struct FANSI_buff * buff, const char * fun);
+#define FANSI_INIT_BUFF(A) FANSI_init_buff((A), __func__)
+size_t FANSI_size_buff0(struct FANSI_buff * buff, int size);
+size_t FANSI_size_buff(struct FANSI_buff * buff);
+int FANSI_release_buff(struct FANSI_buff * buff, int warn);
+void FANSI_check_buff(struct FANSI_buff buff, R_xlen_t i, int strict);
+void FANSI_reset_buff(struct FANSI_buff * buff);
 
-  #define FANSI_COUNT_CHARS   0
-  #define FANSI_COUNT_WIDTH   1
-  #define FANSI_COUNT_GRAPH   2
-  #define FANSI_COUNT_BYTES   3
+struct FANSI_state FANSI_state_init(
+  SEXP strsxp, SEXP warn, SEXP term_cap, R_xlen_t i, const char * arg
+);
+void FANSI_state_reinit(
+  struct FANSI_state * state, SEXP x, R_xlen_t i
+);
+struct FANSI_state FANSI_state_init_full(
+  SEXP strsxp, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
+  SEXP width, SEXP ctl, R_xlen_t i, const char * arg
+);
+struct FANSI_state FANSI_state_init_ctl(
+  SEXP strsxp, SEXP warn, SEXP ctl, R_xlen_t i, const char * arg
+);
+int FANSI_sgr_active(struct FANSI_sgr sgr);
+int FANSI_url_active(struct FANSI_url url);
+int FANSI_sgr_comp_color(struct FANSI_sgr target, struct FANSI_sgr current);
+struct FANSI_sgr FANSI_sgr_setdiff(
+  struct FANSI_sgr old, struct FANSI_sgr new, int mode
+);
+struct FANSI_sgr FANSI_sgr_intersect(
+  struct FANSI_sgr old, struct FANSI_sgr new
+);
+int FANSI_url_comp(struct FANSI_url target, struct FANSI_url current);
 
-  #define FANSI_RND_START     1
-  #define FANSI_RND_STOP      2
-  #define FANSI_RND_BOTH      3
-  #define FANSI_RND_NEITHER   4
+void FANSI_read_next(
+  struct FANSI_state * state, R_xlen_t i, int seq
+);
+int FANSI_add_int(int x, int y, const char * file, int line);
 
-  // macros
+// "Writing" functions
+void FANSI_W_sgr(
+  struct FANSI_buff * buff, struct FANSI_sgr sgr, int normalize,
+  int enclose, R_xlen_t i
+);
+void FANSI_W_url(
+  struct FANSI_buff * buff, struct FANSI_url url, int normalize, R_xlen_t i
+);
+void FANSI_W_sgr_close(
+  struct FANSI_buff * buff, struct FANSI_sgr sgr, int normalize, R_xlen_t i
+);
+void FANSI_W_url_close(
+  struct FANSI_buff * buff, struct FANSI_url url, R_xlen_t i
+);
+int FANSI_W_copy(
+  struct FANSI_buff * buff, const char * tmp, R_xlen_t i, const char * err_msg
+);
+int FANSI_W_mcopy(
+  struct FANSI_buff * buff, const char * tmp, int tmp_len, R_xlen_t i,
+  const char * err_msg
+);
+void FANSI_W_fill(
+  struct FANSI_buff * buff, const char tmp, int times,
+  R_xlen_t i, const char * err_msg
+);
+int FANSI_W_bridge(
+  struct FANSI_buff * buff, struct FANSI_state end,
+  struct FANSI_state restart, int normalize, R_xlen_t i,
+  const char * err_msg
+);
+int FANSI_W_normalize(
+  struct FANSI_buff * buff, struct FANSI_state *state,
+  int stop, R_xlen_t i, const char * err_msg
+);
+int FANSI_W_normalize_or_copy(
+  struct FANSI_buff *buff, struct FANSI_state state, int norm_i,
+  int stop, R_xlen_t i, const char * err_msg
+);
 
-  #define FANSI_ADD_INT(x, y) FANSI_add_int((x), (y), __FILE__, __LINE__)
+// Macro versions require `len`, `i`, and `err_msg` defined in scope.
+#define FANSI_W_COPY(A, B) FANSI_W_copy((A), (B), i, err_msg)
+#define FANSI_W_MCOPY(A, B, C) FANSI_W_mcopy(\
+  (A), (B), (C), i, err_msg)
+#define FANSI_W_FILL(A, B, C) FANSI_W_fill(\
+  (A), (B), (C), i, err_msg)
 
-  // Global variables (see utils.c)
-  // These was originally designed hoping we could have a single struct with
-  // shared logic, but in the end it's like this...  We used to have uintmax_t
-  // and intmax_t, but removed those for performance concerns.
+// Utilities
+int FANSI_seek_ctl(const char * x);
+void FANSI_print(char * x);
+void FANSI_print_state(struct FANSI_state x);
+void FANSI_print_sgr(struct FANSI_sgr s);
+void FANSI_interrupt(R_xlen_t i);
+intmax_t FANSI_ind(R_xlen_t i);
+SEXP FANSI_mkChar0(char * start, char * end, cetype_t enc, R_xlen_t i);
+SEXP FANSI_mkChar(struct FANSI_buff buff, cetype_t enc, R_xlen_t i);
+void FANSI_check_limits();
 
-  struct FANSI_limit_int {
-    const char * name;
-    int min;
-    int max;
-  };
-  struct FANSI_limit_rlent {
-    const char * name;
-    R_len_t min;
-    R_len_t max;
-  };
-  struct FANSI_limit_rxlent {
-    const char * name;
-    R_xlen_t min;
-    R_xlen_t max;
-  };
-  struct FANSI_limit_sizet {
-    const char * name;
-    size_t min;
-    size_t max;
-  };
-  // Update assumption checks if any of this changes
-  struct FANSI_limits {
-    struct FANSI_limit_int lim_int;
-    struct FANSI_limit_rlent lim_R_len_t;
-    struct FANSI_limit_rxlent lim_R_xlen_t;
-    struct FANSI_limit_sizet lim_size_t;
-  };
-  extern struct FANSI_limits FANSI_lim;
+int FANSI_check_append(int cur, int extra, const char * msg, R_xlen_t i);
+void FANSI_check_append_err(const char * msg, R_xlen_t i);
 
-  // - Structs -----------------------------------------------------------------
-  /*
-   * Buffer used for writing strings
-   *
-   * Kept around so we don't keep having to re-allocate memory if it is
-   * sufficiently large to write what we want.
-   */
-  struct FANSI_buff {
-    char * buff0;      // Buffer start
-    char * buff;       // Buffer last written
-    void * vheap_self; // Pointer to self on the heap protection stack
-    void * vheap_prev; // Pointer to what was previously on top of prot stack
-    size_t len_alloc;  // Bytes allocated, includes trailing NULL.
-    int len;           // Size target
-    const char * fun;  // Function that initialized the buffer.
-    int warned;        // Whether a warning was issued already.
-    int reset;         // Indicate the buffer was reset as required.
-  };
-  /*
-   * Used when computing position and size of ANSI tag with FANSI_loc
-   */
-  struct FANSI_ctl_pos {
-    // Byte offset to first recognized control sequence
-    int offset;
-    // how many characters to the end of the sequnce
-    int len;
-    // Warnings encounted, encoded "bitwise" as with FANSI_state.warn
-    unsigned int warn_max;
-  };
-  /*
-   * Encode Active SGR
-   *
-   * Many of the fields here could be made smaller.
-   */
-  struct FANSI_sgr {
-    /*
-     * Encode the additional information required to render the 38 color code in
-     * an array of 4 numbers:
-     *
-     * - color_extra[0]: whether to use the r;g;b format (2) or the single value
-     *   format (5)
-     * - color_extra[1]: the "r" value when in r;g;b format, otherwise the single
-     *   color value, should be a number in 0-255
-     * - color_extra[2]: the "g" value when in r;g;b format, 0-255
-     * - color_extra[3]: the "b" value when in r;g;b format, 0-255
-     *
-     * See also color, bgcolor
-     */
+void FANSI_val_args(SEXP x, SEXP norm, SEXP carry);
+char * FANSI_state_as_chr(
+  struct FANSI_buff *buff, struct FANSI_state state, int normalize, R_xlen_t i
+);
+struct FANSI_state FANSI_carry_init(
+  SEXP carry, SEXP warn, SEXP term_cap, SEXP ctl
+);
+int FANSI_is_tf(SEXP x);
 
-    int color_extra[4];
-    int bg_color_extra[4];
+// - Compatibility -----------------------------------------------------------
 
-    /*
-     * A number in 0-9, corrsponds to the ansi codes in the [3-4][0-9] range, if
-     * less than zero or 9 means no color is active.  If 8 (i.e. corresponding
-     * to the `38` code), then `color_extra` contains additional color info.
-     *
-     * If > 9 then for color in 90-97, the bright color, for bg_color, in
-     * 100-107 the bright bg color.
-     */
+// R_nchar does not exist prior to 3.2.2, so we sub in this dummy
 
-    int color;           // the number following the 3 in 3[0-9]
-    int bg_color;        // the number following the 4 in 4[0-9]
+#if defined(R_VERSION) && R_VERSION >= R_Version(3, 2, 2)
+#else
+typedef enum {Bytes, Chars, Width} nchar_type;
+int R_nchar(SEXP string, nchar_type type_,
+            Rboolean allowNA, Rboolean keepNA, const char* msg_name);
+#endif
 
-    /*
-     * The original string the state corresponds to.  This should always be
-     * a pointer to the beginning of the string, use the
-     * `state.string[state.pos_byte]` to access the current position.
-     *
-     * Should be no longer than INT_MAX excluding terminating NULL.
-     */
-
-    /*
-     * should be interpreted as bit mask where with 2^n., 1-9 match to the
-     * corresponding ANSI CSI SGR codes, 10 and greater are not necessarily
-     * contiguous but were put here because they could co-exist with the style
-     *
-     * - n ==  0: UNUSED, to simplify logic
-     * - n ==  1: bold
-     * - n ==  2: blur/faint
-     * - n ==  3: italic
-     * - n ==  4: underline
-     * - n ==  5: blink slow
-     * - n ==  6: blink fast
-     * - n ==  7: invert
-     * - n ==  8: conceal
-     * - n ==  9: crossout
-     * - n == 10: fraktur
-     * - n == 11: double underline
-     * - n == 12: prop spacing
-     *
-     * UPDATE FANSI_STYLE_MAX if we add more here!!, make sure to check the
-     * size, read, and write funs any time this changes.
-     *
-     * Also, if any HTML styles are added check those too.
-     */
-    unsigned int style;
-
-    /*
-     * should be interpreted as bit mask where with 2^n.
-     *
-     * - n == 0: UNUSED, to simplify logic
-     * - n == 1: framed
-     * - n == 2: encircled
-     * - n == 3: overlined
-     * - n == 4: unused (turns off a style)
-     * - n == 5: unused (turns off a style)
-     * - n == 6: reserved
-     * - n == 7: reserved
-     * - n == 8: reserved
-     * - n == 9: reserved
-     */
-
-    unsigned int border;
-    /*
-     * should be interpreted as bit mask where with 2^n.
-     *
-     * - n == 0: ideogram underline or right side line
-     * - n == 1: ideogram double underline or double line on the right side
-     * - n == 2: ideogram overline or left side line
-     * - n == 3: ideogram double overline or double line on the left side
-     * - n == 4: ideogram stress marking
-     */
-
-    unsigned int ideogram;
-
-    /* Alternative fonts, 10-19, where 0 is the primary font */
-
-    int font;
-  };
-  // val should always be initialized and never NULL.
-  struct FANSI_string {
-    const char * val;
-    int len;
-  };
-  /*
-   * OSC derived URL info.
-   *
-   * Failed url parses designated by bytes == 0.
-   */
-  struct FANSI_osc {
-    int len;    // bytes of the entire OSC, excluding the initial ESC
-    int error;  // error, if any, one of 0, 4 or 5 (see FANSI_state.err_code).
-  };
-  struct FANSI_url {
-    struct FANSI_string url;
-    struct FANSI_string params;  // unparsed param string
-    struct FANSI_string id;      // parsed id
-    struct FANSI_osc osc;
-  };
-  /*
-   * Captures the SGR and OSC URL state at any particular position in a string.
-   *
-   * This object has gotten completely out of hand with how large it is.  We
-   * could change many of the fields to char, or even bitfields and potentially
-   * create smaller structs to passs to-and-fro functions instead of this
-   * monster.  Or explore passing around e.g. a RO pointer.
-   */
-
-  struct FANSI_state {
-    struct FANSI_sgr sgr;
-    struct FANSI_url url;
-
-    const char * string;
-    /*
-     * Any error associated with err_code
-     */
-    const char * err_msg;
-    /* Name of the parameter containing the strings, for warnings */
-
-    const char * arg;
-    /*
-     * Position markers (all zero index).
-     *
-     * - pos_byte: the first unread byte in the string:  IMPORTANT, unlike all
-     *   the other `pos_` trackers which track how many units have already
-     *   been read, this one points to the first UNread byte (need to change
-     *   variable name).
-     * - pos_ansi: actual character position, different from pos_byte due to
-     *   multi-byte characters (i.e. UTF-8)
-     * - pos_raw: the character position after we strip the handled ANSI tags,
-     *   the difference with pos_ansi is that pos_ansi counts the escape
-     *   sequences whereas this one does not.
-     * - pos_width: the character postion accounting for double width
-     *   characters, etc., note in this case ASCII escape sequences are treated
-     *   as zero chars.  Width is computed mostly with R_nchar.
-     *
-     * So pos_raw is essentially the character count excluding escapes.
-     */
-    int pos_byte;
-    int pos_ansi;
-    int pos_raw;
-    int pos_width;
-
-    // Most of the objecs below are 1/0 could be a bitfield?  Or at a minimum as
-    // a char?
-
-    // Are there bytes outside of 0-127 (i.e. UTF-8 since that is the only way
-    // those should show up).  Records the 0-index start byte of the **next**
-    // character **after** last-seen UTF-8 character (we don't record the start
-    // byte because that could be 0, which is ambiguous; we coud initialize this
-    // to -1 so it isn't ambiguous, but that is also fragile).
-    int has_utf8;
-
-    // Info on last element read
-    int last_zwj;         // was last a Zero Width Joiner
-    int last_ri;          // was last an unpaired Regional Indicator
-    int last_special;     // was an sgr or osc url
-    int last_ctl;         // was a recognized ctl (and which one)
-
-    // Need to read one more character before returning from read_next, used
-    // right now just to avoid splitting RI flags.
-    int read_one_more;
-
-    /* Control Flags -----------------------------------------------------------
-     *
-     * Used to communicate back from sub-processes that sub-parsing failed, the
-     * sub-process is supposed to leave the state pointed at the failing
-     * character with the byte position updated.  The parent process is then in
-     * charge of updating the raw position.
-     */
-    /*
-     * Type of failure
-     *
-     * *  0: no error
-     * *  1: well formed csi sgr, but contains uninterpretable sub-strings, if a
-     *       CSI sequence is not fully parsed yet (i.e. last char not read) it is
-     *       assumed to be SGR until we read the final code.
-     * *  2: well formed csi sgr, but contains uninterpretable characters [:<=>]
-     * *  3: well formed csi sgr, but contains color codes that exceed terminal
-     *      capabilities
-     * *  4: well formed csi, but not an SGR
-     * *  5: malformed csi
-     * *  6: other escape sequence
-     * *  7: malformed escape (e.g. string ending in ESC).
-     * *  8: c0 escapes
-     * *  9: malformed UTF8
-     * * ..: unused
-     * * 31: unused, max error code allowable (must fit in signed int for
-     *       transfer to R).
-     */
-    unsigned int err_code;
-    /*
-     * Terminal capabilities
-     *
-     * term_cap & 1        // bright colors
-     * term_cap & (1 << 1) // 256 colors
-     * term_cap & (1 << 2) // true color
-     *
-     */
-    int term_cap;
-    // Whether at end of a CSI escape sequence (i.e. found an 'm').
-    int last;
-    // Whether the last control sequence that was completely read is known to be
-    // an SGR sequence.  This is used as part of the `read_esc` process and is
-    // really intended to be internal.  It's really only meaningful when
-    // `state.last` is true.
-    int is_sgr;
-    // Whether to issue warnings if err_code is non-zero.  Warnings are issued
-    // if warn & (1 << (err_code - 1)) is set.
-    unsigned int warn;
-    // Whether a warning was issued; `read_next` will set this to 1 which will
-    // suppress additional warnings.
-    int warned;
-    // Whether to use R_nchar, really only needed when we're doing things in
-    // width and grapheme mode (see FANSI_COUNT_* defined constants).
-    int width_mode;
-
-    // Last sequence of SGRs contained non-normal escapes
-    int non_normalized;
-
-    /*
-     * These support the arguments of the same names for nchars.  allowNA means
-     * that the normal errors caused by invalid UTF-8 encoding are suppressed.
-     * If running with `allowNA` the corresopnding code is responsible for
-     * ensuring bad utf-8 is dealt with in some way.
-     */
-    int allowNA;
-    int keepNA;
-    // what types of Control Sequences should have special treatment.  See
-    // `FANSI_ctl_as_int` for the encoding.
-    int ctl;
-  };
-  /*
-   * Need to keep track of fallback state, so we need ability to return two
-   * states
-   */
-  struct FANSI_state_pair {
-    struct FANSI_state cur;
-    struct FANSI_state restart;
-  };
-  /*
-   * Sometimes need to keep track of a string and the encoding that it is in
-   * outside of a CHARSXP
-   */
-  struct FANSI_string_type {
-    const char * string;
-    cetype_t type;
-  };
-
-  // - Internal funs -----------------------------------------------------------
-
-  SEXP FANSI_process(
-    SEXP input, SEXP term_cap, SEXP ctl, struct FANSI_buff *buff
-  );
-  SEXP FANSI_tabs_as_spaces(
-    SEXP vec, SEXP tab_stops, struct FANSI_buff * buff, SEXP warn,
-    SEXP term_cap, SEXP ctl
-  );
-  SEXP FANSI_sort_chr(SEXP x);
-
-  struct FANSI_ctl_pos FANSI_find_ctl(struct FANSI_state state, R_xlen_t i);
-  void FANSI_reset_pos(struct FANSI_state * state);
-  void FANSI_reset_width(struct FANSI_state * state);
-  void FANSI_reset_state(struct FANSI_state * state);
-
-  void FANSI_check_chrsxp(SEXP x, R_xlen_t i);
-
-  int FANSI_term_cap_as_int(SEXP term_cap);
-  int FANSI_ctl_as_int(SEXP ctl);
-
-  void FANSI_init_buff(struct FANSI_buff * buff, const char * fun);
-  #define FANSI_INIT_BUFF(A) FANSI_init_buff((A), __func__)
-  size_t FANSI_size_buff0(struct FANSI_buff * buff, int size);
-  size_t FANSI_size_buff(struct FANSI_buff * buff);
-  int FANSI_release_buff(struct FANSI_buff * buff, int warn);
-  void FANSI_check_buff(struct FANSI_buff buff, R_xlen_t i, int strict);
-  void FANSI_reset_buff(struct FANSI_buff * buff);
-
-  struct FANSI_state FANSI_state_init(
-    SEXP strsxp, SEXP warn, SEXP term_cap, R_xlen_t i, const char * arg
-  );
-  void FANSI_state_reinit(
-    struct FANSI_state * state, SEXP x, R_xlen_t i
-  );
-  struct FANSI_state FANSI_state_init_full(
-    SEXP strsxp, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
-    SEXP width, SEXP ctl, R_xlen_t i, const char * arg
-  );
-  struct FANSI_state FANSI_state_init_ctl(
-    SEXP strsxp, SEXP warn, SEXP ctl, R_xlen_t i, const char * arg
-  );
-  int FANSI_sgr_active(struct FANSI_sgr sgr);
-  int FANSI_url_active(struct FANSI_url url);
-  int FANSI_sgr_comp_color(struct FANSI_sgr target, struct FANSI_sgr current);
-  struct FANSI_sgr FANSI_sgr_setdiff(
-    struct FANSI_sgr old, struct FANSI_sgr new, int mode
-  );
-  struct FANSI_sgr FANSI_sgr_intersect(
-    struct FANSI_sgr old, struct FANSI_sgr new
-  );
-  int FANSI_url_comp(struct FANSI_url target, struct FANSI_url current);
-
-  void FANSI_read_next(
-    struct FANSI_state * state, R_xlen_t i, int seq
-  );
-  int FANSI_add_int(int x, int y, const char * file, int line);
-
-  // "Writing" functions
-  void FANSI_W_sgr(
-    struct FANSI_buff * buff, struct FANSI_sgr sgr, int normalize,
-    int enclose, R_xlen_t i
-  );
-  void FANSI_W_url(
-    struct FANSI_buff * buff, struct FANSI_url url, int normalize, R_xlen_t i
-  );
-  void FANSI_W_sgr_close(
-    struct FANSI_buff * buff, struct FANSI_sgr sgr, int normalize, R_xlen_t i
-  );
-  void FANSI_W_url_close(
-    struct FANSI_buff * buff, struct FANSI_url url, R_xlen_t i
-  );
-  int FANSI_W_copy(
-    struct FANSI_buff * buff, const char * tmp, R_xlen_t i, const char * err_msg
-  );
-  int FANSI_W_mcopy(
-    struct FANSI_buff * buff, const char * tmp, int tmp_len, R_xlen_t i,
-    const char * err_msg
-  );
-  void FANSI_W_fill(
-    struct FANSI_buff * buff, const char tmp, int times,
-    R_xlen_t i, const char * err_msg
-  );
-  int FANSI_W_bridge(
-    struct FANSI_buff * buff, struct FANSI_state end,
-    struct FANSI_state restart, int normalize, R_xlen_t i,
-    const char * err_msg
-  );
-  int FANSI_W_normalize(
-    struct FANSI_buff * buff, struct FANSI_state *state,
-    int stop, R_xlen_t i, const char * err_msg
-  );
-  int FANSI_W_normalize_or_copy(
-    struct FANSI_buff *buff, struct FANSI_state state, int norm_i,
-    int stop, R_xlen_t i, const char * err_msg
-  );
-
-  // Macro versions require `len`, `i`, and `err_msg` defined in scope.
-  #define FANSI_W_COPY(A, B) FANSI_W_copy((A), (B), i, err_msg)
-  #define FANSI_W_MCOPY(A, B, C) FANSI_W_mcopy(\
-    (A), (B), (C), i, err_msg)
-  #define FANSI_W_FILL(A, B, C) FANSI_W_fill(\
-    (A), (B), (C), i, err_msg)
-
-  // Utilities
-  int FANSI_seek_ctl(const char * x);
-  void FANSI_print(char * x);
-  void FANSI_print_state(struct FANSI_state x);
-  void FANSI_print_sgr(struct FANSI_sgr s);
-  void FANSI_interrupt(R_xlen_t i);
-  intmax_t FANSI_ind(R_xlen_t i);
-  SEXP FANSI_mkChar0(char * start, char * end, cetype_t enc, R_xlen_t i);
-  SEXP FANSI_mkChar(struct FANSI_buff buff, cetype_t enc, R_xlen_t i);
-  void FANSI_check_limits();
-
-  int FANSI_check_append(int cur, int extra, const char * msg, R_xlen_t i);
-  void FANSI_check_append_err(const char * msg, R_xlen_t i);
-
-  void FANSI_val_args(SEXP x, SEXP norm, SEXP carry);
-  char * FANSI_state_as_chr(
-    struct FANSI_buff *buff, struct FANSI_state state, int normalize, R_xlen_t i
-  );
-  struct FANSI_state FANSI_carry_init(
-    SEXP carry, SEXP warn, SEXP term_cap, SEXP ctl
-  );
-  int FANSI_is_tf(SEXP x);
-
-  // - Compatibility -----------------------------------------------------------
-
-  // R_nchar does not exist prior to 3.2.2, so we sub in this dummy
-
-  #if defined(R_VERSION) && R_VERSION >= R_Version(3, 2, 2)
-  #else
-  typedef enum {Bytes, Chars, Width} nchar_type;
-  int R_nchar(SEXP string, nchar_type type_,
-              Rboolean allowNA, Rboolean keepNA, const char* msg_name);
-  #endif
-
-#endif  /* _FANSI_EXT */
+#endif  /* _FANSI_H */

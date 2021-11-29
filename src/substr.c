@@ -242,7 +242,7 @@ static SEXP substr_one(
       if(term_i) FANSI_W_url_close(buff, state_stop.url, i);
     }
     cetype_t chr_type = CE_NATIVE;
-    if(state_stop.has_utf8 > state_start.pos_byte) chr_type = CE_UTF8;
+    if(state_stop.utf8 > state_start.pos_byte) chr_type = CE_UTF8;
     res = FANSI_mkChar(*buff, chr_type, i);
   } else {
     res = R_BlankString;
@@ -477,7 +477,7 @@ static SEXP substr_replace(
           FANSI_W_MCOPY(buff, x1_string, x_bytes);
         }
       }
-      int has_utf8 = st_x1.has_utf8 || st_v1.has_utf8;
+      int has_utf8 = st_x1.utf8 || st_v1.utf8;
       if(carry_i) {
         st_xlast = st_x1;
         while(st_xlast.string[st_xlast.pos_byte])
@@ -485,7 +485,7 @@ static SEXP substr_replace(
         st_vlast = st_v1;
         while(st_vlast.string[st_vlast.pos_byte])
           FANSI_read_next(&st_vlast, i, 0);
-        has_utf8 = has_utf8 || st_xlast.has_utf8 > st_x0.pos_byte;
+        has_utf8 = has_utf8 || st_xlast.utf8 > st_x0.pos_byte;
       } else {
         has_utf8 = has_utf8 || has_8bit(x1_string);
       }
