@@ -104,7 +104,6 @@ struct FANSI_color {
 struct FANSI_sgr {
   struct FANSI_color color;
   struct FANSI_color bgcol;
-
   /*
    * Should be interpreted as bit mask where with 2^n.  See
    * FANSI_(ST|BRD|IDG)_* constants for details of what each bit means.

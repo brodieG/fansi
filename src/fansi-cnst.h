@@ -87,7 +87,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 // Single bit status
 #define FANSI_STAT_ZWJ       4
 #define FANSI_STAT_RI        5
-#define FANSI_STAT_SPECIAL   6   // Is SGR or CSI
+#define FANSI_STAT_SPECIAL   6   // Is SGR or URL
 #define FANSI_STAT_CTL       7   // Was a recognized control
 #define FANSI_STAT_AGAIN     8   // Need to read on more char (was .read_one_more)
 #define FANSI_STAT_CSI       9   // CSI was complete (was .last)
@@ -98,13 +98,15 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
 // IMPORTANT: masks here are *not* shifted by offset.
 
+#define FANSI_CLR_BUFF_SIZE    17
+
 // Color modes
-#define FANSI_CLR_MASK    192    // 1100 0000
+#define FANSI_CLR_MASK    224    // 1110 0000
 #define FANSI_CLR_OFF       0
-#define FANSI_CLR_16       64    // 0100 0000
-#define FANSI_CLR_256     128    // 1000 0000
-#define FANSI_CLR_TRU     192    // 1100 0000
-#define FANSI_CLR_MASK_16  63    // 0011 1111
+#define FANSI_CLR_8        32    // 0010 0000
+#define FANSI_CLR_BRIGHT   64    // 0100 0000
+#define FANSI_CLR_256      96    // 0110 0000
+#define FANSI_CLR_TRU     128    // 1000 0000
 
 // For start/stop rounding
 #define FANSI_RND_START     1

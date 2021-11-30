@@ -524,25 +524,25 @@ void FANSI_W_sgr_close(
   struct FANSI_buff * buff, struct FANSI_sgr sgr, int normalize, R_xlen_t i
 ) {
   const char * err_msg = "Generating closing SGR";
-
-  if(FANSI_sgr_active(sgr)) {
+  if(FANSI_sgr_active(state->fmt.sgr)) {
     if(normalize) {
       // We're deliberate in only closing things we know how to close in
       // both the state and in the ouptut string, that way we can check
       // state at the end to make sure we did actually close everything.
 
-      if(sgr.font) {
-        sgr.font = 0;
+      if(sgr.style & FANSI_FONT_MASK) {
+        sgr.style &= ~FANSI_FONT_MASK;
         FANSI_W_COPY(buff, "\033[10m");
       }
-      unsigned int s_boldfaint = (1U << 1U | 1U << 2U);
-      unsigned int s_frakital = (1U << 3U | 1U << 10U);
-      unsigned int s_underline = (1U << 4U | 1U << 11U);
-      unsigned int s_blink = (1U << 5U | 1U << 6U);
-      unsigned int s_propspc = 1U << 12U;
-      unsigned int s_inverse = 1U << 7U;
-      unsigned int s_conceal = 1U << 8U;
-      unsigned int s_strikethrough = 1U << 9U;
+      // blur == faint
+      unsigned int s_boldfaint = (1U << FANSI_STL_BOLD | 1U << FANSI_STL_BLUR);
+      unsigned int s_frakital = (1U << FANSI_STL_ITALIC | 1U << FANSI_STL_FRAKTUR);
+      unsigned int s_underline = (1U << FANSI_STL_UNDER | 1U << FANSI_STL_UNDER2);
+      unsigned int s_blink = (1U << FANSI_STL_BLINK1 | 1U << FANSI_STL_BLINK2);
+      unsigned int s_propspc = 1U << FANSI_STL_PROPSPC;
+      unsigned int s_inverse = 1U << FANSI_STL_INVERT;
+      unsigned int s_conceal = 1U << FANSI_STL_CONCEAL;
+      unsigned int s_strikethrough = 1U << FANSI_STL_CROSSOUT;
 
       if(sgr.style & s_boldfaint) {
         sgr.style &= ~s_boldfaint;
@@ -575,11 +575,11 @@ void FANSI_W_sgr_close(
       }
       // Colors
       if(sgr.color >= 0) {
-        sgr.color = -1;
+        sgr.color.x = 0;
         FANSI_W_COPY(buff, "\033[39m");
       }
       if(sgr.bg_color >= 0) {
-        sgr.bg_color = -1;
+        sgr.bgcol.x = 0;
         FANSI_W_COPY(buff, "\033[49m");
       }
       // Prop spacing
@@ -588,16 +588,20 @@ void FANSI_W_sgr_close(
         FANSI_W_COPY(buff, "\033[50m");
       }
       // Border and ideogram
-      if(sgr.border & (1U << 1U | 1U << 2U)) {
-        sgr.border &= ~(1U << 1U | 1U << 2U);
+
+      unsigned int b_frmedencirc =
+        (1U << FANSI_BRD_FRAMED | 1U << FANSI_BRD_ENCIRC);
+
+      if(sgr.style & b_frmedencirc) {
+        sgr.border &= ~b_frmedencirc;
         FANSI_W_COPY(buff, "\033[54m");
       }
-      if(sgr.border & (1U << 3U)) {
-        sgr.border &= ~(1U << 3U);
+      if(sgr.style & (1U << FANSI_BRD_OVERLN)) {
+        sgr.style &= ~(1U << FANSI_BRD_OVERLN);
         FANSI_W_COPY(buff, "\033[55m");
       }
       if(sgr.ideogram > 0U) {
-        for(unsigned int k = 0; k < 5; ++k) sgr.ideogram &= ~(1U << k);
+        sgr.style &= ~(FANSI_IDG_MASK);
         FANSI_W_COPY(buff, "\033[65m");
       }
 
@@ -607,9 +611,9 @@ void FANSI_W_sgr_close(
       if(FANSI_sgr_active(sgr))
         // nocov start
         error(
-          "Internal Error: %s (clr: %d bg: %d st: %u bd: %u id %u).",
+          "Internal Error: %s (clr: %d bg: %d st: %u).",
           "did not successfully close all styles",
-          sgr.color, sgr.bg_color, sgr.style, sgr.border, sgr.ideogram
+          sgr.color.x, sgr.bg_color.x, sgr.style
         );
         // nocov end
     } else {
@@ -617,7 +621,7 @@ void FANSI_W_sgr_close(
       FANSI_W_COPY(buff, "\033[0m");
     }
   }
-}
+
 /*
  * End Active URL
  */
@@ -659,7 +663,7 @@ static char * make_token(char * buff, const char * val, int normalize) {
  * largest: "\033[48;2;255;255;255m", 19 chars + NULL
  */
 static char * color_token(
-  char * buff, int color, int * color_extra, int mode, int normalize
+  char * buff, struct FANSI_color color, int mode, int normalize
 ) {
   if(mode != 3 && mode != 4)
     error("Internal Error: color mode must be 3 or 4");  // nocov
@@ -670,40 +674,42 @@ static char * color_token(
     *(buff_track++) = '\033';
     *(buff_track++) = '[';
   }
-  if(color >= 0 && color < 10) {  // should this be < 9?
+  unsigned int clrval = color.x & ~FANSI_CLR_MASK;
+
+  if(color.x & FANSI_CLR_MASK == FANSI_CLR_BRIGHT) {
+    // Bright colors
+    if(mode == 3) {
+      *(buff_track++) = '9';
+    } else {
+      *(buff_track++) = '1';
+      *(buff_track++) = '0';
+    }
+    *(buff_track++) = '0' + clrval;
+  } else {
+    // Other colors
     *(buff_track++) = '0' + mode;
-    *(buff_track++) = '0' + color;
-    if(color == 8) {
+    *(buff_track++) = '0' + clrval;
+    if(color.x & (FANSI_CLR_256 | FANSI_CLR_TRU)) {
       *(buff_track++) = ';';
       int write_chrs = 0;
-      if(color_extra[0] == 2) {
-        write_chrs = sprintf(
-          buff_track, "2;%d;%d;%d",
-          color_extra[1], color_extra[2], color_extra[3]
-        );
-      } else if(color_extra[0] == 5) {
-        write_chrs = sprintf(buff_track, "5;%d", color_extra[1]);
-      } else error("Internal Error: unexpected color code.");  // nocov
+      if(color.x & FANSI_CLR_TRU) {
+        write_chrs =
+          sprintf(buff_track, "2;%d;%d;%d", color.a, color.b, color.c);
+      } else  {
+        write_chrs = sprintf(buff_track, "5;%d", color.a);
+      }
       if(write_chrs < 0)
         error("Internal Error: failed writing color code.");   // nocov
       buff_track += write_chrs;
+    } else if (!color.x & FANSI_CLR_8) {
+      error("Internal Error: unexpected color mode.");  // nocov
     }
-  } else if(color >= 100 && color <= 107) {
-    // bright colors, we don't actually need to worry about bg vs fg since the
-    // actual color values are different
-    *(buff_track++) = '1';
-    *(buff_track++) = '0';
-    *(buff_track++) = '0' + color - 100;
-  } else if(color >= 90 && color <= 97) {
-    *(buff_track++) = '9';
-    *(buff_track++) = '0' + color - 90;
-  } else {
-    error("Internal Error: unexpected color code.");  // nocov
   }
   if(normalize) *(buff_track++) = 'm';
   else *(buff_track++) = ';';
   *buff_track = 0;
-  if(buff_track - buff > 19)  // too late if this happened...
+  // Check for overflow, even if too late.
+  if(buff_track - buff >= (FANSI_CLR_BUFF_SIZE - 1))
     error("Internal Error: exceeded color buffer.");  // nocov
   return buff;
 }
@@ -740,58 +746,70 @@ void FANSI_W_sgr(
     if(!normalize && enclose) FANSI_W_COPY(buff, "\033[");
     // styles
     char tokval[2] = {0};
-    for(unsigned int i = 1; i < 10; i++) {
-      if((1U << i) & sgr.style) {
-        *tokval = '0' + (char) i;
-        FANSI_W_COPY(buff, make_token(tmp, tokval, normalize));
-    } }
-    // styles outside 0-9
+    if(sgr.style & (1U << FANSI_STL_BOLD))
+      FANSI_W_COPY(buff, make_token("1", tokval, normalize));
+    if(sgr.style & (1U << FANSI_STL_BLUR))
+      FANSI_W_COPY(buff, make_token("2", tokval, normalize));
+    if(sgr.style & (1U << FANSI_STL_ITALIC))
+      FANSI_W_COPY(buff, make_token("3", tokval, normalize));
+    if(sgr.style & (1U << FANSI_STL_UNDER))
+      FANSI_W_COPY(buff, make_token("4", tokval, normalize));
+    if(sgr.style & (1U << FANSI_STL_BLINK1))
+      FANSI_W_COPY(buff, make_token("5", tokval, normalize));
+    if(sgr.style & (1U << FANSI_STL_BLINK2))
+      FANSI_W_COPY(buff, make_token("6", tokval, normalize));
+    if(sgr.style & (1U << FANSI_STL_INVERT))
+      FANSI_W_COPY(buff, make_token("7", tokval, normalize));
+    if(sgr.style & (1U << FANSI_STL_CONCEAL))
+      FANSI_W_COPY(buff, make_token("8", tokval, normalize));
+    if(sgr.style & (1U << FANSI_STL_CROSSOUT))
+      FANSI_W_COPY(buff, make_token("9", tokval, normalize));
+    if(sgr.style & (1U << FANSI_STL_FRAKTUR))
+      FANSI_W_COPY(buff, make_token("20", tokval, normalize));
+    if(sgr.style & (1U << FANSI_STL_UNDER2))
+      FANSI_W_COPY(buff, make_token("21", tokval, normalize));
+    if(sgr.style & (1U << FANSI_STL_PROPSPC))
+      FANSI_W_COPY(buff, make_token("26", tokval, normalize));
 
-    if(sgr.style & (1 << 10)) {
-      // fraktur
-      FANSI_W_COPY(buff, make_token(tmp, "20", normalize));
-    }
-    if(sgr.style & (1 << 11)) {
-      // double underline
-      FANSI_W_COPY(buff, make_token(tmp, "21", normalize));
-    }
-    if(sgr.style & (1 << 12)) {
-      // prop spacing
-      FANSI_W_COPY(buff, make_token(tmp, "26", normalize));
-    }
     // colors
-    if(sgr.color > -1) {
-      char tokval[17] = {0};  // largest: "38;2;255;255;255", 16 chars + NULL
+    if(sgr.color.x) {
+      // largest: "38;2;255;255;255", 16 chars + NULL
+      char tokval[FANSI_CLR_BUFF_SIZE] = {0};
       FANSI_W_COPY(
         buff,
-        color_token(tokval, sgr.color, sgr.color_extra, 3, normalize)
+        color_token(tokval, sgr.color, 3, normalize)
       );
     }
-    if(sgr.bg_color > -1) {
-      char tokval[17] = {0};
+    if(sgr.bg_color.x) {
+      char tokval[FANSI_CLR_BUFF_SIZE] = {0};
       FANSI_W_COPY(
         buff,
-        color_token(tokval, sgr.bg_color, sgr.bg_color_extra, 4, normalize)
+        color_token(tokval, sgr.bgcolor, 4, normalize)
       );
     }
     // Borders
-    if(sgr.border) {
-      char tokval[3] = {'5', '0'};
-      for(int i = 1; i < 4; ++i) {
-        if((1 << i) & sgr.border) {
-          tokval[1] = '0' + i;
-          FANSI_W_COPY(buff, make_token(tmp, tokval, normalize));
-    } } }
+    if(sgr.style & (1U << FANSI_BRD_FRAME))
+      FANSI_W_COPY(buff, make_token("51", tokval, normalize));
+    if(sgr.style & (1U << FANSI_BRD_ENCIRC))
+      FANSI_W_COPY(buff, make_token("52", tokval, normalize));
+    if(sgr.style & (1U << FANSI_BRD_ENCIRC))
+      FANSI_W_COPY(buff, make_token("53", tokval, normalize));
+
     // Ideogram
-    if(sgr.ideogram) {
-      char tokval[3] = {'6', '0'};
-      for(int i = 0; i < 5; ++i){
-        if((1 << i) & sgr.ideogram) {
-          tokval[1] = '0' + i;
-          FANSI_W_COPY(buff, make_token(tmp, tokval, normalize));
-    } } }
+    if(sgr.style & (1U << FANSI_IDG_UNDERL))
+      FANSI_W_COPY(buff, make_token("60", tokval, normalize));
+    if(sgr.style & (1U << FANSI_IDG_UNDERL2))
+      FANSI_W_COPY(buff, make_token("61", tokval, normalize));
+    if(sgr.style & (1U << FANSI_IDG_OVERL))
+      FANSI_W_COPY(buff, make_token("62", tokval, normalize));
+    if(sgr.style & (1U << FANSI_IDG_OVERL2))
+      FANSI_W_COPY(buff, make_token("63", tokval, normalize));
+    if(sgr.style & (1U << FANSI_IDG_STRESS))
+      FANSI_W_COPY(buff, make_token("64", tokval, normalize));
+    }
     // font
-    if(sgr.font) {
+    unsigned int font = get_rng(sgr.style, FANSI_FONT_START, FANSI_FONT_MASK);
+    if(font) {
       char tokval[3] = {'1', '0'};
       tokval[1] = '0' + (sgr.font % 10);
       FANSI_W_COPY(buff, make_token(tmp, tokval, normalize));

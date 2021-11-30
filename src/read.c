@@ -577,7 +577,6 @@ void read_esc(struct FANSI_state * state) {
     );
     // nocov end
 
-  unsigned int err_code = 0;           // track worst error code
   unsigned int esc_types = 0;          // 1 == CSI/OSC, 2 == SGR/URL
 
   // Consume all contiguous ESC sequences, subject to some conditions (see while
@@ -586,7 +585,9 @@ void read_esc(struct FANSI_state * state) {
   // We only interpet sequences if they are active per .ctl, but we need to read
   // them in some cases to know what type they are to decide.
 
+  state->status = set_err(state->status, 0);
   state->status = set_one(state->status, FANSI_STAT_CTL, 0);
+
   do {
     struct FANSI_state state_prev = *state;
     // Is the current escape recognized by the `ctl` parameter?  It doesn't
@@ -612,8 +613,6 @@ void read_esc(struct FANSI_state * state) {
       do {
         tok_val = parse_token(state);
 
-        // Note we use `state->err_code` instead of `tok_res.err_code` as
-        // parse_colors internally calls parse_token
 
         if(!get_err(state->status)) {
           // We have a reasonable CSI value, now we need to check whether it
@@ -627,16 +626,23 @@ void read_esc(struct FANSI_state * state) {
           else if (tok_val == 39) state->format.sgr.color.x = 0;
           else if (tok_val == 49) state->format.sgr.bgcol.x = 0;
           else if (tok_val == 38 || tok_val < 48)
+            // parse_colors internally calls parse_token
             parse_colors(state, foreground ? 3 : 4);
           else if (
             tok_val >=  30 && tok_val <  48 ||
+          ) {
+            int fg = tok_val < 40;
+            unsigned int col_code = tok_val - (fg ? 30 : 40);
+            unsigned int col_enc = FANSI_CLR_8 | col_code;
+            if(fg) state->format.sgr.color.x = col_enc;
+            else   state->format.sgr.bgcol.x = col_enc;
+          } else if (
             tok_val >=  90 && tok_val <  97 ||
             tok_val >= 100 && tok_val < 107
           ) {
-            int fg = tok_val < 40 || (tok_val > 50 && tok_val < 100)
-            if(tok_val >= 90) tok_val -= 62;
-            unsigned int col_code = tok_val - (fg ? 30 : 40);
-            unsigned int col_enc = FANSI_CLR_16 | col_code;
+            int fg = tok_val < 100
+            unsigned int col_code = tok_val - (fg ? 90 : 100);
+            unsigned int col_enc = FANSI_CLR_BRIGHT | col_code;
             if(fg) state->format.sgr.color.x = col_enc;
             else   state->format.sgr.bgcol.x = col_enc;
           // - Styles On -------------------------------------------------------
@@ -814,35 +820,7 @@ void read_esc(struct FANSI_state * state) {
   // CAREFUL adding changing values to `state` after here.  State could
   // be the unwound state `state_prev`.
 
-  if(err_code) {
-    // All errors are zero width; there should not be any errors if
-    // !esc_recognized.
-    // CARFUL: we rely on specific meaning of codes elsewhere, i.e. 5 && 7 are
-    // genuine encoding errors, whereas the others are more warnings.  If we add
-    // more error levels, we'll need to clean this up and e.g. have different
-    // types of errors.
-    state->err_code = err_code;  // b/c we want the worst err code
-    if(err_code == 3) {
-      state->err_msg =
-        "a CSI SGR sequence with color codes not supported by terminal";
-    } else if(err_code < 4) {
-      state->err_msg =
-        "a CSI SGR sequence with unknown substrings or a OSC URL sequence with unsupported parameters";
-    } else if (err_code == 4) {
-      state->err_msg = "a non-SGR CSI or a non-URL OSC sequence";
-    } else if (err_code == 5) {
-      state->err_msg = "a malformed CSI or OSC sequence";
-    } else if (err_code == 6) {
-      state->err_msg = "a non-CSI/OSC escape sequence";
-    } else if (err_code == 7) {
-      state->err_msg = "a malformed escape sequence";
-    } else {
-      // nocov start
-      error("Internal Error: unknown ESC parse error; contact maintainer.");
-      // nocov end
-    }
-  } else {
-    state->last_special = 1;
+  if(!get_err(state->status) state->last_special = 1;
     state->err_msg = "";
   }
 }
