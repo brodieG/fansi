@@ -239,10 +239,16 @@ char * FANSI_state_as_chr(
 int FANSI_sgr_comp_color(
   struct FANSI_sgr target, struct FANSI_sgr current
 ) {
+  unsigned char tclr = target.color.x;
+  unsigned char cclr = current.color.x;
+  int c256 = tclr & (FANSI_CLR_256 | FANSI_CLR_TRU);
+  int cTRU = tclr & FANSI_CLR_TRU;
   return
-    target.color.x != current.color.x  ||
-    // No padding bits in unsigned char, so memcmp okay
-    memcmp(target.bgcol.extra, current.bgcol.extra)
+    tclr != cclr  ||
+    // Can't use memcmp because we don't necessarly cleanup extra
+    (c256 && target.extra.a != current.extra.a) ||
+    (cTRU && target.extra.b != current.extra.b) ||
+    (cTRU && target.extra.c != current.extra.c);
 }
 static int FANSI_sgr_comp_basic(
   struct FANSI_sgr target, struct FANSI_sgr current
