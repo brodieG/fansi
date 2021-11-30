@@ -625,7 +625,13 @@ void FANSI_W_url_close(
   struct FANSI_buff * buff, struct FANSI_url url, R_xlen_t i
 ) {
   const char * err_msg = "Generating URL end";
-  if(FANSI_url_active(url)) FANSI_W_COPY(buff, "\033]8;;\033\\");
+  if(FANSI_url_active(state->fmt.url)) FANSI_W_COPY(buff, "\033]8;;\033\\");
+}
+void FANSI_W_close(
+  struct FANSI_buff * buff, struct FANSI_format fmt, int normalize, R_xlen_t i
+) {
+  FANSI_W_sgr_close(buff, state.fmt.sgr, normalize, i);
+  FANSI_W_url_close(buff, state.fmt.url, i);
 }
 
 /*

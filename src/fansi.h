@@ -101,6 +101,9 @@ void FANSI_W_sgr_close(
 void FANSI_W_url_close(
   struct FANSI_buff * buff, struct FANSI_url url, R_xlen_t i
 );
+void FANSI_W_close(
+  struct FANSI_buff * buff, struct FANSI_format fmt, int normalize, R_xlen_t i
+);
 int FANSI_W_copy(
   struct FANSI_buff * buff, const char * tmp, R_xlen_t i, const char * err_msg
 );

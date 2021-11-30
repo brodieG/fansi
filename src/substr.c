@@ -240,8 +240,7 @@ static SEXP substr_one(
         buff, state_start, norm_i, stop, i, err_msg, "x"
       );
       // And turn off CSI styles if needed
-      if(term_i) FANSI_W_sgr_close(buff, state_stop.sgr, norm_i, i);
-      if(term_i) FANSI_W_url_close(buff, state_stop.url, i);
+      if(term_i) FANSI_W_close(buff, state_stop.fmt, norm_i, i);
     }
     cetype_t chr_type = CE_NATIVE;
     if(state_stop.utf8 > state_start.pos_byte) chr_type = CE_UTF8;
@@ -458,8 +457,7 @@ static SEXP substr_replace(
         // Lead
         if(write_ld) {
           FANSI_W_MCOPY(buff, st_x0.string, st_x0.pos_byte);
-          if(term_i) FANSI_W_sgr_close(buff, st_x0.sgr, norm_i, i);
-          if(term_i) FANSI_W_url_close(buff, st_x0.url, i);
+          if(term_i) FANSI_W_close(buff, st_x0.fmt, norm_i, i);
         }
         // Replacement
         if(write_md) {
@@ -467,8 +465,7 @@ static SEXP substr_replace(
           FANSI_W_normalize_or_copy(
             buff, st_v0, norm_i, st_v1.pos_byte, i, err_msg, "value"
           );
-          if(term_i) FANSI_W_sgr_close(buff, st_v1.sgr, norm_i, i);
-          if(term_i) FANSI_W_url_close(buff, st_v1.url, i);
+          if(term_i) FANSI_W_close(buff, st_v1.fmt, norm_i, i);
         }
         // Trailing string
         if(write_tr) {

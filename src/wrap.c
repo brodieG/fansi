@@ -195,8 +195,7 @@ static SEXP writeline(
     FANSI_W_FILL(buff, *pad_chr, to_pad);
 
     // And turn off CSI styles if needed
-    if(terminate) FANSI_W_sgr_close(buff, state_bound.sgr, normalize, i);
-    if(terminate) FANSI_W_url_close(buff, state_bound.url, i);
+    if(terminate) FANSI_W_close(buff, state_bound.fmt, normalize, i);
   }
   // Now create the charsxp and append to the list, start by determining
   // what encoding to use.

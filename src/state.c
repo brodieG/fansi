@@ -403,14 +403,12 @@ SEXP FANSI_state_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm) {
 
     while(*(state.string + state.pos_byte)) FANSI_read_next(&state, i, arg);
     FANSI_reset_buff(&buff);
-    FANSI_W_sgr_close(&buff, state.sgr, normalize, i);
-    FANSI_W_url_close(&buff, state.url, i);
+    FANSI_W_close(&buff, state.fmt, normalize, i);
 
     if(buff.len) {
       if(res == x) REPROTECT(res = duplicate(x), ipx);
       FANSI_size_buff(&buff);
-      FANSI_W_sgr_close(&buff, state.sgr, normalize, i);
-      FANSI_W_url_close(&buff, state.url, i);
+      FANSI_W_close(&buff, state.fmt, normalize, i);
 
       cetype_t chr_type = getCharCE(x_chr);
       SEXP reschr = PROTECT(FANSI_mkChar(buff, chr_type, i));
