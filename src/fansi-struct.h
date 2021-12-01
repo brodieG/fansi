@@ -97,7 +97,7 @@ struct FANSI_color {
   // Color channels, or at index 0 256 color value
   // **WARNING**: these are not necessarily reset, must check `x` first.
   unsigned char extra[3];
-}
+};
 /*
  * Encode Active SGR
  */
@@ -135,7 +135,7 @@ struct FANSI_url {
 struct FANSI_format {
   struct FANSI_url url;
   struct FANSI_sgr sgr;
-}
+};
 /*
  * Position markers (all zero index).
  *
@@ -159,7 +159,7 @@ struct FANSI_position {
   int a;   // pos_ansi
   int r;   // pos_raw
   int w;   // pos_width
-}
+};
 /*
  * Captures the SGR and OSC URL state at any particular position in a string.
  *

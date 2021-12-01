@@ -102,7 +102,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     int off_init = FANSI_seek_ctl(chr);
     if(!*(chr + off_init)) continue;
 
-    state.pos_byte = off_init;
+    state.pos.x = off_init;
     struct FANSI_ctl_pos pos_prev = {0, 0, 0};
 
     while(1) {
@@ -132,8 +132,8 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
         int w_len = pos.offset - (pos_prev.offset + pos_prev.len);
         memcpy(res_track, chr_track, w_len);
         res_track += w_len;
-        state.pos_byte = pos.offset + pos.len;
-        chr_track = state.string + state.pos_byte;
+        state.pos.x = pos.offset + pos.len;
+        chr_track = state.string + state.pos.x;
         pos_prev = pos;
       } else {
         break;
@@ -155,7 +155,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
             "contact maintainer."
           );
           // nocov end
-        } else if(chr_end > state.string + state.pos_byte) {
+        } else if(chr_end > state.string + state.pos.x) {
           memcpy(res_track, chr_track, chr_end - chr_track);
           res_track += chr_end - chr_track;
       } }
@@ -273,13 +273,13 @@ SEXP FANSI_process(
       int special_len = 0;
 
       if(special) { // Check that it is really special.
-        int pos_prev = state.pos_byte = j;
-        int pos_raw = state.pos_raw;
+        int pos_prev = state.pos.x = j;
+        int pos_rawr = state.pos.r;
         FANSI_read_next(&state, i, arg);
 
-        // Sequence is special if pos_raw does not advance
-        if(state.pos_raw == pos_raw) {
-          special_len = state.pos_byte - pos_prev;
+        // Sequence is special if pos.r does not advance
+        if(state.pos.r == pos_raw) {
+          special_len = state.pos.x - pos_prev;
         } else {
           special = special_len = 0;
         }
@@ -349,9 +349,9 @@ SEXP FANSI_process(
         int copy_end = j_last + copy_bytes;
         for(int k = copy_end; k < copy_end + to_strip0; ++k) {
           if(is_special(string[k])) {
-            state.pos_byte = k;
+            state.pos.x = k;
             FANSI_read_next(&state, i, arg);
-            int bytes = state.pos_byte - k;
+            int bytes = state.pos.x - k;
             FANSI_W_MCOPY(buff, string + k, bytes);
             k += bytes - 1;
           }

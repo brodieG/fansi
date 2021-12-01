@@ -270,8 +270,8 @@ static SEXP strwrap(
   // Need to keep track of where word boundaries start and end due to
   // possibility for multiple elements between words
   if(carry) {
-    state.sgr = state_carry->sgr;
-    state.url = state_carry->url;
+    state.fmt.sgr = state_carry->fmt.sgr;
+    state.fmt.url = state_carry->fmt.url;
   }
   struct FANSI_state state_start, state_bound, state_prev, state_tmp,
     state_last_bound;
@@ -487,8 +487,8 @@ static SEXP strwrap(
   }
 
   UNPROTECT(prt);
-  state_carry->sgr = state.sgr;
-  state_carry->url = state.url;
+  state_carry->fmt.sgr = state.fmt.sgr;
+  state_carry->fmt.url = state.fmt.url;
   return res;
 }
 

@@ -20,7 +20,7 @@
 void state_at_end(
   struct FANSI_state *state, R_xlen_t i, const char * arg
 ) {
-  while(state->string[state->pos_byte]) FANSI_read_next(state, i, arg);
+  while(state->string[state->pos.x]) FANSI_read_next(state, i, arg);
   FANSI_reset_pos(state);
 }
 
@@ -72,7 +72,7 @@ SEXP FANSI_state_at_end_ext(
       );
     } else FANSI_state_reinit(&state, x, i);
 
-    if(do_carry) state.sgr = state_prev.sgr;
+    if(do_carry) state.fmt.sgr = state_prev.fmt.sgr;
 
     state_at_end(&state, i, arg_chr);
     FANSI_state_as_chr(&buff, state, normalize, i);
@@ -131,8 +131,8 @@ int FANSI_W_bridge(
   // rely on an e.g. color change to change a pre-existing color, whereas in
   // non-normalize we close explicitly and need to re-open.
   struct FANSI_sgr to_close, to_open;
-  to_close = FANSI_sgr_setdiff(end.sgr, restart.sgr, !normalize);
-  to_open = FANSI_sgr_setdiff(restart.sgr, end.sgr, !normalize);
+  to_close = FANSI_sgr_setdiff(end.fmt.sgr, restart.fmt.sgr, !normalize);
+  to_open = FANSI_sgr_setdiff(restart.fmt.sgr, end.fmt.sgr, !normalize);
 
   if(!normalize) {
     // We need to combine all the style tokens, which means we need to write the
@@ -141,7 +141,7 @@ int FANSI_W_bridge(
     // re-opened after an all-close.
     struct FANSI_sgr renew;
     // If we close everything, we need to re-open the stuff that was active
-    renew = FANSI_sgr_intersect(end.sgr, restart.sgr);
+    renew = FANSI_sgr_intersect(end.fmt.sgr, restart.fmt.sgr);
     /*
     Rprintf("to_open %d to_close %d renew %d\n",
       FANSI_sgr_active(to_open),
@@ -163,19 +163,19 @@ int FANSI_W_bridge(
       if(buff->buff) *((buff->buff) - 1) = 'm';
     } else {
       FANSI_W_sgr(
-        buff, FANSI_sgr_setdiff(restart.sgr, end.sgr, 0), normalize, 1, i
-      );
-    }
+        buff, FANSI_sgr_setdiff(restart.fmt.sgr, end.fmt.sgr, 0),
+        normalize, 1, i
+    );}
   } else {
     FANSI_W_sgr_close(buff, to_close, normalize, i);
     FANSI_W_sgr(buff, to_open, normalize, 1, i);
   }
   // Any changed URLs will need to be written (empty URL acts as a closer
   // so simpler than with SGR).
-  if(FANSI_url_comp(end.url, restart.url)) {
-    if(!FANSI_url_active(restart.url))
-      FANSI_W_url_close(buff, end.url, i);
-    FANSI_W_url(buff, restart.url, normalize, i);
+  if(FANSI_url_comp(end.fmt.url, restart.fmt.url)) {
+    if(!FANSI_url_active(restart.fmt.url))
+      FANSI_W_url_close(buff, end.fmt.url, i);
+    FANSI_W_url(buff, restart.fmt.url, normalize, i);
   }
   return buff->len;
 }

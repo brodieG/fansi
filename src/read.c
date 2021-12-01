@@ -462,17 +462,17 @@ void FANSI_url parse_url(struct FANSI_state state)) {
       // If semicolon is found, and string is not invalid, it's a URL
       if(*end && semicolon) {
         const char * url_start = x0 + semicolon + 1;
-        state->format.url.params =
+        state->fmt.url.params =
           (struct FANSI_string) {x, (int) (url_start - x) - 1};
         state->foramt.url.url =
           (struct FANSI_string) {url_start, end - url_start};
-        state->format.url.id = get_url_param(url.params, "id=");
+        state->fmt.url.id = get_url_param(url.params, "id=");
       }
     } else state->status <- set_err(state->status, 5);
-    state->format.url.osc.len = end - x0 +
+    state->fmt.url.osc.len = end - x0 +
       (*end != 0) +           // consume terminator if there is one
       (*end == 0x1b);         // consume extra byte for ST
-    state->pos.x += state->format.url.osc.len;
+    state->pos.x += state->fmt.url.osc.len;
   } else error("Internal Error: non-URL OSC fed to URL parser.\n"); // nocov
 }
 /*
@@ -516,11 +516,11 @@ static struct FANSI_osc parse_osc(const char * x) {
  *
  * See GENERAL NOTES atop.
  */
-void read_ascii(struct FANSI_state * state) {
+static void read_ascii(struct FANSI_state * state) {
   ++state->pos.x;
-  ++state->pos_ansi;
-  ++state->pos_raw;
-  ++state->pos_width;
+  ++state->pos.a;
+  ++state->pos.r;
+  ++state->pos.w;
 }
 /*
  * Parses ESC sequences
@@ -633,8 +633,8 @@ void read_esc(struct FANSI_state * state) {
 
           if(!tok_val) state->sgr = reset_sgr(state->sgr);
           // - Colors ----------------------------------------------------------
-          else if (tok_val == 39) state->format.sgr.color.x = 0;
-          else if (tok_val == 49) state->format.sgr.bgcol.x = 0;
+          else if (tok_val == 39) state->fmt.sgr.color.x = 0;
+          else if (tok_val == 49) state->fmt.sgr.bgcol.x = 0;
           else if (tok_val == 38 || tok_val < 48)
             // parse_colors internally calls parse_token
             parse_colors(state, foreground ? 3 : 4);
@@ -644,8 +644,8 @@ void read_esc(struct FANSI_state * state) {
             int fg = tok_val < 40;
             unsigned int col_code = tok_val - (fg ? 30 : 40);
             unsigned int col_enc = FANSI_CLR_8 | col_code;
-            if(fg) state->format.sgr.color.x = col_enc;
-            else   state->format.sgr.bgcol.x = col_enc;
+            if(fg) state->fmt.sgr.color.x = col_enc;
+            else   state->fmt.sgr.bgcol.x = col_enc;
           } else if (
             tok_val >=  90 && tok_val <  97 ||
             tok_val >= 100 && tok_val < 107
@@ -653,8 +653,8 @@ void read_esc(struct FANSI_state * state) {
             int fg = tok_val < 100
             unsigned int col_code = tok_val - (fg ? 90 : 100);
             unsigned int col_enc = FANSI_CLR_BRIGHT | col_code;
-            if(fg) state->format.sgr.color.x = col_enc;
-            else   state->format.sgr.bgcol.x = col_enc;
+            if(fg) state->fmt.sgr.color.x = col_enc;
+            else   state->fmt.sgr.bgcol.x = col_enc;
           // - Styles On -------------------------------------------------------
           } else if (tok_val < 10) {
             // 1-9 are the standard styles (bold/italic)
