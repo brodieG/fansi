@@ -59,21 +59,12 @@ static const struct FANSI_css css_style[9] = {
 };
 // Generate mask for html styles in first pass
 
-static unsigned int style_html_mask() {
-  if(!css_html_mask) {
-    int style_n = sizeof(css_html_style) / sizeof(unsigned int);
-    for(int i = 0; i < style_n; ++i)
-      css_html_mask |= 1U << css_html_style[i];
-  }
-  return css_html_mask;
-}
 static int sgr_has_color(struct FANSI_sgr sgr) {
   return sgr.color >= 0 || sgr.bg_color >= 0;
 }
 static int sgr_has_style_html(struct FANSI_sgr sgr) {
   // generate mask first time around.
-  return (sgr.style & style_html_mask()) ||
-    sgr.color >= 0 || sgr.bg_color >= 0;
+  return (sgr.style & FANSI_STL_MASK1) || sgr.color.x || sgr.bgcol.x
 }
 static int sgr_comp_html(
   struct FANSI_sgr target, struct FANSI_sgr current
@@ -83,14 +74,14 @@ static int sgr_comp_html(
     FANSI_sgr_comp_color(target, current) ||
     // HTML rendered styles are different
     (
-      (target.style & style_html_mask()) !=
-      (current.style & style_html_mask())
+      (target.style & FANSI_STL_MASK1) !=
+      (current.style & FANSI_STL_MASK1)
     ) ||
     // If one has color both have the same color, but we need to check
     // whether they have different invert status
     (
       (sgr_has_color(target)) &&
-      (target.style & (1U << 7)) ^ (current.style & (1U << 7))
+      (target.style & FANSI_STL_INVERT) ^ (current.style & FANSI_STL_INVERT)
     );
 }
 /*
@@ -400,7 +391,7 @@ SEXP FANSI_esc_to_html(
     state.string = string;
     struct FANSI_state state_start = state;
     FANSI_reset_pos(&state_start);
-    state.warned = 0;
+    state.status &= ~FANSI_STAT_WARNED;
     state_prev = state_init;  // but there are no styles in the string yet
 
     int bytes_init = (int) LENGTH(chrsxp);

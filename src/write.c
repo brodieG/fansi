@@ -808,7 +808,8 @@ void FANSI_W_sgr(
       FANSI_W_COPY(buff, make_token("64", tokval, normalize));
     }
     // font
-    unsigned int font = get_rng(sgr.style, FANSI_FONT_START, FANSI_FONT_MASK);
+    unsigned int font =
+      FANSI_GET_RNG(sgr.style, FANSI_FONT_START, FANSI_FONT_MASK);
     if(font) {
       char tokval[3] = {'1', '0'};
       tokval[1] = '0' + (sgr.font % 10);

@@ -29,6 +29,27 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
 #define FANSI_ADD_INT(x, y) FANSI_add_int((x), (y), __FILE__, __LINE__)
 
+// Set or Get range of bits with offset `offset` and range `mask`.
+//
+// We could in theory have a table with all this info, but then would it be
+// slower to look up than providing all the constants in line?  The advantage of
+// the table is we can auto-fill it an be less likely to make mistakes in
+// specifying the constants, and then we have fewer shifts.
+//
+// See fansi-cnst.h, FANSI_SET_*, FANSI_STAT_*.
+//
+// Needed by state.c, read.c, state.c
+//
+// @param offset how many bits to offset into the int (offset + log2(mask) must
+//    be < sizeof(unsigned int)).
+// @param mask a number correspoding to in theory adjacent set of ones starting
+//    at bit zero.
+
+#define FANSI_GET_RNG((x), (offset), (mask)) ((x) >> (offset)) & (mask)
+#define FANSI_SET_RNG((x), (offset), (mask))                              \
+  ((x) & ~((mask) << (offset))) | ((val) << (offset))
+
+
 // - Internal funs -----------------------------------------------------------
 
 SEXP FANSI_process(

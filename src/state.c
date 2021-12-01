@@ -87,20 +87,20 @@ struct FANSI_state FANSI_state_init_full(
   // nocov end
 
   unsigned int settings;
-  settings = set_rng(
+  settings = FANSI_SET_RNG(
     settings, FANSI_SET_TERMCAP, FANSI_TERM_ALL, FANSI_term_cap_as_int(term_cap)
   );
-  settings = set_rng(
+  settings = FANSI_SET_RNG(
     settings, FANSI_SET_WIDTH, FANSI_COUNT_ALL, asInteger(width)
   );
-  settings = set_rng(
+  settings = FANSI_SET_RNG(
     settings, FANSI_SET_WARN, FANSI_WARN_ALL, (unsigned int) warn_int
   );
-  settings = set_rng(
+  settings = FANSI_SET_RNG(
     settings, FANSI_SET_CTL, FANSI_CTL_ALL, FANSI_ctl_as_int(ctl)
   );
-  settings = set_one(settings, FANSI_SET_ALLOWNA, asLogical(allowNA));
-  settings = set_one(settings, FANSI_SET_KEEPNA, asLogical(keepNA));
+  settings |= asLogical(allowNA) ? FANSI_SET_ALLOWNA : 0;
+  settings |= asLogical(keepNA) ? FANSI_SET_KEEPNA : 0;
 
   // All others struct-inited to zero.
   return (struct FANSI_state) {
@@ -191,9 +191,9 @@ void FANSI_reset_width(struct FANSI_state * state) {
  */
 void FANSI_reset_pos(struct FANSI_state * state) {
   state->pos = {0};
-  unsigned int warned = get_one(state->status, FANSI_STAT_WARNED);
+  unsigned int warned = state->status & FANSI_STAT_WARNED;
   state->status = 0U;
-  if(warned) state->status = set_one(0, FANSI_STAT_WARNED);
+  if(warned) state->status |= FANSI_STAT_WARNED;
 }
 /*
  * Reset state without changing index/string
