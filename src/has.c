@@ -31,6 +31,7 @@ SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn) {
   SEXP res = PROTECT(allocVector(LGLSXP, len));
   int * res_int = LOGICAL(res);
   struct FANSI_state state;
+  const char * arg = "x";
 
   for(R_xlen_t i = 0; i < len; ++i) {
     if(!i) state = FANSI_state_init_ctl(x, warn, ctl, i);
@@ -43,7 +44,7 @@ SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn) {
       int off_init = FANSI_seek_ctl(xc);
       if(xc + off_init) {
         state.pos.x = off_init;
-        struct FANSI_ctl_pos pos = FANSI_find_ctl(state, i);
+        struct FANSI_ctl_pos pos = FANSI_find_ctl(state, i, arg);
         res = pos.len > 0;
       }
       res_int[i] = res;

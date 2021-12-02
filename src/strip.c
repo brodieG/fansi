@@ -74,6 +74,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
   }
   // Now strip
   char * chr_buff;
+  const char * arg = "x";
   struct FANSI_state state;
 
   for(i = 0; i < len; ++i) {
@@ -106,7 +107,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     struct FANSI_ctl_pos pos_prev = {0, 0, 0};
 
     while(1) {
-      struct FANSI_ctl_pos pos = FANSI_find_ctl(state, i);
+      struct FANSI_ctl_pos pos = FANSI_find_ctl(state, i, arg);
       if(pos.warn_max && state.settings & FANSI_SET_WARN)
         state.status |= FANSI_STAT_WARNED;
       if(pos.len) {
