@@ -129,14 +129,12 @@ static int utf8_to_cp(const char * chr, int bytes) {
 /*- Helpers -------------------------------------------------------------------\
 \-----------------------------------------------------------------------------*/
 
-static unsigned int get_err(x) {
-  return FANSI_GET_RNG(x, FANSI_STAT_ERR, FANSI_STAT_ERR_ALL);
-}
 // Only sets error if greater than already encoded one
-static unsigned int set_err(x, err) {
-  unsigned int err0 = FANSI_GET_RNG(x, FANSI_STAT_ERR, FANSI_STAT_ERR_ALL);
+static unsigned int set_err(unsigned int x, unsigned int err) {
+  unsigned int err0 = FANSI_GET_ERR(x);
   unsigned int res = x;
-  if(err > err0) res = FANSI_SET_RNG(x, FANSI_STAT_ERR, FANSI_STAT_ERR_ALL, err);
+  if(err > err0)
+    res = FANSI_SET_RNG(x, FANSI_STAT_ERR_START, FANSI_STAT_ERR_ALL, err);
   return res;
 }
 // Can a byte be interpreted as ASCII number?
@@ -156,12 +154,6 @@ static int as_num(const char * string) {
     );
     // nocov end
   return (int) (*string - '0');
-}
-/*
- * Reset all the display attributes, but not the position ones
- */
-static struct FANSI_sgr reset_sgr(struct FANSI_sgr sgr) {
-  return (struct FANSI_sgr) {0};
 }
 /*- Parsers -------------------------------------------------------------------\
 \-----------------------------------------------------------------------------*/
@@ -193,7 +185,7 @@ unsigned int parse_token(struct FANSI_state * state) {
   mult = 1;
   val = 0U;
 
-  const char * string = state->string[state->pos.x];
+  const char * string = state->string + state->pos.x;
 
   // `private` a bit redundant since we don't actually use it differentially to
   // non-normal
@@ -261,8 +253,7 @@ unsigned int parse_token(struct FANSI_state * state) {
   if(*string) ++len;
 
   state->pos.x += len + len_intermediate + len_tail;
-  state->status =
-    FANSI_SET_RNG(state->status, FANSI_STAT_ERR, FANSI_STAT_ERR_ALL, err_code);
+  state->status = set_err(state->status, err_code);
   if(is_sgr) state->status |= FANSI_STAT_SGR;
   if(last) state->status |= FANSI_STAT_CSI;
   return val;
@@ -284,35 +275,31 @@ void parse_colors(
     error("Internal Error: parsing color with invalid mode.");  // nocov
 
   int tok_val = 0;
-  int col = 8;
   int i_max;
   int prev_x = state->pos.x;
 
   // First, figure out if we are in true color or palette mode
+  tok_val = parse_token(state);  // advances state by ref!
 
-  tok_val = parse_token(state);
-
-  if(!state->err_code) {
+  if(!FANSI_GET_ERR(state->status)) {
     if(
-      (tok_val != 2 && tok_val != 5) || state->status & FANSI_STAT_CSI)
+      (tok_val != 2 && tok_val != 5) || state->status & FANSI_STAT_CSI
     ) {
       // weird case, we don't want to advance the position here because
       // `tok_val` needs to be interpreted as potentially a non-color style and
       // the prior 38 or 48 just gets tossed (at least this happens on OSX
       // terminal and iTerm)
-      state->pos.x -= (res.len);
-      state->status =
-        FANSI_SET_RNG(state->status, FANSI_STAT_ERR, FANSI_STAT_ERR_ALL, 1);
+      state->pos.x = prev_x;
+      state->status = set_err(state->status, 1);
     } else if (
       // terminal doesn't have 256 or true color capability
-      (tok_val == 2 && !state->settings & FANSI_TERM_TRUECOLOR)) ||
-      (tok_val == 5 && !state->settings & FANSI_TERM_256))
+      (tok_val == 2 && !(state->settings & FANSI_TERM_TRUECOLOR)) ||
+      (tok_val == 5 && !(state->settings & FANSI_TERM_256))
     ) {
       // right now this is same as when not 2/5 following a 38, but maybe in the
       // future we want different treatment?
-      state->pos.x = prev_x
-      state->status =
-        FANSI_SET_RNG(state->status, FANSI_STAT_ERR, FANSI_STAT_ERR_ALL, 3);
+      state->pos.x = prev_x;
+      state->status = set_err(state->status, 3);
     } else {
       int colors = tok_val;
       if(colors == 2) {
@@ -327,13 +314,13 @@ void parse_colors(
 
       // Parse through the subsequent tokens
       for(int i = 0; i < i_max; ++i) {
-        tok_val = parse_token(&(state->string[state->pos.x]));
-        if(!get_err(state->status)) {
+        tok_val = parse_token(state);  // advances state by ref!
+        if(!FANSI_GET_ERR(state->status)) {
           int early_end =
-            state->status & FANSI_STAT_CSI) && i < (i_max - 1);
+            (state->status & FANSI_STAT_CSI) && i < (i_max - 1);
           if(tok_val < 256 && !early_end) {
             if(mode == 3) state->fmt.sgr.color.extra[i] = tok_val;
-            else)         state->fmt.sgr.bgcol.extra[i] = tok_val;
+            else          state->fmt.sgr.bgcol.extra[i] = tok_val;
           } else {
             // nocov start
             error(
@@ -429,9 +416,9 @@ static struct FANSI_string get_url_param(
  * See also `parse_osc`.
  */
 
-void FANSI_url parse_url(struct FANSI_state state)) {
+void parse_url(struct FANSI_state * state) {
   const char *end, *x0, *x;
-  x = x0 = state->string[state->pos.x]
+  x = x0 = state->string + state->pos.x;
   if(*(x) == '8' && *(x + 1) == ';') {
     end = x = x0 + 2;
     // Look for end of escape tracking position of first semi-colons (subsequent
@@ -447,13 +434,11 @@ void FANSI_url parse_url(struct FANSI_state state)) {
         if (*end == ';' && !semicolon) semicolon = end - x0;
       } else if (!(*end >= 0x08 && *end <= 0x0d)) {
         // Invalid string, probably could break here
-        state->status <- set_err(state->status, 5);
+        state->status = set_err(state->status, 5);
       } else {
         // OK OSC, but non portable URL
-        state->status <- set_err(
-          state->status,
-          get_err(state->status) < 4 ? 4 : get_err(state->status);
-        );
+        unsigned int err_tmp = FANSI_GET_ERR(state->status);
+        state->status = set_err(state->status, err_tmp < 4 ? 4 : err_tmp);
       }
       ++end;
     }
@@ -464,11 +449,11 @@ void FANSI_url parse_url(struct FANSI_state state)) {
         const char * url_start = x0 + semicolon + 1;
         state->fmt.url.params =
           (struct FANSI_string) {x, (int) (url_start - x) - 1};
-        state->foramt.url.url =
+        state->fmt.url.url =
           (struct FANSI_string) {url_start, end - url_start};
-        state->fmt.url.id = get_url_param(url.params, "id=");
+        state->fmt.url.id = get_url_param(state->fmt.url.params, "id=");
       }
-    } else state->status <- set_err(state->status, 5);
+    } else state->status = set_err(state->status, 5);
     state->fmt.url.osc.len = end - x0 +
       (*end != 0) +           // consume terminator if there is one
       (*end == 0x1b);         // consume extra byte for ST
@@ -621,36 +606,33 @@ void read_esc(struct FANSI_state * state) {
       // and advances to the next token
 
       do {
-        tok_val = parse_token(state);
+        tok_val = parse_token(state);  // advances state by ref!
 
-
-        if(!get_err(state->status)) {
+        if(!FANSI_GET_ERR(state->status)) {
           // We have a reasonable CSI value, now we need to check whether it
           // actually corresponds to anything that should modify state
           //
           // Only parse_colors below will modify positions. Otherwise sgr and
           // error codes should be the only things changing.
 
-          if(!tok_val) state->sgr = reset_sgr(state->sgr);
+          if(!tok_val) state->fmt.sgr = (struct FANSI_sgr) {0};
           // - Colors ----------------------------------------------------------
           else if (tok_val == 39) state->fmt.sgr.color.x = 0;
           else if (tok_val == 49) state->fmt.sgr.bgcol.x = 0;
           else if (tok_val == 38 || tok_val < 48)
-            // parse_colors internally calls parse_token
-            parse_colors(state, foreground ? 3 : 4);
-          else if (
-            tok_val >=  30 && tok_val <  48 ||
-          ) {
+            // parse_colors internally calls parse_token (advances state by ref)
+            parse_colors(state, tok_val < 40 ? 3 : 4);
+          else if (tok_val >=  30 && tok_val <  48) {
             int fg = tok_val < 40;
             unsigned int col_code = tok_val - (fg ? 30 : 40);
             unsigned int col_enc = FANSI_CLR_8 | col_code;
             if(fg) state->fmt.sgr.color.x = col_enc;
             else   state->fmt.sgr.bgcol.x = col_enc;
           } else if (
-            tok_val >=  90 && tok_val <  97 ||
-            tok_val >= 100 && tok_val < 107
+            (tok_val >=  90 && tok_val <  97) ||
+            (tok_val >= 100 && tok_val < 107)
           ) {
-            int fg = tok_val < 100
+            int fg = tok_val < 100;
             unsigned int col_code = tok_val - (fg ? 90 : 100);
             unsigned int col_enc = FANSI_CLR_BRIGHT | col_code;
             if(fg) state->fmt.sgr.color.x = col_enc;
@@ -659,107 +641,106 @@ void read_esc(struct FANSI_state * state) {
           } else if (tok_val < 10) {
             // 1-9 are the standard styles (bold/italic)
             // We use a bit mask on to track these
-            state->sgr.style |= 1U << (tok_val - 1U);
+            state->fmt.sgr.style |= 1U << (tok_val - 1U);
           } else if (tok_val < 20) {
             // These are alternative fonts (10 is reset)
-            state->sgr.style &= ~FANSI_FONT_MASK;
-            if(tok_val > 10) state->sgr.style |= tok_val << FANSI_FONT_START;
+            state->fmt.sgr.style &= ~FANSI_FONT_MASK;
+            if(tok_val > 10) state->fmt.sgr.style |= tok_val << FANSI_FONT_START;
           } else if (tok_val == 20) {
             // Fraktur
-            state->sgr.style |= (1U << FANSI_STL_FRAKTUR);
+            state->fmt.sgr.style |= (1U << FANSI_STL_FRAKTUR);
           } else if (tok_val == 21) {
             // Double underline
-            state->sgr.style |= (1U << FANSI_STL_UNDER2);
+            state->fmt.sgr.style |= (1U << FANSI_STL_UNDER2);
           } else if (tok_val == 26) {
             // reserved for proportional spacing as specified in CCITT
             // Recommendation T.61; implicitly we are assuming this is a single
             // substring parameter, unlike say 38;2;..., but really we have no
             // idea what this is.
-            state->sgr.style |= (1U << FANSI_STL_PROPSPC);
+            state->fmt.sgr.style |= (1U << FANSI_STL_PROPSPC);
 
           // - Styles Off ------------------------------------------------------
           } else if (tok_val == 22) {
-            state->sgr.style &= ~(1U << FANSI_STL_BOLD);
-            state->sgr.style &= ~(1U << FANSI_STL_BLUR);
+            state->fmt.sgr.style &= ~(1U << FANSI_STL_BOLD);
+            state->fmt.sgr.style &= ~(1U << FANSI_STL_BLUR);
           } else if (tok_val == 23) {
-            state->sgr.style &= ~(1U << FANSI_STL_ITALIC);
-            state->sgr.style &= ~(1U << FANSI_STL_FRAKTUR);
+            state->fmt.sgr.style &= ~(1U << FANSI_STL_ITALIC);
+            state->fmt.sgr.style &= ~(1U << FANSI_STL_FRAKTUR);
           } else if (tok_val == 24) {
-            state->sgr.style &= ~(1U << FANSI_STL_UNDER);
-            state->sgr.style &= ~(1U << FANSI_STL_UNDER2);
+            state->fmt.sgr.style &= ~(1U << FANSI_STL_UNDER);
+            state->fmt.sgr.style &= ~(1U << FANSI_STL_UNDER2);
           } else if (tok_val == 25) {
-            state->sgr.style &= ~(1U << FANSI_STL_BLINK1);
-            state->sgr.style &= ~(1U << FANSI_STL_BLINK2);
+            state->fmt.sgr.style &= ~(1U << FANSI_STL_BLINK1);
+            state->fmt.sgr.style &= ~(1U << FANSI_STL_BLINK2);
           }
           else if (tok_val == 27)
-            state->sgr.style &= ~(1U << FANSI_STL_INVERT);
+            state->fmt.sgr.style &= ~(1U << FANSI_STL_INVERT);
           else if (tok_val == 28)
-            state->sgr.style &= ~(1U << FANSI_STL_CONCEAL);
+            state->fmt.sgr.style &= ~(1U << FANSI_STL_CONCEAL);
           else if (tok_val == 29)
-            state->sgr.style &= ~(1U << FANSI_STL_CROSSOUT);
-          } else if(tok_val == 50) {
-            state->sgr.style &= ~(1U << FANSI_STL_PROPSPC);
+            state->fmt.sgr.style &= ~(1U << FANSI_STL_CROSSOUT);
+          else if(tok_val == 50)
+            state->fmt.sgr.style &= ~(1U << FANSI_STL_PROPSPC);
 
           // - Borders / Ideograms ---------------------------------------------
-          } else if(tok_val > 50 && tok_val < 60) {
+          else if(tok_val > 50 && tok_val < 60) {
             switch(tok_val) {
-              case 51: state->sgr.style |= (1U << FANSI_BRD_FRAMED); break;
-              case 52: state->sgr.style |= (1U << FANSI_BRD_ENCIRC); break;
-              case 53: state->sgr.style |= (1U << FANSI_BRD_OVERLN); break;
+              case 51: state->fmt.sgr.style |= (1U << FANSI_BRD_FRAMED); break;
+              case 52: state->fmt.sgr.style |= (1U << FANSI_BRD_ENCIRC); break;
+              case 53: state->fmt.sgr.style |= (1U << FANSI_BRD_OVERLN); break;
               case 54:
-                state->sgr.style &= ~(
+                state->fmt.sgr.style &= ~(
                   1U << FANSI_BRD_FRAMED | 1U << FANSI_BRD_ENCIRC
                 );
                 break;
               case 55:
-                state->sgr.style &= ~(1U << FANSI_BRD_OVERLN);
+                state->fmt.sgr.style &= ~(1U << FANSI_BRD_OVERLN);
                 break;
               default:
                 state->status = set_err(state->status, 1U);
             }
           } else if(tok_val >= 60 && tok_val <= 65) {
             switch(tok_val) {
-              case 60: state->sgr.style |= (1U << FANSI_IDG_UNDERL); break;
-              case 61: state->sgr.style |= (1U << FANSI_IDG_UNDERL2); break;
-              case 62: state->sgr.style |= (1U << FANSI_IDG_OVERL); break;
-              case 63: state->sgr.style |= (1U << FANSI_IDG_OVERL2); break;
-              case 64: state->sgr.style |= (1U << FANSI_IDG_STRESS); break;
+              case 60: state->fmt.sgr.style |= (1U << FANSI_IDG_UNDERL); break;
+              case 61: state->fmt.sgr.style |= (1U << FANSI_IDG_UNDERL2); break;
+              case 62: state->fmt.sgr.style |= (1U << FANSI_IDG_OVERL); break;
+              case 63: state->fmt.sgr.style |= (1U << FANSI_IDG_OVERL2); break;
+              case 64: state->fmt.sgr.style |= (1U << FANSI_IDG_STRESS); break;
               default: // ony 65
-                state->sgr.style &= ~FANSI_IDG_MASK;
+                state->fmt.sgr.style &= ~FANSI_IDG_MASK;
             }
           } else {
             state->status = set_err(state->status, 1U); // unknown
           }
         }
-        if(state->status & FANSI_STAT_CSI)) break;
+        if(state->status & FANSI_STAT_CSI) break;
       } while(1);
       // Need to check that sequence actually is SGR, and if not, we need to
       // restore the state (this is done later on checking esc_recognized).
-      if(!state->status & FANSI_STAT_SGR)) {
+      if(!(state->status & FANSI_STAT_SGR)) {
         // CSI
         esc_types |= 1U;
-        if(state->settings & FANSI_CTL_CSI)) {
+        if(state->settings & FANSI_CTL_CSI) {
           state->fmt.sgr = state_prev.fmt.sgr;
           esc_recognized = 1;
           state->status |= FANSI_STAT_CTL;
         }
-      } else if (state->settings & FANSI_CTL_SGR)) {
+      } else if (state->settings & FANSI_CTL_SGR) {
         // SGR tracking enabled
         esc_recognized = 1;
         esc_types |= 2U;
-        state->status |= state->status, FANSI_STAT_CTL);
+        state->status |= FANSI_STAT_CTL;
       }
     } else if(
       state->string[state->pos.x] == ']' &&
       state->string[state->pos.x + 1] == '8' &&
       state->string[state->pos.x + 2] == ';' &&
-      state->settings & FANSI_CTL_URL)
+      state->settings & FANSI_CTL_URL
     ) {
       // - OSC Encoded URL -----------------------------------------------------
       esc_recognized = 1;
-      int osc_bytes = 0;
-      ++state->pos.x;  // consume ']'
-      parse_url(state);
+      ++state->pos.x;    // consume ']'
+      parse_url(state);  // advances state by ref!
     } else if(
       state->string[state->pos.x] == ']' &&
       state->settings & FANSI_CTL_OSC
@@ -771,7 +752,7 @@ void read_esc(struct FANSI_state * state) {
       struct FANSI_osc osc = parse_osc(state->string + state->pos.x);
       osc_bytes = osc.len;
       set_err(state->status, osc.error);
-      if(err_code < 3) {
+      if(FANSI_GET_ERR(state->status) < 3) {
         esc_types |= 1U;
         state->status |= state->status;
       }
@@ -779,8 +760,8 @@ void read_esc(struct FANSI_state * state) {
     } else if(!state->string[state->pos.x]) {
       // - String ends in ESC --------------------------------------------------
       set_err(state->status, 7);
-      esc_recognized = state->settings & FANSI_CTL_ALL);
-    } else if(state->settings & FANSI_CTL_ESC)) {
+      esc_recognized = state->settings & FANSI_CTL_ALL;
+    } else if(state->settings & FANSI_CTL_ESC) {
       // -Two Byte ESC ---------------------------------------------------------
       esc_types |= 1U;
       esc_recognized = 1;
@@ -819,25 +800,24 @@ void read_esc(struct FANSI_state * state) {
         state->status &= FANSI_STAT_SPECIAL;
       }
     } else {
-      state->last_ctl = 0;
+      state->status &= ~FANSI_STAT_CTL;  // not a control
       *state = state_prev;
       read_ascii(state);
     }
   } while(
-    state->string[state->pos.x] == 0x1b &&
-    !state->settings & FANSI_SET_ESCONE
+    state->string[state->pos.x] == 0x1b && !(state->settings & FANSI_SET_ESCONE)
   );
   // CAREFUL adding changing values to `state` after here.  State could
   // be the unwound state `state_prev`.
 
-  if(!get_err(state->status) state->last_special = 1;
+  if(!FANSI_GET_ERR(state->status)) state->status |= FANSI_STAT_SGR;
 }
 /*
  * Read UTF8 character
  *
  * See GENERAL NOTES atop.
  */
-void read_utf8(struct FANSI_state * state, R_xlen_t i) {
+void read_utf8(struct FANSI_state * state, R_xlen_t i, const char * arg) {
   int mb_err = 0;
   int disp_size = 0;
   const char * mb_err_str =
@@ -845,30 +825,29 @@ void read_utf8(struct FANSI_state * state, R_xlen_t i) {
 
   int byte_size = utf8clen(state->string + state->pos.x, &mb_err);
   mb_err |= !valid_utf8(state->string + state->pos.x, byte_size);
+  unsigned int w_mode =
+    FANSI_GET_RNG(state->settings, FANSI_SET_WIDTH, FANSI_COUNT_ALL);
 
   if(mb_err) {
     disp_size = NA_INTEGER;  // mimic what R_nchar does on mb error
-    if(!state->allowNA) {
-      char arg[39];
-      if(state->arg) {
-        if(strlen(state->arg) > 18)
+    if(!(state->status & FANSI_SET_ALLOWNA)) {
+      char argp[39];
+      if(arg) {
+        if(strlen(arg) > 18)
           error("Internal Error: arg name too long for error.");// nocov
-        int try = sprintf(arg, "Argument `%s` contains", state->arg);
+        int try = sprintf(argp, "Argument `%s` contains", arg);
         if(try < 0)
           error("Internal Error: snprintf failed.");  // nocov
       } else {
-        strcpy(arg, "Encountered");
+        strcpy(argp, "Encountered");
       }
       error(
         "%s %s at index [%jd], %s",
-        arg, "an invalid UTF-8 byte sequence", FANSI_ind(i),
+        argp, "an invalid UTF-8 byte sequence", FANSI_ind(i),
         "see `?unhandled_ctl`."
       );
     }
-  } else if(
-      state->width_mode == FANSI_COUNT_WIDTH ||
-      state->width_mode == FANSI_COUNT_GRAPH
-  ) {
+  } else if(w_mode == FANSI_COUNT_WIDTH || w_mode == FANSI_COUNT_GRAPH) {
     // Assumes valid UTF-8!  Should have been checked.
     int cp = utf8_to_cp(state->string + state->pos.x, byte_size);
 
@@ -882,13 +861,18 @@ void read_utf8(struct FANSI_state * state, R_xlen_t i) {
     // things will not work.
 
     if(cp >= 0x1F1E6 && cp <= 0x1F1FF) {         // Regional Indicator
-      if(!state->last_ri) state->read_one_more = TRUE;
+      if(!(state->status & FANSI_STAT_RI)) {
+        state->status |= FANSI_STAT_AGAIN;
+        state->status |= FANSI_STAT_RI;
+      } else {
+        // Toggle it back and forth
+        state->status &= ~FANSI_STAT_RI;
+      }
       disp_size = 1;    // read_next forces reading 2 RIs at a time
-      state->last_ri = !state->last_ri;
     } else if (cp >= 0x1F3FB && cp <= 0x1F3FF) { // Skin type
       disp_size = 0;
     } else if (cp == 0x200D) {                   // Zero Width Joiner
-      state->last_zwj = 1;
+      state->status |= FANSI_STAT_ZWJ;
       disp_size = 0;
     } else {
       // In order to compute char display width, we need to create a charsxp
@@ -898,7 +882,9 @@ void read_utf8(struct FANSI_state * state, R_xlen_t i) {
         PROTECT(mkCharLenCE(state->string + state->pos.x, byte_size, CE_UTF8));
       disp_size = R_nchar(
         str_chr, Width, // Width is an enum
-        state->allowNA, state->keepNA, mb_err_str
+        state->status & FANSI_SET_ALLOWNA,
+        state->status & FANSI_SET_KEEPNA,
+        mb_err_str
       );
       UNPROTECT(1);
     }
@@ -911,8 +897,7 @@ void read_utf8(struct FANSI_state * state, R_xlen_t i) {
   }
   if(disp_size == NA_INTEGER) {
     // Both for R_nchar and if we directly detect an mb_err
-    state->err_code = 9;
-    state->err_msg = "a malformed UTF-8 sequence";
+    state->status = set_err(state->status, 9);
     disp_size = byte_size = 1;
   }
   // We are guaranteed that strings here are at most INT_MAX bytes long, so
@@ -920,10 +905,10 @@ void read_utf8(struct FANSI_state * state, R_xlen_t i) {
   // measures that exceed byte count (like the 6 or 10 from '\u' or '\U' encoded
   // versions of Unicode chars).  Shouldn't be an issue, but playing it safe.
   state->pos.x += byte_size;
-  state->has_utf8 = state->pos.x;  // record after so no ambiguity about 0
-  ++state->pos_ansi;
-  ++state->pos_raw;
-  if(state->pos_width > FANSI_lim.lim_int.max - disp_size)
+  state->utf8 = state->pos.x;  // record after so no ambiguity about 0
+  ++state->pos.a;
+  ++state->pos.r;
+  if(state->pos.w > FANSI_lim.lim_int.max - disp_size)
     // nocov start currently this can't happen
     error(
       "String with display width greater than INT_MAX at index [%jd].",
@@ -931,13 +916,13 @@ void read_utf8(struct FANSI_state * state, R_xlen_t i) {
     );
     // nocov end
   // Width is basically counting graphemes when non-zero.
-  switch(state->width_mode) {
-    case FANSI_COUNT_CHARS: ++state->pos_width; break;
-    case FANSI_COUNT_WIDTH: state->pos_width += disp_size; break;
-    case FANSI_COUNT_GRAPH: state->pos_width += disp_size > 0; break;
-    case FANSI_COUNT_BYTES: state->pos_width += byte_size; break;
+  switch(w_mode) {
+    case FANSI_COUNT_CHARS: ++state->pos.w; break;
+    case FANSI_COUNT_WIDTH: state->pos.w += disp_size; break;
+    case FANSI_COUNT_GRAPH: state->pos.w += disp_size > 0; break;
+    case FANSI_COUNT_BYTES: state->pos.w += byte_size; break;
     default:
-      error("Internal Error: invalid width mode (%d).", state->width_mode); // nocov
+      error("Internal Error: invalid width mode (%d).", w_mode); // nocov
   }
 }
 /*
@@ -947,19 +932,17 @@ void read_utf8(struct FANSI_state * state, R_xlen_t i) {
  */
 void read_c0(struct FANSI_state * state) {
   int is_nl = state->string[state->pos.x] == '\n';
-  if(!is_nl) {
-    state->err_msg = "a C0 control character";
-    state->err_code = 8;
-  }
+  if(!is_nl) state->status = set_err(state->status, 8);
+
   read_ascii(state);
   // If C0/NL are being actively processed, treat them as width zero
   if(
-    (is_nl && (state->ctl & FANSI_CTL_NL)) ||
-    (!is_nl && (state->ctl & FANSI_CTL_C0))
+    (is_nl && (state->settings & FANSI_CTL_NL)) ||
+    (!is_nl && (state->settings & FANSI_CTL_C0))
   ) {
-    --state->pos_raw;
-    --state->pos_width;
-    state->last_ctl = is_nl ? FANSI_CTL_NL : FANSI_CTL_C0;
+    --state->pos.r;
+    --state->pos.w;
+    state->status |= FANSI_STAT_CTL;
   }
 }
 /*
@@ -970,9 +953,8 @@ void read_c0(struct FANSI_state * state) {
 void FANSI_read_next(
   struct FANSI_state * state, R_xlen_t i, const char * arg
 ) {
-  AGAIN:
-
   unsigned char chr_val;
+  AGAIN:
   chr_val = (unsigned char) state->string[state->pos.x];
   int prev_width = state->pos.w;
   int prev_zwj = state->status & FANSI_STAT_ZWJ;
@@ -997,31 +979,32 @@ void FANSI_read_next(
 
   if(!is_utf8) state->status &= ~FANSI_STAT_RI;  // reset regional indicator
 
-  unsigned int err_code = get_err(state->status);
+  unsigned int err_code = FANSI_GET_ERR(state->status);
   if(
-    !state->status & FANSI_STAT_WARNED &&
+    !(state->status & FANSI_STAT_WARNED) &&
     err_code &&
-    state->settings & err_code - 1U)
+    (state->settings & (err_code - 1U))
   ) {
-    char arg[39];
-    if(state->arg) {
-      if(strlen(state->arg) > 18)
+    char argp[39];
+    if(arg) {
+      if(strlen(arg) > 18)
         error("Internal Error: arg name too long for warning.");// nocov
-      int try = sprintf(arg, "Argument `%s` contains", state->arg);
+      int try = sprintf(argp, "Argument `%s` contains", arg);
       if(try < 0)
         error("Internal Error: snprintf failed.");  // nocov
     } else {
-      strcpy(arg, "Encountered");
+      strcpy(argp, "Encountered");
     }
     warning(
       "%s %s at index [%jd], %s%s",
-      arg, err_messages[err_code - 1], FANSI_ind(i),
+      argp, err_messages[err_code - 1], FANSI_ind(i),
       "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
       "off these warnings."
     );
     state->status |= FANSI_STAT_WARNED;  // only warn once
   }
-  int w_mode = state->settings & FANSI_SET_WIDTH);
+  unsigned int w_mode =
+    FANSI_GET_RNG(state->settings, FANSI_SET_WIDTH, FANSI_COUNT_ALL);
   if(
     prev_zwj && (w_mode == FANSI_COUNT_WIDTH || w_mode == FANSI_COUNT_GRAPH)
   )

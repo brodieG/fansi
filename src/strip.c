@@ -200,6 +200,7 @@ SEXP FANSI_process(
   SEXP R_true = PROTECT(ScalarLogical(1)); ++prt;
   SEXP R_zero = PROTECT(ScalarInteger(0)); ++prt;
   char * err_msg = "Processing whitespace";
+  const char * arg = "x";
 
   int strip_any = 0;          // Have any elements in the STRSXP been stripped
 
@@ -274,7 +275,7 @@ SEXP FANSI_process(
 
       if(special) { // Check that it is really special.
         int pos_prev = state.pos.x = j;
-        int pos_rawr = state.pos.r;
+        int pos_raw = state.pos.r;
         FANSI_read_next(&state, i, arg);
 
         // Sequence is special if pos.r does not advance

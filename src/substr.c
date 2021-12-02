@@ -123,7 +123,7 @@ static int substr_range(
     if(state.pos.r > state_prev.pos.r) state_prev = state;
     FANSI_read_next(&state, i, arg);
   }
-  state_prev->status |= state.status &= FANSI_STAT_WARNED; // double warnings.
+  state_prev.status |= state.status & FANSI_STAT_WARNED; // double warnings.
 
   // If we are allowed to overshoot, keep consuming zero-width non-CTL
   /*
@@ -158,10 +158,10 @@ static int substr_range(
       struct FANSI_state state_tmp = state_prev;
       while(state_tmp.string[state_tmp.pos.x]) {
         FANSI_read_next(&state_tmp, i, arg);
-        if(!state_tmp.last_special) state_prev = state_tmp;
+        if(!(state_tmp.status & FANSI_STAT_SPECIAL)) state_prev = state_tmp;
       }
       *state_stop = state_prev;
-      state_stop->warned = state_tmp.warned;
+      state_stop->status |= state_tmp.status & FANSI_STAT_WARNED;
     } else {
       *state_stop = state;
     }
@@ -211,8 +211,9 @@ static SEXP substr_one(
   state_start = state_stop = *state;
   if(term_i) FANSI_reset_state(state);
   else *state = ref;
+  const char * arg  = "x";
 
-  substr_range(&state_start, &state_stop, i, start, stop, rnd_i, term_i);
+  substr_range(&state_start, &state_stop, i, start, stop, rnd_i, term_i, arg);
 
   // - Extract ---------------------------------------------------------------
 
@@ -232,7 +233,7 @@ static SEXP substr_one(
       // Actual string, remember state_stop.pos.x is one past what we need
       int stop = state_stop.pos.x;
       FANSI_W_normalize_or_copy(
-        buff, state_start, norm_i, stop, i, err_msg, "x"
+        buff, state_start, norm_i, stop, i, err_msg, arg
       );
       // And turn off CSI styles if needed
       if(term_i) FANSI_W_close(buff, state_stop.fmt, norm_i, i);
@@ -290,10 +291,7 @@ static SEXP substr_extract(
     } else {
       if(start_ii < 1) start_ii = 1;
       // We do the full process even if stop_ii < start_ii for consistency
-      if(carry_i) {
-        state.sgr = state_carry.sgr;
-        state.url = state_carry.url;
-      }
+      if(carry_i) state.fmt = state_carry.fmt;
       SET_STRING_ELT(
         res, i,
         substr_one(
@@ -303,8 +301,7 @@ static SEXP substr_extract(
       if(carry_i) {
         state_ref = state;
         while(state.string[state.pos.x]) FANSI_read_next(&state, i, arg);
-        state_carry.sgr = state.sgr;
-        state_carry.url = state.url;
+        state_carry.fmt = state.fmt;
   } } }
   UNPROTECT(prt);
   return res;
@@ -334,7 +331,6 @@ static SEXP substr_replace(
                      st_v0, st_v1, st_vlast, st_vref;
   st_x2 = st_x1 = st_xlast = st_xref =
     st_v0 = st_v1 = st_vlast = st_vref = state;
-  st_v0.arg = st_v1.arg = st_vlast.arg = st_vref.arg = "value";
 
   for(R_xlen_t i = 0; i < len; ++i) {
     // - Setup -----------------------------------------------------------------
@@ -348,10 +344,8 @@ static SEXP substr_replace(
     FANSI_state_reinit(&st_x0, x, i);
     FANSI_state_reinit(&st_v0, value, i);
     if(carry_i == 1) {
-      st_x0.sgr = st_xlast.sgr;
-      st_x0.url = st_xlast.url;
-      st_v0.sgr = st_vlast.sgr;
-      st_v0.url = st_vlast.url;
+      st_x0.fmt = st_xlast.fmt;
+      st_v0.fmt = st_vlast.fmt;
     }
     st_x2 = st_x1 = st_x0;
 
@@ -397,7 +391,7 @@ static SEXP substr_replace(
       // be the case when a \U code is rendered (but that should only be for
       // EncodeString, which we don't care about).
       stop_v = stop_v - 1;
-      substr_range(&st_v0, &st_v1, i, start_v, stop_v, rnd_i, term_i);
+      substr_range(&st_v0, &st_v1, i, start_v, stop_v, rnd_i, term_i, "value");
       size_v = st_v1.pos.w - st_v0.pos.w;
       if(size_v > size_x) {
         // Reduction didn't work, collapse size_v;

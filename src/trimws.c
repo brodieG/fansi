@@ -61,56 +61,56 @@ SEXP FANSI_trimws(
     // in fansi.
     if(which_i == 0 || which_i == 1) {
       while(1) {
-        switch(state.string[state.pos_byte]) {
+        switch(state.string[state.pos.x]) {
           case ' ':
           case '\n':
           case '\r':
           case '\t':
-            ++state.pos_byte;
+            ++state.pos.x;
             continue;
           default:
             if(
-              (unsigned char)state.string[state.pos_byte] >= 0x20 &&
-              (unsigned char)state.string[state.pos_byte] <= 0x7e
+              (unsigned char)state.string[state.pos.x] >= 0x20 &&
+              (unsigned char)state.string[state.pos.x] <= 0x7e
             ) {
               goto ENDLEAD;
             } else {
               FANSI_read_next(&state, i, arg);
-              if(state.last_ctl) break;
+              if(state.status & FANSI_STAT_CTL) break;
               else goto ENDLEAD;
             }
       } }
       ENDLEAD:
       state_lead = state;
-      string_start = state_lead.pos_byte;
+      string_start = state_lead.pos.x;
     }
     // Find first space that has no subsequent non-spaces
     if(which_i == 0 || which_i == 2) {
-      while(state.string[state.pos_byte]) {
-        switch(state.string[state.pos_byte]) {
+      while(state.string[state.pos.x]) {
+        switch(state.string[state.pos.x]) {
           case ' ':
           case '\n':
           case '\r':
           case '\t':
             if(!string_end) {
-              string_end = state.pos_byte;
+              string_end = state.pos.x;
               state_trail = state;
             }
-            ++state.pos_byte;
+            ++state.pos.x;
             continue;
           default:
             if(
-              (unsigned char)state.string[state.pos_byte] >= 0x20 &&
-              (unsigned char)state.string[state.pos_byte] <= 0x7e
+              (unsigned char)state.string[state.pos.x] >= 0x20 &&
+              (unsigned char)state.string[state.pos.x] <= 0x7e
             ) {
               string_end = 0;
-              ++state.pos_byte;
+              ++state.pos.x;
             } else {
               FANSI_read_next(&state, i, arg);
-              if(state.last_ctl) continue;
+              if(state.status & FANSI_STAT_CTL) continue;
               else {
                 string_end = 0;
-                ++state.pos_byte;
+                ++state.pos.x;
             } }
       } }
       state_last = state;
@@ -133,8 +133,8 @@ SEXP FANSI_trimws(
 
         // Any leading SGR
         if(string_start) {
-          FANSI_W_sgr(&buff, state_lead.sgr, norm_i, 1, i);
-          FANSI_W_url(&buff, state_lead.url, norm_i, i);
+          FANSI_W_sgr(&buff, state_lead.fmt.sgr, norm_i, 1, i);
+          FANSI_W_url(&buff, state_lead.fmt.url, norm_i, i);
         }
         // Body of string
         FANSI_W_normalize_or_copy(

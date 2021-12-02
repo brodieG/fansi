@@ -18,6 +18,18 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #ifndef _FANSI_CNST_H
 #define _FANSI_CNST_H
 
+// - General Notes -------------------------------------------------------------
+
+// Most of the constants defined here are used to encode state parameters in 32
+// bit unsigned int variables.  Many state parameters are encoded as a single
+// bit in either the ->setting or ->status members of the state objects.  Others
+// are stored as small unsigned integer values occupying some set of adjacent
+// bits in the same member objects.  For these multi-bit elements, we
+// (sometimes) define _MASK and _ALL constants.  The _MASK constants relate to
+// the actual bits being set in the target integers.
+//
+// Generally: _MASK >> _START == _ALL.
+
 // - Settings ------------------------------------------------------------------
 
 // Setting are packed into a (32 bit) unsigned int, the _SET_ values are the
@@ -55,6 +67,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 // First shift by FANSI_SET_WARN
 #define FANSI_WARN_CSIBAD  336 // ... 0001 0101 0000
 #define FANSI_WARN_ALL     511 // ... 0001 1111 1111
+#define FANSI_WARN_MASK   4088 // ... 1111 1111 1000
 
 // First shift by FANSI_SET_WIDTH
 #define FANSI_COUNT_CHARS    0
@@ -67,7 +80,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
 // Same concept as settings
 //
-// Type of failure, set to zero if no error, encode in 4 bits
+// Type of failure, set to zero if no error, use FANSI_GET_ERR to access (or
+// set_err in read.c to set).
 //
 // * 1: well formed csi sgr, but contains uninterpretable sub-strings, if a
 //      CSI sequence is not fully parsed yet (i.e. last char not read) it is
@@ -81,7 +95,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 // * 7: malformed escape (e.g. string ending in ESC).
 // * 8: c0 escapes
 // * 9: malformed UTF8
-#define FANSI_STAT_ERR       0
+#define FANSI_STAT_ERR_START 0
 #define FANSI_STAT_ERR_ALL  15
 
 // Single bit status
@@ -130,6 +144,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
 #define FANSI_STL_MASK   4095
 #define FANSI_STL_MASK1   511   // Basic styles (i.e. 1-9 codes, sum(2^(0:8))
+#define FANSI_STL_MASK2   447   // Basic styles for HTML, excludes inverse
 
 #define FANSI_BRD_FRAMED   12
 #define FANSI_BRD_ENCIRC   13
@@ -148,5 +163,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 // Alternative fonts, 10-19, (encoded as is for simplicity, so use 5 bytes)
 #define FANSI_FONT_START  27 // most significant 5 byte encode font in 10-19
 #define FANSI_FONT_MASK 4160749568 // sum(2^(27:31))
+#define FANSI_FONT_ALL    31
 
 #endif  /* _FANSI_CNST_H */

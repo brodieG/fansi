@@ -40,14 +40,15 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 //
 // Needed by state.c, read.c, state.c
 //
-// @param offset how many bits to offset into the int (offset + log2(mask) must
-//    be < sizeof(unsigned int)).
-// @param mask a number correspoding to in theory adjacent set of ones starting
-//    at bit zero.
+// @param offset how many bits to offset into the unsigned int.
+// @param bits the mask right shifted by the offset.
 
-#define FANSI_GET_RNG((x), (offset), (mask)) ((x) >> (offset)) & (mask)
-#define FANSI_SET_RNG((x), (offset), (mask))                              \
-  ((x) & ~((mask) << (offset))) | ((val) << (offset))
+#define FANSI_GET_RNG(x, offset, bits) (((x) >> (offset)) & (bits))
+#define FANSI_SET_RNG(x, offset, bits, val)                         \
+  (((x) & ~((bits) << (offset))) | ((val) << (offset)))
+
+#define FANSI_GET_ERR(x)                                            \
+  FANSI_GET_RNG((x), FANSI_STAT_ERR_START, FANSI_STAT_ERR_ALL)
 
 
 // - Internal funs -----------------------------------------------------------
@@ -61,7 +62,9 @@ SEXP FANSI_tabs_as_spaces(
 );
 SEXP FANSI_sort_chr(SEXP x);
 
-struct FANSI_ctl_pos FANSI_find_ctl(struct FANSI_state state, R_xlen_t i);
+struct FANSI_ctl_pos FANSI_find_ctl(
+  struct FANSI_state state, R_xlen_t i, const char * arg
+);
 void FANSI_reset_pos(struct FANSI_state * state);
 void FANSI_reset_width(struct FANSI_state * state);
 void FANSI_reset_state(struct FANSI_state * state);

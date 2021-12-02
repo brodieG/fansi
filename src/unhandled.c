@@ -49,6 +49,7 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
   int err_count = 0;
   int break_early = 0;
   struct FANSI_state state;
+  const char * arg = "x";
 
   for(R_xlen_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
@@ -58,20 +59,20 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
         x, no_warn, term_cap, allowNA, keepNA, width, ctl_all, i
       );
       // Read one escape at a time
-      state->settings = state->settings |= FANSI_SET_ESCONE;
+      state.settings = state.settings |= FANSI_SET_ESCONE;
     } else FANSI_state_reinit(&state, x, i);
 
     if(chrsxp != NA_STRING && LENGTH(chrsxp)) {
       int has_errors = 0;
 
-      while(state.string[state.pos_byte]) {
+      while(state.string[state.pos.x]) {
         // Since we don't care about width, etc, we only use the state objects
         // to parse the ESC sequences
 
-        int esc_start = state.pos_ansi;
-        int esc_start_byte = state.pos_byte;
+        int esc_start = state.pos.a;
+        int esc_start_byte = state.pos.x;
         FANSI_read_next(&state, i, arg);
-        if(state.err_code) {
+        if(FANSI_GET_ERR(state.status)) {
           if(err_count == FANSI_lim.lim_int.max) {
             warning(
               "%s%s",
@@ -86,13 +87,13 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
           SEXP err_vals = PROTECT(allocVector(INTSXP, 7));
           INTEGER(err_vals)[0] = i + 1;
           INTEGER(err_vals)[1] = esc_start + 1;
-          INTEGER(err_vals)[2] = state.pos_ansi;
-          INTEGER(err_vals)[3] = state.err_code;
+          INTEGER(err_vals)[2] = state.pos.a;
+          INTEGER(err_vals)[3] = FANSI_GET_ERR(state.status);
           INTEGER(err_vals)[4] = 0;
           // need actual bytes so we can substring the problematic sequence, so
           // we don't use 1 based indexing like with the earlier values
           INTEGER(err_vals)[5] = esc_start_byte;
-          INTEGER(err_vals)[6] = state.pos_byte - 1;
+          INTEGER(err_vals)[6] = state.pos.x - 1;
           SEXP err_vals_list = PROTECT(list1(err_vals));
 
           if(!any_errors) {

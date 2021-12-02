@@ -29,7 +29,7 @@ struct FANSI_prefix_dat {
   int bytes;            // bytes, excluding NULL terminator
   // how many indent/exdent bytes are included in string, width, and bytes
   int indent;
-  int has_utf8;         // see FANSI_state
+  int utf8;             // see FANSI_state
   int warn;             // warning issued while stripping
 };
 /*
@@ -295,9 +295,10 @@ static SEXP strwrap(
           if(
             state_bound.string[state_bound.pos.x] == 0x1b &&
             // wonder whether this should just be a recognized control
-            !state_tmp.status & FANSI_STAT_SPECIAL
+            !(state_tmp.status & FANSI_STAT_SPECIAL)
           ) {
-            state_bound.warned = state_tmp.warned;  // avoid double warnings
+            // avoid double warnings
+            state_bound.status |= state_tmp.status & FANSI_STAT_WARNED;
             break;
           }
           state_bound = state_tmp;
@@ -320,14 +321,14 @@ static SEXP strwrap(
     state_next = state; // if we hit end of string, re-use state as next
     // Look ahead one element
     if(!end) FANSI_read_next(&state_next, index, arg);
-    if(state_next->status & FANSI_STAT_WARNED) { // avoid 2x warning
-      state->status |= FANSI_STAT_WARNED;
-      state_bound->status |= FANSI_STAT_WARNED;
+    if(state_next.status & FANSI_STAT_WARNED) { // avoid 2x warning
+      state.status |= FANSI_STAT_WARNED;
+      state_bound.status |= FANSI_STAT_WARNED;
     }
     // Always strip trailing SGR to behave same way as substr_ctl, except if
     // we're adding padding, or really at end of string.
     int strip_trail_sgr =
-       state.last_special && (!end || terminate) &&
+       (state.status & FANSI_STAT_SPECIAL) && (!end || terminate) &&
       !((*pad_chr) && state.pos.w < width_tar);
 
     // detect word boundaries and paragraph starts; we need to track

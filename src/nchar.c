@@ -37,7 +37,7 @@ SEXP FANSI_nchar(
   int keepNA_int = asLogical(keepNA);
   int type_int = asInteger(type);
   int zz = asLogical(z);
-  const char * arg = "x"
+  const char * arg = "x";;
 
   R_xlen_t x_len = XLENGTH(x);
 
@@ -67,22 +67,22 @@ SEXP FANSI_nchar(
         resi[i] = zz ? NA_LOGICAL : NA_INTEGER;
       } else resi[i] = zz ? 1 : 2;
     } else {
-      while(state.string[state.pos_byte]) {
+      while(state.string[state.pos.x]) {
         FANSI_read_next(&state, i, arg);
         // early exits
-        if((zz && state.pos_raw) || state.err_code == 9) break;
+        if((zz && state.pos.r) || FANSI_GET_ERR(state.status) == 9) break;
       }
       if(zz) {  // nzchar mode
-        resi[i] = state.pos_raw > 0;
-      } else if (state.err_code == 9) {
-        if(state.allowNA) {
+        resi[i] = state.pos.r > 0;
+      } else if (FANSI_GET_ERR(state.status) == 9) {
+        if(state.status & FANSI_SET_ALLOWNA) {
           resi[i] = zz ? NA_LOGICAL : NA_INTEGER;
         } else {
           // read_next should have had an error on invalid encoding
           error("Internal Error: invalid encoding unhandled."); // nocov
         }
       } else {
-        resi[i] = state.pos_width;
+        resi[i] = state.pos.w;
       }
   } }
   UNPROTECT(prt);

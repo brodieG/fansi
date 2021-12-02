@@ -111,21 +111,22 @@ struct FANSI_ctl_pos FANSI_find_ctl(
   unsigned int warn_max = 0;
   found = 0;
 
-  while(state.string[state.pos_byte]) {
-    raw_prev = state.pos_raw;
-    pos_prev = state.pos_byte;
-    err_prev = state.err_code;
+  while(state.string[state.pos.x]) {
+    raw_prev = state.pos.r;
+    pos_prev = state.pos.x;
+    err_prev = FANSI_GET_ERR(state.status);
     FANSI_read_next(&state, i, arg);
-    if(state.err_code) warn_max |= (1U << (state.err_code - 1U));
+    int err = FANSI_GET_ERR(state.status);
+    if(err) warn_max |= (1U << (err - 1U));
     // Known control read
-    if(state.pos_raw == raw_prev) {
+    if(state.pos.r == raw_prev) {
       found = 1;
       break;
     }
-    state.pos_byte += FANSI_seek_ctl(state.string + state.pos_byte);
+    state.pos.x += FANSI_seek_ctl(state.string + state.pos.x);
   }
   int res = 0;
-  if(found) res = state.pos_byte - pos_prev;
+  if(found) res = state.pos.x - pos_prev;
   return (struct FANSI_ctl_pos) {
     .offset = pos_prev, .len = res, .warn_max=warn_max
   };
@@ -183,7 +184,7 @@ int FANSI_term_cap_as_int(SEXP term_cap) {
     if(term_cap_val < 0) flip_bits = 1;
     else term_cap_int |= 1 << term_cap_val;
   }
-  if(flip_bits) term_cap_int ^= FANSI_TERM_CAP_ALL;
+  if(flip_bits) term_cap_int ^= FANSI_TERM_ALL;
   return term_cap_int;
 }
 
@@ -443,41 +444,50 @@ void FANSI_print(char * x) {
     Rprintf("\n");
   }
 }
+static void print_bits(unsigned int x) {
+  for(unsigned int i = 0; i < (sizeof(x) * CHAR_BIT); ++i) {
+    if(i && !(i % 8)) Rprintf(" ");
+    Rprintf("%d", x & (1U << i));
+  }
+}
 void FANSI_print_sgr(struct FANSI_sgr s) {
   Rprintf(
     "  color: %d %d %d;%d;%d bgcolor: %d %d %d;%d;%d\n",
-    s.color, s.color_extra[0],
-    s.color_extra[1], s.color_extra[2], s.color_extra[3],
-    s.bg_color, s.bg_color_extra[0],
-    s.bg_color_extra[1], s.bg_color_extra[2], s.bg_color_extra[3]
+    s.color.x & FANSI_CLR_MASK,
+    s.color.x & ~FANSI_CLR_MASK, 
+    s.color.extra[0], s.color.extra[1], s.color.extra[2],
+    s.bgcol.x & FANSI_CLR_MASK,
+    s.bgcol.x & ~FANSI_CLR_MASK, 
+    s.bgcol.extra[0], s.bgcol.extra[1], s.bgcol.extra[2]
   );
-  Rprintf(
-    "  style %x ideogram %x  border %x font %d\n",
-    s.style, s.ideogram, s.border, s.font
-  );
+  Rprintf("  style ");
+  print_bits(s.style);
+  Rprintf("\n");
 }
 void FANSI_print_state(struct FANSI_state x) {
   Rprintf("- State -------\n");
-  FANSI_print_sgr(x.sgr);
+  FANSI_print_sgr(x.fmt.sgr);
   Rprintf(
     "  pos: b %d r %d a %d w %d\n",
-    x.pos_byte, x.pos_raw, x.pos_ansi, x.pos_width
+    x.pos.x, x.pos.r, x.pos.a, x.pos.a
   );
-  Rprintf("  warn %d err %x\n", x.warn, x.err_code);
-  Rprintf("- End State ---\n");
+  Rprintf("  status ");
+  print_bits(x.status);
+  Rprintf("\n- End State ---\n");
 }
 
 SEXP FANSI_read_all(SEXP x, SEXP warn, SEXP term_cap) {
   R_xlen_t len = XLENGTH(x);
   SEXP res = PROTECT(allocVector(INTSXP, len));
   int * res_i = INTEGER(res);
+  const char * arg = "x";
   struct FANSI_state state;
   for(R_xlen_t i = 0; i < len; ++i) {
     if(!i) state = FANSI_state_init(x, warn, term_cap, i);
     else FANSI_state_reinit(&state, x,  i);
 
-    while(state.string[state.pos_byte]) FANSI_read_next(&state, i, arg);
-    res_i[i] = state.pos_width;
+    while(state.string[state.pos.x]) FANSI_read_next(&state, i, arg);
+    res_i[i] = state.pos.x;
   }
   UNPROTECT(1);
   return res;

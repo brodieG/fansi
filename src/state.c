@@ -86,7 +86,7 @@ struct FANSI_state FANSI_state_init_full(
     );
   // nocov end
 
-  unsigned int settings;
+  unsigned int settings = 0;
   settings = FANSI_SET_RNG(
     settings, FANSI_SET_TERMCAP, FANSI_TERM_ALL, FANSI_term_cap_as_int(term_cap)
   );
@@ -177,7 +177,7 @@ struct FANSI_state FANSI_state_init_ctl(
 }
 
 void FANSI_reset_width(struct FANSI_state * state) {
-  state->p.w = 0;
+  state->pos.w = 0;
 }
 /*
  * Reset the position counters
@@ -190,7 +190,7 @@ void FANSI_reset_width(struct FANSI_state * state) {
  * See also FANSI_state_reinit
  */
 void FANSI_reset_pos(struct FANSI_state * state) {
-  state->pos = {0};
+  state->pos = (struct FANSI_position){0};
   unsigned int warned = state->status & FANSI_STAT_WARNED;
   state->status = 0U;
   if(warned) state->status |= FANSI_STAT_WARNED;
@@ -218,12 +218,12 @@ char * FANSI_state_as_chr(
   struct FANSI_buff *buff, struct FANSI_state state, int normalize, R_xlen_t i
 ) {
   FANSI_reset_buff(buff);
-  FANSI_W_sgr(buff, state.sgr, normalize, 1, i);
-  FANSI_W_url(buff, state.url, normalize, i);
+  FANSI_W_sgr(buff, state.fmt.sgr, normalize, 1, i);
+  FANSI_W_url(buff, state.fmt.url, normalize, i);
 
   FANSI_size_buff(buff);
-  FANSI_W_sgr(buff, state.sgr, normalize, 1, i);
-  FANSI_W_url(buff, state.url, normalize, i);
+  FANSI_W_sgr(buff, state.fmt.sgr, normalize, 1, i);
+  FANSI_W_url(buff, state.fmt.url, normalize, i);
   return buff->buff;
 }
 
@@ -246,20 +246,9 @@ int FANSI_sgr_comp_color(
   return
     tclr != cclr  ||
     // Can't use memcmp because we don't necessarly cleanup extra
-    (c256 && target.extra.a != current.extra.a) ||
-    (cTRU && target.extra.b != current.extra.b) ||
-    (cTRU && target.extra.c != current.extra.c);
-}
-static int FANSI_sgr_comp_basic(
-  struct FANSI_sgr target, struct FANSI_sgr current
-) {
-  // Colors, and the basic styles (1-9 color codes)
-  return FANSI_sgr_comp_color(target, current) ||
-    (target.fmt.style & FANSI_STL_MASK1) !=
-    (current.fmt.style & FANSI_STL_MASK1);
-}
-static int FANSI_sgr_comp(struct FANSI_sgr target, struct FANSI_sgr current) {
-  return FANSI_sgr_comp_color(target, current) || target.style != current.style;
+    (c256 && target.color.extra[0] != current.color.extra[0]) ||
+    (cTRU && target.color.extra[1] != current.color.extra[1]) ||
+    (cTRU && target.color.extra[2] != current.color.extra[2]);
 }
 /*
  * Create a new SGR that has all the styles in `old` missing from `new`.
@@ -273,7 +262,7 @@ static int FANSI_sgr_comp(struct FANSI_sgr target, struct FANSI_sgr current) {
 struct FANSI_sgr FANSI_sgr_setdiff(
   struct FANSI_sgr old, struct FANSI_sgr new, int mode
 ) {
-  struct FANSI_sgr res = {0};
+  struct FANSI_sgr res = (struct FANSI_sgr){0};
   if(
     (!mode && old.color.x != new.color.x) ||
     (mode && old.color.x && !new.color.x)
@@ -283,19 +272,20 @@ struct FANSI_sgr FANSI_sgr_setdiff(
   }
   if(
     (!mode && old.bgcol.x != new.bgcol.x) ||
-    (mode && old.bgcol.x && !new.bgcol)
+    (mode && old.bgcol.x && !new.bgcol.x)
   ) {
     res.bgcol.x = old.bgcol.x;
     memcpy(res.bgcol.extra, old.bgcol.extra, sizeof(old.bgcol.extra));
   }
+  // We don't bother to shift the fonts here since both are already encoded
   unsigned int font_old, font_new;
   font_old = old.style & FANSI_FONT_MASK;
   font_new = new.style & FANSI_FONT_MASK;
   if(
-    (!mode && (font_old != font_new)) || (mode && font_odl && !font_new)
-  ) {
-    res.font = font_old;
-  }
+    (!mode && (font_old != font_new)) || (mode && font_old && !font_new)
+  )
+    res.style &= font_old | ~FANSI_FONT_MASK;
+
   // All non font styles are just bit flags
   unsigned int style_old, style_new;
   style_old = old.style & ~FANSI_FONT_MASK;
@@ -309,21 +299,19 @@ struct FANSI_sgr FANSI_sgr_intersect(
   struct FANSI_sgr old, struct FANSI_sgr new
 ) {
   struct FANSI_sgr res = {0};
-  if(old.color.x = new.color.x) {
+  if(old.color.x == new.color.x) {
     res.color.x = new.color.x;
     memcpy(res.color.extra, new.color.extra, sizeof(new.color.extra));
   }
-  if(old.bgcol.x = new.bgcol.x) {
+  if(old.bgcol.x == new.bgcol.x) {
     res.bgcol.x = new.bgcol.x;
     memcpy(res.bgcol.extra, new.bgcol.extra, sizeof(new.bgcol.extra));
   }
-
   unsigned int font_old, font_new;
   font_old = old.style & FANSI_FONT_MASK;
   font_new = new.style & FANSI_FONT_MASK;
-  if(font_old == font_new) {
-    res.font = font_new;
-  }
+  if(font_old == font_new) res.style &= font_new | ~FANSI_FONT_MASK;
+
   // All non font styles are just bit flags
   unsigned int style_old, style_new;
   style_old = old.style & ~FANSI_FONT_MASK;
@@ -407,7 +395,7 @@ SEXP FANSI_state_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm) {
     SEXP x_chr = STRING_ELT(x, i);
     if(x_chr == NA_STRING || !LENGTH(x_chr)) continue;
 
-    while(*(state.string + state.pos_byte)) FANSI_read_next(&state, i, arg);
+    while(*(state.string + state.pos.x)) FANSI_read_next(&state, i, arg);
     FANSI_reset_buff(&buff);
     FANSI_W_close(&buff, state.fmt, normalize, i);
 
