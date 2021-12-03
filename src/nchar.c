@@ -75,7 +75,7 @@ SEXP FANSI_nchar(
       if(zz) {  // nzchar mode
         resi[i] = state.pos.r > 0;
       } else if (FANSI_GET_ERR(state.status) == 9) {
-        if(state.status & FANSI_SET_ALLOWNA) {
+        if(state.settings & FANSI_SET_ALLOWNA) {
           resi[i] = zz ? NA_LOGICAL : NA_INTEGER;
         } else {
           // read_next should have had an error on invalid encoding

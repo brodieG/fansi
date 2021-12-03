@@ -856,7 +856,7 @@ void read_utf8(struct FANSI_state * state, R_xlen_t i, const char * arg) {
 
   if(mb_err) {
     disp_size = NA_INTEGER;  // mimic what R_nchar does on mb error
-    if(!(state->status & FANSI_SET_ALLOWNA)) {
+    if(!(state->settings & FANSI_SET_ALLOWNA)) {
       char argp[39];
       if(arg) {
         if(strlen(arg) > 18)
@@ -988,7 +988,7 @@ void FANSI_read_next(
   int prev_zwj = state->status & FANSI_STAT_ZWJ;
 
   // reset all flags except warned
-  state->status = (state->status & FANSI_STAT_WARNED);
+  state->status = (state->status & (FANSI_STAT_WARNED | FANSI_STAT_RI));
 
   int is_ascii = chr_val >= 0x20 && chr_val < 0x7F;
   int is_utf8 = chr_val > 0x7f;

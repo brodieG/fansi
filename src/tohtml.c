@@ -146,14 +146,12 @@ static char * color_to_html(struct FANSI_color color, char * buff) {
     "555555", "FF5555", "55FF55", "FFFF55",
     "5555FF", "FF55FF", "55FFFF", "FFFFFF"
   };
-  char * buff_track = buff;
-
   unsigned char clrval = color.x & ~FANSI_CLR_MASK;
-  if(clrval == 9) {
-    error(
-      "Internal Error: should not be applying no-color; contact maintainer."
-    );
-  }
+  if(clrval == 9) error("Internal Error: applying non-color.");
+
+  char * buff_track = buff;
+  *(buff_track++) = '#';
+
   switch(color.x & FANSI_CLR_MASK) {
     case FANSI_CLR_8:
       memcpy(buff_track, std_8[clrval], 6);
@@ -168,7 +166,7 @@ static char * color_to_html(struct FANSI_color color, char * buff) {
       if(color_5 < 16) {
         memcpy(buff_track, std_16[color_5], 6);
         buff_track += 6;
-      } else {
+      } else if (color_5 < 232) {
         int c5 = color_5 - 16;
         int c5_r = c5 / 36;
         int c5_g = (c5 % 36) / 6;
@@ -181,6 +179,14 @@ static char * color_to_html(struct FANSI_color color, char * buff) {
         buff_track += 2;
         memcpy(buff_track, std_5[c5_b], 2);
         buff_track += 2;
+      } else {
+        int c_bw = (color_5 - 232) * 10 + 8;
+        char hi = dectohex[c_bw / 16];
+        char lo = dectohex[c_bw % 16];
+        for(int i = 0; i < 3; ++i) {
+          *(buff_track++) = hi;
+          *(buff_track++) = lo;
+        }
       }
       break;
     }
@@ -197,7 +203,8 @@ static char * color_to_html(struct FANSI_color color, char * buff) {
   }
   *buff_track = 0;
   int dist = (int) (buff_track - buff);
-  if(dist != 7) error("Internal Error: unexpected byte count for color.");
+  if(dist != 7) 
+    error("Internal Error: unexpected byte count for color (%d).", dist);
 
   return buff;
 }
@@ -233,7 +240,6 @@ static int W_state_as_html(
   struct FANSI_sgr sgr = state.fmt.sgr;
 
   // FANSI_W_COPY requires variables len, i, and err_msg
-
   if(sgr_change || url_change) {
     // Close previous
     if(has_prev_sgr) FANSI_W_COPY(buff, "</span>");
@@ -249,7 +255,7 @@ static int W_state_as_html(
        FANSI_W_COPY(buff, "<span");
       // Styles
       int invert = sgr.style & FANSI_STL_INVERT;
-      struct FANSI_color color = invert ? sgr.color : sgr.bgcol;
+      struct FANSI_color color = invert ? sgr.bgcol : sgr.color;
       struct FANSI_color bgcol = invert ? sgr.color : sgr.bgcol;
 
       // Use provided classes instead of inline styles?
@@ -258,7 +264,6 @@ static int W_state_as_html(
 
       // Class based colors e.g. " class='fansi-color-06 fansi-bgcolor-04'"
       // Brights remapped to 8-15
-
       if(color_class || bgcol_class) {
         FANSI_W_COPY(buff, " class='");
         if(color_class) FANSI_W_COPY(buff, color_class);
@@ -286,10 +291,10 @@ static int W_state_as_html(
           );
         }
         // Styles (need to go after color for transparent to work)
-        for(unsigned int i = 1U; i < 10U; ++i)
+        for(unsigned int i = 0U; i < 9U; ++i)
           if(sgr.style & FANSI_STL_MASK2 & (1U << i)) {
             if(has_style) FANSI_W_COPY(buff, "; ");
-            has_style += FANSI_W_COPY(buff, css_style[i - 1].css);
+            has_style += FANSI_W_COPY(buff, css_style[i].css);
           }
         FANSI_W_COPY(buff, ";'");
       }
