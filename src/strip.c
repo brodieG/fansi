@@ -108,7 +108,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
 
     while(1) {
       struct FANSI_ctl_pos pos = FANSI_find_ctl(state, i, arg);
-      if(pos.warn_max && state.settings & FANSI_SET_WARN)
+      if(pos.warn_max && (state.settings & FANSI_SET_WARN))
         state.status |= FANSI_STAT_WARNED;
       if(pos.len) {
         has_ansi = 1;

@@ -445,9 +445,10 @@ void FANSI_print(char * x) {
   }
 }
 static void print_bits(unsigned int x) {
-  for(unsigned int i = 0; i < (sizeof(x) * CHAR_BIT); ++i) {
-    if(i && !(i % 8)) Rprintf(" ");
-    Rprintf("%d", x & (1U << i));
+  unsigned int uintbits = (sizeof(x) * CHAR_BIT);
+  for(unsigned int i = uintbits; i > 0; --i) {
+    if(i < uintbits && !(i % 8)) Rprintf(" ");
+    Rprintf("%d", (x & (1U << (i - 1))) > 0);
   }
 }
 void FANSI_print_sgr(struct FANSI_sgr s) {

@@ -68,7 +68,6 @@ static int substr_range(
 
     state.status |= state_tmp.status & FANSI_STAT_WARNED;
   }
-  /*
   Rprintf(
     "startii %d stopii %d, w %d %d b %d %d c %d %d\n",
     start,
@@ -80,7 +79,6 @@ static int substr_range(
     state.string[state.pos.x],
     state_prev.string[state_prev.pos.x]
   );
-  */
   // Remember there are non SGR/URL controls!  These are not re-issued.
   if (state.pos.w == start - 1) {
     // Consume leading zero widths; controls will be re-issued on output since
@@ -126,11 +124,6 @@ static int substr_range(
   state_prev.status |= state.status & FANSI_STAT_WARNED; // double warnings.
 
   // If we are allowed to overshoot, keep consuming zero-width non-CTL
-  /*
-  Rprintf(
-    "rnd %d p_w %d %d\n", rnd_i, state.pos.w, state_prev.pos.w
-  );
-  */
   if(
     state_prev.pos.w == stop &&
     (state.pos.w > stop || state.pos.r == state_prev.pos.r)
@@ -179,7 +172,6 @@ static int substr_range(
   if(state_start->pos.x > state_stop->pos.x) {
     error("Internal Error: bad `stop` state 2."); // nocov
   }
-  /*
   Rprintf(
     "w %d %d b %d %d c %d %d startb %d stopb %d\n",
     state.pos.w,
@@ -191,7 +183,6 @@ static int substr_range(
     state_start->pos.x,
     state_stop->pos.x
   );
-  */
   return state_stop->pos.w - state_start->pos.w;
 }
 
@@ -212,8 +203,12 @@ static SEXP substr_one(
   if(term_i) FANSI_reset_state(state);
   else *state = ref;
   const char * arg  = "x";
-
   substr_range(&state_start, &state_stop, i, start, stop, rnd_i, term_i, arg);
+  Rprintf(
+    "ctl %d start %d stop %d startb %d stopb %d\n",
+    FANSI_GET_RNG(state->settings, FANSI_SET_TERMCAP, FANSI_TERM_ALL),
+    start, stop, state_start.pos.x, state_stop.pos.x
+  );
 
   // - Extract ---------------------------------------------------------------
 
@@ -228,6 +223,10 @@ static SEXP substr_one(
 
       // Use bridge do write opening styles to account for potential carry and
       // similar in the input state.
+      if(k) {
+        FANSI_print_state(state_start);
+        FANSI_print_state(state_stop);
+      }
       FANSI_W_bridge(buff, *state, state_start, norm_i, i, err_msg);
 
       // Actual string, remember state_stop.pos.x is one past what we need
