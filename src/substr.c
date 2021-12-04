@@ -208,8 +208,6 @@ static SEXP substr_one(
   else *state = ref;
   const char * arg  = "x";
   substr_range(&state_start, &state_stop, i, start, stop, rnd_i, term_i, arg);
-  FANSI_print_state(state_start);
-  FANSI_print_state(state_stop);
 
   // - Extract ---------------------------------------------------------------
 

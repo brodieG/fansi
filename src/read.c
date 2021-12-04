@@ -207,7 +207,6 @@ unsigned int parse_token(struct FANSI_state * state) {
     ++string;
     ++len_intermediate;
   }
-
   // check for final byte
   is_sgr = 0;
   last = 1;
@@ -250,7 +249,10 @@ unsigned int parse_token(struct FANSI_state * state) {
   // ending
 
   if(*string) ++len;
-
+  else {
+    last = 0;
+    err_code = 5;  // Invalid incomplete CSI
+  }
   state->pos.x += len + len_intermediate + len_tail;
   state->status = set_err(state->status, err_code);
   if(is_sgr) state->status |= FANSI_STAT_SGR;
@@ -602,8 +604,9 @@ void read_esc(struct FANSI_state * state) {
     struct FANSI_state state_prev = *state;
     // Is the current escape recognized by the `ctl` parameter?  It doesn't
     // matter if it ends up being badly encoded or, not just that it starts out
-    // as a presumptive escape that we requested to recognize.
-    int esc_recognized = 0;
+    // as a presumptive escape that we requested to recognize and such should
+    // attempt to parse and advance as far as we're able to parse.
+    int esc_recognized = 1;
     ++state->pos.x;  // advance ESC
 
     // Reset status except warned as we could be reading multiple CSIs or OSCs
@@ -615,7 +618,6 @@ void read_esc(struct FANSI_state * state) {
       (state->settings & (FANSI_CTL_CSI | FANSI_CTL_SGR))
     ) {
       // - CSI -----------------------------------------------------------------
-
       ++state->pos.x;  // consume '['
       int tok_val = 0;
 
@@ -735,13 +737,12 @@ void read_esc(struct FANSI_state * state) {
         if(FANSI_GET_ERR(state->status) > err_code)
           err_code = FANSI_GET_ERR(state->status);
         if(state->status & FANSI_STAT_CSI) break;
-      } while(1);
+      } while(state->string[state->pos.x]);
       // Need to check that sequence actually is SGR, and if not, we need to
       // restore the state (this is done later on checking esc_recognized).
 
       if(!(state->status & FANSI_STAT_SGR)) {
         // CSI
-        esc_recognized = 1;
         esc_types |= 1U;
         if(state->settings & FANSI_CTL_CSI) {
           state->fmt.sgr = state_prev.fmt.sgr;
@@ -749,7 +750,6 @@ void read_esc(struct FANSI_state * state) {
         }
       } else if (state->settings & FANSI_CTL_SGR) {
         // SGR tracking enabled
-        esc_recognized = 1;
         esc_types |= 2U;
         state->status |= FANSI_STAT_CTL;
       }
@@ -760,17 +760,15 @@ void read_esc(struct FANSI_state * state) {
       state->settings & FANSI_CTL_URL
     ) {
       // - OSC Encoded URL -----------------------------------------------------
-      esc_recognized = 1;
       ++state->pos.x;    // consume ']'
       parse_url(state);  // advances state by ref!
-      int err_tmp = FANSI_GET_ERR(state->status) < 3;
+      int err_tmp = FANSI_GET_ERR(state->status);
       if(err_tmp < 3) esc_types |= 2U;
     } else if(
       state->string[state->pos.x] == ']' &&
       state->settings & FANSI_CTL_OSC
     ) {
       // - Other OSC System Command --------------------------------------------
-      esc_recognized = 1;
       int osc_bytes = 0;
       ++state->pos.x;  // consume ']'
       struct FANSI_osc osc = parse_osc(state->string + state->pos.x);
@@ -781,14 +779,14 @@ void read_esc(struct FANSI_state * state) {
         state->status |= FANSI_CTL_OSC;
       }
       state->pos.x += osc_bytes;
-    } else if(!state->string[state->pos.x]) {
+    } else if(
+      !state->string[state->pos.x] && (state->settings & FANSI_CTL_ALL)
+    ) {
       // - String ends in ESC --------------------------------------------------
       err_code = 7;
-      esc_recognized = state->settings & FANSI_CTL_ALL;
     } else if(state->settings & FANSI_CTL_ESC) {
       // -Two Byte ESC ---------------------------------------------------------
       esc_types |= 1U;
-      esc_recognized = 1;
 
       // Other ESC sequence; note there are technically multi character
       // sequences but we ignore them here.  There is also the possibility that
@@ -805,6 +803,8 @@ void read_esc(struct FANSI_state * state) {
       // Don't process additional ESC if it is there so we keep looping
       if(state->string[state->pos.x] != 0x1B)
         ++state->pos.x;
+    } else {
+      esc_recognized = 0;
     }
     // Did we read mixed special and non-special escapes?
     if(esc_types == (1U | 2U)) {
