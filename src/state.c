@@ -228,27 +228,28 @@ char * FANSI_state_as_chr(
 }
 
 /*
- * Determine whether two state structs have same style
- *
- * This only compares the style pieces (i.e. not the position pieces)
- *
- * Returns 1 if the are different, 0 if they are equal.
- *
- * _basic is used just for the 1-9 SGR codes plus colors.
+ * Determine whether two state structs have same color
  */
-int FANSI_sgr_comp_color(
-  struct FANSI_sgr target, struct FANSI_sgr current
+static int sgr_comp_color(
+  struct FANSI_color target, struct FANSI_color current
 ) {
-  unsigned char tclr = target.color.x;
-  unsigned char cclr = current.color.x;
+  unsigned char tclr = target.x;
+  unsigned char cclr = current.x;
   int c256 = tclr & (FANSI_CLR_256 | FANSI_CLR_TRU);
   int cTRU = tclr & FANSI_CLR_TRU;
   return
     tclr != cclr  ||
     // Can't use memcmp because we don't necessarly cleanup extra
-    (c256 && target.color.extra[0] != current.color.extra[0]) ||
-    (cTRU && target.color.extra[1] != current.color.extra[1]) ||
-    (cTRU && target.color.extra[2] != current.color.extra[2]);
+    (c256 && target.extra[0] != current.extra[0]) ||
+    (cTRU && target.extra[1] != current.extra[1]) ||
+    (cTRU && target.extra[2] != current.extra[2]);
+}
+int FANSI_sgr_comp_color(
+  struct FANSI_sgr target, struct FANSI_sgr current
+) {
+  return
+    sgr_comp_color(target.color, current.color) ||
+    sgr_comp_color(target.bgcol, current.bgcol);
 }
 /*
  * Create a new SGR that has all the styles in `old` missing from `new`.
@@ -284,7 +285,7 @@ struct FANSI_sgr FANSI_sgr_setdiff(
   if(
     (!mode && (font_old != font_new)) || (mode && font_old && !font_new)
   )
-    res.style &= font_old | ~FANSI_FONT_MASK;
+    res.style = (res.style & ~FANSI_FONT_MASK) | font_old;
 
   // All non font styles are just bit flags
   unsigned int style_old, style_new;

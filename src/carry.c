@@ -142,13 +142,7 @@ int FANSI_W_bridge(
     struct FANSI_sgr renew;
     // If we close everything, we need to re-open the stuff that was active
     renew = FANSI_sgr_intersect(end.fmt.sgr, restart.fmt.sgr);
-    /*
-    Rprintf("to_open %d to_close %d renew %d\n",
-      FANSI_sgr_active(to_open),
-      FANSI_sgr_active(to_close),
-      FANSI_sgr_active(renew)
-      );
-    */
+
     int active_open = FANSI_sgr_active(to_open);
     int active_close = FANSI_sgr_active(to_close);
 

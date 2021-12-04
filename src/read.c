@@ -280,11 +280,6 @@ void parse_colors(
   // First, figure out if we are in true color or palette mode
   tok_val = parse_token(state);  // advances state by ref!
 
-  Rprintf("parsecol %d %d %d csi %d\n", tok_val,
-      state->settings & FANSI_TERM_TRUECOLOR,
-      state->settings & FANSI_TERM_256,
-      (state->status & FANSI_STAT_CSI)
-      );
   if(!FANSI_GET_ERR(state->status)) {
     if(
       (tok_val != 2 && tok_val != 5) || (state->status & FANSI_STAT_CSI)
@@ -438,8 +433,9 @@ void parse_url(struct FANSI_state * state) {
         // All good
         if (*end == ';' && !semicolon) semicolon = end - x0;
       } else if (!(*end >= 0x08 && *end <= 0x0d)) {
-        // Invalid string, probably could break here
+        // Invalid string
         state->status = set_err(state->status, 5);
+        break;
       } else {
         // OK OSC, but non portable URL
         unsigned int err_tmp = FANSI_GET_ERR(state->status);
@@ -448,7 +444,7 @@ void parse_url(struct FANSI_state * state) {
       ++end;
     }
     // Ended sequence before string
-    if(*end) {
+    if(*end && FANSI_GET_ERR(state->status) < 4) {
       // If semicolon is found, and string is not invalid, it's a URL
       if(*end && semicolon) {
         const char * url_start = x0 + semicolon + 1;
@@ -457,11 +453,22 @@ void parse_url(struct FANSI_state * state) {
         state->fmt.url.url =
           (struct FANSI_string) {url_start, end - url_start};
         state->fmt.url.id = get_url_param(state->fmt.url.params, "id=");
+        // Non id parameters
+        if(
+          state->fmt.url.params.len &&
+          state->fmt.url.id.len + 3 != state->fmt.url.params.len
+        ) {
+          unsigned int err_tmp = FANSI_GET_ERR(state->status);
+          state->status = set_err(state->status, err_tmp < 2 ? 2 : err_tmp);
+        }
       }
     } else state->status = set_err(state->status, 5);
-    state->fmt.url.osc.len = end - x0 +
-      (*end != 0) +           // consume terminator if there is one
-      (*end == 0x1b);         // consume extra byte for ST
+    state->fmt.url.osc.len = end - x0;
+    if(FANSI_GET_ERR(state->status) < 4) {
+      state->fmt.url.osc.len +=
+        (*end != 0) +           // consume terminator if there is one
+        (*end == 0x1b);         // consume extra byte for ST
+    }
     state->pos.x += state->fmt.url.osc.len;
   } else error("Internal Error: non-URL OSC fed to URL parser.\n"); // nocov
 }
@@ -590,7 +597,6 @@ void read_esc(struct FANSI_state * state) {
   // them in some cases to know what type they are to decide.
 
   state->status &= ~FANSI_STAT_CTL;
-  Rprintf("start read esc\n");
 
   do {
     struct FANSI_state state_prev = *state;
@@ -618,10 +624,6 @@ void read_esc(struct FANSI_state * state) {
       do {
         state->status = set_err(state->status, 0);
         tok_val = parse_token(state);  // advances state by ref!
-        Rprintf(
-          "    tokval %d err %d ec %d\n", tok_val, FANSI_GET_ERR(state->status),
-          err_code
-        );
         if(!FANSI_GET_ERR(state->status)) {
           // We have a reasonable CSI value, now we need to check whether it
           // actually corresponds to anything that should modify state
@@ -643,14 +645,19 @@ void read_esc(struct FANSI_state * state) {
             if(fg) state->fmt.sgr.color.x = col_enc;
             else   state->fmt.sgr.bgcol.x = col_enc;
           } else if (
-            (tok_val >=  90 && tok_val <  97) ||
-            (tok_val >= 100 && tok_val < 107)
+            (tok_val >=  90 && tok_val <=  97) ||
+            (tok_val >= 100 && tok_val <= 107)
           ) {
-            int fg = tok_val < 100;
-            unsigned int col_code = tok_val - (fg ? 90 : 100);
-            unsigned int col_enc = FANSI_CLR_BRIGHT | col_code;
-            if(fg) state->fmt.sgr.color.x = col_enc;
-            else   state->fmt.sgr.bgcol.x = col_enc;
+            // Does terminal support bright colors? We do not consider it an
+            // error if it doesn't because the color will just be ignored
+            // and won't cause a trainwreck like unsupported truecolor.
+            if(state->settings & FANSI_TERM_BRIGHT) {
+              int fg = tok_val < 100;
+              unsigned int col_code = tok_val - (fg ? 90 : 100);
+              unsigned int col_enc = FANSI_CLR_BRIGHT | col_code;
+              if(fg) state->fmt.sgr.color.x = col_enc;
+              else   state->fmt.sgr.bgcol.x = col_enc;
+            }
           // - Styles On -------------------------------------------------------
           } else if (tok_val < 10) {
             // 1-9 are the standard styles (bold/italic)
@@ -725,10 +732,6 @@ void read_esc(struct FANSI_state * state) {
             state->status = set_err(state->status, 1U); // unknown
           }
         }
-        Rprintf(
-          "    status %d err %d\n", state->status & FANSI_STAT_CSI,
-          FANSI_GET_ERR(state->status)
-        );
         if(FANSI_GET_ERR(state->status) > err_code)
           err_code = FANSI_GET_ERR(state->status);
         if(state->status & FANSI_STAT_CSI) break;
@@ -738,10 +741,10 @@ void read_esc(struct FANSI_state * state) {
 
       if(!(state->status & FANSI_STAT_SGR)) {
         // CSI
+        esc_recognized = 1;
         esc_types |= 1U;
         if(state->settings & FANSI_CTL_CSI) {
           state->fmt.sgr = state_prev.fmt.sgr;
-          esc_recognized = 1;
           state->status |= FANSI_STAT_CTL;
         }
       } else if (state->settings & FANSI_CTL_SGR) {
@@ -760,7 +763,8 @@ void read_esc(struct FANSI_state * state) {
       esc_recognized = 1;
       ++state->pos.x;    // consume ']'
       parse_url(state);  // advances state by ref!
-      if(FANSI_GET_ERR(state->status) < 3) esc_types |= 2U;
+      int err_tmp = FANSI_GET_ERR(state->status) < 3;
+      if(err_tmp < 3) esc_types |= 2U;
     } else if(
       state->string[state->pos.x] == ']' &&
       state->settings & FANSI_CTL_OSC
@@ -829,8 +833,6 @@ void read_esc(struct FANSI_state * state) {
   } while(
     state->string[state->pos.x] == 0x1b && !(state->settings & FANSI_SET_ESCONE)
   );
-  Rprintf("end read esc err %d\n", FANSI_GET_ERR(state->status));
-
   if(err_code > FANSI_GET_ERR(state->status))
     state->status = set_err(state->status, err_code);
 

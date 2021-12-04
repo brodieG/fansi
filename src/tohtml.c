@@ -191,7 +191,7 @@ static char * color_to_html(struct FANSI_color color, char * buff) {
       break;
     }
     case FANSI_CLR_TRU:
-      for(int i = 1; i < 4; ++i) {
+      for(int i = 0; i < 3; ++i) {
         char hi = dectohex[color.extra[i] / 16];
         char lo = dectohex[color.extra[i] % 16];
         *(buff_track++) = hi;
@@ -203,7 +203,7 @@ static char * color_to_html(struct FANSI_color color, char * buff) {
   }
   *buff_track = 0;
   int dist = (int) (buff_track - buff);
-  if(dist != 7) 
+  if(dist != 7)
     error("Internal Error: unexpected byte count for color (%d).", dist);
 
   return buff;
@@ -451,6 +451,8 @@ SEXP FANSI_esc_to_html(
  *
  * x is a 5 x N matrix where, for each column the first value is a color code,
  * and subsequent values correspond to the state.sgr.color_extra values.
+ *
+ * Does not allow for bright mode?
  */
 
 SEXP FANSI_color_to_html_ext(SEXP x) {
@@ -471,10 +473,15 @@ SEXP FANSI_color_to_html_ext(SEXP x) {
 
   for(R_xlen_t i = 0; i < len; i += 5) {
     struct FANSI_color color;
-    color.x = x_int[i];
-    color.extra[0] = (unsigned char)x_int[i + 1];
-    color.extra[1] = (unsigned char)x_int[i + 2];
-    color.extra[2] = (unsigned char)x_int[i + 3];
+    unsigned int color_mode = 0;
+    if(x_int[i] == 8) {
+      if(x_int[i + 1] == 2) color_mode = FANSI_CLR_TRU;
+      else color_mode = FANSI_CLR_256;
+    } else color_mode = FANSI_CLR_8;
+    color.x = x_int[i] | color_mode;
+    color.extra[0] = (unsigned char)x_int[i + 2];
+    color.extra[1] = (unsigned char)x_int[i + 3];
+    color.extra[2] = (unsigned char)x_int[i + 4];
     color_to_html(color, buff.buff);
     SEXP chrsxp = PROTECT(mkCharLenCE(buff.buff, 7, CE_BYTES));
     SET_STRING_ELT(res, i / 5, chrsxp);

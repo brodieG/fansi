@@ -666,7 +666,6 @@ static char * make_token(char * buff, const char * val, int normalize) {
 static char * color_token(
   char * buff, struct FANSI_color color, int mode, int normalize
 ) {
-  Rprintf("in color\n");
   if(mode != 3 && mode != 4)
     error("Internal Error: color mode must be 3 or 4");  // nocov
 
@@ -691,18 +690,15 @@ static char * color_token(
     // Other colors
     *(buff_track++) = '0' + mode;
     *(buff_track++) = '0' + clrval;
-    Rprintf("color %d\n", color.x);
     if(color.x & (FANSI_CLR_256 | FANSI_CLR_TRU)) {
       *(buff_track++) = ';';
       int write_chrs = 0;
       if(color.x & FANSI_CLR_TRU) {
-        Rprintf("color true\n");
         write_chrs = sprintf(
           buff_track, "2;%d;%d;%d",
           color.extra[0], color.extra[1], color.extra[2]
         );
       } else {
-        Rprintf("color 256\n");
         write_chrs = sprintf(buff_track, "5;%d", color.extra[0]);
       }
       if(write_chrs < 0)
@@ -798,7 +794,7 @@ void FANSI_W_sgr(
       FANSI_W_COPY(buff, make_token(tmp, "51", normalize));
     if(sgr.style & FANSI_BRD_ENCIRC)
       FANSI_W_COPY(buff, make_token(tmp, "52", normalize));
-    if(sgr.style & FANSI_BRD_ENCIRC)
+    if(sgr.style & FANSI_BRD_OVERLN)
       FANSI_W_COPY(buff, make_token(tmp, "53", normalize));
 
     // Ideogram
@@ -815,7 +811,7 @@ void FANSI_W_sgr(
 
     // font
     unsigned int font =
-      FANSI_GET_RNG(sgr.style, FANSI_FONT_START, FANSI_FONT_MASK);
+      FANSI_GET_RNG(sgr.style, FANSI_FONT_START, FANSI_FONT_ALL);
     if(font) {
       char tokval[3] = {'1', '0'};
       tokval[1] = '0' + (font % 10);

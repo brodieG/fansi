@@ -150,11 +150,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #define FANSI_IDG_STRESS  524288 // ideogram stress marking
 #define FANSI_IDG_MASK   1015808 // sum(2^(15:19))
 
-// font bit start, bits including and above this are the font
-// this is in sgr.style
 // Alternative fonts, 10-19, (encoded as is for simplicity, so use 5 bytes)
 
-#define FANSI_FONT_START  27 // most significant 5 byte encode font in 10-19
+#define FANSI_FONT_START  27
 #define FANSI_FONT_MASK 4160749568 // sum(2^(27:31))
 #define FANSI_FONT_ALL    31
 
