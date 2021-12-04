@@ -38,27 +38,38 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
 // - Settings ------------------------------------------------------------------
 
-
 // Offset for starting bytes for various settings
-#define FANSI_SET_TERMCAP   0
-#define FANSI_SET_WARN      3
-#define FANSI_SET_WIDTH    12
-#define FANSI_SET_CTL      14
+#define FANSI_SET_CTL       0
+#define FANSI_SET_TERMCAP   7
+#define FANSI_SET_WARN     10
+#define FANSI_SET_WIDTH    19
 
-// Bits 0-2: term caps
-#define FANSI_TERM_BRIGHT    1
-#define FANSI_TERM_256       2
-#define FANSI_TERM_TRUECOLOR 4
+// bits 0-6: recognized controls (also used in .status)
+#define FANSI_CTL_NL           1
+#define FANSI_CTL_C0           2
+#define FANSI_CTL_SGR          4
+#define FANSI_CTL_CSI          8
+#define FANSI_CTL_ESC         16
+#define FANSI_CTL_URL         32
+#define FANSI_CTL_OSC         64
 
-#define FANSI_TERM_ALL       7
-#define FANSI_TERM_MASK      7
+#define FANSI_CTL_ALL        127
+#define FANSI_CTL_MASK       127
 
-// Bits 3-11: warning level
-#define FANSI_WARN_CSIBAD 2688 // ... 1010 1000 0000
-#define FANSI_WARN_MASK   4088 // ... 1111 1111 1000
-#define FANSI_WARN_ALL     511 // ... 0001 1111 1111
+// Bits 7-9: term caps
+#define FANSI_TERM_BRIGHT    128
+#define FANSI_TERM_256       256
+#define FANSI_TERM_TRUECOLOR 512
 
-// bits 12-13: Width mode, this is an integer, not bit flags, so
+#define FANSI_TERM_ALL         7
+#define FANSI_TERM_MASK      896
+
+// Bits 10-18: warning level
+#define FANSI_WARN_CSIBAD 344064 // 0001 0101 0000 << FANSI_SET_WARN
+#define FANSI_WARN_MASK     4088 // 0001 1111 1111 << FANSI_SET_WARN
+#define FANSI_WARN_ALL       511 // 0001 1111 1111
+
+// bits 19-20: Width mode, this is an integer, not bit flags, so
 // First shift by FANSI_SET_WIDTH
 #define FANSI_COUNT_CHARS    0
 #define FANSI_COUNT_WIDTH    1
@@ -67,18 +78,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
 #define FANSI_COUNT_ALL      3
 
-// bits 14-20: recognized controls
-#define FANSI_CTL_NL        16384
-#define FANSI_CTL_C0        32768
-#define FANSI_CTL_SGR       65536
-#define FANSI_CTL_CSI      131072
-#define FANSI_CTL_ESC      262144
-#define FANSI_CTL_URL      524288
-#define FANSI_CTL_OSC     1048576
-
-#define FANSI_CTL_ALL         127  // left shift by FANSI_SET_CTL to get mask
-#define FANSI_CTL_MASK    2080768
-
 // bits 21-23: other settings
 #define FANSI_SET_ALLOWNA 2097152
 #define FANSI_SET_KEEPNA  4194304
@@ -86,36 +85,41 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
 // - Status --------------------------------------------------------------------
 
-// Same concept as settings.
+#define FANSI_STAT_ERR_START  7
+
+// bits 0-6: identical to .settings (controls found).  This is not super
+// efficient, but since we do read many escape sequences at a time it is useful
+// to track all the ones that are found.
+
+#define FANSI_STAT_SPECIAL   36  // FANSI_CTL_SGR | FANSI_CTL_URL
+
+// bits 7-10: integer error code (not bit flags)
 //
 // Type of failure, set to zero if no error, use FANSI_GET_ERR to access (or
 // set_err in read.c to set.  Error is a decimal here.
 //
-// * 1: well formed csi sgr, but contains uninterpretable sub-strings, if a
-//      CSI sequence is not fully parsed yet (i.e. last char not read) it is
-//      assumed to be SGR until we read the final code.
-// * 2: well formed csi sgr, but contains uninterpretable characters [:<=>]
-// * 3: well formed csi sgr, but contains color codes that exceed terminal
-//     capabilities
-// * 4: well formed csi, but not an SGR
-// * 5: malformed csi
-// * 6: other escape sequence
-// * 7: malformed escape (e.g. string ending in ESC).
-// * 8: c0 escapes
-// * 9: malformed UTF8
-#define FANSI_STAT_ERR_START  0
-#define FANSI_STAT_ERR_ALL   15
-#define FANSI_STAT_ERR_MASK  15
+// *  1: well formed csi sgr, but contains uninterpretable sub-strings, if a
+//       CSI sequence is not fully parsed yet (i.e. last char not read) it is
+//       assumed to be SGR until we read the final code.
+// *  2: well formed csi sgr, but contains uninterpretable characters [:<=>]
+// *  3: well formed csi sgr, but contains color codes that exceed terminal
+//      capabilities
+// *  4: well formed csi, but not an SGR
+// *  5: malformed csi
+// *  6: other escape sequence
+// *  7: malformed escape (e.g. string ending in ESC).
+// *  8: c0 escapes
+// *  9: malformed UTF8
 
-// Single bit status
-#define FANSI_STAT_ZWJ       16
-#define FANSI_STAT_RI        32
-#define FANSI_STAT_SPECIAL   64   // Is SGR or URL
-#define FANSI_STAT_CTL      128   // Was a recognized control
-#define FANSI_STAT_AGAIN    256   // Need to read on more char (was .read_one_more)
-#define FANSI_STAT_CSI      512   // CSI was complete (was .last)
-#define FANSI_STAT_SGR     1024   // CSI is an SGR
-#define FANSI_STAT_WARNED  2048   // Warning already issued
+#define FANSI_STAT_ERR_ALL    15
+#define FANSI_STAT_ERR_MASK 1920
+
+// bits 11-14: additional status flags
+
+#define FANSI_STAT_ZWJ      2048
+#define FANSI_STAT_RI       4096
+#define FANSI_STAT_AGAIN    8192 // Need to read on more char (was .read_one_more)
+#define FANSI_STAT_WARNED  16384 // Warning already issued
 
 // - sgr.style -----------------------------------------------------------------
 
@@ -158,7 +162,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
 // - Misc ----------------------------------------------------------------------
 
-#define FANSI_CLR_BUFF_SIZE    17
+#define FANSI_CLR_BUFF_SIZE  17   // big enough for e.g. 38;2;255;255;255
 
 // Color modes
 #define FANSI_CLR_MASK    240    // 1111 0000

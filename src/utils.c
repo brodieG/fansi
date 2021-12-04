@@ -99,38 +99,20 @@ SEXP FANSI_add_int_ext(SEXP x, SEXP y) {
   return ScalarInteger(FANSI_ADD_INT(asInteger(x), asInteger(y)));
 }
 /*
- * Compute Location and Size of Next Control Sequences
+ * Seek a state up until a known control.
  *
- * @param one_only give up after a single failed attempt, otherwise keep going
- *   until a recognized control sequence is found.
+ * Beware that the position offsets other than .x will be incorrect.
  */
-struct FANSI_ctl_pos FANSI_find_ctl(
-  struct FANSI_state state, R_xlen_t i, const char * arg
+void FANSI_find_ctl(
+  struct FANSI_state *state, R_xlen_t i, const char * arg
 ) {
-  int raw_prev, pos_prev, found, err_prev;
-  unsigned int warn_max = 0;
-  found = 0;
-
-  while(state.string[state.pos.x]) {
-    raw_prev = state.pos.r;
-    pos_prev = state.pos.x;
-    err_prev = FANSI_GET_ERR(state.status);
-    FANSI_read_next(&state, i, arg);
-    int err = FANSI_GET_ERR(state.status);
-    if(err) warn_max |= (1U << (err - 1U));
+  while(state->string[state->pos.x]) {
+    state->pos.x += FANSI_seek_ctl(state->string + state->pos.x);
+    FANSI_read_next(state, i, arg);
     // Known control read
-    if(state.pos.r == raw_prev) {
-      found = 1;
+    if(state->status & FANSI_CTL_MASK) {
       break;
-    }
-    state.pos.x += FANSI_seek_ctl(state.string + state.pos.x);
-  }
-  int res = 0;
-  if(found) res = state.pos.x - pos_prev;
-  return (struct FANSI_ctl_pos) {
-    .offset = pos_prev, .len = res, .warn_max=warn_max
-  };
-}
+} } }
 static int FANSI_maybe_ctl(const char x) {
   // Controls range from 0000 0001 (0x01) to 0001 1111 (0x1F), plus 0x7F;
   // We don't treat C1 controls as specials, apparently
@@ -153,7 +135,7 @@ int FANSI_seek_ctl(const char * x) {
  * ctl as a bit.
  */
 
-int FANSI_ctl_as_int(SEXP ctl) {
+unsigned int FANSI_ctl_as_int(SEXP ctl) {
   int ctl_int = 0;
   int flip_bits = 0;
   for(R_xlen_t i = 0; i < XLENGTH(ctl); ++i) {
@@ -164,9 +146,10 @@ int FANSI_ctl_as_int(SEXP ctl) {
     if(ctl_val > 6)
       error("Internal Error: max ctl value allowed is 6.");
     if(ctl_val < 0) flip_bits = 1;
-    else ctl_int |= 1 << ctl_val;
+    else ctl_int |= 1U << ctl_val;
   }
   if(flip_bits) ctl_int ^= FANSI_CTL_ALL;
+  Rprintf("flip %d ctl %d\n", flip_bits, ctl_int);
   return ctl_int;
 }
 SEXP FANSI_ctl_as_int_ext(SEXP ctl) {
@@ -453,7 +436,7 @@ static void print_bits(unsigned int x) {
 }
 void FANSI_print_sgr(struct FANSI_sgr s) {
   Rprintf(
-    "  color: %d %d %d;%d;%d bgcolor: %d %d %d;%d;%d\n",
+    "  color:  %d %d %d;%d;%d bgcolor:  %d %d %d;%d;%d\n",
     s.color.x & FANSI_CLR_MASK,
     s.color.x & ~FANSI_CLR_MASK, 
     s.color.extra[0], s.color.extra[1], s.color.extra[2],
@@ -461,7 +444,7 @@ void FANSI_print_sgr(struct FANSI_sgr s) {
     s.bgcol.x & ~FANSI_CLR_MASK, 
     s.bgcol.extra[0], s.bgcol.extra[1], s.bgcol.extra[2]
   );
-  Rprintf("  style ");
+  Rprintf("  style:  ");
   print_bits(s.style);
   Rprintf("\n");
 }
@@ -472,8 +455,10 @@ void FANSI_print_state(struct FANSI_state x) {
     "  pos: b %d r %d a %d w %d\n",
     x.pos.x, x.pos.r, x.pos.a, x.pos.a
   );
-  Rprintf("  status ");
+  Rprintf("  status: ");
   print_bits(x.status);
+  Rprintf("\n  settng: ");
+  print_bits(x.settings);
   Rprintf("\n- End State ---\n");
 }
 

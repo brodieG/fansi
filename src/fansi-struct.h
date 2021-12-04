@@ -70,28 +70,10 @@ struct FANSI_buff {
   int warned;        // Whether a warning was issued already.
   int reset;         // Indicate the buffer was reset as required.
 };
-/*
- * Used when computing position and size of ANSI tag with FANSI_loc
- */
-struct FANSI_ctl_pos {
-  // Byte offset to first recognized control sequence
-  int offset;
-  // how many characters to the end of the sequnce
-  int len;
-  // Warnings encounted, encoded "bitwise" as with FANSI_state.warn
-  unsigned int warn_max;
-};
 struct FANSI_color {
   /*
-   * Most significant 4 bytes are the color mode, least significant are the
-   * actual colors.
-   *
-   * Color modes:
-   *
-   * - 00: off
-   * - 01: on in lower bytes: 0-7 nomal, 8-15 bright.
-   * - 10: 256 color mode (record value in .a)
-   * - 11: truecolor (recored values in .a, .b, .c)
+   * Most significant 4 bits are the color mode (see FANSI_CLR_*), least
+   * significant are the actual colors for 8 bit and bright modes.
    */
   unsigned char x;
   // Color channels, or at index 0 256 color value

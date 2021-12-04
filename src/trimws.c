@@ -76,7 +76,7 @@ SEXP FANSI_trimws(
               goto ENDLEAD;
             } else {
               FANSI_read_next(&state, i, arg);
-              if(state.status & FANSI_STAT_CTL) break;
+              if(state.status & FANSI_CTL_MASK) break;
               else goto ENDLEAD;
             }
       } }
@@ -107,7 +107,7 @@ SEXP FANSI_trimws(
               ++state.pos.x;
             } else {
               FANSI_read_next(&state, i, arg);
-              if(state.status & FANSI_STAT_CTL) continue;
+              if(state.status & FANSI_CTL_MASK) continue;
               else {
                 string_end = 0;
                 ++state.pos.x;

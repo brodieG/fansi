@@ -98,19 +98,11 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
 
     res_start = res_track = chr_buff;
 
-    // Check whether there anything that could plausibly pass for an escape
-    // before doing a proper (more expensive) check
-    int off_init = FANSI_seek_ctl(chr);
-    if(!*(chr + off_init)) continue;
-
-    state.pos.x = off_init;
-    struct FANSI_ctl_pos pos_prev = {0, 0, 0};
+    struct FANSI_position pos_prev = state.pos;
 
     while(1) {
-      struct FANSI_ctl_pos pos = FANSI_find_ctl(state, i, arg);
-      if(pos.warn_max && (state.settings & FANSI_SET_WARN))
-        state.status |= FANSI_STAT_WARNED;
-      if(pos.len) {
+      FANSI_find_ctl(&state, i, arg);
+      if(state.status & FANSI_CTL_MASK) {
         has_ansi = 1;
 
         // As soon as we encounter ansi in any of the character vector elements,
@@ -130,12 +122,11 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
           chr_buff = (char *) R_alloc(((size_t) mem_req) + 1, sizeof(char));
           res_start = res_track = chr_buff;
         }
-        int w_len = pos.offset - (pos_prev.offset + pos_prev.len);
+        int w_len = state.pos.x - pos_prev.x;
         memcpy(res_track, chr_track, w_len);
         res_track += w_len;
-        state.pos.x = pos.offset + pos.len;
         chr_track = state.string + state.pos.x;
-        pos_prev = pos;
+        pos_prev = state.pos;
       } else {
         break;
       }

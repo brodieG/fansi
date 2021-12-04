@@ -255,8 +255,17 @@ unsigned int parse_token(struct FANSI_state * state) {
   }
   state->pos.x += len + len_intermediate + len_tail;
   state->status = set_err(state->status, err_code);
-  if(is_sgr) state->status |= FANSI_STAT_SGR;
-  if(last) state->status |= FANSI_STAT_CSI;
+  Rprintf("-- sgr %d last %d stat %d pos %d\n", is_sgr, last, state->status, state->pos.x);
+  if(is_sgr && (state->settings & FANSI_CTL_SGR))
+    state->status |= FANSI_CTL_SGR;
+  else if(last && !is_sgr && (state->settings & FANSI_CTL_CSI))
+    state->status |= FANSI_CTL_CSI;
+  Rprintf(
+    "-- sgr %d last %d stat %d err %d len %d\n", 
+    is_sgr, last, state->status,
+    FANSI_GET_ERR(state->status),
+    len + len_intermediate + len_tail
+  );
   return val;
 }
 /*
@@ -284,7 +293,7 @@ void parse_colors(
 
   if(!FANSI_GET_ERR(state->status)) {
     if(
-      (tok_val != 2 && tok_val != 5) || (state->status & FANSI_STAT_CSI)
+      (tok_val != 2 && tok_val != 5) || (state->status & FANSI_CTL_CSI)
     ) {
       // weird case, we don't want to advance the position here because
       // `tok_val` needs to be interpreted as potentially a non-color style and
@@ -312,7 +321,7 @@ void parse_colors(
         tok_val = parse_token(state);  // advances state by ref!
         err_col = FANSI_GET_ERR(state->status);
         if(!err_col) {
-          early_end = (state->status & FANSI_STAT_CSI) && i < (i_max - 1);
+          early_end = (state->status & FANSI_CTL_CSI) && i < (i_max - 1);
           if(tok_val < 256 && !early_end) tmp_col[i] = tok_val;
           else error("Internal Error: invalid color parse."); // nocov
         } else break;
@@ -420,6 +429,7 @@ static struct FANSI_string get_url_param(
 
 void parse_url(struct FANSI_state * state) {
   const char *end, *x0, *x;
+  unsigned int err_tmp = 0;
   x = x0 = state->string + state->pos.x;
   if(*(x) == '8' && *(x + 1) == ';') {
     end = x = x0 + 2;
@@ -440,13 +450,14 @@ void parse_url(struct FANSI_state * state) {
         break;
       } else {
         // OK OSC, but non portable URL
-        unsigned int err_tmp = FANSI_GET_ERR(state->status);
+        err_tmp = FANSI_GET_ERR(state->status);
         state->status = set_err(state->status, err_tmp < 4 ? 4 : err_tmp);
       }
       ++end;
     }
     // Ended sequence before string
-    if(*end && FANSI_GET_ERR(state->status) < 4) {
+    err_tmp = FANSI_GET_ERR(state->status);
+    if(*end && err_tmp < 4) {
       // If semicolon is found, and string is not invalid, it's a URL
       if(*end && semicolon) {
         const char * url_start = x0 + semicolon + 1;
@@ -460,16 +471,19 @@ void parse_url(struct FANSI_state * state) {
           state->fmt.url.params.len &&
           state->fmt.url.id.len + 3 != state->fmt.url.params.len
         ) {
-          unsigned int err_tmp = FANSI_GET_ERR(state->status);
           state->status = set_err(state->status, err_tmp < 2 ? 2 : err_tmp);
         }
       }
     } else state->status = set_err(state->status, 5);
+    err_tmp = FANSI_GET_ERR(state->status);
+
     state->fmt.url.osc.len = end - x0;
-    if(FANSI_GET_ERR(state->status) < 4) {
+    if(err_tmp < 4) {
+      // Essentially a valid URL, although maybe has some invalid stuff in it
       state->fmt.url.osc.len +=
         (*end != 0) +           // consume terminator if there is one
         (*end == 0x1b);         // consume extra byte for ST
+      state->status |= FANSI_CTL_URL;
     }
     state->pos.x += state->fmt.url.osc.len;
   } else error("Internal Error: non-URL OSC fed to URL parser.\n"); // nocov
@@ -598,7 +612,7 @@ void read_esc(struct FANSI_state * state) {
   // We only interpet sequences if they are active per .ctl, but we need to read
   // them in some cases to know what type they are to decide.
 
-  state->status &= ~FANSI_STAT_CTL;
+  state->status &= ~FANSI_CTL_MASK;
 
   do {
     struct FANSI_state state_prev = *state;
@@ -736,23 +750,18 @@ void read_esc(struct FANSI_state * state) {
         }
         if(FANSI_GET_ERR(state->status) > err_code)
           err_code = FANSI_GET_ERR(state->status);
-        if(state->status & FANSI_STAT_CSI) break;
+        if(state->status & (FANSI_CTL_CSI | FANSI_CTL_SGR)) break;
       } while(state->string[state->pos.x]);
-      // Need to check that sequence actually is SGR, and if not, we need to
-      // restore the state (this is done later on checking esc_recognized).
 
-      if(!(state->status & FANSI_STAT_SGR)) {
+      // Need to check that sequence actually is SGR or CSI, and if not, we need
+      // to restore the state (this is done later on checking esc_recognized).
+
+      if(!(state->status & (FANSI_CTL_SGR | FANSI_CTL_CSI)) {
         // CSI
-        esc_types |= 1U;
-        if(state->settings & FANSI_CTL_CSI) {
-          state->fmt.sgr = state_prev.fmt.sgr;
-          state->status |= FANSI_STAT_CTL;
-        }
-      } else if (state->settings & FANSI_CTL_SGR) {
-        // SGR tracking enabled
-        esc_types |= 2U;
-        state->status |= FANSI_STAT_CTL;
-      }
+        *state = state_prev;
+        ++state->pos.x;       // consume '['
+      } else if (state->status & FANSI_CTL_CSI) esc_types |= 1U;
+      } else if (state->status & FANSI_CTL_SGR) esc_types |= 2U;
     } else if(
       state->string[state->pos.x] == ']' &&
       state->string[state->pos.x + 1] == '8' &&
@@ -780,7 +789,7 @@ void read_esc(struct FANSI_state * state) {
       }
       state->pos.x += osc_bytes;
     } else if(
-      !state->string[state->pos.x] && (state->settings & FANSI_CTL_ALL)
+      !state->string[state->pos.x] && (state->settings & FANSI_CTL_MASK)
     ) {
       // - String ends in ESC --------------------------------------------------
       err_code = 7;
@@ -818,13 +827,8 @@ void read_esc(struct FANSI_state * state) {
       state->pos.a += byte_offset;
       // Record other ancillary info here, we don't do it outside of the loop
       // as we want to be able reset to state_prev if things don't work out.
-      state->status |= FANSI_STAT_CTL;
-      if(esc_types & 2U) {
-        // we  just read an SGR/URL, but maybe invalid
-        state->status |= FANSI_STAT_SPECIAL;
-      }
     } else {
-      state->status &= ~FANSI_STAT_CTL;  // not a control
+      state->status &= ~FANSI_CTL_MASK; // not a control
       *state = state_prev;
       read_ascii(state);
     }
@@ -835,10 +839,6 @@ void read_esc(struct FANSI_state * state) {
   );
   if(err_code > FANSI_GET_ERR(state->status))
     state->status = set_err(state->status, err_code);
-
-  // CAREFUL adding changing values to `state` after here.  State could
-  // be the unwound state `state_prev`.
-  if(!FANSI_GET_ERR(state->status)) state->status |= FANSI_STAT_SPECIAL;
 }
 /*
  * Read UTF8 character
@@ -970,7 +970,7 @@ void read_c0(struct FANSI_state * state) {
   ) {
     --state->pos.r;
     --state->pos.w;
-    state->status |= FANSI_STAT_CTL;
+    state->status |= is_nl ? FANSI_CTL_NL : FANSI_CTL_C0;
   }
 }
 /*

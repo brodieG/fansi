@@ -61,8 +61,8 @@ SEXP FANSI_tabs_as_spaces(
 );
 SEXP FANSI_sort_chr(SEXP x);
 
-struct FANSI_ctl_pos FANSI_find_ctl(
-  struct FANSI_state state, R_xlen_t i, const char * arg
+void FANSI_find_ctl(
+  struct FANSI_state * state, R_xlen_t i, const char * arg
 );
 void FANSI_reset_pos(struct FANSI_state * state);
 void FANSI_reset_width(struct FANSI_state * state);
@@ -71,7 +71,7 @@ void FANSI_reset_state(struct FANSI_state * state);
 void FANSI_check_chrsxp(SEXP x, R_xlen_t i);
 
 int FANSI_term_cap_as_int(SEXP term_cap);
-int FANSI_ctl_as_int(SEXP ctl);
+unsigned int FANSI_ctl_as_int(SEXP ctl);
 
 void FANSI_init_buff(struct FANSI_buff * buff, const char * fun);
 #define FANSI_INIT_BUFF(A) FANSI_init_buff((A), __func__)

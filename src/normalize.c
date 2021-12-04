@@ -58,7 +58,7 @@ int FANSI_W_normalize(
       // Any special sequence will be re-written.  In some cases, we don't need
       // to do so, but even when things are already normalized, the order of the
       // elements may not be the same.
-      if(state_int.status &= FANSI_STAT_SPECIAL) {
+      if(state_int.status & FANSI_STAT_SPECIAL) {
         any_to_exp = 1;
         // stuff prior to SGR/URL
         FANSI_W_MCOPY(buff, string_last, string - string_last);
