@@ -311,7 +311,7 @@ void parse_colors(
         for(int i = 0; i < i_max; ++i) {
           tok_val = parse_token(state);  // advances state by ref!
           err_col = FANSI_GET_ERR(state->status);
-          early_end = state->string[state->pos.x] != ';' || i < (i_max - 1);
+          early_end = state->string[state->pos.x] != ';' && i < (i_max - 1);
           if(early_end && err_col < 2) {
             state->status = set_err(state->status, 2);
             err_col = 2;
