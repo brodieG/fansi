@@ -103,16 +103,19 @@ SEXP FANSI_add_int_ext(SEXP x, SEXP y) {
  *
  * Beware that the position offsets other than .x will be incorrect.
  */
-void FANSI_find_ctl(
+int FANSI_find_ctl(
   struct FANSI_state *state, R_xlen_t i, const char * arg
 ) {
+  int pos = state->pos.x;
   while(state->string[state->pos.x]) {
-    state->pos.x += FANSI_seek_ctl(state->string + state->pos.x);
+    pos = state->pos.x += FANSI_seek_ctl(state->string + state->pos.x);
     FANSI_read_next(state, i, arg);
     // Known control read
     if(state->status & FANSI_CTL_MASK) {
       break;
-} } }
+  } }
+  return pos;
+}
 static int FANSI_maybe_ctl(const char x) {
   // Controls range from 0000 0001 (0x01) to 0001 1111 (0x1F), plus 0x7F;
   // We don't treat C1 controls as specials, apparently

@@ -100,11 +100,10 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
 
     struct FANSI_position pos_prev = state.pos;
 
-    while(1) {
-      FANSI_find_ctl(&state, i, arg);
-      if(state.status & FANSI_CTL_MASK) {
+    while(state.string[state.pos.x]) {
+      int pos = FANSI_find_ctl(&state, i, arg);
+      if(has_ansi || (state.status & FANSI_CTL_MASK)) {
         has_ansi = 1;
-
         // As soon as we encounter ansi in any of the character vector elements,
         // allocate vector to track what has ansi
         if(!any_ansi) {
@@ -112,25 +111,20 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
 
           // We need to allocate a result vector since we'll be stripping ANSI
           // pos, and also the buffer we'll use to re-write the pos less strings
-
           REPROTECT(res_fin = duplicate(x), ipx);
 
           // Buffer is guaranteed to be an over-allocation, as it fits the
           // longest string in the vector, re-used for all strings.  It should
           // be no longer than R_LEN_T_MAX.
-
           chr_buff = (char *) R_alloc(((size_t) mem_req) + 1, sizeof(char));
           res_start = res_track = chr_buff;
         }
-        int w_len = state.pos.x - pos_prev.x;
+        int w_len = pos - pos_prev.x;
         memcpy(res_track, chr_track, w_len);
         res_track += w_len;
         chr_track = state.string + state.pos.x;
         pos_prev = state.pos;
-      } else {
-        break;
-      }
-    }
+    } }
     // Update string
 
     if(has_ansi) {
