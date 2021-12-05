@@ -231,7 +231,6 @@ unsigned int parse_token(struct FANSI_state * state) {
   }
   // Final interpretations; note that anything over 255 cannot be part of a
   // valid SGR sequence
-
   if(!err_code && (len - leading_zeros) > 3) {
     err_code = 1;
   }
@@ -241,7 +240,7 @@ unsigned int parse_token(struct FANSI_state * state) {
       val += (as_num(--string) * mult);
       mult *= 10;
   } }
-  if(err_code < 3 && val > 255) err_code = 2;
+  if(err_code < 2 && val > 255) err_code = 1;
 
   // If the string ended it is an error
   if(!*string) {
@@ -314,15 +313,15 @@ void parse_colors(
             state->status = set_err(state->status, 2);
             err_col = 2;
           }
-          if(!err_col) {
-            if(tok_val < 256) tmp_col[i] = tok_val;
-            else error("Internal Error: invalid color parse."); // nocov
-          }
+          // this may overflow, but usigned so ok, + that's how Iterm2 seems to
+          // interpret the value
+          tmp_col[i] = tok_val;
           if(state->string[state->pos.x] && i < (i_max - 1) && !early_end)
             ++state->pos.x; // consume semi-colon except last one
-          if(err_col) break;
+          if(early_end) break;
         }
-        // Only change a color if all sub-tokens parse correctly
+        // Only change a color if all sub-tokens parse correctly (arguably we
+        // could allow e.g. 900 as a color channel value as Iterm2 does.
         if(!err_col && !early_end) {
           if(colors == 2) {
             if(mode == 3) state->fmt.sgr.color.x = FANSI_CLR_TRU | 8U;
@@ -606,15 +605,14 @@ void read_esc(struct FANSI_state * state) {
   // then we need to store it back in ->status before exit.
   unsigned int err_code = 0;
 
-  // Consume all contiguous ESC sequences, subject to some conditions (see while
-  // at the end)
-  //
-  // We only interpet sequences if they are active per .ctl, but we need to read
-  // them in some cases to know what type they are to decide.
-
   state->status &= ~FANSI_CTL_MASK;
   unsigned int sgr_sup = state->settings & FANSI_CTL_SGR;
   unsigned int csi_sup = state->settings & FANSI_CTL_CSI;
+
+  // Consume all contiguous ESC sequences, subject to some conditions (see while
+  // at the end).  We only interpet sequences if they are active per .settings,
+  // but we need to read them in some cases to know what type they are to
+  // decide.
 
   do {
     struct FANSI_state state_prev = *state;
@@ -633,16 +631,18 @@ void read_esc(struct FANSI_state * state) {
       // - CSI -----------------------------------------------------------------
       ++state->pos.x;  // consume '['
       int tok_val = 0;
+
+      // Make sure ->status only contains one CTL per ESC sequence.
       unsigned int ctl_prev = state->status & FANSI_CTL_MASK;
       state->status &= ~FANSI_CTL_MASK;
 
       // Loop through the SGR; each token we process successfully modifies state
-      // and advances to the next token
+      // and advances to the next token.
       do {
         state->status = set_err(state->status, 0);
         tok_val = parse_token(state);  // advances state by ref!
         if(!FANSI_GET_ERR(state->status)) {
-          // We have a reasonable CSI value, now we need to check whether it
+          // We have a reasonable CSI substring, now we need to check whether it
           // actually corresponds to anything that should modify state
           //
           // Only parse_colors below will modify positions. Otherwise sgr and
