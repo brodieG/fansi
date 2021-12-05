@@ -285,31 +285,24 @@ static SEXP strwrap(
     if(new_line) {
       // Strip leading spaces and/or SGR
       new_line = 0;
-      if(strip_spaces) {  // no tabs guaranteed
-        while(
-          state_bound.string[state_bound.pos.x] == ' ' ||
-          state_bound.string[state_bound.pos.x] == 0x1b
-        ) {
-          state_tmp = state_bound;
-          FANSI_read_next(&state_tmp, index, arg);
-          if(
-            state_bound.string[state_bound.pos.x] == 0x1b &&
-            // wonder whether this should just be a recognized control
-            !(state_tmp.status & FANSI_STAT_SPECIAL)
-          ) {
-            // avoid double warnings
-            state_bound.status |= state_tmp.status & FANSI_STAT_WARNED;
-            break;
-          }
-          state_bound = state_tmp;
-        }
-      } else if(state_bound.string[state_bound.pos.x] == 0x1b) {
+      while(
+        (state_bound.string[state_bound.pos.x] == ' ' strip_spaces) ||
+        state_bound.string[state_bound.pos.x] == 0x1b
+      ) {
         state_tmp = state_bound;
         FANSI_read_next(&state_tmp, index, arg);
-        if(state_tmp.status & FANSI_STAT_SPECIAL) state_bound = state_tmp;
-        else {  // avoid double warnings
+        // Strip any leading special sequences as we will re-emit them.  Stop if
+        // any non-specials as those don't get re-emitted.  This corresponds to
+        // substr_ctl(x, 0, n),  does.
+        if(
+          state_bound.string[state_bound.pos.x] == 0x1b &&
+          !(state_tmp.status & FANSI_STAT_SPECIAL)
+        ) {
+          // avoid double warnings
           state_bound.status |= state_tmp.status & FANSI_STAT_WARNED;
+          break;
         }
+        state_bound = state_tmp;
       }
       has_boundary = 0;
       state_bound.pos.w = 0;
