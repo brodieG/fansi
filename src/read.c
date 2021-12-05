@@ -21,7 +21,6 @@
  * GENERAL NOTES ON read_ FUNCTIONS
  *
  * * read_* should never be used directly, use FANSI_read_next.
- * * state.pos.x is taken to be the first unread character.
  * * state.pos.x will be the first unread character after a call to `read_*`
  * * It is assumed that the string pointed to by a state cannot be longer than
  *   INT_MAX, so we do not check for overflow (this is checked on state init)
@@ -29,14 +28,9 @@
  *
  * In many cases it is possible to bypass `FANSI_read_next` by e.g. incrementing
  * the `pos.x` offset.  Typically this is done when we don't care about thing
- * such as UTF-8 or widths.  In these caess, care should be taken to ensure none
+ * such as UTF-8 or widths.  In these cases, care should be taken to ensure none
  * of the subsequent uses of the state object rely on the specific states that
  * `FANSI_read_next` leaves it in.
- *
- * Functions sometimes use the large `FANSI_state` object, but the hope is that
- * with them static the compilers will do nice things and the overhead will be
- * limited (but we have not checked).  It is a todo to see if this is a
- * performance bottleneck.
  */
 
 /*- Error Data ----------------------------------------------------------------\
@@ -125,11 +119,9 @@ static int utf8_to_cp(const char * chr, int bytes) {
 
   return cp;
 }
-
 /*- Helpers -------------------------------------------------------------------\
 \-----------------------------------------------------------------------------*/
 
-// Does not ratchet
 static unsigned int set_err(unsigned int x, unsigned int err) {
   return FANSI_SET_RNG(x, FANSI_STAT_ERR_START, FANSI_STAT_ERR_ALL, err);
 }
@@ -235,7 +227,7 @@ unsigned int parse_token(struct FANSI_state * state) {
       val += (as_num(--string) * mult);
       mult *= 10;
   } }
-  if(err_code < 2 && val > 255) err_code = 1;
+  if(err_code < 2 && val > 255) err_code = 2;
 
   // If the string ended it is an error
   if(!*string) {
@@ -472,11 +464,11 @@ void parse_url(struct FANSI_state * state) {
     state->fmt.url.osc.len = end - x0;
     if(err_tmp < 4) {
       // Essentially a valid URL, although maybe has some invalid stuff in it
-      state->fmt.url.osc.len +=
-        (*end != 0) +           // consume terminator if there is one
-        (*end == 0x1b);         // consume extra byte for ST
       state->status |= FANSI_CTL_URL;
     }
+    state->fmt.url.osc.len +=
+      (*end != 0) +           // consume terminator if there is one
+      (*end == 0x1b);         // consume extra byte for ST
     state->pos.x += state->fmt.url.osc.len;
     state->status = set_err(state->status, err_tmp);
   } else error("Internal Error: non-URL OSC fed to URL parser.\n"); // nocov
@@ -533,7 +525,12 @@ static void read_ascii(struct FANSI_state * state) {
  *
  * See GENERAL NOTES atop, and notes for each parse_ function.
  *
- * In particular, special treatment for ANSI CSI SGR sequences.
+ * In particular, special treatment for ANSI CSI SGR and OSC URL sequences.
+ * Reading is greedy, where sequences will continue to be read until a valid
+ * terminator is encountered, even if there are illegal bytes in the interim.
+ * This allows bad sequences to be stripped.  Only correct (or close enough)
+ * sequences will result in `state.status` gaining one of the `FANSI_CTL_*`
+ * flags.
  *
  * @section ANSI CSI:
  *
@@ -555,7 +552,7 @@ static void read_ascii(struct FANSI_state * state) {
  *
  * @section Possible Outcomes:
  *
- * See `FANSI_state.err_code`
+ * See `FANSI_STAT_ERR_MASK`.
  *
  * From some experimentation it doesn't seem like the intermediate bytes are
  * completely supported by the OSX terminal...  A single itermediate works okay,
