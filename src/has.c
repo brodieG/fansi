@@ -32,7 +32,6 @@ SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn) {
   int * res_int = LOGICAL(res);
   struct FANSI_state state;
   const char * arg = "x";
-  PrintValue(ctl);
 
   for(R_xlen_t i = 0; i < len; ++i) {
     if(!i) state = FANSI_state_init_ctl(x, warn, ctl, i);
@@ -46,21 +45,13 @@ SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn) {
       if(xc + off_init) {
         state.pos.x = off_init;
         FANSI_find_ctl(&state, i, arg);
-        res = state.status & FANSI_CTL_MASK;
+        res = (state.status & FANSI_CTL_MASK) > 0;
       }
       res_int[i] = res;
     } else {
       res_int[i] = NA_LOGICAL;
     }
   }
-  FANSI_print_state(state);
-  Rprintf(
-    "CTL setting csi %d sgr %d stat %d %d\n",
-    state.settings & FANSI_CTL_CSI,
-    state.settings & FANSI_CTL_SGR,
-    state.status & FANSI_CTL_CSI,
-    state.status & FANSI_CTL_SGR
-  );
   UNPROTECT(1);
   return res;
 }

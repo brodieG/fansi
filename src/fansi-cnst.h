@@ -87,9 +87,9 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
 #define FANSI_STAT_ERR_START  7
 
-// bits 0-6: identical to .settings (controls found).  This is not super
-// efficient, but since we do read many escape sequences at a time it is useful
-// to track all the ones that are found.
+// bits 0-6: identical to .settings (controls found).  It's not clear that we
+// actually want this to be a bit field, it might be better to have it be an
+// integer representing only the last state, but that's not what we have ATM.
 
 #define FANSI_STAT_SPECIAL   36  // FANSI_CTL_SGR | FANSI_CTL_URL
 
@@ -101,7 +101,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 // *  1: well formed csi sgr, but contains uninterpretable sub-strings, if a
 //       CSI sequence is not fully parsed yet (i.e. last char not read) it is
 //       assumed to be SGR until we read the final code.
-// *  2: well formed csi sgr, but contains uninterpretable characters [:<=>]
+// *  2: well formed csi sgr, but contains uninterpretable characters [:<=>] or
+//       bad subsequences.
 // *  3: well formed csi sgr, but contains color codes that exceed terminal
 //      capabilities
 // *  4: well formed csi, but not an SGR

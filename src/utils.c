@@ -149,7 +149,6 @@ unsigned int FANSI_ctl_as_int(SEXP ctl) {
     else ctl_int |= 1U << ctl_val;
   }
   if(flip_bits) ctl_int ^= FANSI_CTL_ALL;
-  Rprintf("flip %d ctl %d\n", flip_bits, ctl_int);
   return ctl_int;
 }
 SEXP FANSI_ctl_as_int_ext(SEXP ctl) {
