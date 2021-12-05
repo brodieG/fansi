@@ -250,10 +250,8 @@ unsigned int parse_token(struct FANSI_state * state) {
   }
   state->pos.x += len + len_intermediate + len_tail;
   state->status = set_err(state->status, err_code);
-  if(is_sgr && (state->settings & FANSI_CTL_SGR))
-    state->status |= FANSI_CTL_SGR;
-  else if(last && !is_sgr && (state->settings & FANSI_CTL_CSI))
-    state->status |= FANSI_CTL_CSI;
+  if(is_sgr) state->status |= FANSI_CTL_SGR;
+  else if(last) state->status |= FANSI_CTL_CSI;
   return val;
 }
 /*
@@ -615,6 +613,8 @@ void read_esc(struct FANSI_state * state) {
   // them in some cases to know what type they are to decide.
 
   state->status &= ~FANSI_CTL_MASK;
+  unsigned int sgr_sup = state->settings & FANSI_CTL_SGR;
+  unsigned int csi_sup = state->settings & FANSI_CTL_CSI;
 
   do {
     struct FANSI_state state_prev = *state;
@@ -629,10 +629,7 @@ void read_esc(struct FANSI_state * state) {
     // in a row.  Error is preserved in err_code
     state->status = state->status & FANSI_STAT_WARNED;
 
-    if(
-      state->string[state->pos.x] == '[' &&
-      (state->settings & (FANSI_CTL_CSI | FANSI_CTL_SGR))
-    ) {
+    if(state->string[state->pos.x] == '[' && (sgr_sup || csi_sup)) {
       // - CSI -----------------------------------------------------------------
       ++state->pos.x;  // consume '['
       int tok_val = 0;
@@ -760,14 +757,31 @@ void read_esc(struct FANSI_state * state) {
       // Consume closing char (parse_token already checked it is correct
       if(state->string[state->pos.x]) ++state->pos.x;
 
-      // Need to check that sequence actually is SGR or CSI, and if not, we need
-      // to restore the state (this is done later on checking esc_recognized).
-      if(!(state->status & (FANSI_CTL_SGR | FANSI_CTL_CSI))) {
+      // We have no way of knowning whether something could be SGR or other CSI
+      // until we read the whole sequence.  If we do not support SGRs, the
+      // behavior should be to just treat it as a two char ESC.  If we do
+      // support it but it is bad, we consume as much of it as we can.
+      //
+      // CSI and SGR status are exclusive (i.e. you get one or the other from
+      // parse_token)
+
+      unsigned int sgr, csi;
+      sgr = state->status & FANSI_CTL_SGR;
+      csi = state->status & FANSI_CTL_CSI;
+      if(sgr && sgr_sup) esc_types |= 2U;
+      else if(csi && csi_sup) esc_types |= 1U;
+      else if((!sgr && sgr_sup) && (!csi && csi_sup))
+        // Bad sequence, read as much as possible but reset formats
+        state->fmt = state_prev.fmt;
+      else if((sgr && !sgr_sup) || (csi && !csi_sup)) {
+        // Good sequence, but don't support it, so just read 1 char from prev
         *state = state_prev;
-        read_ascii(state); // consume '['
+        read_ascii(state);
       }
-      else if (state->status & FANSI_CTL_CSI) esc_types |= 1U;
-      else if (state->status & FANSI_CTL_SGR) esc_types |= 2U;
+      else error("Internal Error: unexpected CSI/SGR status."); // nocov
+
+      // If we're reading multiple ESCs in series, we could have more than one
+      // of CSI/SGR in status.
       state->status |= ctl_prev;
     } else if(
       state->string[state->pos.x] == ']' &&
