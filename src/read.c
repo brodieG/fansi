@@ -764,7 +764,7 @@ void read_esc(struct FANSI_state * state) {
       // to restore the state (this is done later on checking esc_recognized).
       if(!(state->status & (FANSI_CTL_SGR | FANSI_CTL_CSI))) {
         *state = state_prev;
-        ++state->pos.x;       // consume '['
+        read_ascii(state); // consume '['
       }
       else if (state->status & FANSI_CTL_CSI) esc_types |= 1U;
       else if (state->status & FANSI_CTL_SGR) esc_types |= 2U;
