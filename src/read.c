@@ -166,12 +166,9 @@ struct FANSI_tok_res {
 /*
  * Attempts to read CSI SGR tokens
  *
- * See struct FANSI_tok_res for return value details.
- *
- * Resets status & FANSI_STAT_ERR before running.
- *
- * Note this makes no attempt to interpret the CSI other than indicate there are
- * odd characters in it.
+ * Returns token value.  `state` is advanced to the last byte of the sequence so
+ * that calling code can check for e.g. ';' to know that there may be more
+ * parameters to parse.
  */
 
 unsigned int parse_token(struct FANSI_state * state) {
@@ -189,8 +186,7 @@ unsigned int parse_token(struct FANSI_state * state) {
   // non-normal
   private = *string >= 0x3C && * string <= 0x3F;
 
-  // cycle through valid parameter bytes
-
+  // cycle through valid parameter bytes [0-9:;<=>?]
   while(*string >= 0x30 && *string <= 0x3F && *string != ';') {
     int is_zero = *string == '0';
     if(!is_zero && !not_zero) not_zero = 1;
@@ -218,7 +214,6 @@ unsigned int parse_token(struct FANSI_state * state) {
     // sequence is actually sgr.
     if(*string == 'm') is_sgr = 1;
   } else if(*string >= 0x40 && *string <= 0x7E) {
-  // } else if(*string >= 0x40 && *string <= 0x7E && len_intermediate <= 1) {
     // valid final byte
     err_code = 4;
   } else {
@@ -278,6 +273,7 @@ void parse_colors(
     ++state->pos.x;
     // First, figure out if we are in true color or palette mode
     tok_val = parse_token(state);  // advances state by ref!
+
     if(!FANSI_GET_ERR(state->status) && state->string[state->pos.x] == ';')  {
       ++state->pos.x;
       if(
@@ -307,6 +303,7 @@ void parse_colors(
         // Parse through the subsequent tokens
         for(int i = 0; i < i_max; ++i) {
           tok_val = parse_token(state);  // advances state by ref!
+
           err_col = FANSI_GET_ERR(state->status);
           early_end = state->string[state->pos.x] != ';' && i < (i_max - 1);
           if(early_end && err_col < 2) {
@@ -445,17 +442,14 @@ void parse_url(struct FANSI_state * state) {
         if (*end == ';' && !semicolon) semicolon = end - x0;
       } else if (!(*end >= 0x08 && *end <= 0x0d)) {
         // Invalid string
-        state->status = set_err(state->status, 5);
-        break;
+        err_tmp = 5;
       } else {
         // OK OSC, but non portable URL
-        err_tmp = FANSI_GET_ERR(state->status);
-        state->status = set_err(state->status, err_tmp < 4 ? 4 : err_tmp);
+        if(err_tmp < 4) err_tmp = 4;
       }
       ++end;
     }
     // Ended sequence before string
-    err_tmp = FANSI_GET_ERR(state->status);
     if(*end && err_tmp < 4) {
       // If semicolon is found, and string is not invalid, it's a URL
       if(*end && semicolon) {
@@ -470,11 +464,10 @@ void parse_url(struct FANSI_state * state) {
           state->fmt.url.params.len &&
           state->fmt.url.id.len + 3 != state->fmt.url.params.len
         ) {
-          state->status = set_err(state->status, err_tmp < 2 ? 2 : err_tmp);
+          if(err_tmp < 1) err_tmp = 1;
         }
       }
-    } else state->status = set_err(state->status, 5);
-    err_tmp = FANSI_GET_ERR(state->status);
+    } else err_tmp = 5;
 
     state->fmt.url.osc.len = end - x0;
     if(err_tmp < 4) {
@@ -485,6 +478,7 @@ void parse_url(struct FANSI_state * state) {
       state->status |= FANSI_CTL_URL;
     }
     state->pos.x += state->fmt.url.osc.len;
+    state->status = set_err(state->status, err_tmp);
   } else error("Internal Error: non-URL OSC fed to URL parser.\n"); // nocov
 }
 /*
@@ -668,6 +662,8 @@ void read_esc(struct FANSI_state * state) {
             // Does terminal support bright colors? We do not consider it an
             // error if it doesn't because the color will just be ignored
             // and won't cause a trainwreck like unsupported truecolor.
+            // However, we do not write it because if the terminal doesn't
+            // support it presumably it doesn't change the color at all.
             if(state->settings & FANSI_TERM_BRIGHT) {
               int fg = tok_val < 100;
               unsigned int col_code = tok_val - (fg ? 90 : 100);
@@ -813,6 +809,7 @@ void read_esc(struct FANSI_state * state) {
       !state->string[state->pos.x] && (state->settings & FANSI_CTL_MASK)
     ) {
       // - String ends in ESC --------------------------------------------------
+      esc_types |= 1U;
       err_code = 7;
     } else if(state->settings & FANSI_CTL_ESC) {
       // -Two Byte ESC ---------------------------------------------------------
@@ -831,9 +828,8 @@ void read_esc(struct FANSI_state * state) {
       }
       else err_code = 7;
 
-      // Don't process additional ESC if it is there so we keep looping
-      if(state->string[state->pos.x] != 0x1B)
-        ++state->pos.x;
+      // Don't process additional character if it is not a valid 2 char esc
+      if(err_code < 7) ++state->pos.x;
     } else {
       esc_recognized = 0;
     }
@@ -842,6 +838,9 @@ void read_esc(struct FANSI_state * state) {
       *state = state_prev;
       break;
     }
+    if(FANSI_GET_ERR(state->status) > err_code)
+      err_code = FANSI_GET_ERR(state->status);
+
     // If the ESC was recognized then record error (if any) and advance,
     // otherwise reset the state and advance as if reading an ASCII character.
     if(esc_recognized) {
@@ -853,9 +852,8 @@ void read_esc(struct FANSI_state * state) {
       state->status &= ~FANSI_CTL_MASK; // not a control
       *state = state_prev;
       read_ascii(state);
+      break;
     }
-    if(FANSI_GET_ERR(state->status) > err_code)
-      err_code = FANSI_GET_ERR(state->status);
   } while(
     state->string[state->pos.x] == 0x1b && !(state->settings & FANSI_SET_ESCONE)
   );

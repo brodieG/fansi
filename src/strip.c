@@ -95,7 +95,6 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     // vector, which is why we re-assign to chr_buff here.  chr_buff will be
     // allocated in the loop below the first time it is needed, but we need to
     // re-assign re_start / res_track.
-
     res_start = res_track = chr_buff;
 
     struct FANSI_position pos_prev = state.pos;
