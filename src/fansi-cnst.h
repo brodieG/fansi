@@ -66,7 +66,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
 // Bits 10-18: warning level
 #define FANSI_WARN_CSIBAD 344064 // 0001 0101 0000 << FANSI_SET_WARN
-#define FANSI_WARN_MASK     4088 // 0001 1111 1111 << FANSI_SET_WARN
+#define FANSI_WARN_MASK   523264 // 0001 1111 1111 << FANSI_SET_WARN
 #define FANSI_WARN_ALL       511 // 0001 1111 1111
 
 // bits 19-20: Width mode, this is an integer, not bit flags, so
