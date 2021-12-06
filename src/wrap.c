@@ -286,7 +286,7 @@ static SEXP strwrap(
       // Strip leading spaces and/or SGR
       new_line = 0;
       while(
-        (state_bound.string[state_bound.pos.x] == ' ' strip_spaces) ||
+        (state_bound.string[state_bound.pos.x] == ' ' && strip_spaces) ||
         state_bound.string[state_bound.pos.x] == 0x1b
       ) {
         state_tmp = state_bound;

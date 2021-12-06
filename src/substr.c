@@ -125,6 +125,14 @@ static int substr_range(
   }
   state_prev.status |= state.status & FANSI_STAT_WARNED; // double warnings.
 
+  /*
+  Rprintf(
+    "x %d %d w %d %d rnd %d byte %x\n", 
+    state.pos.x, state_prev.pos.x,
+    state.pos.w, state_prev.pos.w, rnd_i,
+    state.string[state.pos.x]
+  );
+  */
   // If we are allowed to overshoot, keep consuming zero-width non-CTL
   if(
     state_prev.pos.w == stop &&
@@ -146,6 +154,11 @@ static int substr_range(
       FANSI_read_next(&state, i, arg);
     }
     *state_stop = state_prev;
+  } else if(
+    state_prev.pos.w < stop && state.pos.w > stop &&
+    !(rnd_i == FANSI_RND_STOP || rnd_i == FANSI_RND_BOTH)
+  ) {
+    *state_stop = state_prev;
   } else if(!state.string[state.pos.x]) {
     // Ran out of string, want to include trailing controls b/c we selected
     // past end of string, but not SGR/OSC if terminating
@@ -160,11 +173,6 @@ static int substr_range(
     } else {
       *state_stop = state;
     }
-  } else if(
-    state_prev.pos.w < stop && state.pos.w > stop &&
-    !(rnd_i == FANSI_RND_STOP || rnd_i == FANSI_RND_BOTH)
-  ) {
-    *state_stop = state_prev;
   } else if (
     stop < state_prev.pos.w
   ) {
@@ -205,15 +213,20 @@ static SEXP substr_one(
   struct FANSI_state state_start, state_stop;
   state_start = state_stop = *state;
   if(term_i) FANSI_reset_state(state);
-  else *state = ref;
+  else state->fmt = ref.fmt;
   const char * arg  = "x";
-  substr_range(&state_start, &state_stop, i, start, stop, rnd_i, term_i, arg);
+  int start_tmp = start < 1 ? 1 : start;
+  substr_range(
+    &state_start, &state_stop, i, start_tmp, stop, rnd_i, term_i, arg
+  );
+  // Corner case where we select before first char
+  if(start < 1 && stop >= 1) state_start = *state;
 
   // - Extract ---------------------------------------------------------------
 
   SEXP res;
   int empty_string = state_stop.pos.x == state_start.pos.x;
-  if(!(empty_string && term_i) && stop >= start) {
+  if(!(empty_string && term_i) && stop >= start_tmp) {
     // Measure/Write loop (see src/write.c), this is adapted from wrap.c
     const char * err_msg = "Writing substring";
     for(int k = 0; k < 2; ++k) {
@@ -283,7 +296,6 @@ static SEXP substr_extract(
     ) {
       SET_STRING_ELT(res, i, NA_STRING);
     } else {
-      if(start_ii < 1) start_ii = 1;
       // We do the full process even if stop_ii < start_ii for consistency
       if(carry_i) state.fmt = state_carry.fmt;
       SET_STRING_ELT(
