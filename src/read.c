@@ -527,10 +527,10 @@ static void read_ascii(struct FANSI_state * state) {
  *
  * In particular, special treatment for ANSI CSI SGR and OSC URL sequences.
  * Reading is greedy, where sequences will continue to be read until a valid
- * terminator is encountered, even if there are illegal bytes in the interim.
- * This allows bad sequences to be stripped.  Only correct (or close enough)
- * sequences will result in `state.status` gaining one of the `FANSI_CTL_*`
- * flags.
+ * terminator is encountered (or target length achieved), even if there are
+ * illegal bytes in the interim.  This allows bad sequences to be stripped.
+ * Only correct (or close enough) sequences will result in `state.status`
+ * gaining one of the `FANSI_CTL_*` flags.
  *
  * @section ANSI CSI:
  *
@@ -811,6 +811,7 @@ void read_esc(struct FANSI_state * state) {
     } else if(state->settings & FANSI_CTL_ESC) {
       // -Two Byte ESC ---------------------------------------------------------
       esc_types |= 1U;
+      state->status |= FANSI_CTL_ESC;
 
       // Other ESC sequence; note there are technically multi character
       // sequences but we ignore them here.  There is also the possibility that
@@ -821,13 +822,14 @@ void read_esc(struct FANSI_state * state) {
         state->string[state->pos.x] <= 0x7E
       ) {
         err_code = 6;
-        state->status |= FANSI_CTL_ESC;
       }
       else err_code = 7;
 
-      // Don't process additional character if it is not a valid 2 char esc
-      if(err_code < 7) ++state->pos.x;
+      // Process additional character, even if bad ESC, for consistency with
+      // greedy byte consumption.
+      if(state->string[state->pos.x]) ++state->pos.x;
     } else {
+      esc_types |= 1U;
       esc_recognized = 0;
     }
     // Did we read mixed special and non-special escapes?
