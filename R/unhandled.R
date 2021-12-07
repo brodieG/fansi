@@ -47,10 +47,12 @@
 #'       them are.  This is because the latter are often misinterpreted by
 #'       terminals that do not support them, whereas the former are typically
 #'       silently ignored.
-#'     * special: SGR substring contains uncommon characters in ":<=>", or URL
-#'       contains otherwise valid OSC bytes in 0x08-0x0d.
-#'     * unknown: SGR substring with a value that does not correspond to a known
-#'       SGR code or URL with unsupported parameters.
+#'     * invalid: SGR substring contains uncommon characters in ":<=>", or URL
+#'       contains otherwise valid OSC bytes in 0x08-0x0d, or there is an invalid
+#'       subsequence (e.g. "ESC&#91;38;2m" which should specify an RGB triplet
+#'       but does not).
+#'     * unknown-substring: SGR substring with a value that does not correspond
+#'       to a known SGR code or URL with unsupported parameters.
 #'     * non-SGR/URL: a non-SGR CSI sequence, or non-URL OSC sequence.
 #'     * non-CSI/OSC: a non-CSI or non-OSC escape sequence, i.e. one where the
 #'       ESC is followed by something other than "&#91;" or "&#93;".  Since we
@@ -60,7 +62,10 @@
 #'     * malformed-CSI/OSC: a malformed CSI or OSC sequence.
 #'     * malformed-ESC: a malformed two byte ESC sequence (i.e. one not ending
 #'       in 0x40-0x7e).
+#'     * malformed-UTF8: illegal UTF8 encoding.
 #'     * C0: a "C0" control character (e.g. tab, bell, etc.).
+#'     * unsupported: an unsupported control sequence (e.g. because it was not
+#'       selected in `ctl`)
 #' * translated: whether the string was translated to UTF-8, might be helpful in
 #'   odd cases were character offsets change depending on encoding.  You should
 #'   only worry about this if you cannot tie out the `start`/`stop` values to
@@ -91,8 +96,9 @@ unhandled_ctl <- function(
   res <- .Call(FANSI_unhandled_esc, x, TERM.CAP.INT)
   names(res) <- c("index", "start", "stop", "error", "translated", "esc")
   errors <- c(
-    'unknown', 'special', 'exceed-term-cap', 'non-SGR/URL', 'malformed-CSI/OSC',
-    'non-CSI/OSC', 'malformed-ESC', 'C0', 'malformed-UTF8'
+    'unknown-substr', 'invalid', 'exceed-term-cap', 'non-SGR/URL',
+    'malformed-CSI/OSC', 'non-CSI/OSC', 'malformed-ESC', 'C0',
+    'malformed-UTF8'
   )
   res[['error']] <- errors[res[['error']]]
   as.data.frame(res, stringsAsFactors=FALSE)
