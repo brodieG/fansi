@@ -229,9 +229,8 @@ unsigned int parse_token(struct FANSI_state * state) {
   } }
   if(err_code < 2 && val > 255) err_code = 2;
 
-  // If the string ended it is an error
+  // If the string ended it is an error, but count it as CSI
   if(!*string) {
-    last = 0;
     err_code = 5;  // Invalid incomplete CSI
   }
   state->pos.x += len + len_intermediate + len_tail;
@@ -462,10 +461,8 @@ void parse_url(struct FANSI_state * state) {
     } else err_tmp = 5;
 
     state->fmt.url.osc.len = end - x0;
-    if(err_tmp < 4) {
-      // Essentially a valid URL, although maybe has some invalid stuff in it
-      state->status |= FANSI_CTL_URL;
-    }
+    // Even if sequence doesn't end, we declare an OSC encoded URL
+    state->status |= FANSI_CTL_URL;
     state->fmt.url.osc.len +=
       (*end != 0) +           // consume terminator if there is one
       (*end == 0x1b);         // consume extra byte for ST
@@ -785,8 +782,7 @@ void read_esc(struct FANSI_state * state) {
       // - OSC Encoded URL -----------------------------------------------------
       ++state->pos.x;    // consume ']'
       parse_url(state);  // advances state by ref!
-      int err_tmp = FANSI_GET_ERR(state->status);
-      if(err_tmp < 3) esc_types |= 2U;
+      esc_types |= 2U;
     } else if(
       state->string[state->pos.x] == ']' &&
       state->settings & FANSI_CTL_OSC
@@ -797,10 +793,8 @@ void read_esc(struct FANSI_state * state) {
       struct FANSI_osc osc = parse_osc(state->string + state->pos.x);
       osc_bytes = osc.len;
       err_code = osc.error;
-      if(err_code < 3) {
-        esc_types |= 1U;
-        state->status |= FANSI_CTL_OSC;
-      }
+      state->status |= FANSI_CTL_OSC;
+      esc_types |= 1U;
       state->pos.x += osc_bytes;
     } else if(
       !state->string[state->pos.x] && (state->settings & FANSI_CTL_MASK)

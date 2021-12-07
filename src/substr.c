@@ -50,8 +50,8 @@ static int substr_range(
   // width things. `state_prev` tracks the last valid break point.
   while(state.string[state.pos.x] && state.pos.w < start) {
     if(
-      state.pos.r == state_prev.pos.r ||   // read an escape
-      state.pos.w > state_prev.pos.w   // moved column in string
+      (state.status & FANSI_CTL_ALL) ||   // read a ctrl seq
+      state.pos.w > state_prev.pos.w      // moved column in string
     )
       state_prev = state;
 
@@ -93,7 +93,7 @@ static int substr_range(
     if(!(rnd_i == FANSI_RND_START || rnd_i == FANSI_RND_BOTH)) {
       // Not okay, collect trail zero width
       do{
-        if(state.pos.r > state_prev.pos.r) state_prev = state;
+        if(!(state.status & FANSI_CTL_ALL)) state_prev = state;
         FANSI_read_next(&state, i, arg);
       } while(
         state.string[state.pos.x] &&
@@ -120,23 +120,24 @@ static int substr_range(
   // sequences as being out-of-band, i.e. they don't interfere with combining
   // glyphs, etc.
   while(state.string[state.pos.x] && state.pos.w <= stop) {
-    if(state.pos.r > state_prev.pos.r) state_prev = state;
+    if(!(state.status & FANSI_CTL_ALL)) state_prev = state;
     FANSI_read_next(&state, i, arg);
   }
   state_prev.status |= state.status & FANSI_STAT_WARNED; // double warnings.
 
   /*
   Rprintf(
-    "x %d %d w %d %d rnd %d byte %x\n", 
+    "x %d %d w %d %d rnd %d byte %x ctl_all %d\n",
     state.pos.x, state_prev.pos.x,
     state.pos.w, state_prev.pos.w, rnd_i,
-    state.string[state.pos.x]
+    state.string[state.pos.x],
+    state.status & FANSI_CTL_ALL
   );
   */
   // If we are allowed to overshoot, keep consuming zero-width non-CTL
   if(
     state_prev.pos.w == stop &&
-    (state.pos.w > stop || state.pos.r == state_prev.pos.r)
+    (state.pos.w > stop || (state.status & FANSI_CTL_ALL))
   ) {
     // Finished exactly, did not add any interesting chars
     *state_stop = state_prev;
@@ -149,7 +150,7 @@ static int substr_range(
     // separately the case where the string ends
     state_prev = state;
     while(state.pos.w == state_prev.pos.w) {
-      if(state.pos.r > state_prev.pos.r) state_prev = state;
+      if(!(state.status & FANSI_CTL_ALL)) state_prev = state;
       if(!state.string[state.pos.x]) break;
       FANSI_read_next(&state, i, arg);
     }
@@ -434,7 +435,8 @@ static SEXP substr_replace(
     // tr = trail, ld = lead, md = mid (`value`).  The semantics are
     // "what you selected gets replaced", so that lead/trail sequences are left
     // in unless you clearly select past them on each side.
-    write_ld = start_ii > 0 && (st_x0.pos.r > 0 || !term_i);
+    write_ld = start_ii > 0 &&
+      (st_x0.pos.w > 0 || !(st_x0.status & FANSI_CTL_ALL) || !term_i);
     write_md =
       (stop_ii >= start_ii) && (st_v1.pos.x > st_v0.pos.x || !term_i);
     write_tr = (start_tr - 1) <= st_x2.pos.w; // stop_ii isn't scooched
