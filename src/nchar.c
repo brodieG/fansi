@@ -18,6 +18,8 @@
 #include "fansi.h"
 
 /*
+ * Not very optimized.
+ *
  * @param z logical(1L) whether to stop once we confirm there is one non-sgr
  *  character.
  */
@@ -37,6 +39,9 @@ SEXP FANSI_nchar(
   int keepNA_int = asLogical(keepNA);
   int type_int = asInteger(type);
   int zz = asLogical(z);
+  if(zz && (type_int != FANSI_COUNT_CHARS || !asLogical(allowNA)))
+    error("Internal Error: `type` must be \"char\" for `nzchar_ctl`");
+
   const char * arg = "x";;
 
   R_xlen_t x_len = XLENGTH(x);
@@ -67,24 +72,23 @@ SEXP FANSI_nchar(
         resi[i] = zz ? NA_LOGICAL : NA_INTEGER;
       } else resi[i] = zz ? 1 : 2;
     } else {
-      while(state.string[state.pos.x]) {
-        FANSI_read_next(&state, i, arg);
-        // early exits
-        if((zz && state.pos.r) || FANSI_GET_ERR(state.status) == 9) break;
-      }
       if(zz) {  // nzchar mode
-        resi[i] = state.pos.r > 0;
-      } else if (FANSI_GET_ERR(state.status) == 9) {
-        if(state.settings & FANSI_SET_ALLOWNA) {
-          resi[i] = zz ? NA_LOGICAL : NA_INTEGER;
-        } else {
-          // read_next should have had an error on invalid encoding
-          error("Internal Error: invalid encoding unhandled."); // nocov
+        while(state.string[state.pos.x] && !state.pos.w) {
+          FANSI_read_next(&state, i, arg);
+          if(state.pos.w) break;
         }
+        resi[i] = state.pos.w > 0;
       } else {
-        resi[i] = state.pos.w;
-      }
-  } }
+        // Invalid utf8 in !ALLOWNA should cause errors in read_next
+        while(state.string[state.pos.x]) {
+          FANSI_read_next(&state, i, arg);
+          if(FANSI_GET_ERR(state.status) == 9) break;
+        }
+        if (FANSI_GET_ERR(state.status) == 9) {
+          if(state.settings & FANSI_SET_ALLOWNA) resi[i] = NA_INTEGER;
+          else error("Internal Error: invalid encoding unhandled."); // nocov
+        } else resi[i] = state.pos.w;
+  } } }
   UNPROTECT(prt);
   return res;
 }
