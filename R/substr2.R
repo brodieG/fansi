@@ -31,7 +31,7 @@
 #' interpreted as:
 #'
 #' ```
-#'  0                 1
+#'                    1 1 1
 #'  1 2 3 4 5 6 7 8 9 0 1 2
 #'  h e l l o -|w o r l d|!
 #'             ^         ^
@@ -44,10 +44,14 @@
 #' the last.  Additionally, because _Control Sequences_ affect all subsequent
 #' characters in a string, any active _Control Sequence_, whether opened just
 #' before a character or much before, will be reflected in the state `fansi`
-#' prepends to the beginning of each substring.  It is possible to select
-#' _Control Sequences_ at the end of a string by specifying `stop` values past
-#' the end of the string, although this will only produce a visible result if
-#' `terminate` is set to `FALSE`.
+#' prepends to the beginning of each substring.
+#'
+#' It is possible to select _Control Sequences_ at the end of a string by
+#' specifying `stop` values past the end of the string, although this will only
+#' produce a visible result if `terminate` is set to `FALSE`.  Similarly, it is
+#' possible to select _Control Sequences_ preceding the beginning of a string by
+#' specifying `start` values less than one, although this is typically
+#' unnecessary as active state is output by `fansi` before each substring.
 #'
 #' Because exact substrings on anything other than character count cannot be
 #' guaranteed (e.g. as a result of multi-byte encodings, or double display-width
@@ -63,16 +67,17 @@
 #' characters to be dropped irrespective whether they correspond to `start` or
 #' `stop`, and "both" could cause all of them to be included.
 #'
-#' For example, if we consider "WW" to be a single wide character, and "n" to be
+#' For example, if we consider the full width "Ｗ" character
+#' "WW" to be a single wide character, and "n" to be
 #' a single narrow one:
 #'
 #' ```
 #'       12345
-#' x <- "WWnWW"
-#'substr_ctl(x, 2, 4, type='width' round='start')    -> "WWn"
-#'substr_ctl(x, 2, 4, type='width' round='stop')     -> "nWW"
-#'substr_ctl(x, 2, 4, type='width' round='neither')  -> "n"
-#'substr_ctl(x, 2, 4, type='width' round='both')     -> "WWnWW"
+#' x <- "ＷnＷ"
+#' substr2_ctl(x, 2, 4, type='width', round='start')    -> "Ｗn"
+#' substr2_ctl(x, 2, 4, type='width', round='stop')     -> "nＷ"
+#' substr2_ctl(x, 2, 4, type='width', round='neither')  -> "n"
+#' substr2_ctl(x, 2, 4, type='width', round='both')     -> "ＷnＷ"
 #' ```
 #'
 #' A number of _Normal_ characters such as combining diacritic marks have
