@@ -47,7 +47,7 @@ static const char * err_messages[] = {
   "a malformed escape sequence",
   "a C0 control character",
   "a malformed UTF-8 sequence",
-  "a non-ASCII byte"
+  "an illegal non-ASCII byte"
 };
 
 /*- UTF8 Helpers --------------------------------------------------------------\
@@ -248,7 +248,7 @@ unsigned int parse_token(struct FANSI_state * state) {
   }
   if(*string == 'm') is_sgr = 1;
   else if(*string >= 0x40 && *string <= 0x7E) last = 1;
-  else if(*string > 0x1f) err_code = ERR_NON_ASCII;
+  else if((unsigned char)*string > 0x7f) err_code = ERR_NON_ASCII;
   if(err_code && err_code < ERR_EXCEED_CAP && !is_sgr)
     err_code = ERR_NOT_SPECIAL_BAD_SUB;
 
@@ -470,7 +470,7 @@ void parse_url(struct FANSI_state * state) {
       if(*end >= 0x20 && *end <= 0x7e) {
         // All good
         if (*end == ';' && !semicolon) semicolon = end - x0;
-      } else if(*end > 0x1f) {
+      } else if((unsigned char)*end > 0x7f) {
         err_tmp = ERR_NON_ASCII;
       } else if (!(*end >= 0x08 && *end <= 0x0d)) {
         // Invalid sub string (these used to be 5)
@@ -545,7 +545,9 @@ static struct FANSI_osc parse_osc(const char * x) {
   struct FANSI_osc osc = {.len=0, .error=0};
   while(*end && *end != '\a' && !(*end == 0x1b && *(end + 1) == '\\')) {
     if (!((*end >= 0x08 && *end <= 0x0d) || (*end >= 0x20 && *end <= 0x7e))) {
-      if(*end > 0x1f) osc.error = ERR_NON_ASCII;
+      if((unsigned char)*end > 0x7f) {
+        osc.error = ERR_NON_ASCII;
+      }
       else if(osc.error < ERR_NOT_SPECIAL_BAD_SUB)
         osc.error = ERR_NOT_SPECIAL_BAD_SUB;
     }
@@ -873,7 +875,7 @@ void read_esc(struct FANSI_state * state) {
         state->string[state->pos.x] <= 0x7E
       )
         err_code = ERR_ESC_OTHER;
-      else if(state->string[state->pos.x] > 0x7F)
+      else if((unsigned char)state->string[state->pos.x] > 0x7F)
         err_code = ERR_NON_ASCII;
       else
         err_code = ERR_ESC_OTHER_BAD;
