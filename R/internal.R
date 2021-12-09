@@ -50,8 +50,8 @@ reset_limits <- function(x) .Call(FANSI_reset_limits)
 
 get_warn_all <- function() .Call(FANSI_get_warn_all)
 get_warn_mangled <- function() .Call(FANSI_get_warn_mangled)
-get_warn_badbyte <- function() .Call(FANSI_get_warn_badbyte)
-get_warn_worst <- function() bitwOr(get_warn_mangled(), get_warn_badbyte())
+get_warn_utf8 <- function() .Call(FANSI_get_warn_utf8)
+get_warn_worst <- function() bitwOr(get_warn_mangled(), get_warn_utf8())
 
 ## exposed internals for testing
 

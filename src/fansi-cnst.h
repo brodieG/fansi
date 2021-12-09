@@ -69,8 +69,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #define FANSI_WARN_ALL        2047 // 0111 1111 1111
 // Warnings for situations jeopardizing width computation and similar
 #define FANSI_WARN_MANGLED  163840 // 0000 1010 0000 << FANSI_SET_WARN
-// UTF8 non-ASCII
-#define FANSI_WARN_BADBYTE 1572864 // 0110 0000 0000 << FANSI_SET_WARN
+#define FANSI_WARN_UTF8     524288
 
 // bits 20-21: Width mode, this is an integer, not bit flags, so
 // First shift by FANSI_SET_WIDTH

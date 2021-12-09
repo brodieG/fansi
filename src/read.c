@@ -464,7 +464,6 @@ void parse_url(struct FANSI_state * state) {
     // narrower range than stricly allowed by OSC CSI.
     int semicolon = 0;
     int bad_byte = -1;
-    int nonportable_byte = -1;
 
     while(*end && *end != '\a' && !(*end == 0x1b && *(end + 1) == '\\')) {
       if(*end >= 0x20 && *end <= 0x7e) {
@@ -479,7 +478,7 @@ void parse_url(struct FANSI_state * state) {
       } else {
         // OK OSC, but non portable URL, used to be separate error from bad osc
         if(err_tmp < ERR_BAD_SUB) err_tmp  = ERR_BAD_SUB;
-        nonportable_byte = end - x;
+        bad_byte = end - x;  // really non-portable, but we don't distinguish
       }
       ++end;
     }
@@ -490,26 +489,22 @@ void parse_url(struct FANSI_state * state) {
         const char * url_start = x0 + semicolon + 1;
         // Only record params/id if we're sure they don't contain a bad byte
         state->fmt.url = (struct FANSI_url) {0};
-        if(bad_byte < 0) {
-          state->fmt.url.params =
-            (struct FANSI_string) {x, (int) (url_start - x) - 1};
-          state->fmt.url.id = get_url_param(state->fmt.url.params, "id=");
-        } else {
-          struct FANSI_string id_tmp;
-          id_tmp = get_url_param(state->fmt.url.params, "id=");
-          if(id_tmp.val - x > bad_byte) state->fmt.url.id = id_tmp;
-        }
+        state->fmt.url.params =
+          (struct FANSI_string) {x, (int) (url_start - x) - 1};
+        struct FANSI_string id_tmp;
+        id_tmp = get_url_param(state->fmt.url.params, "id=");
+        if(id_tmp.val - x > bad_byte) state->fmt.url.id = id_tmp;
+
         // Only record url if it has neither bad nor non-portable byte
-        int url_len = end - url_start;
-        if(bad_byte < url_len && nonportable_byte < url_len)
-          state->fmt.url.url = (struct FANSI_string) {url_start, url_len};
+        if(bad_byte < url_start - x) state->fmt.url.url =
+          (struct FANSI_string) {url_start, end - url_start};
 
         // Non id parameters
         if(
           state->fmt.url.params.len &&
           state->fmt.url.id.len + 3 != state->fmt.url.params.len
         ) {
-          if(err_tmp < ERR_BAD_SUB) err_tmp = ERR_BAD_SUB;
+          if(err_tmp < ERR_UNKNOWN_SUB) err_tmp = ERR_UNKNOWN_SUB;
         }
       }
     } else err_tmp = ERR_BAD_CSI_OSC;

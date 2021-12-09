@@ -134,7 +134,7 @@ SEXP FANSI_trimws(
         // Any leading SGR
         if(string_start) {
           FANSI_W_sgr(&buff, state_lead.fmt.sgr, norm_i, 1, i);
-          FANSI_W_url(&buff, state_lead.fmt.url, norm_i, i);
+          FANSI_W_url(&buff, state_lead.fmt.url, i);
         }
         // Body of string
         FANSI_W_normalize_or_copy(

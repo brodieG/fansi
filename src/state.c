@@ -217,11 +217,11 @@ char * FANSI_state_as_chr(
 ) {
   FANSI_reset_buff(buff);
   FANSI_W_sgr(buff, state.fmt.sgr, normalize, 1, i);
-  FANSI_W_url(buff, state.fmt.url, normalize, i);
+  FANSI_W_url(buff, state.fmt.url, i);
 
   FANSI_size_buff(buff);
   FANSI_W_sgr(buff, state.fmt.sgr, normalize, 1, i);
-  FANSI_W_url(buff, state.fmt.url, normalize, i);
+  FANSI_W_url(buff, state.fmt.url, i);
   return buff->buff;
 }
 /*

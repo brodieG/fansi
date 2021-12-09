@@ -833,7 +833,7 @@ void FANSI_W_sgr(
  * Return how many needed / written bytes.
  */
 void FANSI_W_url(
-  struct FANSI_buff * buff, struct FANSI_url url, int normalize, R_xlen_t i
+  struct FANSI_buff * buff, struct FANSI_url url, R_xlen_t i
 ) {
   /****************************************************\
   | IMPORTANT:                                         |
@@ -844,13 +844,9 @@ void FANSI_W_url(
   if(FANSI_url_active(url)) {
     const char * err_msg = "Writing URL"; // for FANSI_W_M?COPY
     FANSI_W_COPY(buff, "\033]8;");
-    if(normalize) {
-      if(url.id.val) {
-        FANSI_W_COPY(buff, "id=");
-        FANSI_W_MCOPY(buff, url.id.val, url.id.len);
-      }
-    } else if(url.params.val) {
-      FANSI_W_MCOPY(buff, url.params.val, url.params.len);
+    if(url.id.val) {
+      FANSI_W_COPY(buff, "id=");
+      FANSI_W_MCOPY(buff, url.id.val, url.id.len);
     }
     FANSI_W_COPY(buff, ";");
     FANSI_W_MCOPY(buff, url.url.val, url.url.len);

@@ -59,8 +59,7 @@
 #'     * CSI/OSC-bad-substr: a CSI or OSC sequence containing invalid
 #'       characters.
 #'     * malformed-CSI/OSC: a malformed CSI or OSC sequence, typically one that
-#'       hits the end of a string before bytes denoting the closure of the
-#'       sequence.
+#'       never encounters its closing sequence before the end of a string.
 #'     * non-CSI/OSC: a non-CSI or non-OSC escape sequence, i.e. one where the
 #'       ESC is followed by something other than "&#91;" or "&#93;".  Since we
 #'       assume all non-CSI sequences are only 2 characters long include the

@@ -116,7 +116,7 @@ void FANSI_W_sgr(
   int enclose, R_xlen_t i
 );
 void FANSI_W_url(
-  struct FANSI_buff * buff, struct FANSI_url url, int normalize, R_xlen_t i
+  struct FANSI_buff * buff, struct FANSI_url url, R_xlen_t i
 );
 void FANSI_W_sgr_close(
   struct FANSI_buff * buff, struct FANSI_sgr sgr, int normalize, R_xlen_t i

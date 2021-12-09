@@ -169,7 +169,7 @@ int FANSI_W_bridge(
   if(FANSI_url_comp(end.fmt.url, restart.fmt.url)) {
     if(!FANSI_url_active(restart.fmt.url))
       FANSI_W_url_close(buff, end.fmt.url, i);
-    FANSI_W_url(buff, restart.fmt.url, normalize, i);
+    FANSI_W_url(buff, restart.fmt.url, i);
   }
   return buff->len;
 }

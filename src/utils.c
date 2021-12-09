@@ -179,8 +179,8 @@ SEXP FANSI_get_warn_all() {
 SEXP FANSI_get_warn_mangled() {
   return ScalarInteger(FANSI_WARN_MANGLED);
 }
-SEXP FANSI_get_warn_badbyte() {
-  return ScalarInteger(FANSI_WARN_BADBYTE);
+SEXP FANSI_get_warn_utf8() {
+  return ScalarInteger(FANSI_WARN_UTF8);
 }
 // concept borrowed from utf8-lite, but is not great because we're
 // still doing the calculation every iteration.  Probably okay though, the
