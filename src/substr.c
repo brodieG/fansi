@@ -43,9 +43,17 @@ static int substr_range(
 
   // - Start Point -----------------------------------------------------------
 
-  struct FANSI_state state, state_prev;
-  state_prev = state = *state_start;
+  struct FANSI_state state, state_prev, state_tmp;
+  state = *state_start;
 
+  // Corner case: consume any leading specials
+  if(start <= 0) {
+    state_tmp = state;
+    FANSI_read_next(&state_tmp, i, arg);
+    if(state_tmp.status & FANSI_STAT_SPECIAL) state = state_tmp;
+  }
+  state.status |= state_tmp.status & FANSI_STAT_WARNED;
+  state_prev = state;
   // Recall `start` and `stop` are in 1-index, here we're greedy eating zero
   // width things. `state_prev` tracks the last valid break point.
   while(state.string[state.pos.x] && state.pos.w < start) {
@@ -56,7 +64,6 @@ static int substr_range(
       state_prev = state;
 
     // Read all zero width following next char in addition to next char
-    struct FANSI_state state_tmp;
     FANSI_read_next(&state, i, arg);
     state_tmp = state;
     while(state_tmp.pos.w == state.pos.w && state_tmp.string[state_tmp.pos.x]) {
@@ -106,8 +113,6 @@ static int substr_range(
   } else if (rnd_i == FANSI_RND_START || rnd_i == FANSI_RND_BOTH) {
     *state_start = state_prev;
   } else *state_start = state;
-
-  //Rprintf("start %d %d\n", state_start->pos.x, state_start->pos.w);
 
   // - End Point -------------------------------------------------------------
 
@@ -163,6 +168,7 @@ static int substr_range(
   } else if(!state.string[state.pos.x]) {
     // Ran out of string, want to include trailing controls b/c we selected
     // past end of string, but not SGR/OSC if terminating
+
     if(term_i) {
       struct FANSI_state state_tmp = state_prev;
       while(state_tmp.string[state_tmp.pos.x]) {
@@ -216,18 +222,14 @@ static SEXP substr_one(
   if(term_i) FANSI_reset_state(state);
   else state->fmt = ref.fmt;
   const char * arg  = "x";
-  int start_tmp = start < 1 ? 1 : start;
   substr_range(
-    &state_start, &state_stop, i, start_tmp, stop, rnd_i, term_i, arg
+    &state_start, &state_stop, i, start, stop, rnd_i, term_i, arg
   );
-  // Corner case where we select before first char
-  if(start < 1 && stop >= 1) state_start = *state;
-
   // - Extract ---------------------------------------------------------------
 
   SEXP res;
   int empty_string = state_stop.pos.x == state_start.pos.x;
-  if(!(empty_string && term_i) && stop >= start_tmp) {
+  if(!(empty_string && term_i) && stop >= start) {
     // Measure/Write loop (see src/write.c), this is adapted from wrap.c
     const char * err_msg = "Writing substring";
     for(int k = 0; k < 2; ++k) {

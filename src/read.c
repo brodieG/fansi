@@ -895,7 +895,12 @@ void read_esc(struct FANSI_state * state) {
     if(esc_recognized) {
       int byte_offset = state->pos.x - state_prev.pos.x;
       state->pos.a += byte_offset;
-      if(esc_types == 2U && err_code <= ERR_EXCEED_CAP)
+      if(
+        esc_types == 2U && (
+          err_code <= ERR_EXCEED_CAP ||
+          // URLs always special since we know from begining what they are
+          (state->status & FANSI_CTL_URL)
+      ) )
         state->status |= FANSI_STAT_SPECIAL;
     } else {
       state->status &= ~FANSI_CTL_MASK; // not a control
