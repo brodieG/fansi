@@ -79,12 +79,14 @@ SEXP FANSI_nchar(
         }
         resi[i] = state.pos.w > 0;
       } else {
-        // Invalid utf8 in !ALLOWNA should cause errors in read_next
+        // Invalid utf8 in !ALLOWNA should cause errors in read_next.  Whether
+        // errors are thrown is controlled via the warn bits set from R.
         while(state.string[state.pos.x]) {
           FANSI_read_next(&state, i, arg);
-          if(FANSI_GET_ERR(state.status) == 9) break;
+          if(FANSI_GET_ERR(state.status) == ERR_BAD_UTF8) break;
         }
-        if (FANSI_GET_ERR(state.status) == 9) {
+        unsigned int err_tmp = FANSI_GET_ERR(state.status);
+        if (err_tmp == ERR_BAD_UTF8 || err_tmp == ERR_NON_ASCII) {
           if(state.settings & FANSI_SET_ALLOWNA) resi[i] = NA_INTEGER;
           else error("Internal Error: invalid encoding unhandled."); // nocov
         } else resi[i] = state.pos.w;

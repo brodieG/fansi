@@ -79,7 +79,7 @@ struct FANSI_state FANSI_state_init_full(
       type2char(TYPEOF(warn)), XLENGTH(warn)
     );
   int warn_int = asInteger(warn);
-  if(warn_int < 0 || warn_int > FANSI_WARN_ALL)
+  if((unsigned int) warn_int & ~FANSI_WARN_MASK)
     error(
       "Internal error: state_init with OOB value for warn (%d)",
       warn_int
@@ -94,13 +94,11 @@ struct FANSI_state FANSI_state_init_full(
     settings, FANSI_SET_WIDTH, FANSI_COUNT_ALL, asInteger(width)
   );
   settings = FANSI_SET_RNG(
-    settings, FANSI_SET_WARN, FANSI_WARN_ALL, (unsigned int) warn_int
-  );
-  settings = FANSI_SET_RNG(
     settings, FANSI_SET_CTL, FANSI_CTL_ALL, FANSI_ctl_as_int(ctl)
   );
   settings |= asLogical(allowNA) ? FANSI_SET_ALLOWNA : 0;
   settings |= asLogical(keepNA) ? FANSI_SET_KEEPNA : 0;
+  settings |= (unsigned int) warn_int;
 
   // All others struct-inited to zero.
   return (struct FANSI_state) {
@@ -226,7 +224,6 @@ char * FANSI_state_as_chr(
   FANSI_W_url(buff, state.fmt.url, normalize, i);
   return buff->buff;
 }
-
 /*
  * Determine whether two state structs have same color
  */

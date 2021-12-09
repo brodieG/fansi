@@ -174,7 +174,13 @@ int FANSI_term_cap_as_int(SEXP term_cap) {
 }
 
 SEXP FANSI_get_warn_all() {
-  return ScalarInteger(FANSI_WARN_ALL);
+  return ScalarInteger(FANSI_WARN_MASK);
+}
+SEXP FANSI_get_warn_mangled() {
+  return ScalarInteger(FANSI_WARN_MANGLED);
+}
+SEXP FANSI_get_warn_badbyte() {
+  return ScalarInteger(FANSI_WARN_BADBYTE);
 }
 // concept borrowed from utf8-lite, but is not great because we're
 // still doing the calculation every iteration.  Probably okay though, the
@@ -418,7 +424,7 @@ void FANSI_val_args(SEXP x, SEXP norm, SEXP carry) {
 // Utilitiy fun
 // nocov start
 
-void FANSI_print(char * x) {
+void FANSI_print(const char * x) {
   if(x) {
     size_t len = strlen(x);
     for(size_t i = 0; i < len; ++i)
@@ -428,6 +434,14 @@ void FANSI_print(char * x) {
         Rprintf("%c", *(x + i));
     Rprintf("\n");
   }
+}
+void FANSI_print_len(const char * x, int len) {
+  for(int i = 0; i < len; ++i)
+    if(*(x + i) < 0x20 || *(x + i) > 0x7F)
+      Rprintf("\\x%2x", *(x + i));
+    else
+      Rprintf("%c", *(x + i));
+  Rprintf("\n");
 }
 static void print_bits(unsigned int x) {
   unsigned int uintbits = (sizeof(x) * CHAR_BIT);

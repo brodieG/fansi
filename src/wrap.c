@@ -275,9 +275,17 @@ static SEXP strwrap(
   }
   struct FANSI_state state_start, state_bound, state_prev, state_tmp,
     state_last_bound;
-  state_start = state_bound = state_prev = state_last_bound = state;
+  state_tmp = state_start = state_last_bound = state;
   // Blank anchor state in terminate mode
   if(terminate) FANSI_reset_state(&state_last_bound);
+
+  // Consume any leading specials (to be re-output)
+  FANSI_read_next(&state_tmp, index, arg);
+  if(state_tmp.status & FANSI_STAT_SPECIAL) state_start = state_tmp;
+  else state_start.status |= state_tmp.status & FANSI_STAT_WARNED;
+
+  state_bound = state_prev = state_start;
+
   R_xlen_t size = 0;
   SEXP res_sxp;
 

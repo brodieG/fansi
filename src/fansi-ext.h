@@ -75,6 +75,8 @@ SEXP FANSI_set_int_max(SEXP x);
 SEXP FANSI_set_rlent_max(SEXP x);
 SEXP FANSI_get_int_max();
 SEXP FANSI_get_warn_all();
+SEXP FANSI_get_warn_mangled();
+SEXP FANSI_get_warn_badbyte();
 SEXP FANSI_esc_html(SEXP x, SEXP what);
 
 SEXP FANSI_normalize_state_ext(

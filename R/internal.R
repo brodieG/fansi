@@ -48,7 +48,10 @@ set_rlent_max <- function(x) .Call(FANSI_set_rlent_max, as.integer(x)[1])
 
 reset_limits <- function(x) .Call(FANSI_reset_limits)
 
-get_warn_all <- function(x) .Call(FANSI_get_warn_all)
+get_warn_all <- function() .Call(FANSI_get_warn_all)
+get_warn_mangled <- function() .Call(FANSI_get_warn_mangled)
+get_warn_badbyte <- function() .Call(FANSI_get_warn_badbyte)
+get_warn_worst <- function() bitwOr(get_warn_mangled(), get_warn_badbyte())
 
 ## exposed internals for testing
 
@@ -58,16 +61,6 @@ check_enc <- function(x, i) .Call(FANSI_check_enc, x, as.integer(i)[1])
 
 ctl_as_int <- function(x) .Call(FANSI_ctl_as_int, as.integer(x))
 
-## Encode Bits into an Integer
-##
-## Given an integer vector of 1-indexed bit positions, return an scalar integer
-## with those bits set.
-
-set_bits <- function(...) {
-  x <- as.integer(c(...))
-  stopifnot(all(x > 0 & x < 32))
-  as.integer(sum(2^(x - 1L)))
-}
 ## testing interface for bridging
 
 bridge <- function(
@@ -124,7 +117,7 @@ VAL_IN_ENV <- function(
     if(length(warn) != 1L || is.na(warn))
       stop2("Argument `warn` must be TRUE or FALSE.")
     args[['warn']] <- warn
-    args[['WARN.INT']] <- warn * warn.mask
+    args[['WARN.INT']] <- if(warn) warn.mask else 0L
   }
   if('normalize' %in% argnm) {
     normalize <- as.logical(args[['normalize']])

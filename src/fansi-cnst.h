@@ -42,7 +42,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #define FANSI_SET_CTL       0
 #define FANSI_SET_TERMCAP   7
 #define FANSI_SET_WARN     10
-#define FANSI_SET_WIDTH    19
+#define FANSI_SET_WIDTH    20
 
 // bits 0-6: recognized controls (also used in .status)
 #define FANSI_CTL_NL           1
@@ -64,12 +64,15 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #define FANSI_TERM_ALL         7
 #define FANSI_TERM_MASK      896
 
-// Bits 10-18: warning level
-#define FANSI_WARN_CSIBAD 344064 // 0001 0101 0000 << FANSI_SET_WARN
-#define FANSI_WARN_MASK   523264 // 0001 1111 1111 << FANSI_SET_WARN
-#define FANSI_WARN_ALL       511 // 0001 1111 1111
+// Bits 10-19: warning level (see ERR_*)
+#define FANSI_WARN_MASK    2096128 // 0111 1111 1111 << FANSI_SET_WARN
+#define FANSI_WARN_ALL        2047 // 0111 1111 1111
+// Warnings for situations jeopardizing width computation and similar
+#define FANSI_WARN_MANGLED  163840 // 0000 1010 0000 << FANSI_SET_WARN
+// UTF8 non-ASCII
+#define FANSI_WARN_BADBYTE 1572864 // 0110 0000 0000 << FANSI_SET_WARN
 
-// bits 19-20: Width mode, this is an integer, not bit flags, so
+// bits 20-21: Width mode, this is an integer, not bit flags, so
 // First shift by FANSI_SET_WIDTH
 #define FANSI_COUNT_CHARS    0
 #define FANSI_COUNT_WIDTH    1
@@ -78,10 +81,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
 #define FANSI_COUNT_ALL      3
 
-// bits 21-23: other settings
-#define FANSI_SET_ALLOWNA 2097152
-#define FANSI_SET_KEEPNA  4194304
-#define FANSI_SET_ESCONE  8388608  // consume only one ESC at a time
+// bits 22-24: other settings
+#define FANSI_SET_ALLOWNA  4194304
+#define FANSI_SET_KEEPNA   8388608
+#define FANSI_SET_ESCONE  16777216  // consume only one ESC at a time
 
 // - Status --------------------------------------------------------------------
 
@@ -91,36 +94,34 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 // actually want this to be a bit field, it might be better to have it be an
 // integer representing only the last state, but that's not what we have ATM.
 
-#define FANSI_STAT_SPECIAL   36  // FANSI_CTL_SGR | FANSI_CTL_URL
 
-// bits 7-10: integer error code (not bit flags)
-//
-// Type of failure, set to zero if no error, use FANSI_GET_ERR to access (or
-// set_err in read.c to set.  Error is a decimal here.
-//
-// *  1: well formed csi sgr, but contains uninterpretable sub-strings, if a
-//       CSI sequence is not fully parsed yet (i.e. last char not read) it is
-//       assumed to be SGR until we read the final code.
-// *  2: well formed csi sgr, but contains uninterpretable characters [:<=>] or
-//       bad subsequences.
-// *  3: well formed csi sgr, but contains color codes that exceed terminal
-//      capabilities
-// *  4: well formed csi, but not an SGR
-// *  5: malformed csi
-// *  6: other escape sequence
-// *  7: malformed escape (e.g. string ending in ESC).
-// *  8: c0 escapes
-// *  9: malformed UTF8
+// bits 7-10: integer error code (not bit flags), see read.c/err_msgs[] and
+// `?unhandled_ctl` for details.
 
 #define FANSI_STAT_ERR_ALL    15
 #define FANSI_STAT_ERR_MASK 1920
 
-// bits 11-14: additional status flags
+// These are all integer values that must be shifted by _ERR_START for encoding
+// into ->status.  Subtract 1 for ->settings byte positions (relative to the
+// settings starting byte for errors).
+#define ERR_UNKNOWN_SUB         1
+#define ERR_BAD_SUB             2
+#define ERR_EXCEED_CAP          3
+#define ERR_NOT_SPECIAL         4
+#define ERR_NOT_SPECIAL_BAD_SUB 5
+#define ERR_BAD_CSI_OSC         6
+#define ERR_ESC_OTHER           7
+#define ERR_ESC_OTHER_BAD       8
+#define ERR_C0                  9
+#define ERR_BAD_UTF8           10
+#define ERR_NON_ASCII          11
 
-#define FANSI_STAT_ZWJ      2048
-#define FANSI_STAT_RI       4096
-#define FANSI_STAT_AGAIN    8192 // Need to read on more char (was .read_one_more)
-#define FANSI_STAT_WARNED  16384 // Warning already issued
+// bits 11-14: additional status flags
+#define FANSI_STAT_ZWJ       2048
+#define FANSI_STAT_RI        4096
+#define FANSI_STAT_AGAIN     8192 // Need to read on more char
+#define FANSI_STAT_WARNED   16384 // Warning already issued
+#define FANSI_STAT_SPECIAL  32768 // Valid SGR or URL (no critical errors)
 
 // - sgr.style -----------------------------------------------------------------
 

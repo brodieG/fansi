@@ -41,17 +41,18 @@
 #' `start` and `stop` reference character positions so they never explicitly
 #' select for the interstitial _Control Sequences_.  The latter are implicitly
 #' selected if they appear in interstices after the first character and before
-#' the last.  Additionally, because _Control Sequences_ affect all subsequent
-#' characters in a string, any active _Control Sequence_, whether opened just
-#' before a character or much before, will be reflected in the state `fansi`
-#' prepends to the beginning of each substring.
+#' the last.  Additionally, because _Special Sequences_ (CSI SGR and OSC
+#' hyperlinks) affect all subsequent characters in a string, any active _Control
+#' Sequence_, whether opened just before a character or much before, will be
+#' reflected in the state `fansi` prepends to the beginning of each substring.
 #'
 #' It is possible to select _Control Sequences_ at the end of a string by
-#' specifying `stop` values past the end of the string, although this will only
-#' produce a visible result if `terminate` is set to `FALSE`.  Similarly, it is
-#' possible to select _Control Sequences_ preceding the beginning of a string by
-#' specifying `start` values less than one, although this is typically
-#' unnecessary as active state is output by `fansi` before each substring.
+#' specifying `stop` values past the end of the string, although for _Special
+#' Sequences_ this only produces visible results if `terminate` is set to
+#' `FALSE`.  Similarly, it is possible to select _Control Sequences_ preceding
+#' the beginning of a string by specifying `start` values less than one,
+#' although this is unnecessary for _Special Sequences_ as those are output by
+#' `fansi` before each substring.
 #'
 #' Because exact substrings on anything other than character count cannot be
 #' guaranteed (e.g. as a result of multi-byte encodings, or double display-width
@@ -65,19 +66,13 @@
 #' included character via the `stop` is left out.  The converse is true if we
 #' use "stop" as the `round` value.  "neither" would cause all partial
 #' characters to be dropped irrespective whether they correspond to `start` or
-#' `stop`, and "both" could cause all of them to be included.
+#' `stop`, and "both" could cause all of them to be included.  See examples.
 #'
 #' For example, if we consider the full width "Ｗ" character
 #' "WW" to be a single wide character, and "n" to be
 #' a single narrow one:
 #'
 #' ```
-#'       12345
-#' x <- "ＷnＷ"
-#' substr2_ctl(x, 2, 4, type='width', round='start')    -> "Ｗn"
-#' substr2_ctl(x, 2, 4, type='width', round='stop')     -> "nＷ"
-#' substr2_ctl(x, 2, 4, type='width', round='neither')  -> "n"
-#' substr2_ctl(x, 2, 4, type='width', round='both')     -> "ＷnＷ"
 #' ```
 #'
 #' A number of _Normal_ characters such as combining diacritic marks have
@@ -103,8 +98,9 @@
 #' the future.
 #'
 #' How a particular display format is encoded in _Control Sequences_ is
-#' not guaranteed to be stable across `fansi` versions, although we will
-#' strive to keep the rendered appearance stable.
+#' not guaranteed to be stable across `fansi` versions.  Additionally, which
+#' _Special Sequences_ are re-encoded vs transcribed untouched may change.
+#' In general we will strive to keep the rendered appearance stable.
 #'
 #' To maximize the odds of getting stable output set `normalize_state` to
 #' `TRUE` and `type` to `"chars"` in functions that allow it, and
@@ -239,14 +235,15 @@
 #' substr_ctl("\033[42mhello\033[m world", 1, 9)
 #' substr_ctl("\033[42mhello\033[m world", 3, 9)
 #'
-#' ## Width 2 and 3 are in the middle of an ideogram as
-#' ## start and stop positions respectively, so we control
-#' ## what we get with `round`
-#' cn.string <- paste0("\033[42m", "\u4E00\u4E01\u4E03", "\033[m")
-#' substr2_ctl(cn.string, 2, 3, type='width')
-#' substr2_ctl(cn.string, 2, 3, type='width', round='both')
-#' substr2_ctl(cn.string, 2, 3, type='width', round='start')
-#' substr2_ctl(cn.string, 2, 3, type='width', round='stop')
+#' ## Positions 2 and 4 are in the middle of the full width Ｗ for
+#' ## the `start` and `stop` positions respectively. Use `round`
+#' ## to control result:
+#' ##    12345
+#' x <- "ＷnＷ"
+#' substr2_ctl(x, 2, 4, type='width', round='start')
+#' substr2_ctl(x, 2, 4, type='width', round='stop')
+#' substr2_ctl(x, 2, 4, type='width', round='neither')
+#' substr2_ctl(x, 2, 4, type='width', round='both')
 #'
 #' ## We can specify which escapes are considered special:
 #' substr_ctl("\033[31mhello\tworld", 1, 6, ctl='sgr', warn=FALSE)

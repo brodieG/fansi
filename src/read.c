@@ -37,15 +37,17 @@
 \-----------------------------------------------------------------------------*/
 
 static const char * err_messages[] = {
-  "a CSI SGR sequence with unknown substrings or a OSC URL sequence with unsupported parameters",
-  "a CSI SGR sequence with invalid substrings",
+  "a CSI SGR sequence with unknown substrings or a OSC hyperlink with unsupported parameters",
+  "a CSI SGR sequence or OSC hyperlink with invalid substrings",
   "a CSI SGR sequence with color codes not supported by terminal",
   "a non-SGR CSI or a non-URL OSC sequence",
-  "a malformed CSI or OSC sequence",
+  "a non-SGR CSI or a non-URL OSC sequence with invalid substrings",
+  "a malformed CSI or OSC sequence",  // early end
   "a non-CSI/OSC escape sequence",
   "a malformed escape sequence",
   "a C0 control character",
-  "a malformed UTF-8 sequence"
+  "a malformed UTF-8 sequence",
+  "a non-ASCII byte"
 };
 
 /*- UTF8 Helpers --------------------------------------------------------------\
@@ -143,18 +145,46 @@ static int as_num(const char * string) {
     // nocov end
   return (int) (*string - '0');
 }
+
+static void alert(struct FANSI_state * state, R_xlen_t i, const char * arg) {
+  unsigned int err_code = FANSI_GET_ERR(state->status);
+  if(
+    (
+      !(state->status & FANSI_STAT_WARNED) ||
+      // Bad error still happen even if warned already
+      (err_code == ERR_BAD_UTF8 || err_code == ERR_NON_ASCII)
+    )
+    && err_code && (state->settings & (1U  << (FANSI_SET_WARN + err_code - 1U)))
+  ) {
+    // Select warn or error depending on severity
+    void (*fun)(const char *, ...);
+    if(err_code == ERR_BAD_UTF8 || err_code == ERR_NON_ASCII) {
+      fun = error;
+    } else fun = warning;
+
+    char argp[39];
+    if(arg) {
+      if(strlen(arg) > 18)
+        error("Internal Error: arg name too long for warning.");// nocov
+      int try = sprintf(argp, "Argument `%s` contains", arg);
+      if(try < 0)
+        error("Internal Error: snprintf failed.");  // nocov
+    } else {
+      strcpy(argp, "Encountered");
+    }
+    fun(
+      "%s %s at index [%jd], %s%s",
+      argp, err_messages[err_code - 1], FANSI_ind(i),
+      "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
+      "off these warnings."
+    );
+    state->status |= FANSI_STAT_WARNED;  // only warn once
+  }
+}
+
 /*- Parsers -------------------------------------------------------------------\
 \-----------------------------------------------------------------------------*/
 
-// Store the result of reading a parameter substring token
-
-struct FANSI_tok_res {
-  unsigned int val;         // The actual value of the token
-  int len;                  // How many character in the token
-  int err_code;             // see struct FANSI_state
-  int last;                 // Whether it is the last parameter substring
-  int is_sgr;               // Whether sequence is known to be SGR
-};
 /*
  * Attempts to read CSI SGR tokens
  *
@@ -198,28 +228,34 @@ unsigned int parse_token(struct FANSI_state * state) {
   last = 1;
   if((*string == ';' || *string == 'm') && !len_intermediate) {
     // valid end of SGR parameter substring
-    if(non_standard) err_code = 2;
+    if(non_standard) err_code = ERR_BAD_SUB;
     if(*string == ';') last = 0;
     // technically non-sgrness is implicit in last + err_code, but because we
     // can parse multiple CSI sequences one after the other, and we accumulate
     // the err_code value, it's cleaner to just explicitly determine whether
     // sequence is actually sgr.
-    if(*string == 'm') is_sgr = 1;
   } else if(*string >= 0x40 && *string <= 0x7E) {
     // valid final byte
-    err_code = 4;
+    err_code = ERR_NOT_SPECIAL;
   } else {
     // invalid end, consume all subsequent parameter substrings
+    // could argue this should go on to the end of the string?
     while(*string >= 0x20 && *string <= 0x3F) {
       ++string;
       ++len_tail;
     }
-    err_code = 5;
+    err_code = ERR_UNKNOWN_SUB;
   }
+  if(*string == 'm') is_sgr = 1;
+  else if(*string >= 0x40 && *string <= 0x7E) last = 1;
+  else if(*string > 0x1f) err_code = ERR_NON_ASCII;
+  if(err_code && err_code < ERR_EXCEED_CAP && !is_sgr)
+    err_code = ERR_NOT_SPECIAL_BAD_SUB;
+
   // Final interpretations; note that anything over 255 cannot be part of a
   // valid SGR sequence
   if(!err_code && (len - leading_zeros) > 3) {
-    err_code = 1;
+    err_code = ERR_UNKNOWN_SUB;
   }
   if(!err_code) {
     int len2 = len - leading_zeros;
@@ -227,11 +263,11 @@ unsigned int parse_token(struct FANSI_state * state) {
       val += (as_num(--string) * mult);
       mult *= 10;
   } }
-  if(err_code < 2 && val > 255) err_code = 2;
+  if(err_code < ERR_BAD_SUB && val > 255) err_code = ERR_BAD_SUB;
 
   // If the string ended it is an error, but count it as CSI
   if(!*string) {
-    err_code = 5;  // Invalid incomplete CSI
+    err_code = ERR_BAD_CSI_OSC;  // Invalid incomplete CSI
   }
   state->pos.x += len + len_intermediate + len_tail;
   state->status = set_err(state->status, err_code);
@@ -264,8 +300,9 @@ void parse_colors(
     ++state->pos.x;
     // First, figure out if we are in true color or palette mode
     tok_val = parse_token(state);  // advances state by ref!
+    unsigned int err_tmp = FANSI_GET_ERR(state->status);
 
-    if(!FANSI_GET_ERR(state->status) && state->string[state->pos.x] == ';')  {
+    if(!err_tmp && state->string[state->pos.x] == ';')  {
       ++state->pos.x;
       if(
         (tok_val != 2 && tok_val != 5) || (state->status & FANSI_CTL_CSI)
@@ -275,7 +312,7 @@ void parse_colors(
         // and the prior 38 or 48 just gets tossed (at least this happens on OSX
         // terminal and iTerm)
         state->pos.x = prev_x;
-        state->status = set_err(state->status, 1);
+        state->status = set_err(state->status, ERR_UNKNOWN_SUB);
       } else if (
         // terminal doesn't have 256 or true color capability
         (tok_val == 2 && !(state->settings & FANSI_TERM_TRUECOLOR)) ||
@@ -284,7 +321,7 @@ void parse_colors(
         // right now this is same as when not 2/5 following a 38, but maybe in
         // the future we want different treatment?
         state->pos.x = prev_x;
-        state->status = set_err(state->status, 3);
+        state->status = set_err(state->status, ERR_EXCEED_CAP);
       } else {
         unsigned char tmp_col[3] = {0};
         int colors = tok_val;
@@ -297,9 +334,9 @@ void parse_colors(
 
           err_col = FANSI_GET_ERR(state->status);
           early_end = state->string[state->pos.x] != ';' && i < (i_max - 1);
-          if(early_end && err_col < 2) {
-            state->status = set_err(state->status, 2);
-            err_col = 2;
+          if(early_end && err_col < ERR_BAD_SUB) {
+            state->status = set_err(state->status, ERR_BAD_SUB);
+            err_col = ERR_BAD_SUB;
           }
           // this may overflow, but usigned so ok, + that's how Iterm2 seems to
           // interpret the value
@@ -326,8 +363,8 @@ void parse_colors(
             memcpy(state->fmt.sgr.bgcol.extra, tmp_col, sizeof(tmp_col));
         }
       }
-    } else state->status = set_err(state->status, 2);
-  } else state->status = set_err(state->status, 2);
+    } else if(!err_tmp) state->status = set_err(state->status, ERR_BAD_SUB);
+  } else state->status = set_err(state->status, ERR_BAD_SUB);
 }
 
 // DANGER: param must be known to be no longer than INT_MAX.
@@ -426,39 +463,56 @@ void parse_url(struct FANSI_state * state) {
     // neither params nor URI must contain bytes outside of 0x20-0x7E. This is a
     // narrower range than stricly allowed by OSC CSI.
     int semicolon = 0;
+    int bad_byte = -1;
+    int nonportable_byte = -1;
 
     while(*end && *end != '\a' && !(*end == 0x1b && *(end + 1) == '\\')) {
       if(*end >= 0x20 && *end <= 0x7e) {
         // All good
         if (*end == ';' && !semicolon) semicolon = end - x0;
+      } else if(*end > 0x1f) {
+        err_tmp = ERR_NON_ASCII;
       } else if (!(*end >= 0x08 && *end <= 0x0d)) {
-        // Invalid string
-        err_tmp = 5;
+        // Invalid sub string (these used to be 5)
+        if(err_tmp < ERR_BAD_SUB) err_tmp  = ERR_BAD_SUB;
+        bad_byte = end - x;
       } else {
-        // OK OSC, but non portable URL
-        if(err_tmp < 4) err_tmp = 4;
+        // OK OSC, but non portable URL, used to be separate error from bad osc
+        if(err_tmp < ERR_BAD_SUB) err_tmp  = ERR_BAD_SUB;
+        nonportable_byte = end - x;
       }
       ++end;
     }
     // Ended sequence before string
-    if(*end && err_tmp < 4) {
+    if(*end) {
       // If semicolon is found, and string is not invalid, it's a URL
       if(*end && semicolon) {
         const char * url_start = x0 + semicolon + 1;
-        state->fmt.url.params =
-          (struct FANSI_string) {x, (int) (url_start - x) - 1};
-        state->fmt.url.url =
-          (struct FANSI_string) {url_start, end - url_start};
-        state->fmt.url.id = get_url_param(state->fmt.url.params, "id=");
+        // Only record params/id if we're sure they don't contain a bad byte
+        state->fmt.url = (struct FANSI_url) {0};
+        if(bad_byte < 0) {
+          state->fmt.url.params =
+            (struct FANSI_string) {x, (int) (url_start - x) - 1};
+          state->fmt.url.id = get_url_param(state->fmt.url.params, "id=");
+        } else {
+          struct FANSI_string id_tmp;
+          id_tmp = get_url_param(state->fmt.url.params, "id=");
+          if(id_tmp.val - x > bad_byte) state->fmt.url.id = id_tmp;
+        }
+        // Only record url if it has neither bad nor non-portable byte
+        int url_len = end - url_start;
+        if(bad_byte < url_len && nonportable_byte < url_len)
+          state->fmt.url.url = (struct FANSI_string) {url_start, url_len};
+
         // Non id parameters
         if(
           state->fmt.url.params.len &&
           state->fmt.url.id.len + 3 != state->fmt.url.params.len
         ) {
-          if(err_tmp < 1) err_tmp = 1;
+          if(err_tmp < ERR_BAD_SUB) err_tmp = ERR_BAD_SUB;
         }
       }
-    } else err_tmp = 5;
+    } else err_tmp = ERR_BAD_CSI_OSC;
 
     state->fmt.url.osc.len = end - x0;
     // Even if sequence doesn't end, we declare an OSC encoded URL
@@ -486,17 +540,20 @@ void parse_url(struct FANSI_state * state) {
  * @return number of bytes in OSC excluding opening "ESC]", and error code if
  *   any
  */
-
 static struct FANSI_osc parse_osc(const char * x) {
   const char * end = x;
   struct FANSI_osc osc = {.len=0, .error=0};
   while(*end && *end != '\a' && !(*end == 0x1b && *(end + 1) == '\\')) {
     if (!((*end >= 0x08 && *end <= 0x0d) || (*end >= 0x20 && *end <= 0x7e))) {
-      osc.error = 5;
+      if(*end > 0x1f) osc.error = ERR_NON_ASCII;
+      else if(osc.error < ERR_NOT_SPECIAL_BAD_SUB)
+        osc.error = ERR_NOT_SPECIAL_BAD_SUB;
     }
     ++end;
   }
-  if(!*end) osc.error = 5;  // Unterminated
+  // Unterminated
+  if(!*end && osc.error < ERR_BAD_CSI_OSC) osc.error = ERR_BAD_CSI_OSC;
+
   osc.len = end - x +
     (*end != 0) +           // consume terminator if there is one
     (*end == 0x1b);         // consume extra byte for ST
@@ -723,7 +780,7 @@ void read_esc(struct FANSI_state * state) {
                 state->fmt.sgr.style &= ~FANSI_BRD_OVERLN;
                 break;
               default:
-                state->status = set_err(state->status, 1U);
+                state->status = set_err(state->status, ERR_UNKNOWN_SUB);
             }
           } else if(tok_val >= 60 && tok_val <= 65) {
             switch(tok_val) {
@@ -736,7 +793,7 @@ void read_esc(struct FANSI_state * state) {
                 state->fmt.sgr.style &= ~FANSI_IDG_MASK;
             }
           } else {
-            state->status = set_err(state->status, 1U); // unknown
+            state->status = set_err(state->status, ERR_UNKNOWN_SUB);
           }
         }
         if(FANSI_GET_ERR(state->status) > err_code)
@@ -801,7 +858,7 @@ void read_esc(struct FANSI_state * state) {
     ) {
       // - String ends in ESC --------------------------------------------------
       esc_types |= 1U;
-      err_code = 7;
+      err_code = ERR_ESC_OTHER_BAD;
     } else if(state->settings & FANSI_CTL_ESC) {
       // -Two Byte ESC ---------------------------------------------------------
       esc_types |= 1U;
@@ -814,10 +871,12 @@ void read_esc(struct FANSI_state * state) {
       if(
         state->string[state->pos.x] >= 0x40 &&
         state->string[state->pos.x] <= 0x7E
-      ) {
-        err_code = 6;
-      }
-      else err_code = 7;
+      )
+        err_code = ERR_ESC_OTHER;
+      else if(state->string[state->pos.x] > 0x7F)
+        err_code = ERR_NON_ASCII;
+      else
+        err_code = ERR_ESC_OTHER_BAD;
 
       // Process additional character, even if bad ESC, for consistency with
       // greedy byte consumption.
@@ -839,8 +898,8 @@ void read_esc(struct FANSI_state * state) {
     if(esc_recognized) {
       int byte_offset = state->pos.x - state_prev.pos.x;
       state->pos.a += byte_offset;
-      // Record other ancillary info here, we don't do it outside of the loop
-      // as we want to be able reset to state_prev if things don't work out.
+      if(esc_types == 2U && err_code <= ERR_EXCEED_CAP)
+        state->status |= FANSI_STAT_SPECIAL;
     } else {
       state->status &= ~FANSI_CTL_MASK; // not a control
       *state = state_prev;
@@ -858,7 +917,7 @@ void read_esc(struct FANSI_state * state) {
  *
  * See GENERAL NOTES atop.
  */
-void read_utf8(struct FANSI_state * state, R_xlen_t i, const char * arg) {
+void read_utf8(struct FANSI_state * state, R_xlen_t i) {
   int mb_err = 0;
   int disp_size = 0;
   const char * mb_err_str =
@@ -871,23 +930,6 @@ void read_utf8(struct FANSI_state * state, R_xlen_t i, const char * arg) {
 
   if(mb_err) {
     disp_size = NA_INTEGER;  // mimic what R_nchar does on mb error
-    if(!(state->settings & FANSI_SET_ALLOWNA)) {
-      char argp[39];
-      if(arg) {
-        if(strlen(arg) > 18)
-          error("Internal Error: arg name too long for error.");// nocov
-        int try = sprintf(argp, "Argument `%s` contains", arg);
-        if(try < 0)
-          error("Internal Error: snprintf failed.");  // nocov
-      } else {
-        strcpy(argp, "Encountered");
-      }
-      error(
-        "%s %s at index [%jd], %s",
-        argp, "an invalid UTF-8 byte sequence", FANSI_ind(i),
-        "see `?unhandled_ctl`."
-      );
-    }
   } else if(w_mode == FANSI_COUNT_WIDTH || w_mode == FANSI_COUNT_GRAPH) {
     // Assumes valid UTF-8!  Should have been checked.
     int cp = utf8_to_cp(state->string + state->pos.x, byte_size);
@@ -937,8 +979,9 @@ void read_utf8(struct FANSI_state * state, R_xlen_t i, const char * arg) {
     disp_size = 1;
   }
   if(disp_size == NA_INTEGER) {
-    // Both for R_nchar and if we directly detect an mb_err
-    state->status = set_err(state->status, 9);
+    // Both for R_nchar and if we directly detect an mb_err.  Whether this
+    // throws an errors is a function of what ->settings has been set to.
+    state->status = set_err(state->status, ERR_BAD_UTF8);
     disp_size = byte_size = 1;
   }
   // We are guaranteed that strings here are at most INT_MAX bytes long, so
@@ -973,7 +1016,7 @@ void read_utf8(struct FANSI_state * state, R_xlen_t i, const char * arg) {
  */
 void read_c0(struct FANSI_state * state) {
   int is_nl = state->string[state->pos.x] == '\n';
-  if(!is_nl) state->status = set_err(state->status, 8);
+  if(!is_nl) state->status = set_err(state->status, ERR_C0);
 
   read_ascii(state);
   // If C0/NL are being actively processed, treat them as width zero
@@ -1011,7 +1054,7 @@ void FANSI_read_next(
   // Normal ASCII characters
   if(is_ascii) read_ascii(state);
   // UTF8 characters (if chr_val is signed, then > 0x7f will be negative)
-  else if (is_utf8) read_utf8(state, i, arg);
+  else if (is_utf8) read_utf8(state, i);
   // ESC sequences
   else if (chr_val == 0x1BU) read_esc(state);
   // C0 escapes (e.g. \t, \n, etc)
@@ -1019,30 +1062,10 @@ void FANSI_read_next(
 
   if(!is_utf8) state->status &= ~FANSI_STAT_RI;  // reset regional indicator
 
-  unsigned int err_code = FANSI_GET_ERR(state->status);
-  if(
-    !(state->status & FANSI_STAT_WARNED) &&
-    err_code &&
-    (state->settings & (1U  << (FANSI_SET_WARN + err_code - 1U)))
-  ) {
-    char argp[39];
-    if(arg) {
-      if(strlen(arg) > 18)
-        error("Internal Error: arg name too long for warning.");// nocov
-      int try = sprintf(argp, "Argument `%s` contains", arg);
-      if(try < 0)
-        error("Internal Error: snprintf failed.");  // nocov
-    } else {
-      strcpy(argp, "Encountered");
-    }
-    warning(
-      "%s %s at index [%jd], %s%s",
-      argp, err_messages[err_code - 1], FANSI_ind(i),
-      "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
-      "off these warnings."
-    );
-    state->status |= FANSI_STAT_WARNED;  // only warn once
-  }
+  // Trigger errors / warnings if warranted
+  alert(state, i, arg);
+
+  // Update width counters
   unsigned int w_mode =
     FANSI_GET_RNG(state->settings, FANSI_SET_WIDTH, FANSI_COUNT_ALL);
   if(

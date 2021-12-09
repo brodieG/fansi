@@ -161,7 +161,8 @@ int FANSI_W_normalize_or_copy(
 
 // Utilities
 int FANSI_seek_ctl(const char * x);
-void FANSI_print(char * x);
+void FANSI_print(const char * x);
+void FANSI_print_len(const char * x, int len);
 void FANSI_print_state(struct FANSI_state x);
 void FANSI_print_sgr(struct FANSI_sgr s);
 void FANSI_interrupt(R_xlen_t i);

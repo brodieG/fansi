@@ -41,6 +41,8 @@ R_CallMethodDef callMethods[] = {
   {"get_int_max", (DL_FUNC) &FANSI_get_int_max, 0},
   {"set_rlent_max", (DL_FUNC) &FANSI_set_rlent_max, 1},
   {"get_warn_all", (DL_FUNC) &FANSI_get_warn_all, 0},
+  {"get_warn_mangled", (DL_FUNC) &FANSI_get_warn_mangled, 0},
+  {"get_warn_badbyte", (DL_FUNC) &FANSI_get_warn_badbyte, 0},
   {"check_enc", (DL_FUNC) &FANSI_check_enc_ext, 2},
   {"ctl_as_int", (DL_FUNC) &FANSI_ctl_as_int_ext, 1},
   {"esc_html", (DL_FUNC) &FANSI_esc_html, 2},

@@ -18,9 +18,10 @@
 #' Will return position and types of unhandled _Control Sequences_ in a
 #' character vector.  Unhandled sequences may cause `fansi` to interpret strings
 #' in a way different to your display.  See [fansi] for details.  Functions that
-#' interpret SGR/OSC URLs might omit bad SGR/OSC URLs in sequences in output
-#' substrings, particularly if they are leading or trailing.  Some functions are
-#' more tolerant of bad inputs than others.  For example [`nchar_ctl`] will not
+#' interpret _Special Sequences_ (CSI SGR or OSC hyperlinks) might omit bad
+#' _Special Sequences_ or some of their components in output substrings,
+#' particularly if they are leading or trailing.  Some functions are more
+#' tolerant of bad inputs than others.  For example [`nchar_ctl`] will not
 #' report unsupported colors because it only cares about counts or widths.
 #' `unhandled_ctl` will report all potentially problematic sequences.
 #'
@@ -40,6 +41,13 @@
 #'   there are multiple ESC sequences abutting each other they will all be
 #'   treated as one, even if some of those sequences are valid.
 #' * error: the reason why the sequence was not handled:
+#'     * unknown-substring: SGR substring with a value that does not correspond
+#'       to a known SGR code or OSC hyperlink with unsupported parameters.
+#'     * invalid-substr: SGR contains uncommon characters in ":<=>",
+#'       intermediate bytes, other invalid characters, or there is an invalid
+#'       subsequence (e.g. "ESC&#91;38;2m" which should specify an RGB triplet
+#'       but does not).  OSCs contain invalid bytes, or OSC hyperlinks contain
+#'       otherwise valid OSC bytes in 0x08-0x0d.
 #'     * exceed-term-cap: contains color codes not supported by the terminal
 #'       (see [term_cap_test]).  Bright colors with color codes in the 90-97 and
 #'       100-107 range in terminals that do not support them are not considered
@@ -47,25 +55,22 @@
 #'       them are.  This is because the latter are often misinterpreted by
 #'       terminals that do not support them, whereas the former are typically
 #'       silently ignored.
-#'     * invalid: SGR substring contains uncommon characters in ":<=>", or URL
-#'       contains otherwise valid OSC bytes in 0x08-0x0d, or there is an invalid
-#'       subsequence (e.g. "ESC&#91;38;2m" which should specify an RGB triplet
-#'       but does not).
-#'     * unknown-substring: SGR substring with a value that does not correspond
-#'       to a known SGR code or URL with unsupported parameters.
-#'     * non-SGR/URL: a non-SGR CSI sequence, or non-URL OSC sequence.
+#'     * CSI/OSC: a non-SGR CSI sequence, or non-hyperlink OSC sequence.
+#'     * CSI/OSC-bad-substr: a CSI or OSC sequence containing invalid
+#'       characters.
+#'     * malformed-CSI/OSC: a malformed CSI or OSC sequence, typically one that
+#'       hits the end of a string before bytes denoting the closure of the
+#'       sequence.
 #'     * non-CSI/OSC: a non-CSI or non-OSC escape sequence, i.e. one where the
 #'       ESC is followed by something other than "&#91;" or "&#93;".  Since we
 #'       assume all non-CSI sequences are only 2 characters long include the
 #'       ESC, this type of sequence is the most likely to cause problems as some
 #'       are not actually two characters long.
-#'     * malformed-CSI/OSC: a malformed CSI or OSC sequence.
 #'     * malformed-ESC: a malformed two byte ESC sequence (i.e. one not ending
 #'       in 0x40-0x7e).
-#'     * malformed-UTF8: illegal UTF8 encoding.
 #'     * C0: a "C0" control character (e.g. tab, bell, etc.).
-#'     * unsupported: an unsupported control sequence (e.g. because it was not
-#'       selected in `ctl`)
+#'     * malformed-UTF8: illegal UTF8 encoding.
+#'     * non-ASCII: non-ASCII bytes in escape sequences.
 #' * translated: whether the string was translated to UTF-8, might be helpful in
 #'   odd cases were character offsets change depending on encoding.  You should
 #'   only worry about this if you cannot tie out the `start`/`stop` values to
@@ -96,9 +101,9 @@ unhandled_ctl <- function(
   res <- .Call(FANSI_unhandled_esc, x, TERM.CAP.INT)
   names(res) <- c("index", "start", "stop", "error", "translated", "esc")
   errors <- c(
-    'unknown-substr', 'invalid', 'exceed-term-cap', 'non-SGR/URL',
-    'malformed-CSI/OSC', 'non-CSI/OSC', 'malformed-ESC', 'C0',
-    'malformed-UTF8'
+    'unknown-substr', 'invalid-substr', 'exceed-term-cap', 'non-SGR/hyperlink',
+    'CSI/OSC-bad-substr', 'malformed-CSI/OSC', 'non-CSI/OSC',
+    'malformed-ESC', 'C0', 'malformed-UTF8', 'non-ASCII'
   )
   res[['error']] <- errors[res[['error']]]
   as.data.frame(res, stringsAsFactors=FALSE)

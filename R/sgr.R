@@ -61,7 +61,7 @@ strip_ctl <- function(x, ctl='all', warn=getOption('fansi.warn', TRUE), strip) {
     ctl <- strip
   }
   ## modifies / creates NEW VARS in fun env
-  VAL_IN_ENV(x=x, ctl=ctl, warn=warn, warn.mask=set_bits(5, 7, 9))
+  VAL_IN_ENV(x=x, ctl=ctl, warn=warn, warn.mask=get_warn_worst())
 
   if(length(ctl)) .Call(FANSI_strip_csi, enc_to_utf8(x), CTL.INT, WARN.INT)
   else x
@@ -81,7 +81,7 @@ strip_ctl <- function(x, ctl='all', warn=getOption('fansi.warn', TRUE), strip) {
 
 strip_sgr <- function(x, warn=getOption('fansi.warn', TRUE)) {
   ## modifies / creates NEW VARS in fun env
-  VAL_IN_ENV(x=x, warn=warn, warn.mask=set_bits(5, 7, 9))
+  VAL_IN_ENV(x=x, warn=warn, warn.mask=get_warn_worst())
   ctl.int <- match(c("sgr", "url"), VALID.CTL)
   .Call(FANSI_strip_csi, x, ctl.int, WARN.INT)
 }
@@ -111,7 +111,7 @@ has_ctl <- function(x, ctl='all', warn=getOption('fansi.warn', TRUE), which) {
     ctl <- which
   }
   ## modifies / creates NEW VARS in fun env
-  VAL_IN_ENV(x=x, ctl=ctl, warn=warn, warn.mask=set_bits(5, 7, 9))
+  VAL_IN_ENV(x=x, ctl=ctl, warn=warn, warn.mask=get_warn_worst())
   if(length(CTL.INT)) {
     .Call(FANSI_has_csi, x, CTL.INT, WARN.INT)
   } else rep(FALSE, length(x))
