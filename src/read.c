@@ -238,17 +238,19 @@ unsigned int parse_token(struct FANSI_state * state) {
     // valid final byte
     err_code = ERR_NOT_SPECIAL;
   } else {
-    // invalid end, consume all subsequent parameter substrings
-    // could argue this should go on to the end of the string?
-    while(*string >= 0x20 && *string <= 0x3F) {
+    // Invalid end, consume until find a valid end or end string
+    while(*string && (*string < 0x40 || *string > 0x7E)) {
+      if((unsigned char)*string > 0x7F) err_code = ERR_NON_ASCII;
       ++string;
       ++len_tail;
     }
-    err_code = ERR_UNKNOWN_SUB;
+    if(*string == 'm' && err_code < ERR_BAD_SUB)
+      err_code = ERR_BAD_SUB;
+    else if(*string && err_code < ERR_NOT_SPECIAL_BAD_SUB)
+      err_code = ERR_NOT_SPECIAL_BAD_SUB;
   }
   if(*string == 'm') is_sgr = 1;
   else if(*string >= 0x40 && *string <= 0x7E) last = 1;
-  else if((unsigned char)*string > 0x7f) err_code = ERR_NON_ASCII;
   if(err_code && err_code < ERR_EXCEED_CAP && !is_sgr)
     err_code = ERR_NOT_SPECIAL_BAD_SUB;
 
@@ -266,7 +268,7 @@ unsigned int parse_token(struct FANSI_state * state) {
   if(err_code < ERR_BAD_SUB && val > 255) err_code = ERR_BAD_SUB;
 
   // If the string ended it is an error, but count it as CSI
-  if(!*string) {
+  if(!*string && err_code < ERR_BAD_CSI_OSC) {
     err_code = ERR_BAD_CSI_OSC;  // Invalid incomplete CSI
   }
   state->pos.x += len + len_intermediate + len_tail;
