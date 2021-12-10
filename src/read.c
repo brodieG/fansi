@@ -849,9 +849,12 @@ void read_esc(struct FANSI_state * state) {
       esc_types |= 1U;
       state->pos.x += osc_bytes;
     } else if(
-      !state->string[state->pos.x] && (state->settings & FANSI_CTL_MASK)
+      !state->string[state->pos.x] && (state->settings & FANSI_CTL_ESC_CTL)
     ) {
       // - String ends in ESC --------------------------------------------------
+
+      // Assume 2-byte ESC, although could be any other hence _CTL_MASK
+      state->status |= FANSI_CTL_ESC;
       esc_types |= 1U;
       err_code = ERR_ESC_OTHER_BAD;
     } else if(state->settings & FANSI_CTL_ESC) {

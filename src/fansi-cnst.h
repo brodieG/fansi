@@ -55,6 +55,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
 #define FANSI_CTL_ALL        127
 #define FANSI_CTL_MASK       127
+#define FANSI_CTL_ESC_CTL    124   // Controls starting with ESC
 
 // Bits 7-9: term caps
 #define FANSI_TERM_BRIGHT    128
@@ -95,7 +96,6 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 // bits 0-6: identical to .settings (controls found).  It's not clear that we
 // actually want this to be a bit field, it might be better to have it be an
 // integer representing only the last state, but that's not what we have ATM.
-
 
 // bits 7-10: integer error code (not bit flags), see read.c/err_msgs[] and
 // `?unhandled_ctl` for details.
