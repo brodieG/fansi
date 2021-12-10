@@ -567,8 +567,6 @@ static struct FANSI_osc parse_osc(const char * x) {
  */
 static void read_ascii(struct FANSI_state * state) {
   ++state->pos.x;
-  ++state->pos.a;
-  ++state->pos.r;
   ++state->pos.w;
 }
 /*
@@ -893,8 +891,6 @@ void read_esc(struct FANSI_state * state) {
     // If the ESC was recognized then record error (if any) and advance,
     // otherwise reset the state and advance as if reading an ASCII character.
     if(esc_recognized) {
-      int byte_offset = state->pos.x - state_prev.pos.x;
-      state->pos.a += byte_offset;
       if(
         esc_types == 2U && (
           err_code <= ERR_EXCEED_CAP ||
@@ -992,8 +988,6 @@ void read_utf8(struct FANSI_state * state, R_xlen_t i) {
   // versions of Unicode chars).  Shouldn't be an issue, but playing it safe.
   state->pos.x += byte_size;
   state->utf8 = state->pos.x;  // record after so no ambiguity about 0
-  ++state->pos.a;
-  ++state->pos.r;
   if(state->pos.w > FANSI_lim.lim_int.max - disp_size)
     // nocov start currently this can't happen
     error(
@@ -1026,7 +1020,6 @@ void read_c0(struct FANSI_state * state) {
     (is_nl && (state->settings & FANSI_CTL_NL)) ||
     (!is_nl && (state->settings & FANSI_CTL_C0))
   ) {
-    --state->pos.r;
     --state->pos.w;
     state->status |= is_nl ? FANSI_CTL_NL : FANSI_CTL_C0;
   }

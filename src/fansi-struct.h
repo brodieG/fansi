@@ -125,12 +125,6 @@ struct FANSI_format {
  *   the other `pos_` trackers which track how many units have already
  *   been read, this one points to the first UNread byte (need to change
  *   variable name).
- * - pos_ansi: actual character position, different from pos_byte due to
- *   multi-byte characters (i.e. UTF-8).  Originally this was use for feeding to
- *   `base::substr`
- * - pos_raw: the character position after we strip the handled ANSI tags,
- *   the difference with pos_ansi is that pos_ansi counts the escape
- *   sequences whereas this one does not.
  * - pos_width: the character postion accounting for width mode, which could be
  *   either display width (computed with R_nchar), graphemes, character count,
  *   or byte count, all of these excluding CSI and other controls.
@@ -138,8 +132,6 @@ struct FANSI_format {
 
 struct FANSI_position {
   int x;   // Next byte to read
-  int a;   // pos_ansi
-  int r;   // pos_raw
   int w;   // pos_width
 };
 /*

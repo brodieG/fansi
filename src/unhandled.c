@@ -64,14 +64,20 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
 
     if(chrsxp != NA_STRING && LENGTH(chrsxp)) {
       int has_errors = 0;
+      int ctl_bytes_all = 0;
 
       while(state.string[state.pos.x]) {
         // Since we don't care about width, etc, we only use the state objects
-        // to parse the ESC sequences
+        // to parse the ESC sequences and UTF8 characters.
 
-        int esc_start = state.pos.a;
+        int esc_start = state.pos.w + ctl_bytes_all;
         int esc_start_byte = state.pos.x;
+        int ctl_bytes = 0;
         FANSI_read_next(&state, i, arg);
+        if(state.status & FANSI_CTL_MASK) {
+          ctl_bytes = state.pos.x - esc_start_byte;
+          ctl_bytes_all += ctl_bytes;
+        }
         if(FANSI_GET_ERR(state.status)) {
           if(err_count == FANSI_lim.lim_int.max) {
             warning(
@@ -87,7 +93,7 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
           SEXP err_vals = PROTECT(allocVector(INTSXP, 7));
           INTEGER(err_vals)[0] = i + 1;
           INTEGER(err_vals)[1] = esc_start + 1;
-          INTEGER(err_vals)[2] = state.pos.a;
+          INTEGER(err_vals)[2] = state.pos.w + ctl_bytes_all;
           INTEGER(err_vals)[3] = FANSI_GET_ERR(state.status);
           INTEGER(err_vals)[4] = 0;
           // need actual bytes so we can substring the problematic sequence, so

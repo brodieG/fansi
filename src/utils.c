@@ -471,8 +471,8 @@ void FANSI_print_state(struct FANSI_state x) {
   Rprintf("- State -------\n");
   FANSI_print_sgr(x.fmt.sgr);
   Rprintf(
-    "  pos: b %d r %d a %d w %d\n",
-    x.pos.x, x.pos.r, x.pos.a, x.pos.a
+    "  pos: byte %d width %d\n",
+    x.pos.x, x.pos.w
   );
   Rprintf("  status: ");
   FANSI_print_bits(x.status);
