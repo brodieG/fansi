@@ -43,6 +43,7 @@ R_CallMethodDef callMethods[] = {
   {"get_warn_all", (DL_FUNC) &FANSI_get_warn_all, 0},
   {"get_warn_mangled", (DL_FUNC) &FANSI_get_warn_mangled, 0},
   {"get_warn_utf8", (DL_FUNC) &FANSI_get_warn_utf8, 0},
+  {"get_warn_error", (DL_FUNC) &FANSI_get_warn_error, 0},
   {"check_enc", (DL_FUNC) &FANSI_check_enc_ext, 2},
   {"ctl_as_int", (DL_FUNC) &FANSI_ctl_as_int_ext, 1},
   {"esc_html", (DL_FUNC) &FANSI_esc_html, 2},

@@ -182,6 +182,9 @@ SEXP FANSI_get_warn_mangled() {
 SEXP FANSI_get_warn_utf8() {
   return ScalarInteger(FANSI_WARN_UTF8);
 }
+SEXP FANSI_get_warn_error() {
+  return ScalarInteger(FANSI_WARN_ERROR);
+}
 // concept borrowed from utf8-lite, but is not great because we're
 // still doing the calculation every iteration.  Probably okay though, the
 // alternative is just too much of a pain.
@@ -443,7 +446,7 @@ void FANSI_print_len(const char * x, int len) {
       Rprintf("%c", *(x + i));
   Rprintf("\n");
 }
-static void print_bits(unsigned int x) {
+void FANSI_print_bits(unsigned int x) {
   unsigned int uintbits = (sizeof(x) * CHAR_BIT);
   for(unsigned int i = uintbits; i > 0; --i) {
     if(i < uintbits && !(i % 8)) Rprintf(" ");
@@ -461,7 +464,7 @@ void FANSI_print_sgr(struct FANSI_sgr s) {
     s.bgcol.extra[0], s.bgcol.extra[1], s.bgcol.extra[2]
   );
   Rprintf("  style:  ");
-  print_bits(s.style);
+  FANSI_print_bits(s.style);
   Rprintf("\n");
 }
 void FANSI_print_state(struct FANSI_state x) {
@@ -472,9 +475,9 @@ void FANSI_print_state(struct FANSI_state x) {
     x.pos.x, x.pos.r, x.pos.a, x.pos.a
   );
   Rprintf("  status: ");
-  print_bits(x.status);
+  FANSI_print_bits(x.status);
   Rprintf("\n  settng: ");
-  print_bits(x.settings);
+  FANSI_print_bits(x.settings);
   Rprintf("\n- End State ---\n");
 }
 

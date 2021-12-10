@@ -42,7 +42,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #define FANSI_SET_CTL       0
 #define FANSI_SET_TERMCAP   7
 #define FANSI_SET_WARN     10
-#define FANSI_SET_WIDTH    20
+#define FANSI_SET_WIDTH    21
 
 // bits 0-6: recognized controls (also used in .status)
 #define FANSI_CTL_NL           1
@@ -64,14 +64,17 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #define FANSI_TERM_ALL         7
 #define FANSI_TERM_MASK      896
 
-// Bits 10-19: warning level (see ERR_*)
+// Bits 10-20: warning level (see ERR_*)
 #define FANSI_WARN_MASK    2096128 // 0111 1111 1111 << FANSI_SET_WARN
 #define FANSI_WARN_ALL        2047 // 0111 1111 1111
 // Warnings for situations jeopardizing width computation and similar
 #define FANSI_WARN_MANGLED  163840 // 0000 1010 0000 << FANSI_SET_WARN
 #define FANSI_WARN_UTF8     524288
+// These should not be suppressed by warn=FALSE (but an be turned off by
+// functions that don't care about them).
+#define FANSI_WARN_ERROR   1572864 // 0110 0000 0000 << FANSI_SET_WARN
 
-// bits 20-21: Width mode, this is an integer, not bit flags, so
+// bits 21-22: Width mode, this is an integer, not bit flags, so
 // First shift by FANSI_SET_WIDTH
 #define FANSI_COUNT_CHARS    0
 #define FANSI_COUNT_WIDTH    1
@@ -80,10 +83,10 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
 #define FANSI_COUNT_ALL      3
 
-// bits 22-24: other settings
-#define FANSI_SET_ALLOWNA  4194304
-#define FANSI_SET_KEEPNA   8388608
-#define FANSI_SET_ESCONE  16777216  // consume only one ESC at a time
+// bits 23-25: other settings
+#define FANSI_SET_ALLOWNA  8388608
+#define FANSI_SET_KEEPNA  16777216
+#define FANSI_SET_ESCONE  33554432  // consume only one ESC at a time
 
 // - Status --------------------------------------------------------------------
 

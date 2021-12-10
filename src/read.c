@@ -148,19 +148,19 @@ static int as_num(const char * string) {
 
 static void alert(struct FANSI_state * state, R_xlen_t i, const char * arg) {
   unsigned int err_code = FANSI_GET_ERR(state->status);
+  int err_mode = (err_code == ERR_BAD_UTF8 || err_code == ERR_NON_ASCII);
   if(
     (
       !(state->status & FANSI_STAT_WARNED) ||
-      // Bad error still happen even if warned already
-      (err_code == ERR_BAD_UTF8 || err_code == ERR_NON_ASCII)
-    )
-    && err_code && (state->settings & (1U  << (FANSI_SET_WARN + err_code - 1U)))
+      err_mode // Bad error still happen even if warned already
+    ) &&
+    err_code &&
+    (state->settings & (1U  << (FANSI_SET_WARN + err_code - 1U)))
   ) {
     // Select warn or error depending on severity
     void (*fun)(const char *, ...);
-    if(err_code == ERR_BAD_UTF8 || err_code == ERR_NON_ASCII) {
-      fun = error;
-    } else fun = warning;
+    if(err_mode) fun = error;
+    else fun = warning;
 
     char argp[39];
     if(arg) {
@@ -175,8 +175,8 @@ static void alert(struct FANSI_state * state, R_xlen_t i, const char * arg) {
     fun(
       "%s %s at index [%jd], %s%s",
       argp, err_messages[err_code - 1], FANSI_ind(i),
-      "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
-      "off these warnings."
+      "see `?unhandled_ctl`",
+      err_mode ? "." : "; you can use `warn=FALSE` to turn off these warnings."
     );
     state->status |= FANSI_STAT_WARNED;  // only warn once
   }

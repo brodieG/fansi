@@ -165,6 +165,7 @@ void FANSI_print(const char * x);
 void FANSI_print_len(const char * x, int len);
 void FANSI_print_state(struct FANSI_state x);
 void FANSI_print_sgr(struct FANSI_sgr s);
+void FANSI_print_bits(unsigned int x);
 void FANSI_interrupt(R_xlen_t i);
 intmax_t FANSI_ind(R_xlen_t i);
 SEXP FANSI_mkChar0(char * start, char * end, cetype_t enc, R_xlen_t i);

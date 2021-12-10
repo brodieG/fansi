@@ -86,7 +86,7 @@ SEXP FANSI_nchar(
           if(FANSI_GET_ERR(state.status) == ERR_BAD_UTF8) break;
         }
         unsigned int err_tmp = FANSI_GET_ERR(state.status);
-        if (err_tmp == ERR_BAD_UTF8 || err_tmp == ERR_NON_ASCII) {
+        if (err_tmp == ERR_BAD_UTF8) {
           if(state.settings & FANSI_SET_ALLOWNA) resi[i] = NA_INTEGER;
           else error("Internal Error: invalid encoding unhandled."); // nocov
         } else resi[i] = state.pos.w;
