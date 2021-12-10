@@ -45,14 +45,13 @@ static int substr_range(
 
   struct FANSI_state state, state_prev, state_tmp;
   state = *state_start;
-
   // Corner case: consume any leading specials
-  if(start <= 0) {
+  if(start <= 0 && stop > 0) {
     state_tmp = state;
     FANSI_read_next(&state_tmp, i, arg);
     if(state_tmp.status & FANSI_STAT_SPECIAL) state = state_tmp;
+    state.status |= state_tmp.status & FANSI_STAT_WARNED;
   }
-  state.status |= state_tmp.status & FANSI_STAT_WARNED;
   state_prev = state;
   // Recall `start` and `stop` are in 1-index, here we're greedy eating zero
   // width things. `state_prev` tracks the last valid break point.
@@ -132,11 +131,12 @@ static int substr_range(
 
   /*
   Rprintf(
-    "x %d %d w %d %d rnd %d byte %x ctl_all %d\n",
+    "x %d %d w %d %d rnd %d byte %x ctl_all %d err %d\n",
     state.pos.x, state_prev.pos.x,
     state.pos.w, state_prev.pos.w, rnd_i,
     state.string[state.pos.x],
-    state.status & FANSI_CTL_ALL
+    state.status & FANSI_CTL_ALL,
+    state.status & FANSI_STAT_ERR_MASK
   );
   */
   // If we are allowed to overshoot, keep consuming zero-width non-CTL
@@ -229,7 +229,7 @@ static SEXP substr_one(
 
   SEXP res;
   int empty_string = state_stop.pos.x == state_start.pos.x;
-  if(!(empty_string && term_i) && stop >= start) {
+  if(!(empty_string && term_i) && stop > 0 && stop >= start) {
     // Measure/Write loop (see src/write.c), this is adapted from wrap.c
     const char * err_msg = "Writing substring";
     for(int k = 0; k < 2; ++k) {

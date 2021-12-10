@@ -248,6 +248,8 @@ unsigned int parse_token(struct FANSI_state * state) {
       err_code = ERR_BAD_SUB;
     else if(*string && err_code < ERR_NOT_SPECIAL_BAD_SUB)
       err_code = ERR_NOT_SPECIAL_BAD_SUB;
+    else if(!*string && err_code < ERR_BAD_CSI_OSC)
+      err_code = ERR_BAD_CSI_OSC;
   }
   if(*string == 'm') is_sgr = 1;
   else if(*string >= 0x40 && *string <= 0x7E) last = 1;
@@ -267,10 +269,6 @@ unsigned int parse_token(struct FANSI_state * state) {
   } }
   if(err_code < ERR_BAD_SUB && val > 255) err_code = ERR_BAD_SUB;
 
-  // If the string ended it is an error, but count it as CSI
-  if(!*string && err_code < ERR_BAD_CSI_OSC) {
-    err_code = ERR_BAD_CSI_OSC;  // Invalid incomplete CSI
-  }
   state->pos.x += len + len_intermediate + len_tail;
   state->status = set_err(state->status, err_code);
   if(is_sgr) state->status |= FANSI_CTL_SGR;
