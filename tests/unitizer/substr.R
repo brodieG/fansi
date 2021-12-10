@@ -123,13 +123,45 @@ unitizer_sect("Corner cases", {
   substr2_ctl(rep("o\033[31m ", 2), 1:2, 1:2)
 
   # bad sequence at beginning or end
-  substr_ctl("\033[41bhello", 1, 5)
   substr_ctl("hello\033[41b", 1, 5)
   substr_ctl("hello\033[41b", 1, 6)
+  substr_ctl("\033[1p\033[31mA", 1, 1)
+  substr_ctl("\033[1p\033[31mA", 0, 1)
+  substr_ctl("\033[1p\033[31mA", -1, 1)
+
+  # Good/bad sequence at beginning
+  substr_ctl("\033[31m\033[1pA", 1, 1)
+  substr_ctl("\033[31m\033[1pA", 0, 1)
+  substr_ctl("\033[31m\033[1pA", -1, 1)
+
+  # Good good (test re-emission)
+  substr_ctl("\033[41m\033[1mA", 1, 1)
+  substr_ctl("\033[41m\033[1mA", 0, 1)
+  substr_ctl("\033[41m\033[1mA", -1, 1)
 
   # Re-issue when state change out of substring
   str.4 <- c("A\033[45mB", "A")
   substr_ctl(str.4, 1, 1, carry=TRUE, terminate=FALSE)
+
+  # Incomplete sequences
+  substr_ctl("a\033[42", 1, 1)
+  substr_ctl("a\033[42", 1, 2)
+  substr_ctl("a\033[42", 1, 2, terminate=FALSE)
+  substr_ctl("a\033]8;;END", 1, 1)
+  # Incomplete, but we know it's a URL, so we remove it even if past end
+  substr_ctl("a\033]8;;END", 1, 2)
+  # But leave it if not terminating
+  substr_ctl("a\033]8;;END", 1, 2, terminate=FALSE)
+  substr_ctl("a\033];;END", 1, 1)
+  substr_ctl("a\033];;END", 1, 2)
+  substr_ctl("a\033[38;5mb", 1, 2, term.cap="all")
+  substr_ctl("a\033[38;2mb", 1, 2, term.cap="all")
+  substr_ctl("a\033[38;2;255mb", 1, 2, term.cap="all")
+  substr_ctl("a\033[38;2;255;255mb", 1, 2, term.cap="all")
+
+  # Select leading controls
+  substr_ctl("\033[45pA", 1, 1, warn=FALSE)
+  substr_ctl("\033[45pA", 0, 1, warn=FALSE)
 })
 unitizer_sect("Obscure escapes", {
   # illegal 38/48

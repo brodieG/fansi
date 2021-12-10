@@ -93,6 +93,12 @@ unitizer_sect("substr", {
   latin.utf8 <- substr_ctl(latin, 1, 9)
   latin.utf8
   Encoding(latin.utf8)
+
+  # Start/Stop rounding
+  substr2_ctl("ＷnＷ", 2, 4, type='width', round='start')
+  substr2_ctl("ＷnＷ", 2, 4, type='width', round='stop')
+  substr2_ctl("ＷnＷ", 2, 4, type='width', round='neither')
+  substr2_ctl("ＷnＷ", 2, 4, type='width', round='both')
 })
 unitizer_sect("rounding", {
   # handling of subsetting when we end up in middle of wide display characters
@@ -177,18 +183,8 @@ unitizer_sect("Corner cases", {
   utf8.bad <- "hello \xF0 world, goodnight moon"
   Encoding(utf8.bad) <- 'UTF-8'
 
-  # # have to remove these because of the change in substr behavior, use
-  # # state_at_pos instead
-  # substr_ctl(utf8.bad, 1, 7)
-  # identical(substr_ctl(utf8.bad, 1, 7), substr(utf8.bad, 1, 7))
-  # substr_ctl(utf8.bad, 5, 10)
-
-  fansi:::state_at_pos(utf8.bad, 1, 7)
-  fansi:::state_at_pos(utf8.bad, 5, 10)
-
-  ## Weird indices
-  fansi:::state_at_pos("he\033[42mllo", 1, 7, ids=c(1, 1))
-  fansi:::state_at_pos("he\033[42mllo", 1, 7, ids=c("1", "1"))
+  substr_ctl(utf8.bad, 1, 7)
+  substr_ctl(utf8.bad, 5, 10)
 
   # Need to use `tryCatch` because the warnings vascillate for no rhyme or
   # reason between showing the call and not.  Seems to be triggered by
@@ -210,8 +206,11 @@ unitizer_sect("Corner cases", {
   # # need to remove for changes in R3.6.0
   # substr2_ctl(chrs.2, 1, 10, type='width', warn=FALSE)
 
-  # boundaries
+  # bad utf8 in SGR and CSI
+  substr_ctl("A\033[31;\x80mB", 0, 3)
+  substr_ctl("A\033[31;\x80pB", 0, 3)
 
+  # boundaries
   b.test <- c(
     "\uc0f6\ubed9",
     "\u0301a\ubed9",  # leading diacritic
@@ -297,6 +296,10 @@ unitizer_sect("nchar", {
 
   nchar_sgr("\033[31m\thello", type='width') >=
     nchar_ctl("\033[31m\thello", type='width')
+
+  # nchar doesn't care about bad bits embedded in escapes
+  nchar_ctl("123\033[31\x80m123")
+  nchar_ctl("123\033\x80123")
 })
 unitizer_sect("unhandled", {
   # a bad utf8 string and other bad stuff
@@ -348,11 +351,7 @@ unitizer_sect("utf8clen", {
   nchar_ctl(utf8.bad.2, allowNA=TRUE)
 
   ## remove for changes in R3.6.0
-  # substr(utf8.bad.2, 1, 1)
-  # substr_ctl(utf8.bad.2, 1, 1)
-
-  fansi:::state_at_pos(utf8.bad.2, 1, 1)
-
+  substr_ctl(utf8.bad.2, 1, 1)
 })
 unitizer_sect("wrap corner cases", {
   # With UTF8

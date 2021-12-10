@@ -14,13 +14,16 @@ unitizer_sect("Strip ansi", {
   strip_sgr(1:3)
 })
 unitizer_sect("Corner cases", {
+  # In order for an escape to be stripped it has to be fully recognized.  A bit
+  # amgiuous what should really happen in these cases, particularly because now
+  # we distinguish between a mal-formed but complete sequence (which we consider
+  # fully recongized and strip), vs e.g. an incomplete one which we don't strip.
   strip_ctl("hello\033")
-  # should this be stripped?  Not 100% clear since terminal seems to be waiting
-  # for input after it is cated
   strip_ctl("hello\033[")
+  strip_ctl("hello\033[42")
+  strip_ctl("hello\033[42", ctl=c('all', 'csi', 'sgr'))
 
   # illegal sequence
-
   strip_ctl("hello\033[31##3m illegal")
   strip_ctl("hello\033[31##m legal")
 
