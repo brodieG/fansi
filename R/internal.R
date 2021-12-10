@@ -52,6 +52,7 @@ get_warn_all <- function() .Call(FANSI_get_warn_all)
 get_warn_mangled <- function() .Call(FANSI_get_warn_mangled)
 get_warn_utf8 <- function() .Call(FANSI_get_warn_utf8)
 get_warn_worst <- function() bitwOr(get_warn_mangled(), get_warn_utf8())
+get_warn_error <- function() .Call(FANSI_get_warn_error)
 
 ## exposed internals for testing
 
@@ -117,7 +118,8 @@ VAL_IN_ENV <- function(
     if(length(warn) != 1L || is.na(warn))
       stop2("Argument `warn` must be TRUE or FALSE.")
     args[['warn']] <- warn
-    args[['WARN.INT']] <- if(warn) warn.mask else 0L
+    args[['WARN.INT']] <-
+      if(warn) warn.mask else bitwAnd(warn.mask, get_warn_error())
   }
   if('normalize' %in% argnm) {
     normalize <- as.logical(args[['normalize']])
