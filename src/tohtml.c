@@ -248,7 +248,7 @@ static int W_state_as_html(
     if(has_cur_url) {
       // users responsibility to escape html special chars
       FANSI_W_COPY(buff, "<a href='");
-      FANSI_W_MCOPY(buff, state.fmt.url.url.val, state.fmt.url.url.len);
+      FANSI_W_MCOPY(buff, URL_STRING(state.fmt.url), URL_LEN(state.fmt.url));
       FANSI_W_COPY(buff, "'>");
     }
     if(has_cur_sgr) {

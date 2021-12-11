@@ -844,12 +844,12 @@ void FANSI_W_url(
   if(FANSI_url_active(url)) {
     const char * err_msg = "Writing URL"; // for FANSI_W_M?COPY
     FANSI_W_COPY(buff, "\033]8;");
-    if(url.id.val) {
+    if(ID_LEN(url)) {
       FANSI_W_COPY(buff, "id=");
-      FANSI_W_MCOPY(buff, url.id.val, url.id.len);
+      FANSI_W_MCOPY(buff, ID_STRING(url), ID_LEN(url));
     }
     FANSI_W_COPY(buff, ";");
-    FANSI_W_MCOPY(buff, url.url.val, url.url.len);
+    FANSI_W_MCOPY(buff, URL_STRING(url), URL_LEN(url));
     FANSI_W_COPY(buff, "\033\\");  // ST
   }
   // for debugging, buff always should have 1 byte

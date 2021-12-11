@@ -50,6 +50,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #define FANSI_GET_ERR(x)                                            \
   FANSI_GET_RNG((x), FANSI_STAT_ERR_START, FANSI_STAT_ERR_ALL)
 
+#define URL_STRING(x) ((x).string + (x).url.start)
+#define URL_LEN(x) ((x).url.len)
+#define ID_STRING(x) ((x).string + (x).id.start)
+#define ID_LEN(x) ((x).id.len)
+
 // - Internal funs -----------------------------------------------------------
 
 SEXP FANSI_process(

@@ -324,7 +324,7 @@ int FANSI_sgr_active(struct FANSI_sgr sgr) {
 }
 // Keep synchronized with `url_close`
 int FANSI_url_active(struct FANSI_url url) {
-  return url.url.len > 0;
+  return URL_LEN(url) > 0;
 }
 // Return 0 if equal, 1 if different
 //
@@ -338,13 +338,15 @@ int FANSI_url_active(struct FANSI_url url) {
 int FANSI_url_comp(struct FANSI_url target, struct FANSI_url current) {
   int url_eq = target.url.len == current.url.len &&
     (
-      !target.url.len ||
-      !memcmp(target.url.val, current.url.val, target.url.len)
+      !URL_LEN(target) ||
+      !memcmp(URL_STRING(target), URL_STRING(current), URL_LEN(target))
     );
-  int id_eq = target.id.len == current.id.len &&
+  int id_eq = ID_LEN(target) == ID_LEN(current) &&
     (
-      (!target.url.len && !target.id.len) ||
-      (target.id.len && !memcmp(target.id.val, current.id.val, target.id.len))
+      (!URL_LEN(target) && !ID_LEN(target)) ||
+      (ID_LEN(target) &&
+        !memcmp(ID_STRING(target), ID_STRING(current), ID_LEN(target))
+      )
     );
 
   return !(url_eq && id_eq);

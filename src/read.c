@@ -372,33 +372,44 @@ void parse_colors(
 // This is going to be quadratic on params * strlen(params) so bad idea to
 // search for all params if there are many (there should not be).
 //
-// @params will be assumed to be colon delimited
+// @param will be assumed to be colon delimited
 // @param param must include trailing =, e.g. "id="
 
-static struct FANSI_string get_url_param(
-  struct FANSI_string params, const char * param
+static struct FANSI_offset get_url_param(
+  const char * string, unsigned int start, unsigned int len, const char * param
 ) {
   // We don't check any params longer than 128 chars
-  struct FANSI_string res = {.val="", .len=0};
-  int len = 0;
-  while(len <= 128 && *(param + len)) ++len;
+  unsigned int plen = 0;
+  struct FANSI_offset res = {0};
+  while(plen <= 128 && *(param + plen)) ++plen;
   // Can't test the checks, we only ever use this with 'id=' ATM
-  if(*(param + len))
+  if(*(param + plen))
     error("Internal Error: max allowed param len 128 bytes.");  // nocov
-  if(*(param + len - 1) != '=')
-    error("Internal Error: trailing param char must be '='.");  // nocov
+  if(plen) {
+    if(*(param + plen - 1) != '=')
+      error("Internal Error: trailing param char must be '='.");  // nocov
 
-  const char * start = params.val;
-  const char * end;
-  if(len <= params.len) {
-    while(*(start + len) && memcmp(start, param, len)) ++start;
-    if(*(start + len)) {          // found match
-      start = end = start + len;  // param value start
-      // Previously checked that there will be at least a ';'
-      while(*end && *end != ':' && *end != ';') ++end;
-      res = (struct FANSI_string) {start, end - start};
-    }
-  }
+    const char * target = string + start;
+    const char * end;
+    if(plen <= len) {
+      while(
+        *target &&
+        (target - (string + start) < len - plen) &&
+        memcmp(target, param, plen)
+      )
+        ++target; // could seek for delimiter for speed
+
+      if(*target) {
+        int o_pstart = target - string + plen;
+        end = target;
+        // Previously checked that there will be at least a ';'
+        while(*end && *end != ':' && *end != ';') ++end;
+        int o_pend = end - string;
+        if(o_pstart < 0 || o_pend < 0)
+          error("Internal Error: bad url param."); // nocov
+        res = (struct FANSI_offset) {
+          (unsigned int) o_pstart, (unsigned int) (o_pend - o_pstart)
+  }; } } }
   return res;
 }
 /*
@@ -449,75 +460,104 @@ static struct FANSI_string get_url_param(
  * > characters either.
  *
  * See also `parse_osc`.
+ *
+ * @return the length of the osc parsed
  */
 
-void parse_url(struct FANSI_state * state) {
+#define ID_END(x) ((x).id.len + (x).id.start)
+#define URL_END(x) ((x).url.len + (x).url.start)
+
+unsigned int parse_url(struct FANSI_state * state) {
   const char *end, *x0, *x;
   unsigned int err_tmp = 0;
-  x = x0 = state->string + state->pos.x;
+  unsigned int osc_len = 0;
+  x0 = state->string;
+  x = state->string + state->pos.x;
   if(*(x) == '8' && *(x + 1) == ';') {
-    end = x = x0 + 2;
+  // All o_ variables are offsets relative to beginning of string
+    unsigned int o_dat = state->pos.x + 2;
+    end = x0 + o_dat;
     // Look for end of escape tracking position of first semi-colons (subsequent
     // ones may be part of the URI).
-    //
-    // neither params nor URI must contain bytes outside of 0x20-0x7E. This is a
-    // narrower range than stricly allowed by OSC CSI.
-    int semicolon = 0;
-    int bad_byte = -1;
+    unsigned int o_semic = 0;  // semicolon
+    unsigned int o_bad = 0;
 
     while(*end && *end != '\a' && !(*end == 0x1b && *(end + 1) == '\\')) {
+      // neither params nor URI must contain bytes outside of 0x20-0x7E. This is
+      // a narrower range than stricly allowed by OSC CSI.
       if(*end >= 0x20 && *end <= 0x7e) {
         // All good
-        if (*end == ';' && !semicolon) semicolon = end - x0;
+        if (*end == ';' && o_semic <= o_dat) o_semic = end - x0;
       } else if((unsigned char)*end > 0x7f) {
         err_tmp = ERR_NON_ASCII;
       } else if (!(*end >= 0x08 && *end <= 0x0d)) {
         // Invalid sub string (these used to be 5)
         if(err_tmp < ERR_BAD_SUB) err_tmp  = ERR_BAD_SUB;
-        bad_byte = end - x;
+        o_bad = end - x0;
       } else {
         // OK OSC, but non portable URL, used to be separate error from bad osc
         if(err_tmp < ERR_BAD_SUB) err_tmp  = ERR_BAD_SUB;
-        bad_byte = end - x;  // really non-portable, but we don't distinguish
+        o_bad = end - x0;  // really non-portable, but we don't distinguish
       }
       ++end;
     }
-    // Ended sequence before string
+    // Ended sequence before string did
     if(*end) {
-      // If semicolon is found, and string is not invalid, it's a URL
-      if(*end && semicolon) {
-        const char * url_start = x0 + semicolon + 1;
+      // If o_semic is found, and string is not invalid, it's a URL
+      if(*end && o_semic >= o_dat) {
+        // const char * url_o_dat = x0 + o_semic + 1;
         // Only record params/id if we're sure they don't contain a bad byte
-        state->fmt.url = (struct FANSI_url) {0};
-        state->fmt.url.params =
-          (struct FANSI_string) {x, (int) (url_start - x) - 1};
-        struct FANSI_string id_tmp;
-        id_tmp = get_url_param(state->fmt.url.params, "id=");
-        if(id_tmp.val - x > bad_byte) state->fmt.url.id = id_tmp;
+        state->fmt.url = (struct FANSI_url) {.string = state->string};
+        struct FANSI_offset id_tmp;
+        id_tmp = get_url_param(
+          state->string, o_dat, o_semic - o_dat, "id="
+        );
+        if(id_tmp.start > o_bad) state->fmt.url.id = id_tmp;
 
         // Only record url if it has neither bad nor non-portable byte
-        if(bad_byte < url_start - x) state->fmt.url.url =
-          (struct FANSI_string) {url_start, end - url_start};
+        if(o_semic > o_bad) state->fmt.url.url =
+          (struct FANSI_offset) {o_semic + 1, end - (x0 + o_semic + 1)};
 
-        // Non id parameters
+        // Detect non id parameters
         if(
-          state->fmt.url.params.len &&
-          state->fmt.url.id.len + 3 != state->fmt.url.params.len
+          // Params before id (+3 for "id=")
+          (state->fmt.url.id.start > o_dat + 3) ||
+          // Params after id
+          (
+            state->fmt.url.id.start &&
+            o_semic > state->fmt.url.id.start + state->fmt.url.id.len
+          ) ||
+          // No id but other params
+          (!state->fmt.url.id.start && o_semic > o_dat)
         ) {
           if(err_tmp < ERR_UNKNOWN_SUB) err_tmp = ERR_UNKNOWN_SUB;
         }
+        // Sanity check
+        if(
+          (end - state->string) < URL_LEN(state->fmt.url) ||
+          (end - state->string) < ID_LEN(state->fmt.url)
+        )
+          error("Internal Error: bad URI size.");
       }
     } else err_tmp = ERR_BAD_CSI_OSC;
 
-    state->fmt.url.osc.len = end - x0;
+    const char * xdat = x0 + o_dat;
+    if(end < xdat) error("Internal Error: bad url data detection\n");
+    // Recall ESC] already consumed befor this function
+    osc_len = end - xdat + 2 +   // 2 for opening "8;"
+      (*end != 0) +              // consume terminator if there is one
+      (*end == 0x1b);            // consume extra byte for ST
+
     // Even if sequence doesn't end, we declare an OSC encoded URL
     state->status |= FANSI_CTL_URL;
-    state->fmt.url.osc.len +=
-      (*end != 0) +           // consume terminator if there is one
-      (*end == 0x1b);         // consume extra byte for ST
-    state->pos.x += state->fmt.url.osc.len;
+    state->pos.x += osc_len;
     state->status = set_err(state->status, err_tmp);
+    Rprintf(
+      "url %d %d len %d\n", state->fmt.url.url.start,state->fmt.url.url.len,
+      osc_len
+    );
   } else error("Internal Error: non-URL OSC fed to URL parser.\n"); // nocov
+  return osc_len;
 }
 /*
  * Return OSC length excluding initial "ESC]"

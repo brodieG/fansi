@@ -99,6 +99,11 @@ struct FANSI_string {
   const char * val;
   int len;
 };
+// Pair this up with a string to mark substrings
+struct FANSI_offset {
+  unsigned int start;
+  unsigned int len;
+};
 /*
  * OSC derived URL info.
  *
@@ -109,10 +114,9 @@ struct FANSI_osc {
   int error;  // error, if any, one of 0, 4 or 5 (see FANSI_state.err_code).
 };
 struct FANSI_url {
-  struct FANSI_string url;
-  struct FANSI_string params;  // unparsed param string
-  struct FANSI_string id;      // parsed id
-  struct FANSI_osc osc;
+  const char * string;
+  struct FANSI_offset url;
+  struct FANSI_offset id;
 };
 struct FANSI_format {
   struct FANSI_url url;
