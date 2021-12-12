@@ -556,10 +556,6 @@ unsigned int parse_url(struct FANSI_state * state) {
     state->status |= FANSI_CTL_URL;
     state->pos.x += osc_len;
     state->status = set_err(state->status, err_tmp);
-    Rprintf(
-      "url %d %d len %d\n", state->fmt.url.url.start,state->fmt.url.url.len,
-      osc_len
-    );
   } else error("Internal Error: non-URL OSC fed to URL parser.\n"); // nocov
   return osc_len;
 }
@@ -608,11 +604,14 @@ static struct FANSI_osc parse_osc(const char * x) {
 static void read_ascii_until(
   struct FANSI_state * state, int until, int reset
 ) {
+  Rprintf("read ascii %d w %d until %d\n", state->pos.x, state->pos.w, until);
   if(reset) state->status = state->status & FANSI_STAT_WARNED;
+  int until2 = until - state->pos.w;
   const char * start, * end;
   end = start = state->string + state->pos.x;
-  while(*end >= 0x20 && *end < 0x7F && (end - state->string) < until) ++end;
+  while(IS_ASCII(*end) && (end - start) < until2) ++end;
   int bytes = end - start;
+  Rprintf("  bytes read %d until %d until2 %d\n", bytes, until, until2);
   state->pos.w += bytes;
   state->pos.x += bytes;
 }
@@ -623,7 +622,7 @@ static void read_ascii_until(
  *
  * See GENERAL NOTES atop.
  */
-static void read_ascii(struct FANSI_state * state) {
+static void read_one(struct FANSI_state * state) {
   ++state->pos.x;
   ++state->pos.w;
 }
@@ -688,6 +687,7 @@ static void read_ascii(struct FANSI_state * state) {
  *   details for failure modes.
  */
 void read_esc(struct FANSI_state * state) {
+  Rprintf("read esc %d\n", state->pos.x);
   if(state->string[state->pos.x] != 27)
     // nocov start
     error(
@@ -876,7 +876,8 @@ void read_esc(struct FANSI_state * state) {
       else if((sgr && !sgr_sup) || (csi && !csi_sup)) {
         // Good sequence, but don't support it, so just read 1 char from prev
         *state = state_prev;
-        read_ascii_until(state, state->pos.w + 1, 1);
+        state->status &= FANSI_STAT_WARNED;
+        read_one(state);  // can't use read_ascii_until as this is not ascii
       }
       else error("Internal Error: unexpected CSI/SGR status."); // nocov
 
@@ -961,7 +962,8 @@ void read_esc(struct FANSI_state * state) {
         state->status |= FANSI_STAT_SPECIAL;
     } else {
       *state = state_prev;
-      read_ascii_until(state, state->pos.w + 1, 1);
+      Rprintf("esc not recognized\n");
+      read_one(state);   // read one byte, can's use read_ascii_until
       break;
     }
   } while(
@@ -1074,7 +1076,8 @@ void read_c0(struct FANSI_state * state) {
   int is_nl = state->string[state->pos.x] == '\n';
   if(!is_nl) state->status = set_err(state->status, ERR_C0);
 
-  read_ascii_until(state, state->pos.w + 1, 0);
+  Rprintf("REad C0\n");
+  read_one(state);
   // If C0/NL are being actively processed, treat them as width zero
   if(
     (is_nl && (state->settings & FANSI_CTL_NL)) ||
@@ -1109,7 +1112,7 @@ void FANSI_read_next(
   int is_utf8 = IS_UTF8(chr_val);
 
   // Normal ASCII characters
-  if(is_ascii) read_ascii(state);
+  if(is_ascii) read_one(state);
   // UTF8 characters (if chr_val is signed, then > 0x7f will be negative)
   else if (is_utf8) read_utf8(state, i);
   // ESC sequences
@@ -1168,6 +1171,7 @@ void read_utf8_until(
     state->status = state->status & FANSI_STAT_WARNED;
     if(IS_ASCII(x)) {
       // Read ASCII in case outer fun is not inlined
+      Rprintf("in utf8\n");
       read_ascii_until(state, until, 1);
     } else {
       int mb_err = 0;
@@ -1276,6 +1280,7 @@ void FANSI_read_until(
     state->pos.w < until &&
     !(state->status & FANSI_STAT_OVERSHOT)
   ) {
+    Rprintf("outer loop w %d until %d\n", state->pos.w, until);
     // reset non-persistent flags
     state->status = state->status & (FANSI_STAT_PERSIST);
 

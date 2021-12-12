@@ -40,12 +40,13 @@ static int substr_range(
   const char * arg
 ) {
   *state_stop = *state_start;
+  int start0 = start - 1;
 
   // - Start Point -----------------------------------------------------------
 
   struct FANSI_state state_tmp;
   // Corner case: consume any leading specials
-  if(start <= 0 && stop > 0) {
+  if(start0 <= 0 && stop > 0) {
     state_tmp = *state_start;
     FANSI_read_next(&state_tmp, i, arg);
     if(state_tmp.status & FANSI_STAT_SPECIAL) *state_start = state_tmp;
@@ -55,7 +56,7 @@ static int substr_range(
   // width things. `state_prev` tracks the last valid break point.
 
   int overshoot = rnd_i == (FANSI_RND_START | FANSI_RND_BOTH);
-  FANSI_read_until(state_start, start, overshoot, term_i, i, arg);
+  FANSI_read_until(state_start, start0, overshoot, term_i, i, arg);
 
   // - End Point -------------------------------------------------------------
 
