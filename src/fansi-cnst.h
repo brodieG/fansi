@@ -118,12 +118,16 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #define ERR_BAD_UTF8           10
 #define ERR_NON_ASCII          11
 
-// bits 11-14: additional status flags
+// bits 11-16: additional status flags, some of these are no longer strictly
+// necessary with the switch to read_until (from read_next).
 #define FANSI_STAT_ZWJ       2048
 #define FANSI_STAT_RI        4096
-#define FANSI_STAT_AGAIN     8192 // Need to read on more char
+#define FANSI_STAT_AGAIN     8192 // Read past requested width
 #define FANSI_STAT_WARNED   16384 // Warning already issued
 #define FANSI_STAT_SPECIAL  32768 // Valid SGR or URL (no critical errors)
+#define FANSI_STAT_OVERSHOT 65536 // Read past requested width
+
+#define FANSI_STAT_PERSIST  22528 // _ZWJ | _RI | _WARNED
 
 // - sgr.style -----------------------------------------------------------------
 

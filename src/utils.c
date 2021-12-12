@@ -481,7 +481,7 @@ void FANSI_print_state(struct FANSI_state x) {
   Rprintf("\n- End State ---\n");
 }
 
-SEXP FANSI_read_all(SEXP x, SEXP warn, SEXP term_cap) {
+SEXP FANSI_read_all_ext(SEXP x, SEXP warn, SEXP term_cap) {
   R_xlen_t len = XLENGTH(x);
   SEXP res = PROTECT(allocVector(INTSXP, len));
   int * res_i = INTEGER(res);

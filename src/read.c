@@ -181,6 +181,10 @@ static void alert(struct FANSI_state * state, R_xlen_t i, const char * arg) {
     state->status |= FANSI_STAT_WARNED;  // only warn once
   }
 }
+// Names of these are not quite correct
+#define IS_ASCII(x) ((unsigned char)(x) < 0x7F && (unsigned char)(x) >= 0x20)
+#define IS_UTF8(x) ((unsigned char)(x) > 0x7F)
+#define IS_ESC(x) ((unsigned char)(x) == 0x1B)
 
 /*- Parsers -------------------------------------------------------------------\
 \-----------------------------------------------------------------------------*/
@@ -598,6 +602,20 @@ static struct FANSI_osc parse_osc(const char * x) {
 }
 /*- Read Interfaces -----------------------------------------------------------\
 \-----------------------------------------------------------------------------*/
+/*
+ * @param reset whether to reset status before proceeding
+ */
+static void read_ascii_until(
+  struct FANSI_state * state, int until, int reset
+) {
+  if(reset) state->status = state->status & FANSI_STAT_WARNED;
+  const char * start, * end;
+  end = start = state->string + state->pos.x;
+  while(*end >= 0x20 && *end < 0x7F && (end - state->string) < until) ++end;
+  int bytes = end - start;
+  state->pos.w += bytes;
+  state->pos.x += bytes;
+}
 
 /*
  * Read a Character Off when we know it is an ascii char, this is so we have a
@@ -858,7 +876,7 @@ void read_esc(struct FANSI_state * state) {
       else if((sgr && !sgr_sup) || (csi && !csi_sup)) {
         // Good sequence, but don't support it, so just read 1 char from prev
         *state = state_prev;
-        read_ascii(state);
+        read_ascii_until(state, state->pos.w + 1, 1);
       }
       else error("Internal Error: unexpected CSI/SGR status."); // nocov
 
@@ -942,9 +960,8 @@ void read_esc(struct FANSI_state * state) {
       ) )
         state->status |= FANSI_STAT_SPECIAL;
     } else {
-      state->status &= ~FANSI_CTL_MASK; // not a control
       *state = state_prev;
-      read_ascii(state);
+      read_ascii_until(state, state->pos.w + 1, 1);
       break;
     }
   } while(
@@ -1057,7 +1074,7 @@ void read_c0(struct FANSI_state * state) {
   int is_nl = state->string[state->pos.x] == '\n';
   if(!is_nl) state->status = set_err(state->status, ERR_C0);
 
-  read_ascii(state);
+  read_ascii_until(state, state->pos.w + 1, 0);
   // If C0/NL are being actively processed, treat them as width zero
   if(
     (is_nl && (state->settings & FANSI_CTL_NL)) ||
@@ -1065,6 +1082,8 @@ void read_c0(struct FANSI_state * state) {
   ) {
     --state->pos.w;
     state->status |= is_nl ? FANSI_CTL_NL : FANSI_CTL_C0;
+  } else {
+    state->status &= FANSI_STAT_WARNED;
   }
 }
 /*
@@ -1086,8 +1105,8 @@ void FANSI_read_next(
   // reset all flags except warned
   state->status = (state->status & (FANSI_STAT_WARNED | FANSI_STAT_RI));
 
-  int is_ascii = chr_val >= 0x20 && chr_val < 0x7F;
-  int is_utf8 = chr_val > 0x7f;
+  int is_ascii = IS_ASCII(chr_val);
+  int is_utf8 = IS_UTF8(chr_val);
 
   // Normal ASCII characters
   if(is_ascii) read_ascii(state);
@@ -1115,3 +1134,193 @@ void FANSI_read_next(
     goto AGAIN;
 }
 
+/*
+ * Read a Series of UTF8 (and ASCII) Characters
+ *
+ * Hacky grapheme approximation ensures flags (RI) aren't split, sets skin
+ * modifiers to width zero (so greedy / not greedy searches will / will  not
+ * grab them), and sets width zero to anything following a ZWJ (for  the same
+ * reason).  This will work in many cases, provided that the emoji sequences
+ * are valid and recognized by the display device.  Other graphemes work
+ * similarly to the extent continuation code points are   zero width naturally.
+ * Prefixes, sequence interruptors, and other things will not work.
+ *
+ * @param until width target
+ * @param overshoot allow overshooting of target width
+ * @param zerowidth allow only reading zerowidth chars at the boundary
+ */
+void read_utf8_until(
+  struct FANSI_state * state, int until, int overshoot, int zerowidth
+) {
+  char x;
+  unsigned int w_mode =
+    FANSI_GET_RNG(state->settings, FANSI_SET_WIDTH, FANSI_COUNT_ALL);
+
+  while(
+    (x = state->string[state->pos.x]) &&
+    (IS_UTF8(x) || IS_ASCII(x)) &&
+    state->pos.w < until
+  ) {
+    // These status are tracked in state->  because they must be reatained
+    // across escape sequences.
+    unsigned int prev_zwj = state->status & FANSI_STAT_ZWJ;
+    // Reset prior state info
+    state->status = state->status & FANSI_STAT_WARNED;
+    if(IS_ASCII(x)) {
+      // Read ASCII in case outer fun is not inlined
+      read_ascii_until(state, until, 1);
+    } else {
+      int mb_err = 0;
+      int disp_size = 0;
+      unsigned int prev_ri = state->status & FANSI_STAT_RI;
+      const char * mb_err_str = "use `validUTF8()` to find problem strings.";
+
+      int byte_size = utf8clen(state->string + state->pos.x, &mb_err);
+      mb_err |= !valid_utf8(state->string + state->pos.x, byte_size);
+
+      if(mb_err) {
+        // mimic what R_nchar does on mb error.  This will also break the loop
+        // later.
+        disp_size = NA_INTEGER;
+      } else if(w_mode == FANSI_COUNT_WIDTH || w_mode == FANSI_COUNT_GRAPH) {
+        // Assumes valid UTF-8!  Should have been checked.
+        int cp = utf8_to_cp(state->string + state->pos.x, byte_size);
+        if(cp >= 0x1F1E6 && cp <= 0x1F1FF) {    // Regional Indicator
+          // First RI is width two, next zero
+          if(!(prev_ri)) {
+            state->status |= FANSI_STAT_RI;
+            disp_size = 2;
+          } else disp_size = 0;
+          // we rely on external logic to forece reading two RIs
+        } else {
+          if (cp >= 0x1F3FB && cp <= 0x1F3FF) { // Skin type
+            disp_size = 0;
+          } else if (cp == 0x200D) {            // Zero Width Joiner
+            state->status |= FANSI_STAT_ZWJ;
+            disp_size = 0;
+          } else {
+            // Need CHARSXP for `R_nchar`, hopefull not too expensive.
+            SEXP str_chr = PROTECT(
+              mkCharLenCE(state->string + state->pos.x, byte_size, CE_UTF8)
+            );
+            disp_size = R_nchar(
+              str_chr, Width, // Width is an enum
+              state->status & FANSI_SET_ALLOWNA,
+              state->status & FANSI_SET_KEEPNA,
+              mb_err_str
+            );
+            UNPROTECT(1);
+        } }
+      } else {
+        disp_size = 1; // Character / byte counting
+      }
+      // toggle RI
+      if(prev_ri) state->status &= ~FANSI_STAT_RI;
+
+      if(disp_size == NA_INTEGER) {
+        // Both for R_nchar and if we directly detect an mb_err.  Whether this
+        // throws an errors is a function of what ->settings has been set to.
+        state->status = set_err(state->status, ERR_BAD_UTF8);
+        disp_size = byte_size = 1;
+      }
+      int total_width = state->pos.w + disp_size;
+      if(
+        (total_width > until && !overshoot) ||
+        (total_width >= until && zerowidth)
+      ) {
+        break;
+      } else {
+        // It is the responsibility of read_until to cleanup trailing zero width
+        // chars or control sequences
+        if(total_width > until) state->status |= FANSI_STAT_OVERSHOT;
+        state->pos.x += byte_size;
+        state->utf8 = state->pos.x;  // record after so no ambiguity about 0
+        // This could possibly overflow if byte_size >> 2 (e.g. if at some point
+        // width reports the \U escape codes.
+        if(state->pos.w > FANSI_lim.lim_int.max - disp_size)
+          error("Internal Error:  width greater than INT_MAX"); // nocov
+
+        // Don't count width of things following ZWJ
+        int w_or_g = w_mode == FANSI_COUNT_WIDTH || w_mode == FANSI_COUNT_GRAPH;
+        if(!prev_zwj || !w_or_g) state->pos.w += disp_size;
+      }
+      // Break for error reporting
+      if(mb_err) break;
+} } }
+/*
+ * Consume bytes until a certain width is met.
+ *
+ * Will read as many bytes as possible within each of the child `read_*`
+ * functions, but will need to drop out occasionally.  UTF8 state should survive
+ * across calls to escape functions as Terminals ignore them when composing
+ * compound UTF8 graphemes.
+ *
+ * We always consume all controls less than target `until` but never those
+ * greater than that.
+ *
+ * Two loop structure, where the second one cleans up any additional items that
+ * do not add width.
+ *
+ * @param until width measure not to exceed (subject to overshoot)
+ * @param overshoot allow a wide character to overshoot `until`
+ */
+void FANSI_read_until(
+  struct FANSI_state * state, int until, int overshoot, int term_i,
+  R_xlen_t i, const char * arg
+) {
+  char x;
+  // - Basic Read --------------------------------------------------------------
+
+  while(
+    (x = state->string[state->pos.x]) &&
+    state->pos.w < until &&
+    !(state->status & FANSI_STAT_OVERSHOT)
+  ) {
+    // reset non-persistent flags
+    state->status = state->status & (FANSI_STAT_PERSIST);
+
+    if(IS_ASCII(x)) read_ascii_until(state, until, 1);
+    else if(IS_UTF8(x)) read_utf8_until(state, until, overshoot, 0);
+    else if(IS_ESC(x)) read_esc(state);
+    else if(x) read_c0(state);        // C0 escapes (e.g. \t, \n, etc)
+
+    // Trigger errors / warnings if warranted
+    alert(state, i, arg);
+  }
+  // - Trail Read --------------------------------------------------------------
+
+  // 1. Consume all remaining zero width characters (+ those made so by ZWJ)
+  // 2. Consume all trailing controls, except:
+  // 3. Do not end string in specials if in terminate mode
+
+  overshoot = 0;
+  until = state->pos.w;  // reset until to accomodate over/undershoot
+  while(
+    (x = state->string[state->pos.x]) &&
+    state->pos.w == until &&
+    !IS_ASCII(x)
+  ) {
+    // reset non-persistent flags
+    state->status = state->status & (FANSI_STAT_PERSIST);
+    // If a special, save the prior point if in terminate mode
+    struct FANSI_state state_tmp = *state;
+    if(IS_UTF8(x)) {
+      read_utf8_until(&state_tmp, until + 1, overshoot, 1);
+      if(state_tmp.pos.w == state->pos.w) *state = state_tmp;
+    } else {
+      if(IS_ESC(x)) read_esc(&state_tmp);
+      else if(x) read_c0(&state_tmp);
+      // If it ended up not being a control we're done
+      if(!(state_tmp.status & FANSI_CTL_MASK)) break;
+      // If the last thing read was a special and we're terminating, also done
+      if(term_i && (state_tmp.status & FANSI_STAT_SPECIAL)) break;
+      *state = state_tmp;
+    }
+  }
+}
+void FANSI_read_all(struct FANSI_state * state, R_xlen_t i, const char * arg) {
+  int term_i = 0;
+  int until = FANSI_lim.lim_int.max;
+  int overshoot = 0;
+  FANSI_read_until(state, until, overshoot, term_i, i, arg);
+}

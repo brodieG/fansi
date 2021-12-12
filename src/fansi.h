@@ -113,6 +113,14 @@ int FANSI_url_comp(struct FANSI_url target, struct FANSI_url current);
 void FANSI_read_next(
   struct FANSI_state * state, R_xlen_t i, const char * arg
 );
+void FANSI_read_until(
+  struct FANSI_state * state, int until, int overshoot, int term_i,
+  R_xlen_t i, const char * arg
+);
+void FANSI_read_all(
+  struct FANSI_state * state, R_xlen_t i, const char * arg
+);
+
 int FANSI_add_int(int x, int y, const char * file, int line);
 
 // "Writing" functions

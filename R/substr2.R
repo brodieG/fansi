@@ -42,7 +42,7 @@
 #' select for the interstitial _Control Sequences_.  The latter are implicitly
 #' selected if they appear in interstices after the first character and before
 #' the last.  Additionally, because _Special Sequences_ (CSI SGR and OSC
-#' hyperlinks) affect all subsequent characters in a string, any active _Control
+#' hyperlinks) affect all subsequent characters in a string, any active _Special
 #' Sequence_, whether opened just before a character or much before, will be
 #' reflected in the state `fansi` prepends to the beginning of each substring.
 #'
@@ -51,8 +51,8 @@
 #' Sequences_ this only produces visible results if `terminate` is set to
 #' `FALSE`.  Similarly, it is possible to select _Control Sequences_ preceding
 #' the beginning of a string by specifying `start` values less than one,
-#' although this is unnecessary for _Special Sequences_ as those are output by
-#' `fansi` before each substring.
+#' although as noted earlier this is unnecessary for _Special Sequences_ as
+#' those are output by `fansi` before each substring.
 #'
 #' Because exact substrings on anything other than character count cannot be
 #' guaranteed (e.g. as a result of multi-byte encodings, or double display-width
@@ -68,21 +68,13 @@
 #' characters to be dropped irrespective whether they correspond to `start` or
 #' `stop`, and "both" could cause all of them to be included.  See examples.
 #'
-#' For example, if we consider the full width "Ｗ" character
-#' "WW" to be a single wide character, and "n" to be
-#' a single narrow one:
-#'
-#' ```
-#' ```
-#'
 #' A number of _Normal_ characters such as combining diacritic marks have
 #' reported width of zero.  These are typically displayed overlaid on top of the
 #' preceding glyph, as in the case of `"e\u301"` forming `"é"`.  Unlike _Control
 #' Sequences_, which also have reported width of zero, `fansi` groups zero-width
 #' _Normal_ characters with the last preceding non-zero width _Normal_
-#' character.  This is not the right thing to do for some rare zero-width
-#' _Normal_ characters such as prepending marks (see "Output Stability" and
-#' "Graphemes").
+#' character.  This is incorrect for some rare zero-width _Normal_ characters
+#' such as prepending marks (see "Output Stability" and "Graphemes").
 #'
 #' @section Output Stability:
 #'
@@ -122,8 +114,8 @@
 #' The `carry` parameter causes state to carry within the original string and
 #' the replacement values independently, as if they were columns of text cut
 #' from different pages and pasted together.  String values for `carry` are
-#' illegal in replacement mode as it is ambiguous which of `x` or `value` they
-#' would modify (see examples).
+#' disallowed in replacement mode as it is ambiguous which of `x` or `value`
+#' they would modify (see examples).
 #'
 #' When in `type = 'width'` mode, it is only guaranteed that the result will be
 #' no wider than the original `x`.  Narrower strings may result if a mixture
@@ -137,9 +129,9 @@
 #' grapheme breaks that work for most common graphemes, including emoji
 #' combining sequences.  The heuristic is known to work incorrectly with
 #' invalid combining sequences, prepending marks, and sequence interruptors.
-#' `fansi` does not provide a full implementation to avoid carrying a copy of
-#' the Unicode grapheme breaks table, and also because the hope is that R will
-#' add the feature eventually itself.
+#' `fansi` does not provide a full implementation of grapheme break detection to
+#' avoid carrying a copy of the Unicode grapheme breaks table, and also because
+#' the hope is that R will add the feature eventually itself.
 #'
 #' The [`utf8`](https://cran.r-project.org/package=utf8) package provides a
 #' conforming grapheme parsing implementation.
