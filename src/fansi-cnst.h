@@ -126,6 +126,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #define FANSI_STAT_WARNED   16384 // Warning already issued
 #define FANSI_STAT_SPECIAL  32768 // Valid SGR or URL (no critical errors)
 #define FANSI_STAT_OVERSHOT 65536 // Read past requested width
+#define FANSI_STAT_DONE    131072 // Hit end with special
 
 #define FANSI_STAT_PERSIST  22528 // _ZWJ | _RI | _WARNED
 
