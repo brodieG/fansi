@@ -81,10 +81,8 @@ SEXP FANSI_nchar(
       } else {
         // Invalid utf8 in !ALLOWNA should cause errors in read_next.  Whether
         // errors are thrown is controlled via the warn bits set from R.
-        while(state.string[state.pos.x]) {
-          FANSI_read_next(&state, i, arg);
-          if(FANSI_GET_ERR(state.status) == ERR_BAD_UTF8) break;
-        }
+
+        FANSI_read_all(&state, i, arg);
         unsigned int err_tmp = FANSI_GET_ERR(state.status);
         if (err_tmp == ERR_BAD_UTF8) {
           if(state.settings & FANSI_SET_ALLOWNA) resi[i] = NA_INTEGER;

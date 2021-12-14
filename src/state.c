@@ -395,7 +395,7 @@ SEXP FANSI_state_close_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP norm) {
     SEXP x_chr = STRING_ELT(x, i);
     if(x_chr == NA_STRING || !LENGTH(x_chr)) continue;
 
-    while(*(state.string + state.pos.x)) FANSI_read_next(&state, i, arg);
+    FANSI_read_all(&state, i, arg);
     FANSI_reset_buff(&buff);
     FANSI_W_close(&buff, state.fmt, normalize, i);
 

@@ -20,7 +20,7 @@
 void state_at_end(
   struct FANSI_state *state, R_xlen_t i, const char * arg
 ) {
-  while(state->string[state->pos.x]) FANSI_read_next(state, i, arg);
+  FANSI_read_all(state, i, arg);
   FANSI_reset_pos(state);
 }
 

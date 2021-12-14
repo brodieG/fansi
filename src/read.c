@@ -1213,9 +1213,9 @@ void read_utf8_until(
           UNPROTECT(1);
       } }
       if(w_mode == FANSI_COUNT_GRAPH && disp_size > 1) disp_size = 1;
-    } else {
-      disp_size = 1; // Character / byte counting
-    }
+    } else if(w_mode == FANSI_COUNT_BYTES) {
+      disp_size = byte_size;
+    } else disp_size = 1;
     // toggle RI
     if(prev_ri) state->status &= ~FANSI_STAT_RI;
 
@@ -1301,6 +1301,7 @@ void FANSI_read_until(
 
     // Trigger errors / warnings if warranted
     alert(state, i, arg);
+    if(FANSI_GET_ERR(state->status) == ERR_BAD_UTF8) goto EXIT;
   }
   // - Trail Read --------------------------------------------------------------
 
@@ -1337,8 +1338,10 @@ void FANSI_read_until(
       else if (mode == 0) *state = state_tmp;
     }
     alert(&state_tmp, i, arg);
+    if(FANSI_GET_ERR(state->status) == ERR_BAD_UTF8) goto EXIT;
   }
   alert(&state_tmp, i, arg);  // because of breaks
+EXIT:
   state->status |= state_tmp.status & FANSI_STAT_WARNED;
 }
 void FANSI_read_all(struct FANSI_state * state, R_xlen_t i, const char * arg) {

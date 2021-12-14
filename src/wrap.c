@@ -51,7 +51,7 @@ static struct FANSI_prefix_dat make_pre(
   struct FANSI_state state = FANSI_state_init_full(
     x, warn, term_cap, allowNA, keepNA, width, ctl, 0
   );
-  while(state.string[state.pos.x]) FANSI_read_next(&state, 0, arg);
+  FANSI_read_all(&state, 0, arg);
 
   UNPROTECT(prt);
   return (struct FANSI_prefix_dat) {
