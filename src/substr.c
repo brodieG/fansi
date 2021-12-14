@@ -40,29 +40,31 @@ static int substr_range(
   const char * arg
 ) {
   *state_stop = *state_start;
-  int start0 = start - 1;
+  int start0 = start - 1;     // start wants the beginning byte
 
   // - Start Point -----------------------------------------------------------
 
   struct FANSI_state state_tmp;
-  // Corner case: consume any leading specials
-  if(start0 <= 0 && stop > 0) {
+  int overshoot = rnd_i == (FANSI_RND_START | FANSI_RND_BOTH);
+  int mode = 0;               // start wants the beginning byte
+
+  // Always consume leading controls, unless starting before string, in which
+  // case don't consume them (except specials, which are re-output so
+  // semantically equivalent to consume them).
+  if(start0 < 0 && stop > 0) {
     state_tmp = *state_start;
     FANSI_read_next(&state_tmp, i, arg);
     if(state_tmp.status & FANSI_STAT_SPECIAL) *state_start = state_tmp;
     state_start->status |= state_tmp.status & FANSI_STAT_WARNED;
+  } else {
+    FANSI_read_until(state_start, start0, overshoot, term_i, mode, i, arg);
   }
-  // Recall `start` and `stop` are in 1-index, here we're greedy eating zero
-  // width things. `state_prev` tracks the last valid break point.
-
-  int overshoot = rnd_i == (FANSI_RND_START | FANSI_RND_BOTH);
-  FANSI_read_until(state_start, start0, overshoot, term_i, i, arg);
-
   // - End Point -------------------------------------------------------------
 
   *state_stop = *state_start;
   overshoot = rnd_i == (FANSI_RND_STOP | FANSI_RND_BOTH);
-  FANSI_read_until(state_stop, stop, overshoot, term_i, i, arg);
+  mode = 1;                   // stop wants the last byte
+  FANSI_read_until(state_stop, stop, overshoot, term_i, mode, i, arg);
 
   if(state_start->pos.x > state_stop->pos.x) {
     error("Internal Error: bad `stop` state 2."); // nocov
@@ -262,9 +264,9 @@ static SEXP substr_replace(
     substr_range(&st_x2, &st_x0, i, 1, stop_ld - 1, rnd_i, term_i, "x");
     // trail of x, we just need the first character position since
     // we're going to copy the entire string after that.
-    substr_range(&st_x1, &st_x2, i, start_tr, start_tr, rnd_i, term_i, "value");
+    substr_range(&st_x1, &st_x2, i, start_tr, start_tr, rnd_i, term_i, "x");
     // More straightforward for the `value`
-    substr_range(&st_v0, &st_v1, i, start_v, stop_v, rnd_i, term_i, "x");
+    substr_range(&st_v0, &st_v1, i, start_v, stop_v, rnd_i, term_i, "value");
 
     int size_x = st_x1.pos.w - st_x0.pos.w;
     int size_v = st_v1.pos.w - st_v0.pos.w;

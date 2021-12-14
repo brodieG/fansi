@@ -115,7 +115,7 @@ void FANSI_read_next(
 );
 void FANSI_read_until(
   struct FANSI_state * state, int until, int overshoot, int term_i,
-  R_xlen_t i, const char * arg
+  int mode, R_xlen_t i, const char * arg
 );
 void FANSI_read_all(
   struct FANSI_state * state, R_xlen_t i, const char * arg

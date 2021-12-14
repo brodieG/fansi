@@ -604,14 +604,12 @@ static struct FANSI_osc parse_osc(const char * x) {
 static void read_ascii_until(
   struct FANSI_state * state, int until, int reset
 ) {
-  Rprintf("read ascii %d w %d until %d\n", state->pos.x, state->pos.w, until);
   if(reset) state->status = state->status & FANSI_STAT_WARNED;
   int until2 = until - state->pos.w;
   const char * start, * end;
   end = start = state->string + state->pos.x;
   while(IS_ASCII(*end) && (end - start) < until2) ++end;
   int bytes = end - start;
-  Rprintf("  bytes read %d until %d until2 %d\n", bytes, until, until2);
   state->pos.w += bytes;
   state->pos.x += bytes;
 }
@@ -687,7 +685,6 @@ static void read_one(struct FANSI_state * state) {
  *
  */
 void read_esc(struct FANSI_state * state, int term_i) {
-  Rprintf("read esc %d\n", state->pos.x);
   if(state->string[state->pos.x] != 27)
     // nocov start
     error(
@@ -868,7 +865,6 @@ void read_esc(struct FANSI_state * state, int term_i) {
       unsigned int sgr, csi;
       sgr = state->status & FANSI_CTL_SGR;
       csi = state->status & FANSI_CTL_CSI;
-      Rprintf("sgr %d sgr_sup %d csi %d csi_sup %d\n", sgr, sgr_sup, csi, csi_sup);
       if(sgr && sgr_sup) esc_types |= 2U;
       else if(csi && csi_sup) esc_types |= 1U;
       else if((!sgr && sgr_sup) && (!csi && csi_sup))
@@ -968,7 +964,6 @@ void read_esc(struct FANSI_state * state, int term_i) {
       }
     } else {
       *state = state_prev;
-      Rprintf("esc not recognized\n");
       read_one(state);   // read one byte, can's use read_ascii_until
       break;
     }
@@ -1080,9 +1075,8 @@ void read_utf8(struct FANSI_state * state, R_xlen_t i) {
  */
 void read_c0(struct FANSI_state * state) {
   int is_nl = state->string[state->pos.x] == '\n';
+  state->status &= FANSI_STAT_WARNED;
   if(!is_nl) state->status = set_err(state->status, ERR_C0);
-
-  Rprintf("REad C0\n");
   read_one(state);
   // If C0/NL are being actively processed, treat them as width zero
   if(
@@ -1091,8 +1085,6 @@ void read_c0(struct FANSI_state * state) {
   ) {
     --state->pos.w;
     state->status |= is_nl ? FANSI_CTL_NL : FANSI_CTL_C0;
-  } else {
-    state->status &= FANSI_STAT_WARNED;
   }
 }
 /*
@@ -1170,10 +1162,6 @@ void read_utf8_until(
     (IS_UTF8(x) || IS_ASCII(x)) &&
     state->pos.w < until
   ) {
-    Rprintf(
-      "x %d w %d until %d xval %02x\n", state->pos.x, state->pos.w,
-      until, (unsigned char)state->string[state->pos.x]
-    );
     // These status are tracked in state->  because they must be reatained
     // across escape sequences.
     unsigned int prev_zwj = state->status & FANSI_STAT_ZWJ;
@@ -1181,7 +1169,6 @@ void read_utf8_until(
     state->status = state->status & FANSI_STAT_WARNED;
     if(IS_ASCII(x)) {
       // Read ASCII in case outer fun is not inlined
-      Rprintf("in utf8\n");
       read_ascii_until(state, until, 1);
     } else {
       int mb_err = 0;
@@ -1191,7 +1178,6 @@ void read_utf8_until(
 
       int byte_size = utf8clen(state->string + state->pos.x, &mb_err);
       mb_err |= !valid_utf8(state->string + state->pos.x, byte_size);
-      Rprintf("  byte size %d\n", byte_size);
 
       if(mb_err) {
         // mimic what R_nchar does on mb error.  This will also break the loop
@@ -1239,14 +1225,11 @@ void read_utf8_until(
         disp_size = byte_size = 1;
       }
       int total_width = state->pos.w + disp_size;
-      Rprintf(
-        "  total_width %d overshoot %d zerowidth %d\n",
-        total_width, overshoot, zerowidth
-      );
       if(
         (total_width > until && !overshoot) ||
         (total_width >= until && zerowidth)
       ) {
+        state->status |= FANSI_STAT_DONE;
         break;
       } else {
         // It is the responsibility of read_until to cleanup trailing zero width
@@ -1282,20 +1265,31 @@ void read_utf8_until(
  *
  * @param until width measure not to exceed (subject to overshoot)
  * @param overshoot allow a wide character to overshoot `until`
+ * @param mode 0: 'start mode', read all controls, 1: 'stop mode', only read
+ *   controls followed by zero width.
  */
 void FANSI_read_until(
   struct FANSI_state * state, int until, int overshoot, int term_i,
-  R_xlen_t i, const char * arg
+  int mode, R_xlen_t i, const char * arg
 ) {
   char x;
   // - Basic Read --------------------------------------------------------------
 
+  state->status = state->status & FANSI_STAT_WARNED;
+  /*
+  Rprintf(
+    "  until %d x %d w %d overshot %d done %d warned %d\n", 
+    until, state->pos.x, state->pos.w,
+    (state->status & (FANSI_STAT_OVERSHOT)),
+    (state->status & (FANSI_STAT_DONE)),
+    state->status & FANSI_STAT_WARNED
+  );
+  */
   while(
     (x = state->string[state->pos.x]) &&
     state->pos.w < until &&
     !(state->status & (FANSI_STAT_OVERSHOT | FANSI_STAT_DONE))
   ) {
-    Rprintf("outer loop w %d until %d\n", state->pos.w, until);
     // reset non-persistent flags
     state->status = state->status & (FANSI_STAT_PERSIST);
 
@@ -1311,7 +1305,7 @@ void FANSI_read_until(
 
   // 1. Consume all remaining zero width characters (+ those made so by ZWJ)
   // 2. Consume all trailing controls, so long as they are followed by more
-  //    zero width char.
+  //    zero width char or we are in start mode.
 
   overshoot = 0;
   until = state->pos.w;  // reset until to accomodate over/undershoot
@@ -1322,26 +1316,33 @@ void FANSI_read_until(
     !IS_ASCII(x) &&
     !(state_tmp.status & FANSI_STAT_DONE)
   ) {
-    Rprintf("tail\n");
     // reset non-persistent flags
     state_tmp.status = state_tmp.status & (FANSI_STAT_PERSIST);
     // If a special, save the prior point if in terminate mode
     if(IS_UTF8(x)) {
       int pos_prev = state_tmp.pos.x;
       read_utf8_until(&state_tmp, until + 1, overshoot, 1);
-      if(state_tmp.pos.x == pos_prev) break;  // Couldn't advance zero-width
+      // Next one was not zero width, so UTF8 cannot be advanced
+      if(state_tmp.pos.x == pos_prev) break;
+      // There was a zero width, so advance
       if(state_tmp.pos.w == state->pos.w) *state = state_tmp;
     } else {
       if(IS_ESC(x)) read_esc(&state_tmp, term_i);
       else if(x) read_c0(&state_tmp);
       // If it ended up not being a control we're done
       if(!(state_tmp.status & FANSI_CTL_MASK)) break;
+      // If in 'start' mode, read trailing controls
+      else if (mode == 0) *state = state_tmp;
     }
+    alert(&state_tmp, i, arg);
   }
+  alert(&state_tmp, i, arg);  // because of breaks
+  state->status |= state_tmp.status & FANSI_STAT_WARNED;
 }
 void FANSI_read_all(struct FANSI_state * state, R_xlen_t i, const char * arg) {
   int term_i = 0;
   int until = FANSI_lim.lim_int.max;
   int overshoot = 0;
-  FANSI_read_until(state, until, overshoot, term_i, i, arg);
+  int mode = 1;
+  FANSI_read_until(state, until, overshoot, term_i, mode, i, arg);
 }
