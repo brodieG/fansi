@@ -45,7 +45,7 @@ static int substr_range(
   // - Start Point -----------------------------------------------------------
 
   struct FANSI_state state_tmp;
-  int overshoot = rnd_i == (FANSI_RND_START | FANSI_RND_BOTH);
+  int overshoot = !(rnd_i == FANSI_RND_START || rnd_i == FANSI_RND_BOTH);
   int mode = 0;               // start wants the beginning byte
 
   // Always consume leading controls, unless starting before string, in which
@@ -62,7 +62,7 @@ static int substr_range(
   // - End Point -------------------------------------------------------------
 
   *state_stop = *state_start;
-  overshoot = rnd_i == (FANSI_RND_STOP | FANSI_RND_BOTH);
+  overshoot = (rnd_i == FANSI_RND_STOP || rnd_i == FANSI_RND_BOTH);
   mode = 1;                   // stop wants the last byte
   FANSI_read_until(state_stop, stop, overshoot, term_i, mode, i, arg);
 

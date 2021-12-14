@@ -1159,96 +1159,97 @@ void read_utf8_until(
 
   while(
     (x = state->string[state->pos.x]) &&
-    (IS_UTF8(x) || IS_ASCII(x)) &&
+    IS_UTF8(x) &&
     state->pos.w < until
   ) {
-    // These status are tracked in state->  because they must be reatained
+    // These status are tracked in state->  because they must be retained
     // across escape sequences.
     unsigned int prev_zwj = state->status & FANSI_STAT_ZWJ;
+    unsigned int prev_ri = state->status & FANSI_STAT_RI;
     // Reset prior state info
     state->status = state->status & FANSI_STAT_WARNED;
-    if(IS_ASCII(x)) {
-      // Read ASCII in case outer fun is not inlined
-      read_ascii_until(state, until, 1);
-    } else {
-      int mb_err = 0;
-      int disp_size = 0;
-      unsigned int prev_ri = state->status & FANSI_STAT_RI;
-      const char * mb_err_str = "use `validUTF8()` to find problem strings.";
 
-      int byte_size = utf8clen(state->string + state->pos.x, &mb_err);
-      mb_err |= !valid_utf8(state->string + state->pos.x, byte_size);
+    int mb_err = 0;
+    int disp_size = 0;
+    const char * mb_err_str = "use `validUTF8()` to find problem strings.";
 
-      if(mb_err) {
-        // mimic what R_nchar does on mb error.  This will also break the loop
-        // later.
-        disp_size = NA_INTEGER;
-      } else if(w_mode == FANSI_COUNT_WIDTH || w_mode == FANSI_COUNT_GRAPH) {
-        // Assumes valid UTF-8!  Should have been checked.
-        int cp = utf8_to_cp(state->string + state->pos.x, byte_size);
-        if(cp >= 0x1F1E6 && cp <= 0x1F1FF) {    // Regional Indicator
-          // First RI is width two, next zero
-          if(!(prev_ri)) {
-            state->status |= FANSI_STAT_RI;
-            disp_size = 2;
-          } else disp_size = 0;
-          // we rely on external logic to forece reading two RIs
+    int byte_size = utf8clen(state->string + state->pos.x, &mb_err);
+    mb_err |= !valid_utf8(state->string + state->pos.x, byte_size);
+
+    if(mb_err) {
+      // mimic what R_nchar does on mb error.  This will also break the loop
+      // later.
+      disp_size = NA_INTEGER;
+    } else if(w_mode == FANSI_COUNT_WIDTH || w_mode == FANSI_COUNT_GRAPH) {
+      // Assumes valid UTF-8!  Should have been checked.
+      int cp = utf8_to_cp(state->string + state->pos.x, byte_size);
+
+      if(cp >= 0x1F1E6 && cp <= 0x1F1FF) {    // Regional Indicator
+        // First RI is width two, next zero
+        if(!(prev_ri)) {
+          state->status |= FANSI_STAT_RI;
+          disp_size = 2;
+        } else disp_size = 0;
+        // we rely on external logic to forece reading two RIs
+      } else {
+        if (cp >= 0x1F3FB && cp <= 0x1F3FF) { // Skin type
+          disp_size = 0;
+        } else if (cp == 0x200D) {            // Zero Width Joiner
+          state->status |= FANSI_STAT_ZWJ;
+          disp_size = 0;
+        } else if (prev_zwj) {
+          disp_size = 0;
         } else {
-          if (cp >= 0x1F3FB && cp <= 0x1F3FF) { // Skin type
-            disp_size = 0;
-          } else if (cp == 0x200D) {            // Zero Width Joiner
-            state->status |= FANSI_STAT_ZWJ;
-            disp_size = 0;
-          } else {
-            // Need CHARSXP for `R_nchar`, hopefull not too expensive.
-            SEXP str_chr = PROTECT(
-              mkCharLenCE(state->string + state->pos.x, byte_size, CE_UTF8)
-            );
-            disp_size = R_nchar(
-              str_chr, Width, // Width is an enum
-              state->status & FANSI_SET_ALLOWNA,
-              state->status & FANSI_SET_KEEPNA,
-              mb_err_str
-            );
-            UNPROTECT(1);
-        } }
-      } else {
-        disp_size = 1; // Character / byte counting
-      }
-      // toggle RI
-      if(prev_ri) state->status &= ~FANSI_STAT_RI;
+          // Need CHARSXP for `R_nchar`, hopefull not too expensive.
+          SEXP str_chr = PROTECT(
+            mkCharLenCE(state->string + state->pos.x, byte_size, CE_UTF8)
+          );
+          disp_size = R_nchar(
+            str_chr, Width, // Width is an enum
+            state->status & FANSI_SET_ALLOWNA,
+            state->status & FANSI_SET_KEEPNA,
+            mb_err_str
+          );
+          UNPROTECT(1);
+      } }
+      if(w_mode == FANSI_COUNT_GRAPH && disp_size > 1) disp_size = 1;
+    } else {
+      disp_size = 1; // Character / byte counting
+    }
+    // toggle RI
+    if(prev_ri) state->status &= ~FANSI_STAT_RI;
 
-      if(disp_size == NA_INTEGER) {
-        // Both for R_nchar and if we directly detect an mb_err.  Whether this
-        // throws an errors is a function of what ->settings has been set to.
-        state->status = set_err(state->status, ERR_BAD_UTF8);
-        disp_size = byte_size = 1;
-      }
-      int total_width = state->pos.w + disp_size;
-      if(
-        (total_width > until && !overshoot) ||
-        (total_width >= until && zerowidth)
-      ) {
-        state->status |= FANSI_STAT_DONE;
-        break;
-      } else {
-        // It is the responsibility of read_until to cleanup trailing zero width
-        // chars or control sequences
-        if(total_width > until) state->status |= FANSI_STAT_OVERSHOT;
-        state->pos.x += byte_size;
-        state->utf8 = state->pos.x;  // record after so no ambiguity about 0
-        // This could possibly overflow if byte_size >> 2 (e.g. if at some point
-        // width reports the \U escape codes.
-        if(state->pos.w > FANSI_lim.lim_int.max - disp_size)
-          error("Internal Error:  width greater than INT_MAX"); // nocov
+    if(disp_size == NA_INTEGER) {
+      // Both for R_nchar and if we directly detect an mb_err.  Whether this
+      // throws an errors is a function of what ->settings has been set to.
+      state->status = set_err(state->status, ERR_BAD_UTF8);
+      disp_size = byte_size = 1;
+    }
+    int total_width = state->pos.w + disp_size;
+    if(
+      (total_width > until && !overshoot) ||
+      (total_width >= until && zerowidth)
+    ) {
+      state->status |= FANSI_STAT_DONE;
+      break;
+    } else {
+      // It is the responsibility of read_until to cleanup trailing zero width
+      // chars or control sequences
+      if(total_width > until) state->status |= FANSI_STAT_OVERSHOT;
+      state->pos.x += byte_size;
+      state->utf8 = state->pos.x;  // record after so no ambiguity about 0
+      // This could possibly overflow if byte_size >> 2 (e.g. if at some point
+      // width reports the \U escape codes.
+      if(state->pos.w > FANSI_lim.lim_int.max - disp_size)
+        error("Internal Error:  width greater than INT_MAX"); // nocov
 
-        // Don't count width of things following ZWJ
-        int w_or_g = w_mode == FANSI_COUNT_WIDTH || w_mode == FANSI_COUNT_GRAPH;
-        if(!prev_zwj || !w_or_g) state->pos.w += disp_size;
-      }
-      // Break for error reporting
-      if(mb_err) break;
-} } }
+      // Don't count width of things following ZWJ
+      int w_or_g = w_mode == FANSI_COUNT_WIDTH || w_mode == FANSI_COUNT_GRAPH;
+      if(!prev_zwj || !w_or_g) state->pos.w += disp_size;
+    }
+    // Always break for error reporting
+    if(mb_err) break;
+} }
 /*
  * Consume bytes until a certain width is met.
  *
@@ -1278,7 +1279,7 @@ void FANSI_read_until(
   state->status = state->status & FANSI_STAT_WARNED;
   /*
   Rprintf(
-    "  until %d x %d w %d overshot %d done %d warned %d\n", 
+    "  until %d x %d w %d overshot %d done %d warned %d\n",
     until, state->pos.x, state->pos.w,
     (state->status & (FANSI_STAT_OVERSHOT)),
     (state->status & (FANSI_STAT_DONE)),
@@ -1321,7 +1322,8 @@ void FANSI_read_until(
     // If a special, save the prior point if in terminate mode
     if(IS_UTF8(x)) {
       int pos_prev = state_tmp.pos.x;
-      read_utf8_until(&state_tmp, until + 1, overshoot, 1);
+      int zerowidth = 1;
+      read_utf8_until(&state_tmp, until + 1, overshoot, zerowidth);
       // Next one was not zero width, so UTF8 cannot be advanced
       if(state_tmp.pos.x == pos_prev) break;
       // There was a zero width, so advance
