@@ -23,8 +23,9 @@
  * We rely on struct initialization to set everything else to zero.
  *
  * FANSI_state_init_full is specifically to handle the allowNA case in nchar,
- * for which we MUST check `state.err_code == 9` after each `FANSI_read_next`.
- * In all other cases `R_nchar` should be set to not `allowNA`.
+ * for which we MUST check FANSI_GET_ERR(state.status) after each
+ * `FANSI_read_next`.  In all other cases `R_nchar` should be set to not
+ * `allowNA`.
  */
 struct FANSI_state FANSI_state_init_full(
   SEXP strsxp, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,

@@ -181,10 +181,6 @@ static void alert(struct FANSI_state * state, R_xlen_t i, const char * arg) {
     state->status |= FANSI_STAT_WARNED;  // only warn once
   }
 }
-// Names of these are not quite correct
-#define IS_ASCII(x) ((unsigned char)(x) < 0x7F && (unsigned char)(x) >= 0x20)
-#define IS_UTF8(x) ((unsigned char)(x) > 0x7F)
-#define IS_ESC(x) ((unsigned char)(x) == 0x1B)
 
 /*- Parsers -------------------------------------------------------------------\
 \-----------------------------------------------------------------------------*/
@@ -608,7 +604,7 @@ static void read_ascii_until(
   int until2 = until - state->pos.w;
   const char * start, * end;
   end = start = state->string + state->pos.x;
-  while(IS_ASCII(*end) && (end - start) < until2) ++end;
+  while(IS_PRINT(*end) && (end - start) < until2) ++end;
   int bytes = end - start;
   state->pos.w += bytes;
   state->pos.x += bytes;
@@ -1106,7 +1102,7 @@ void FANSI_read_next(
   // reset all flags except warned
   state->status = (state->status & (FANSI_STAT_WARNED | FANSI_STAT_RI));
 
-  int is_ascii = IS_ASCII(chr_val);
+  int is_ascii = IS_PRINT(chr_val);
   int is_utf8 = IS_UTF8(chr_val);
 
   // Normal ASCII characters
@@ -1266,6 +1262,7 @@ void read_utf8_until(
  *
  * @param until width measure not to exceed (subject to overshoot)
  * @param overshoot allow a wide character to overshoot `until`
+ * @param term_i if true will not read trailing special sequences.
  * @param mode 0: 'start mode', read all controls, 1: 'stop mode', only read
  *   controls followed by zero width.
  */
@@ -1294,7 +1291,7 @@ void FANSI_read_until(
     // reset non-persistent flags
     state->status = state->status & (FANSI_STAT_PERSIST);
 
-    if(IS_ASCII(x)) read_ascii_until(state, until, 1);
+    if(IS_PRINT(x)) read_ascii_until(state, until, 1);
     else if(IS_UTF8(x)) read_utf8_until(state, until, overshoot, 0);
     else if(IS_ESC(x)) read_esc(state, term_i);
     else if(x) read_c0(state);        // C0 escapes (e.g. \t, \n, etc)
@@ -1315,7 +1312,7 @@ void FANSI_read_until(
   while(
     (x = state_tmp.string[state_tmp.pos.x]) &&
     state_tmp.pos.w == until &&
-    !IS_ASCII(x) &&
+    !IS_PRINT(x) &&
     !(state_tmp.status & FANSI_STAT_DONE)
   ) {
     // reset non-persistent flags

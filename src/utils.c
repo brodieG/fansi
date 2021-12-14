@@ -491,7 +491,7 @@ SEXP FANSI_read_all_ext(SEXP x, SEXP warn, SEXP term_cap) {
     if(!i) state = FANSI_state_init(x, warn, term_cap, i);
     else FANSI_state_reinit(&state, x,  i);
 
-    while(state.string[state.pos.x]) FANSI_read_next(&state, i, arg);
+    FANSI_read_all(&state, i, arg);
     res_i[i] = state.pos.x;
   }
   UNPROTECT(1);

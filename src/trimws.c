@@ -69,10 +69,7 @@ SEXP FANSI_trimws(
             ++state.pos.x;
             continue;
           default:
-            if(
-              (unsigned char)state.string[state.pos.x] >= 0x20 &&
-              (unsigned char)state.string[state.pos.x] <= 0x7e
-            ) {
+            if(IS_PRINT(state.string[state.pos.x])) {
               goto ENDLEAD;
             } else {
               FANSI_read_next(&state, i, arg);
@@ -99,10 +96,7 @@ SEXP FANSI_trimws(
             ++state.pos.x;
             continue;
           default:
-            if(
-              (unsigned char)state.string[state.pos.x] >= 0x20 &&
-              (unsigned char)state.string[state.pos.x] <= 0x7e
-            ) {
+            if(IS_PRINT(state.string[state.pos.x])) {
               string_end = 0;
               ++state.pos.x;
             } else {

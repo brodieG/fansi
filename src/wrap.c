@@ -435,9 +435,7 @@ static SEXP strwrap(
         UNPROTECT(1); --prt;
       } else {
         // Need end state if in strtrim mode and we wish to carry
-        if(carry)
-          while(state.string[state.pos.x])
-            FANSI_read_next(&state, index, arg);
+        if(carry) FANSI_read_all(&state, index, arg);
         break;
       }
 

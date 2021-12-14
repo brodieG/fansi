@@ -55,6 +55,11 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 #define ID_STRING(x) ((x).string + (x).id.start)
 #define ID_LEN(x) ((x).id.len)
 
+// Names of these are not quite correct
+#define IS_PRINT(x) ((unsigned char)(x) < 0x7F && (unsigned char)(x) >= 0x20)
+#define IS_UTF8(x) ((unsigned char)(x) > 0x7F)
+#define IS_ESC(x) ((unsigned char)(x) == 0x1B)
+
 // - Internal funs -----------------------------------------------------------
 
 SEXP FANSI_process(
