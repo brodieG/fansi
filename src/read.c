@@ -1003,25 +1003,22 @@ void read_c0(struct FANSI_state * state) {
  * @param until width target
  * @param overshoot allow overshooting of target width, if set to 0 it is
  *   critical that calling code check for the _DONE flag.  Must be 1 or 0
- * @param zerowidth allow only reading zerowidth chars at the boundary
  */
-void read_utf8_until(
-  struct FANSI_state * state, int until, int overshoot, int zerowidth
-) {
+void read_utf8_until(struct FANSI_state * state, int until, int overshoot) {
   char x;
   unsigned int w_mode =
     FANSI_GET_RNG(state->settings, FANSI_SET_WIDTH, FANSI_COUNT_ALL);
   unsigned int cur_ri = state->status & FANSI_STAT_RI;
   unsigned int cur_zwj = state->status & FANSI_STAT_ZWJ;
+  state->status = state->status & FANSI_STAT_WARNED;
 
   while((x = state->string[state->pos.x]) && IS_UTF8(x)) {
     // These status are tracked in state->  because they must be retained
     // across escape sequences.
     unsigned int prev_zwj = cur_zwj;
     unsigned int prev_ri = cur_ri;
-    Rprintf("  zwj %d ri %d\n", prev_zwj, prev_ri);
+    cur_zwj = cur_ri = 0;
     // Reset prior state info
-    state->status = state->status & FANSI_STAT_WARNED;
 
     int mb_err = 0;
     int disp_size = 0;
@@ -1048,7 +1045,6 @@ void read_utf8_until(
         } else {
           disp_size = 0;
         }
-        Rprintf("    disp_size %d\n", disp_size);
         // we rely on external logic to forece reading two RIs
       } else {
         if (cp >= 0x1F3FB && cp <= 0x1F3FF) { // Skin type
@@ -1077,7 +1073,6 @@ void read_utf8_until(
     } else disp_size = 1;
     // toggle RI
     if(prev_ri) cur_ri = 0;
-    Rprintf("  untoggled! %d\n", cur_ri);
 
     if(disp_size == NA_INTEGER) {
       // Both for R_nchar and if we directly detect an mb_err.  Whether this
@@ -1086,24 +1081,23 @@ void read_utf8_until(
       disp_size = byte_size = 1;
     }
     int total_width = state->pos.w + disp_size;
-    Rprintf("  tot %d size %d pos %d %d ri %d %d until %d zw %d os %d\n", 
+    /*
+    Rprintf("  tot %d size %d pos %d %d ri %d %d until %d d os %d\n", 
         total_width, disp_size, 
         state->pos.x,
         state->pos.w,
         prev_ri, cur_ri,
         until,
-        zerowidth,
         overshoot
       );
-
+    */
     if(total_width > until && !overshoot) {
-      Rprintf("    break done\n");
       state->status |= FANSI_STAT_DONE;
       break;
     } else {
-      // We allow one overshoot
-      if(total_width > until && overshoot) {
-        Rprintf("    Overshot\n");
+      // We allow one overshoot if necessary and requested
+      if(total_width == until) overshoot = 0;
+      else if(total_width > until && overshoot) {
         state->status |= FANSI_STAT_OVERSHOT;
         until = total_width;
         overshoot = 0;
@@ -1120,15 +1114,12 @@ void read_utf8_until(
       // Don't count width of things following ZWJ
       int w_or_g = w_mode == FANSI_COUNT_WIDTH || w_mode == FANSI_COUNT_GRAPH;
       if(!prev_zwj || !w_or_g) {
-        Rprintf("    update width\n");
         state->pos.w += disp_size;
       }
-      Rprintf("    End extra %d %d ri %d\n",state->pos.x, state->pos.w, state->status & FANSI_STAT_RI);
     }
     // Always break for error reporting
     if(mb_err) break;
   }
-  Rprintf("  end read %d %d ri %d\n", state->pos.x, state->pos.w, state->status & FANSI_STAT_RI);
 }
 /*
  * Read UTF8 character
@@ -1137,8 +1128,7 @@ void read_utf8_until(
  */
 void read_utf8(struct FANSI_state * state) {
   int overshoot = 1;  // always read at least one char
-  int zerowidth = 0;
-  read_utf8_until(state, state->pos.w + 1, overshoot, zerowidth);
+  read_utf8_until(state, state->pos.w + 1, overshoot);
 }
 /*
  * Read a Character Off and Update State
@@ -1149,14 +1139,13 @@ void FANSI_read_next(
   struct FANSI_state * state, R_xlen_t i, const char * arg
 ) {
   unsigned char chr_val = (unsigned char) state->string[state->pos.x];
-  Rprintf("Read next %d %d\n", state->pos.x, state->pos.w);
   // reset all flags except persistent ones
   state->status = state->status & FANSI_STAT_PERSIST;
 
   int is_utf8 = IS_UTF8(chr_val);
   int is_print = IS_PRINT(chr_val);
   if(is_print) read_one(state);
-  else if (is_utf8) read_utf8_until(state, state->pos.w + 1, 1, 0);
+  else if (is_utf8) read_utf8_until(state, state->pos.w + 1, 1);
   else if (IS_ESC(chr_val)) read_esc(state, 0);
   else if(chr_val) read_c0(state);
 
@@ -1213,7 +1202,7 @@ void FANSI_read_until(
     state->status = state->status & (FANSI_STAT_PERSIST);
 
     if(IS_PRINT(x)) read_ascii_until(state, until, 1);
-    else if(IS_UTF8(x)) read_utf8_until(state, until, overshoot, 0);
+    else if(IS_UTF8(x)) read_utf8_until(state, until, overshoot);
     else if(IS_ESC(x)) read_esc(state, term_i);
     else if(x) read_c0(state);        // C0 escapes (e.g. \t, \n, etc)
 
@@ -1223,6 +1212,9 @@ void FANSI_read_until(
   }
   // - Trail Read --------------------------------------------------------------
 
+  // This handles mixed zero widths and escapes in trailing (utf8_until only
+  // does zero width utf8s).
+  //
   // 1. Consume all remaining zero width characters (+ those made so by ZWJ)
   // 2. Consume all trailing controls, so long as they are followed by more
   //    zero width char or we are in start mode.
@@ -1241,8 +1233,7 @@ void FANSI_read_until(
     // If a special, save the prior point if in terminate mode
     if(IS_UTF8(x)) {
       int pos_prev = state_tmp.pos.x;
-      int zerowidth = 1;
-      read_utf8_until(&state_tmp, until + 1, overshoot, zerowidth);
+      read_utf8_until(&state_tmp, until, overshoot);
       // Next one was not zero width, so UTF8 cannot be advanced
       if(state_tmp.pos.x == pos_prev) break;
       // There was a zero width, so advance

@@ -289,8 +289,6 @@ static SEXP strwrap(
   R_xlen_t size = 0;
   SEXP res_sxp;
 
-  Rprintf("--- Start loop\n");
-
   while(1) {
     if(new_line) {
       // Strip leading spaces and/or SGR
@@ -300,7 +298,6 @@ static SEXP strwrap(
         state_bound.string[state_bound.pos.x] == 0x1b
       ) {
         state_tmp = state_bound;
-        Rprintf("--- mark bound\n");
         FANSI_read_next(&state_tmp, index, arg);
         // Strip any leading special sequences as we will re-emit them.  Stop if
         // any non-specials as those don't get re-emitted.  This corresponds to
@@ -324,12 +321,7 @@ static SEXP strwrap(
 
     state_next = state; // if we hit end of string, re-use state as next
     // Look ahead one element
-    Rprintf("--- look ahead\n");
     if(!end) FANSI_read_next(&state_next, index, arg);
-    Rprintf("cur %d %d next %d %d has_b %d wrapal %d\n",
-      state.pos.x, state.pos.w, state_next.pos.x, state_next.pos.w,
-      has_boundary, wrap_always
-    );
     if(state_next.status & FANSI_STAT_WARNED) { // avoid 2x warning
       state.status |= FANSI_STAT_WARNED;
       state_bound.status |= FANSI_STAT_WARNED;
@@ -422,7 +414,6 @@ static SEXP strwrap(
         ) &&
         state_bound.pos.x < state.pos.x
       ) {
-        Rprintf("--- not stripping spaces\n");
         FANSI_read_next(&state_bound, index, arg);
       }
       // Write the string
