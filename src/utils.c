@@ -111,9 +111,8 @@ int FANSI_find_ctl(
     pos = state->pos.x += FANSI_seek_ctl(state->string + state->pos.x);
     FANSI_read_next(state, i, arg);
     // Known control read
-    if(state->status & FANSI_CTL_MASK) {
-      break;
-  } }
+    if(state->status & FANSI_CTL_MASK) break;
+  }
   return pos;
 }
 static int FANSI_maybe_ctl(const char x) {

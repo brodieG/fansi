@@ -73,10 +73,7 @@ SEXP FANSI_nchar(
       } else resi[i] = zz ? 1 : 2;
     } else {
       if(zz) {  // nzchar mode
-        while(state.string[state.pos.x] && !state.pos.w) {
-          FANSI_read_next(&state, i, arg);
-          if(state.pos.w) break;
-        }
+        FANSI_read_until(&state, 1, 0, 0, 1, i, arg);
         resi[i] = state.pos.w > 0;
       } else {
         // Invalid utf8 in !ALLOWNA should cause errors in read_next.  Whether

@@ -970,101 +970,6 @@ void read_esc(struct FANSI_state * state, int term_i) {
     state->status = set_err(state->status, err_code);
 }
 /*
- * Read UTF8 character
- *
- * See GENERAL NOTES atop.
- */
-void read_utf8(struct FANSI_state * state, R_xlen_t i) {
-  int mb_err = 0;
-  int disp_size = 0;
-  const char * mb_err_str =
-    "use `validUTF8()` to find problem strings.";
-
-  int byte_size = utf8clen(state->string + state->pos.x, &mb_err);
-  mb_err |= !valid_utf8(state->string + state->pos.x, byte_size);
-  unsigned int w_mode =
-    FANSI_GET_RNG(state->settings, FANSI_SET_WIDTH, FANSI_COUNT_ALL);
-
-  if(mb_err) {
-    disp_size = NA_INTEGER;  // mimic what R_nchar does on mb error
-  } else if(w_mode == FANSI_COUNT_WIDTH || w_mode == FANSI_COUNT_GRAPH) {
-    // Assumes valid UTF-8!  Should have been checked.
-    int cp = utf8_to_cp(state->string + state->pos.x, byte_size);
-
-    // Hacky grapheme approximation ensures flags (RI) aren't split, sets
-    // skin modifiers to width zero (so greedy / not greedy searches will
-    // / will not grab them), and sets width zero to anything following a ZWJ
-    // (for the same reason).  This will work in many cases, provided that the
-    // emoji sequences are valid and recognized by the display device.
-    // Other graphemes work similarly to the extent continuation code points
-    // are zero width naturally.  Prefixes, sequence interruptors, and other
-    // things will not work.
-
-    if(cp >= 0x1F1E6 && cp <= 0x1F1FF) {         // Regional Indicator
-      if(!(state->status & FANSI_STAT_RI)) {
-        state->status |= FANSI_STAT_AGAIN;
-        state->status |= FANSI_STAT_RI;
-      } else {
-        // Toggle it back and forth
-        state->status &= ~FANSI_STAT_RI;
-      }
-      disp_size = 1;    // read_next forces reading 2 RIs at a time
-    } else if (cp >= 0x1F3FB && cp <= 0x1F3FF) { // Skin type
-      disp_size = 0;
-    } else if (cp == 0x200D) {                   // Zero Width Joiner
-      state->status |= FANSI_STAT_ZWJ;
-      disp_size = 0;
-    } else {
-      // In order to compute char display width, we need to create a charsxp
-      // with the sequence in question.  Hopefully not too much overhead since
-      // at least we benefit from the global string hash table
-      SEXP str_chr =
-        PROTECT(mkCharLenCE(state->string + state->pos.x, byte_size, CE_UTF8));
-      disp_size = R_nchar(
-        str_chr, Width, // Width is an enum
-        state->status & FANSI_SET_ALLOWNA,
-        state->status & FANSI_SET_KEEPNA,
-        mb_err_str
-      );
-      UNPROTECT(1);
-    }
-  } else {
-    // This is not consistent with what we do with the padding where we use
-    // byte_size, but in this case we know we're supposed to be dealing
-    // with one char
-
-    disp_size = 1;
-  }
-  if(disp_size == NA_INTEGER) {
-    // Both for R_nchar and if we directly detect an mb_err.  Whether this
-    // throws an errors is a function of what ->settings has been set to.
-    state->status = set_err(state->status, ERR_BAD_UTF8);
-    disp_size = byte_size = 1;
-  }
-  // We are guaranteed that strings here are at most INT_MAX bytes long, so
-  // nothing should overflow, except maybe width if we ever add some width
-  // measures that exceed byte count (like the 6 or 10 from '\u' or '\U' encoded
-  // versions of Unicode chars).  Shouldn't be an issue, but playing it safe.
-  state->pos.x += byte_size;
-  state->utf8 = state->pos.x;  // record after so no ambiguity about 0
-  if(state->pos.w > FANSI_lim.lim_int.max - disp_size)
-    // nocov start currently this can't happen
-    error(
-      "String with display width greater than INT_MAX at index [%jd].",
-      FANSI_ind(i)
-    );
-    // nocov end
-  // Width is basically counting graphemes when non-zero.
-  switch(w_mode) {
-    case FANSI_COUNT_CHARS: ++state->pos.w; break;
-    case FANSI_COUNT_WIDTH: state->pos.w += disp_size; break;
-    case FANSI_COUNT_GRAPH: state->pos.w += disp_size > 0; break;
-    case FANSI_COUNT_BYTES: state->pos.w += byte_size; break;
-    default:
-      error("Internal Error: invalid width mode (%d).", w_mode); // nocov
-  }
-}
-/*
  * C0 ESC sequences treated as zero width and do not count as characters either
  *
  * See GENERAL NOTES atop.
@@ -1083,53 +988,6 @@ void read_c0(struct FANSI_state * state) {
     state->status |= is_nl ? FANSI_CTL_NL : FANSI_CTL_C0;
   }
 }
-/*
- * Read a Character Off and Update State
- *
- * See GENERAL NOTES atop.
- */
-void FANSI_read_next(
-  struct FANSI_state * state, R_xlen_t i, const char * arg
-) {
-  unsigned char chr_val;
-
-  AGAIN:
-
-  chr_val = (unsigned char) state->string[state->pos.x];
-  int prev_width = state->pos.w;
-  int prev_zwj = state->status & FANSI_STAT_ZWJ;
-
-  // reset all flags except warned
-  state->status = (state->status & (FANSI_STAT_WARNED | FANSI_STAT_RI));
-
-  int is_ascii = IS_PRINT(chr_val);
-  int is_utf8 = IS_UTF8(chr_val);
-
-  // Normal ASCII characters
-  if(is_ascii) read_one(state);
-  // UTF8 characters (if chr_val is signed, then > 0x7f will be negative)
-  else if (is_utf8) read_utf8(state, i);
-  // ESC sequences
-  else if (chr_val == 0x1BU) read_esc(state, 0);
-  // C0 escapes (e.g. \t, \n, etc)
-  else if(chr_val) read_c0(state);
-
-  if(!is_utf8) state->status &= ~FANSI_STAT_RI;  // reset regional indicator
-
-  // Trigger errors / warnings if warranted
-  alert(state, i, arg);
-
-  // Update width counters
-  unsigned int w_mode =
-    FANSI_GET_RNG(state->settings, FANSI_SET_WIDTH, FANSI_COUNT_ALL);
-  if(
-    prev_zwj && (w_mode == FANSI_COUNT_WIDTH || w_mode == FANSI_COUNT_GRAPH)
-  )
-    state->pos.w = prev_width;
-
-  if(state->status & FANSI_STAT_AGAIN && state->string[state->pos.x])
-    goto AGAIN;
-}
 
 /*
  * Read a Series of UTF8 (and ASCII) Characters
@@ -1143,7 +1001,8 @@ void FANSI_read_next(
  * Prefixes, sequence interruptors, and other things will not work.
  *
  * @param until width target
- * @param overshoot allow overshooting of target width
+ * @param overshoot allow overshooting of target width, if set to 0 it is
+ *   critical that calling code check for the _DONE flag.
  * @param zerowidth allow only reading zerowidth chars at the boundary
  */
 void read_utf8_until(
@@ -1162,6 +1021,7 @@ void read_utf8_until(
     // across escape sequences.
     unsigned int prev_zwj = state->status & FANSI_STAT_ZWJ;
     unsigned int prev_ri = state->status & FANSI_STAT_RI;
+    Rprintf("  zwj %d ri %d\n", prev_zwj, prev_ri);
     // Reset prior state info
     state->status = state->status & FANSI_STAT_WARNED;
 
@@ -1180,12 +1040,17 @@ void read_utf8_until(
       // Assumes valid UTF-8!  Should have been checked.
       int cp = utf8_to_cp(state->string + state->pos.x, byte_size);
 
+      // Probably shouldn't set RI or ZWJ until we're sure we're okay, but we
+      // do.  It works, but likely only b/c of bailouts and resets elsewhere
       if(cp >= 0x1F1E6 && cp <= 0x1F1FF) {    // Regional Indicator
         // First RI is width two, next zero
         if(!(prev_ri)) {
           state->status |= FANSI_STAT_RI;
           disp_size = 2;
-        } else disp_size = 0;
+        } else {
+          disp_size = 0;
+        }
+        Rprintf("    disp_size %d\n", disp_size);
         // we rely on external logic to forece reading two RIs
       } else {
         if (cp >= 0x1F3FB && cp <= 0x1F3FF) { // Skin type
@@ -1214,6 +1079,7 @@ void read_utf8_until(
     } else disp_size = 1;
     // toggle RI
     if(prev_ri) state->status &= ~FANSI_STAT_RI;
+    Rprintf("  untoggled! %d\n", state->status & FANSI_STAT_RI);
 
     if(disp_size == NA_INTEGER) {
       // Both for R_nchar and if we directly detect an mb_err.  Whether this
@@ -1222,10 +1088,20 @@ void read_utf8_until(
       disp_size = byte_size = 1;
     }
     int total_width = state->pos.w + disp_size;
+    Rprintf("  tot %d size %d pos %d %d ri %d %d until %d zw %d os %d\n", 
+        total_width, disp_size, 
+        state->pos.x,
+        state->pos.w,
+        prev_ri, state->status & FANSI_STAT_RI,
+        until,
+        zerowidth,
+        overshoot
+      );
     if(
       (total_width > until && !overshoot) ||
       (total_width >= until && zerowidth)
     ) {
+      Rprintf("    break done\n");
       state->status |= FANSI_STAT_DONE;
       break;
     } else {
@@ -1241,11 +1117,58 @@ void read_utf8_until(
 
       // Don't count width of things following ZWJ
       int w_or_g = w_mode == FANSI_COUNT_WIDTH || w_mode == FANSI_COUNT_GRAPH;
-      if(!prev_zwj || !w_or_g) state->pos.w += disp_size;
+      if(!prev_zwj || !w_or_g) {
+        Rprintf("    update width\n");
+        state->pos.w += disp_size;
+      }
     }
     // Always break for error reporting
     if(mb_err) break;
 } }
+/*
+ * Read UTF8 character
+ *
+ * See GENERAL NOTES atop.
+ */
+void read_utf8(struct FANSI_state * state) {
+  int overshoot = 1;
+  int zerowidth = 0;
+  read_utf8_until(state, state->pos.w + 1, overshoot, zerowidth);
+}
+/*
+ * Read a Character Off and Update State
+ *
+ * See GENERAL NOTES atop.
+ */
+void FANSI_read_next(
+  struct FANSI_state * state, R_xlen_t i, const char * arg
+) {
+  unsigned char chr_val = (unsigned char) state->string[state->pos.x];
+  Rprintf("Read next %d %d\n", state->pos.x, state->pos.w);
+  do {
+    Rprintf("  inner read ri %d\n", state->status & FANSI_STAT_RI);
+    // reset all flags except persistent ones
+    state->status = state->status & FANSI_STAT_PERSIST;
+
+    int is_utf8 = IS_UTF8(chr_val);
+    int is_print = IS_PRINT(chr_val);
+    if(is_print) read_one(state);
+    else if (is_utf8) read_utf8(state);
+    else if (IS_ESC(chr_val)) read_esc(state, 0);
+    else if(chr_val) read_c0(state);
+
+    // Non-control or printable reset UTF8 state
+    if(is_print || (!is_utf8 && !(state->status & FANSI_CTL_MASK)))
+      state->status &= ~(FANSI_STAT_RI | FANSI_STAT_ZWJ);
+
+    // Trigger errors / warnings if warranted
+    alert(state, i, arg);
+  } while(
+    (chr_val = (unsigned char) state->string[state->pos.x]) &&
+    (state->status & (FANSI_STAT_RI | FANSI_STAT_ZWJ)) &&
+    !(state->status |= FANSI_STAT_DONE)
+  );
+}
 /*
  * Consume bytes until a certain width is met.
  *
