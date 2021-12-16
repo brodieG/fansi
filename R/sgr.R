@@ -63,7 +63,7 @@ strip_ctl <- function(x, ctl='all', warn=getOption('fansi.warn', TRUE), strip) {
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(x=x, ctl=ctl, warn=warn, warn.mask=get_warn_worst())
 
-  if(length(ctl)) .Call(FANSI_strip_csi, enc_to_utf8(x), CTL.INT, WARN.INT)
+  if(length(ctl)) .Call(FANSI_strip_csi, x, CTL.INT, WARN.INT)
   else x
 }
 #' Strip Control Sequences

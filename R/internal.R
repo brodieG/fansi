@@ -102,8 +102,9 @@ VAL_IN_ENV <- function(
   if('x' %in% argnm) {
     x <- args[['x']]
     if(!is.character(x)) x <- as.character(args[['x']])
-    x <- enc_to_utf8(x)
-    if(length(which.byte <- which(Encoding(x) == "bytes")))
+    enc <- Encoding(x)
+    x <- enc_to_utf8(x, enc)
+    if(length(which.byte <- which(enc == "bytes")))
       stop2(
         "Argument `x` contains a \"bytes\" encoded string at index [",
         which.byte[1],"]",
@@ -253,9 +254,8 @@ VAL_IN_ENV <- function(
 ##
 ## Assumes char input
 
-enc_to_utf8 <- function(x) {
+enc_to_utf8 <- function(x, enc=Encoding(x)) {
   if(isTRUE(l10n_info()[['UTF-8']])) {
-    enc <- Encoding(x)
     # in theory just "latin1", but just in case other encs added
     translate <- enc != "unknown" & enc != "UTF-8"
     x[translate] <- enc2utf8(x[translate])

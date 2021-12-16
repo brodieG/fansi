@@ -75,7 +75,7 @@ strtrim2_ctl <- function(
   # a bit inefficient to rely on strwrap, but oh well
   res <- .Call(
     FANSI_strwrap_csi,
-    enc_to_utf8(x), width,
+    x, width,
     0L, 0L,    # indent, exdent
     "", "",    # prefix, initial
     TRUE, "",  # wrap always
