@@ -53,12 +53,10 @@ static int substr_range(
   // semantically equivalent to consume them).
   if(start0 < 0 && stop > 0) {
     state_tmp = *state_start;
-    Rprintf("  --> read lead\n");
     FANSI_read_next(&state_tmp, i, arg);
     if(state_tmp.status & FANSI_STAT_SPECIAL) *state_start = state_tmp;
     state_start->status |= state_tmp.status & FANSI_STAT_WARNED;
   } else {
-    Rprintf("  --> start start\n");
     FANSI_read_until(state_start, start0, overshoot, term_i, mode, i, arg);
   }
   // - End Point -------------------------------------------------------------
@@ -66,9 +64,6 @@ static int substr_range(
   *state_stop = *state_start;
   overshoot = (rnd_i == FANSI_RND_STOP || rnd_i == FANSI_RND_BOTH);
   mode = 1;                   // stop wants the last byte
-  Rprintf(
-    "  --> End start %d %d target %d os %d mode %d\n",
-    state_stop->pos.x, state_stop->pos.w, stop, overshoot, mode);
   FANSI_read_until(state_stop, stop, overshoot, term_i, mode, i, arg);
 
   if(state_start->pos.x > state_stop->pos.x) {
