@@ -109,9 +109,7 @@ int FANSI_find_ctl(
   int pos = state->pos.x;
   while(state->string[state->pos.x]) {
     pos = state->pos.x += FANSI_seek_ctl(state->string + state->pos.x);
-    Rprintf("cur %d %d\n", state->pos.x, state->pos.w);
     FANSI_read_next(state, i, arg);
-    Rprintf("next %d %d\n", state->pos.x, state->pos.w);
     // Known control read
     if(state->status & FANSI_CTL_MASK) break;
   }

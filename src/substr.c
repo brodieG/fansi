@@ -69,19 +69,6 @@ static int substr_range(
   if(state_start->pos.x > state_stop->pos.x) {
     error("Internal Error: bad `stop` state 2."); // nocov
   }
-  /*
-  Rprintf(
-    "w %d %d b %d %d c %d %d startb %d stopb %d\n",
-    state.pos.w,
-    state_prev.pos.w,
-    state.pos.x,
-    state_prev.pos.x,
-    state.string[state.pos.x],
-    state_prev.string[state_prev.pos.x],
-    state_start->pos.x,
-    state_stop->pos.x
-  );
-  */
   return state_stop->pos.w - state_start->pos.w;
 }
 
@@ -295,15 +282,6 @@ static SEXP substr_replace(
         &st_x11, &st_x21, i, start_tr2, start_tr, rnd_i, term_i, "x"
       );
       int size_x1 = st_x11.pos.w - st_x0.pos.w;
-      /*
-      Rprintf("x0 %d %d x1 %d %d x11 %d %d\n",
-        st_x0.pos.x,st_x0.pos.w,
-        st_x1.pos.x,st_x1.pos.w,
-        st_x11.pos.x,st_x11.pos.w
-      );
-      Rprintf("size x %d x1 %d v %d\n", size_x, size_x1, size_v);
-      Rprintf("start_tr %d start_tr2 %d\n", start_tr, start_tr2);
-      */
       if(size_v <= size_x1) {
         start_tr = start_tr2;
         // We explicilty do not reset _x2 as that doesn't move

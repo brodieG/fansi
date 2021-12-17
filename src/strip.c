@@ -267,14 +267,6 @@ SEXP FANSI_process(
         } else {
           special = special_len = 0;
         }
-        /*
-        Rprintf(
-          "pos %d char %x status %d err %d special %d len %d\n",
-          j, string[j], state.status,
-          FANSI_GET_ERR(state.status), state.status & FANSI_CTL_ALL,
-          special_len
-        );
-        */
       }
       // transcribe string if:
       if(
@@ -327,12 +319,6 @@ SEXP FANSI_process(
           j_last -       // less last time we copied
           to_strip;      // less extra stuff to strip
 
-        /*
-        Rprintf(
-          "strip j %d %d jc %x special %d space %d nl %d bytes %d to_strip %d\n",
-          j, j_last, string[j], special, space, newlines, copy_bytes, to_strip
-        );
-        */
         if(copy_bytes) {
           FANSI_W_MCOPY(buff, string_start, copy_bytes);
         }

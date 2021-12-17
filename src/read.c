@@ -1081,16 +1081,6 @@ void read_utf8_until(struct FANSI_state * state, int until, int overshoot) {
       disp_size = byte_size = 1;
     }
     int total_width = state->pos.w + disp_size;
-    /*
-    Rprintf("  tot %d size %d pos %d %d ri %d %d until %d d os %d\n", 
-        total_width, disp_size, 
-        state->pos.x,
-        state->pos.w,
-        prev_ri, cur_ri,
-        until,
-        overshoot
-      );
-    */
     if(total_width > until && !overshoot) {
       state->status |= FANSI_STAT_DONE;
       break;
@@ -1184,15 +1174,6 @@ void FANSI_read_until(
   // - Basic Read --------------------------------------------------------------
 
   state->status = state->status & FANSI_STAT_WARNED;
-  /*
-  Rprintf(
-    "  until %d x %d w %d overshot %d done %d warned %d\n",
-    until, state->pos.x, state->pos.w,
-    (state->status & (FANSI_STAT_OVERSHOT)),
-    (state->status & (FANSI_STAT_DONE)),
-    state->status & FANSI_STAT_WARNED
-  );
-  */
   while(
     (x = state->string[state->pos.x]) &&
     state->pos.w < until &&
