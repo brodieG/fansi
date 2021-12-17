@@ -19,8 +19,6 @@ Still a bit curious why we don't get closer to substr?
 
 * Hunt down more instances of OSC-anchored URL to replace with OSC hyperlink.
 
-* get rid of `read_all`
-
 * Should the default color mode be truecolor?  The big issue is that presumably
   strings that contain such are intended to be interpreted as truecolor,
   irrespective of what the terminal can handle.
@@ -29,8 +27,6 @@ Still a bit curious why we don't get closer to substr?
 
 * It would be nice if in replacement mode, lead and mid can account for each
   other to produce the minimal style.  
-
-* Remove `Rprintf`.
 
 * Update copyright in test files.
 
@@ -52,6 +48,8 @@ Still a bit curious why we don't get closer to substr?
 We just live with it as is?  Should just warn.
 
 ## Done
+
+* get rid of `read_all`
 
 * Write a section on performance in the fansi section (note that overhead is
   actually higher for small strings for substr; it looked really low either b/c

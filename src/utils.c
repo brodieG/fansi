@@ -479,21 +479,5 @@ void FANSI_print_state(struct FANSI_state x) {
   FANSI_print_bits(x.settings);
   Rprintf("\n- End State ---\n");
 }
-
-SEXP FANSI_read_all_ext(SEXP x, SEXP warn, SEXP term_cap) {
-  R_xlen_t len = XLENGTH(x);
-  SEXP res = PROTECT(allocVector(INTSXP, len));
-  int * res_i = INTEGER(res);
-  const char * arg = "x";
-  struct FANSI_state state;
-  for(R_xlen_t i = 0; i < len; ++i) {
-    if(!i) state = FANSI_state_init(x, warn, term_cap, i);
-    else FANSI_state_reinit(&state, x,  i);
-
-    FANSI_read_all(&state, i, arg);
-    res_i[i] = state.pos.x;
-  }
-  UNPROTECT(1);
-  return res;
-}
+// nocov end
 
