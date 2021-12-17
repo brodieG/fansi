@@ -349,7 +349,7 @@ unitizer_sect("Rep Funs - SGR", {
   `substr_ctl<-`(txt4, 2, 3, carry=TRUE, "#\033[32m?-")
   `substr_ctl<-`(txt4, 2, 3, carry=TRUE, "#\033[42m?-\033[0m")
   `substr_ctl<-`(txt4, 2, 3, carry=TRUE, "#\033[0m?-")
-  ## Weirdness here because the 39 in value causes re-issue of 45.  This is
+  ## Weirdness here because the 39 in `value` causes re-issue of 45.  This is
   ## correct; a consequence of the mess of termintate=FALSE in replace mode.
   rep4 <- c("\033[32m_\033[45m", ".-", "\033[39m__")
   `substr_ctl<-`(txt4, 2, 3, carry=TRUE, rep4)
@@ -389,8 +389,9 @@ unitizer_sect("Rep Funs - Corner Cases", {
   ## Include trail when selecting past end of `value`
   `substr_ctl<-`(txt2, 1, 3, terminate=FALSE, "#\033[32m?\033[0m")
 
-  ## Include trail when selecting past end of `x`.  It's a bit odd that even
-  ## with only the two char replacement, we can suppress the trailing ESC.
+  ## Only portions of string that are replaced are modified; leading and
+  ## trailing controls remain, possibly causing redundant sequences when the
+  ## lead and trail sequences are zero width, particularly with terminate=T.
   txt8 <- "\033[32mAB\033[45m"
   `substr_ctl<-`(txt8, 1, 2, "12")
   `substr_ctl<-`(txt8, 1, 2, "12", terminate=FALSE)

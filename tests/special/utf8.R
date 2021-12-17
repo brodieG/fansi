@@ -94,11 +94,23 @@ unitizer_sect("substr", {
   latin.utf8
   Encoding(latin.utf8)
 
-  # Start/Stop rounding
-  substr2_ctl("ＷnＷ", 2, 4, type='width', round='start')
-  substr2_ctl("ＷnＷ", 2, 4, type='width', round='stop')
-  substr2_ctl("ＷnＷ", 2, 4, type='width', round='neither')
-  substr2_ctl("ＷnＷ", 2, 4, type='width', round='both')
+  # Start/Stop rounding - examples
+  rnd.1 <- "ＭnＷ"
+  Encoding(rnd.1) <- "UTF-8"
+  substr2_ctl(rnd.1, 2, 4, type='width', round='start')
+  substr2_ctl(rnd.1, 2, 4, type='width', round='stop')
+  substr2_ctl(rnd.1, 2, 4, type='width', round='neither')
+  substr2_ctl(rnd.1, 2, 4, type='width', round='both')
+
+  # Start/Stop rounding - end edge cases
+  rnd.2 <- "ＭＷ"
+  Encoding(rnd.2) <- "UTF-8"
+  substr2_ctl(rnd.2, 2, 3, type='width', round='start')
+  substr2_ctl(rnd.2, 2, 3, type='width', round='stop')
+  substr2_ctl(rnd.2, 1, 2, type='width', round='start')
+  substr2_ctl(rnd.2, 1, 2, type='width', round='stop')
+  substr2_ctl(rnd.2, 3, 4, type='width', round='start')
+  substr2_ctl(rnd.2, 3, 4, type='width', round='stop')
 })
 unitizer_sect("rounding", {
   # handling of subsetting when we end up in middle of wide display characters
@@ -159,10 +171,11 @@ unitizer_sect("zero width combining", {
   substr2_ctl(combo3, 4, 5, type='width')
 
   # start with diacritic
-
   combo4 <- paste0('\u0300hello')
   substr2_ctl(combo4, 1, 1, type='width')  # no diacritic
   substr2_ctl(combo4, 1, 1)                # diacritic only
+  substr2_ctl(combo4, 0, 1, type='width')  # with diacritic
+  substr2_ctl(combo4, 0, 0, type='width')  # empty
 })
 unitizer_sect("Emoji combining", {
   flags <- "\U0001f1e6\U0001f1f7\U0001f1e6\U0001f1f4\U0001f1e6\U0001f1ee"
@@ -399,6 +412,9 @@ unitizer_sect("wrap corner cases", {
   # Encoding captured correctly
   Encoding(strwrap_ctl("hell\u00F8 world", 5))
   Encoding(strwrap_ctl("hello w\u00F8rld", 5))
+
+  # Caused an infinite loop in one case
+  strwrap2_ctl("\U1F600 \U1F600", 2)
 })
 unitizer_sect("wrap with wide UTF8 and ESC", {
   wrap.mix <- strwrap_ctl(lorem.mix, 25)

@@ -14,11 +14,11 @@ unitizer_sect("Strip ansi", {
   strip_sgr(1:3)
 })
 unitizer_sect("Corner cases", {
-  # In order for an escape to be stripped it has to be fully recognized.  A bit
-  # amgiuous what should really happen in these cases, particularly because now
-  # we distinguish between a mal-formed but complete sequence (which we consider
-  # fully recongized and strip), vs e.g. an incomplete one which we don't strip.
+  # Even partially recognized escapes are stripped assuming that they could be
+  # recognized at all (with the special exception that a single leading ESC will
+  # be stripped if any control is active).
   strip_ctl("hello\033")
+  strip_ctl("hello\033", ctl=c('nl', 'c0'))
   strip_ctl("hello\033[")
   strip_ctl("hello\033[42")
   strip_ctl("hello\033[42", ctl=c('all', 'csi', 'sgr'))
