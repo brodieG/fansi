@@ -14,13 +14,16 @@ unitizer_sect("Strip ansi", {
   strip_sgr(1:3)
 })
 unitizer_sect("Corner cases", {
+  # Even partially recognized escapes are stripped assuming that they could be
+  # recognized at all (with the special exception that a single leading ESC will
+  # be stripped if any control is active).
   strip_ctl("hello\033")
-  # should this be stripped?  Not 100% clear since terminal seems to be waiting
-  # for input after it is cated
+  strip_ctl("hello\033", ctl=c('nl', 'c0'))
   strip_ctl("hello\033[")
+  strip_ctl("hello\033[42")
+  strip_ctl("hello\033[42", ctl=c('all', 'csi', 'sgr'))
 
   # illegal sequence
-
   strip_ctl("hello\033[31##3m illegal")
   strip_ctl("hello\033[31##m legal")
 

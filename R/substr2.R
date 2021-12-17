@@ -31,7 +31,7 @@
 #' interpreted as:
 #'
 #' ```
-#'  0                 1
+#'                    1 1 1
 #'  1 2 3 4 5 6 7 8 9 0 1 2
 #'  h e l l o -|w o r l d|!
 #'             ^         ^
@@ -41,13 +41,18 @@
 #' `start` and `stop` reference character positions so they never explicitly
 #' select for the interstitial _Control Sequences_.  The latter are implicitly
 #' selected if they appear in interstices after the first character and before
-#' the last.  Additionally, because _Control Sequences_ affect all subsequent
-#' characters in a string, any active _Control Sequence_, whether opened just
-#' before a character or much before, will be reflected in the state `fansi`
-#' prepends to the beginning of each substring.  It is possible to select
-#' _Control Sequences_ at the end of a string by specifying `stop` values past
-#' the end of the string, although this will only produce a visible result if
-#' `terminate` is set to `FALSE`.
+#' the last.  Additionally, because _Special Sequences_ (CSI SGR and OSC
+#' hyperlinks) affect all subsequent characters in a string, any active _Special
+#' Sequence_, whether opened just before a character or much before, will be
+#' reflected in the state `fansi` prepends to the beginning of each substring.
+#'
+#' It is possible to select _Control Sequences_ at the end of a string by
+#' specifying `stop` values past the end of the string, although for _Special
+#' Sequences_ this only produces visible results if `terminate` is set to
+#' `FALSE`.  Similarly, it is possible to select _Control Sequences_ preceding
+#' the beginning of a string by specifying `start` values less than one,
+#' although as noted earlier this is unnecessary for _Special Sequences_ as
+#' those are output by `fansi` before each substring.
 #'
 #' Because exact substrings on anything other than character count cannot be
 #' guaranteed (e.g. as a result of multi-byte encodings, or double display-width
@@ -61,28 +66,15 @@
 #' included character via the `stop` is left out.  The converse is true if we
 #' use "stop" as the `round` value.  "neither" would cause all partial
 #' characters to be dropped irrespective whether they correspond to `start` or
-#' `stop`, and "both" could cause all of them to be included.
-#'
-#' For example, if we consider "WW" to be a single wide character, and "n" to be
-#' a single narrow one:
-#'
-#' ```
-#'       12345
-#' x <- "WWnWW"
-#'substr_ctl(x, 2, 4, type='width' round='start')    -> "WWn"
-#'substr_ctl(x, 2, 4, type='width' round='stop')     -> "nWW"
-#'substr_ctl(x, 2, 4, type='width' round='neither')  -> "n"
-#'substr_ctl(x, 2, 4, type='width' round='both')     -> "WWnWW"
-#' ```
+#' `stop`, and "both" could cause all of them to be included.  See examples.
 #'
 #' A number of _Normal_ characters such as combining diacritic marks have
 #' reported width of zero.  These are typically displayed overlaid on top of the
 #' preceding glyph, as in the case of `"e\u301"` forming `"é"`.  Unlike _Control
 #' Sequences_, which also have reported width of zero, `fansi` groups zero-width
 #' _Normal_ characters with the last preceding non-zero width _Normal_
-#' character.  This is not the right thing to do for some rare zero-width
-#' _Normal_ characters such as prepending marks (see "Output Stability" and
-#' "Graphemes").
+#' character.  This is incorrect for some rare zero-width _Normal_ characters
+#' such as prepending marks (see "Output Stability" and "Graphemes").
 #'
 #' @section Output Stability:
 #'
@@ -98,8 +90,9 @@
 #' the future.
 #'
 #' How a particular display format is encoded in _Control Sequences_ is
-#' not guaranteed to be stable across `fansi` versions, although we will
-#' strive to keep the rendered appearance stable.
+#' not guaranteed to be stable across `fansi` versions.  Additionally, which
+#' _Special Sequences_ are re-encoded vs transcribed untouched may change.
+#' In general we will strive to keep the rendered appearance stable.
 #'
 #' To maximize the odds of getting stable output set `normalize_state` to
 #' `TRUE` and `type` to `"chars"` in functions that allow it, and
@@ -121,8 +114,8 @@
 #' The `carry` parameter causes state to carry within the original string and
 #' the replacement values independently, as if they were columns of text cut
 #' from different pages and pasted together.  String values for `carry` are
-#' illegal in replacement mode as it is ambiguous which of `x` or `value` they
-#' would modify (see examples).
+#' disallowed in replacement mode as it is ambiguous which of `x` or `value`
+#' they would modify (see examples).
 #'
 #' When in `type = 'width'` mode, it is only guaranteed that the result will be
 #' no wider than the original `x`.  Narrower strings may result if a mixture
@@ -136,9 +129,9 @@
 #' grapheme breaks that work for most common graphemes, including emoji
 #' combining sequences.  The heuristic is known to work incorrectly with
 #' invalid combining sequences, prepending marks, and sequence interruptors.
-#' `fansi` does not provide a full implementation to avoid carrying a copy of
-#' the Unicode grapheme breaks table, and also because the hope is that R will
-#' add the feature eventually itself.
+#' `fansi` does not provide a full implementation of grapheme break detection to
+#' avoid carrying a copy of the Unicode grapheme breaks table, and also because
+#' the hope is that R will add the feature eventually itself.
 #'
 #' The [`utf8`](https://cran.r-project.org/package=utf8) package provides a
 #' conforming grapheme parsing implementation.
@@ -234,14 +227,15 @@
 #' substr_ctl("\033[42mhello\033[m world", 1, 9)
 #' substr_ctl("\033[42mhello\033[m world", 3, 9)
 #'
-#' ## Width 2 and 3 are in the middle of an ideogram as
-#' ## start and stop positions respectively, so we control
-#' ## what we get with `round`
-#' cn.string <- paste0("\033[42m", "\u4E00\u4E01\u4E03", "\033[m")
-#' substr2_ctl(cn.string, 2, 3, type='width')
-#' substr2_ctl(cn.string, 2, 3, type='width', round='both')
-#' substr2_ctl(cn.string, 2, 3, type='width', round='start')
-#' substr2_ctl(cn.string, 2, 3, type='width', round='stop')
+#' ## Positions 2 and 4 are in the middle of the full width Ｗ for
+#' ## the `start` and `stop` positions respectively. Use `round`
+#' ## to control result:
+#' ##    12345
+#' x <- "ＷnＷ"
+#' substr2_ctl(x, 2, 4, type='width', round='start')
+#' substr2_ctl(x, 2, 4, type='width', round='stop')
+#' substr2_ctl(x, 2, 4, type='width', round='neither')
+#' substr2_ctl(x, 2, 4, type='width', round='both')
 #'
 #' ## We can specify which escapes are considered special:
 #' substr_ctl("\033[31mhello\tworld", 1, 6, ctl='sgr', warn=FALSE)
@@ -453,140 +447,6 @@ substr2_sgr <- function(
     carry=carry, terminate=terminate
   )
 
-## All parameters must have been processed by VAL_IN_ENV.
-
-substr_ctl_internal_bck <- function(
-  x, start, stop, type.int, round, tabs.as.spaces,
-  tab.stops, warn.int, term.cap.int, round.start, round.stop,
-  x.len, ctl.int, normalize, carry, terminate
-) {
-  # For each unique string, compute the state at each start and stop position
-  # and re-map the positions to "ansi" space
-
-  if(tabs.as.spaces)
-    x <- .Call(
-      FANSI_tabs_as_spaces, x, tab.stops,
-      0L,  # turn off warning, will be reported later
-      term.cap.int, ctl.int
-    )
-
-  res <- character(length(x))
-  s.s.valid <- stop >= start & stop
-
-  # If we want to carry, we'll do this manually as too much work to try to do it
-  # in C given the current structure using ordered indices into each string.
-  # Do before `unique` as this to equal strings may become different.
-
-  x.carry <- character(length(x))
-  if(!is.na(carry)) {
-    # need to check carry, do a one-pass through checking for problems
-    ends <- .Call(
-      FANSI_state_at_end, x, warn.int, term.cap.int, ctl.int, normalize,
-      NA_character_, "carry", TRUE
-    )
-    # and now compute style at end
-    ends <- .Call(
-      FANSI_state_at_end, x, warn.int, term.cap.int, ctl.int, normalize,
-      carry, "x", TRUE
-    )
-    x.carry <- c(carry, ends[-length(ends)])
-    x <- paste0(x.carry, x)
-  }
-  # Need to warn here as during substringing we might not see the end.
-  warn.int <- warn.int * is.na(carry)
-
-  # We compute style at each start and stop position by getting all those
-  # positions into a vector and then ordering them by position, keeping track of
-  # original order and whether they are starting or ending positions (affects
-  # how multi-byte characters are trimmed/kept).
-
-  # We do this for each unique string in `x` as the indices must be incrementing
-  # for each of them.
-
-  # x.scalar is likely needed for strsplit (but not sure, this is after the fact
-  # documentation)
-  x.scalar <- length(x) == 1
-  # x.u <- if(x.scalar) x else unique_chr(x)
-  if(x.scalar) x <- rep(x, length.out=length(s.s.valid))
-  ids <- seq_along(x)
-  elems.l <- split(ids * s.s.valid, x)
-
-  for(i in seq_along(elems.l)) {
-    elems <- elems.l[[i]]
-    elems <- elems[elems > 0]
-    if(!length(elems)) next
-    u <- x[elems[1L]]
-    elems.len <- length(elems)
-    # we want to specify minimum number of position/width elements
-    e.start <- start[elems] - 1L
-    e.stop <- stop[elems]
-    e.ids <- ids[elems]
-    x.elems <- if(x.scalar)
-      rep(x, length.out=elems.len) else x[elems]
-    x.carries <- if(x.scalar)
-      rep(x.carry, length.out=elems.len) else x.carry[elems]
-
-    # note, for expediency we're currently assuming that there is no overlap
-    # between starts and stops
-    e.order <- forder(c(e.start, e.stop))
-
-    e.keep <- rep(c(!round.start, round.stop), each=elems.len)[e.order]
-    e.sort <- c(e.start, e.stop)[e.order]
-
-    state <- .Call(
-      FANSI_state_at_pos_ext,
-      u, e.sort, type.int,
-      e.keep,  # whether to include a partially covered multi-byte character
-      rep(c(TRUE, FALSE), each=length(elems))[e.order], # start or end of string
-      warn.int, term.cap.int,
-      ctl.int, normalize, terminate,
-      c(e.ids, e.ids)[e.order]
-    )
-    # Recover the matching values for e.sort
-    e.unsort.idx <- match(seq_along(e.order), e.order)  # e.order[e.order]?
-    start.stop.ansi.idx <- .Call(FANSI_cleave, e.unsort.idx)
-    start.ansi.idx <- start.stop.ansi.idx[[1L]]
-    stop.ansi.idx <- start.stop.ansi.idx[[2L]]
-
-    # And use those to substr with
-    start.ansi <- state[[2]][3, start.ansi.idx] + 1L
-    stop.ansi <- state[[2]][3, stop.ansi.idx]
-    start.tag <- state[[1]][start.ansi.idx]
-    stop.tag <- state[[1]][stop.ansi.idx]
-
-    # It's possible to end up with starts after stops because starts always
-    # ingest trailing SGR.
-    empty.req <- e.start >= e.stop
-    empty.res <- !empty.req & start.ansi > stop.ansi
-    if(!terminate) res[elems[empty.res]] <- start.tag[empty.res]
-
-    # Finalize real substrings
-    full <- !empty.res & !empty.req
-    if(any(full)) {
-      # if there is active state at end then add a terminating CSI, warnings
-      # should have been issued on first read
-      end.csi <-
-        if(terminate) close_state(stop.tag[full], warn=FALSE, normalize)
-        else ""
-
-      substring <- substr(x.elems[full], start.ansi[full], stop.ansi[full])
-      term.cap <- VALID.TERM.CAP[term.cap.int]
-      tmp <- paste0(
-        if(!is.na(carry)) {
-          bridge(
-            x.carries[full], start.tag[full], term.cap=term.cap,
-            normalize=normalize
-          )
-        } else start.tag[full],
-        substring
-      )
-      res[elems[full]] <- paste0(
-        if(normalize) normalize_state(tmp, warn=FALSE, term.cap=term.cap)
-        else tmp,
-        end.csi
-  ) } }
-  res
-}
 substr_ctl_internal <- function(
   x, start, stop, type.int, round.int, tabs.as.spaces,
   tab.stops, warn.int, term.cap.int,
@@ -609,29 +469,3 @@ substr_ctl_internal <- function(
   )
 }
 
-## Need to expose this so we can test bad UTF8 handling because substr will
-## behave different with bad UTF8 pre and post R 3.6.0.  Make sure things
-## are sorted properly given starts are input -1L.
-
-state_at_pos <- function(
-  x, starts, ends, warn=getOption('fansi.warn', TRUE),
-  normalize=getOption('fansi.normalize', FALSE),
-  terminate=getOption('fansi.terminate', FALSE),
-  ids=rep(seq_along(starts), 2)
-) {
-  warn.int <- warn * get_warn_all()
-  is.start <- c(rep(TRUE, length(starts)), rep(FALSE, length(ends)))
-  .Call(
-    FANSI_state_at_pos_ext,
-    x, as.integer(c(starts - 1L, ends)),
-    0L,        # character type
-    is.start,  # keep if is.start
-    is.start,  # indicate that it's a start
-    warn.int,
-    1L,        # term.cap="all"
-    1L,        # ctl="all"
-    normalize,
-    terminate,
-    ids
-  )
-}

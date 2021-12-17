@@ -81,16 +81,19 @@ unitizer_sect("wrap", {
   strwrap_ctl(u12, 5)
   strwrap_ctl(u12a, 5)
   nchar_ctl(c(u12, u12a))
+  nchar_ctl(c(u12, u12a), allowNA=TRUE)
 
-  # Unterminated, should consume everything?  It does in terminals, but what are
-  # the semantics of that, and carrying it?
+  # Unterminated, gets consumed, not shown if we're terminating.
   u13 <- "a\033]8;;THE END"
+  u13a <- "a\033];;THE END"
   u14 <- "a\033]8;;THE END\033]8;;NO?"
   u15 <- "a\033]8;;THE END\033]8;;\033["
   strwrap_ctl(u13, 5);
+  strwrap_ctl(u13, 5, terminate=FALSE);
+  strwrap_ctl(u13a, 5);
   strwrap_ctl(u14, 5);
   strwrap_ctl(u15, 5);
-  nchar_ctl(c(u13, u14, u15))
+  nchar_ctl(c(u13, u13a, u14, u15))
 
   # Empty Fields
   u16 <- sprintf(base.st, "", "", "", txt, "")
@@ -129,6 +132,12 @@ unitizer_sect('substr', {
   substr_ctl(u0, 6, 9)
   substr_ctl(u0, 6, 9, terminate=FALSE)
   substr_ctl("hello world", 3, 8, carry="\033]8;;a.b\033\\")
+
+  # corner cases with bad/non-portable bytes
+  substr_ctl("A\033]8;a=\x0d:id=c;x.y\033\\B", 2, 2)
+  substr_ctl("A\033]8;a=c:id=\x0d;x.y\033\\B", 2, 2)
+  substr_ctl("A\033]8;a=c:id=d;x.\x0d\033\\B", 2, 2)
+  substr_ctl("A\033]8;a=c:id=d;x.\x80\033\\B", 2, 2)
 })
 unitizer_sect('tohtml', {
   to_html(u0)

@@ -25,7 +25,6 @@ R_CallMethodDef callMethods[] = {
   {"strip_csi", (DL_FUNC) &FANSI_strip, 3},
   {"strwrap_csi", (DL_FUNC) &FANSI_strwrap_ext, 18},
   {"substr", (DL_FUNC) &FANSI_substr, 12},
-  {"state_at_pos_ext", (DL_FUNC) &FANSI_state_at_pos_ext, 11},
   {"process", (DL_FUNC) &FANSI_process_ext, 3},
   {"check_assumptions", (DL_FUNC) &FANSI_check_assumptions, 0},
   {"tabs_as_spaces", (DL_FUNC) &FANSI_tabs_as_spaces_ext, 5},
@@ -42,6 +41,9 @@ R_CallMethodDef callMethods[] = {
   {"get_int_max", (DL_FUNC) &FANSI_get_int_max, 0},
   {"set_rlent_max", (DL_FUNC) &FANSI_set_rlent_max, 1},
   {"get_warn_all", (DL_FUNC) &FANSI_get_warn_all, 0},
+  {"get_warn_mangled", (DL_FUNC) &FANSI_get_warn_mangled, 0},
+  {"get_warn_utf8", (DL_FUNC) &FANSI_get_warn_utf8, 0},
+  {"get_warn_error", (DL_FUNC) &FANSI_get_warn_error, 0},
   {"check_enc", (DL_FUNC) &FANSI_check_enc_ext, 2},
   {"ctl_as_int", (DL_FUNC) &FANSI_ctl_as_int_ext, 1},
   {"esc_html", (DL_FUNC) &FANSI_esc_html, 2},
@@ -58,6 +60,7 @@ R_CallMethodDef callMethods[] = {
   {"state_at_end", (DL_FUNC) &FANSI_state_at_end_ext, 8},
   {"bridge_state", (DL_FUNC) &FANSI_bridge_state_ext, 4},
   {"trimws", (DL_FUNC) &FANSI_trimws, 6},
+  {"read_all", (DL_FUNC) &FANSI_read_all_ext, 3},
   {NULL, NULL, 0}
 };
 

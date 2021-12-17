@@ -30,11 +30,6 @@ SEXP FANSI_substr(
 );
 SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn);
 SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn);
-SEXP FANSI_state_at_pos_ext(
-  SEXP x, SEXP pos, SEXP type,
-  SEXP overshoot, SEXP is_start, SEXP warn, SEXP term_cap, SEXP ctl,
-  SEXP norm, SEXP terminate, SEXP ids
-);
 SEXP FANSI_strwrap_ext(
   SEXP x, SEXP width,
   SEXP indent, SEXP exdent,
@@ -80,6 +75,9 @@ SEXP FANSI_set_int_max(SEXP x);
 SEXP FANSI_set_rlent_max(SEXP x);
 SEXP FANSI_get_int_max();
 SEXP FANSI_get_warn_all();
+SEXP FANSI_get_warn_mangled();
+SEXP FANSI_get_warn_utf8();
+SEXP FANSI_get_warn_error();
 SEXP FANSI_esc_html(SEXP x, SEXP what);
 
 SEXP FANSI_normalize_state_ext(
@@ -107,5 +105,7 @@ SEXP FANSI_buff_test_mcopy_overflow();
 SEXP FANSI_buff_test_fill_overflow();
 
 SEXP FANSI_reset_limits();
+
+SEXP FANSI_read_all_ext(SEXP x, SEXP warn, SEXP term_cap);
 
 #endif  /* _FANSI_EXT_H */

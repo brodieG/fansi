@@ -27,9 +27,10 @@ problem.  See details.
 Will return position and types of unhandled \emph{Control Sequences} in a
 character vector.  Unhandled sequences may cause \code{fansi} to interpret strings
 in a way different to your display.  See \link{fansi} for details.  Functions that
-interpret SGR/OSC URLs might omit bad SGR/OSC URLs in sequences in output
-substrings, particularly if they are leading or trailing.  Some functions are
-more tolerant of bad inputs than others.  For example \code{\link{nchar_ctl}} will not
+interpret \emph{Special Sequences} (CSI SGR or OSC hyperlinks) might omit bad
+\emph{Special Sequences} or some of their components in output substrings,
+particularly if they are leading or trailing.  Some functions are more
+tolerant of bad inputs than others.  For example \code{\link{nchar_ctl}} will not
 report unsupported colors because it only cares about counts or widths.
 \code{unhandled_ctl} will report all potentially problematic sequences.
 }
@@ -51,6 +52,13 @@ there are multiple ESC sequences abutting each other they will all be
 treated as one, even if some of those sequences are valid.
 \item error: the reason why the sequence was not handled:
 \itemize{
+\item unknown-substring: SGR substring with a value that does not correspond
+to a known SGR code or OSC hyperlink with unsupported parameters.
+\item invalid-substr: SGR contains uncommon characters in ":<=>",
+intermediate bytes, other invalid characters, or there is an invalid
+subsequence (e.g. "ESC[38;2m" which should specify an RGB triplet
+but does not).  OSCs contain invalid bytes, or OSC hyperlinks contain
+otherwise valid OSC bytes in 0x08-0x0d.
 \item exceed-term-cap: contains color codes not supported by the terminal
 (see \link{term_cap_test}).  Bright colors with color codes in the 90-97 and
 100-107 range in terminals that do not support them are not considered
@@ -58,20 +66,21 @@ errors, whereas 256 or truecolor codes in terminals that do not support
 them are.  This is because the latter are often misinterpreted by
 terminals that do not support them, whereas the former are typically
 silently ignored.
-\item special: SGR substring contains uncommon characters in ":<=>", or URL
-contains otherwise valid OSC bytes in 0x08-0x0d.
-\item unknown: SGR substring with a value that does not correspond to a known
-SGR code or URL with unsupported parameters.
-\item non-SGR/URL: a non-SGR CSI sequence, or non-URL OSC sequence.
+\item CSI/OSC: a non-SGR CSI sequence, or non-hyperlink OSC sequence.
+\item CSI/OSC-bad-substr: a CSI or OSC sequence containing invalid
+characters.
+\item malformed-CSI/OSC: a malformed CSI or OSC sequence, typically one that
+never encounters its closing sequence before the end of a string.
 \item non-CSI/OSC: a non-CSI or non-OSC escape sequence, i.e. one where the
 ESC is followed by something other than "[" or "]".  Since we
 assume all non-CSI sequences are only 2 characters long include the
 ESC, this type of sequence is the most likely to cause problems as some
 are not actually two characters long.
-\item malformed-CSI/OSC: a malformed CSI or OSC sequence.
 \item malformed-ESC: a malformed two byte ESC sequence (i.e. one not ending
 in 0x40-0x7e).
 \item C0: a "C0" control character (e.g. tab, bell, etc.).
+\item malformed-UTF8: illegal UTF8 encoding.
+\item non-ASCII: non-ASCII bytes in escape sequences.
 }
 \item translated: whether the string was translated to UTF-8, might be helpful in
 odd cases were character offsets change depending on encoding.  You should
@@ -92,5 +101,6 @@ unhandled_ctl(string)
 }
 \seealso{
 \code{\link[=fansi]{?fansi}} for details on how \emph{Control Sequences} are
-interpreted, particularly if you are getting unexpected results.
+interpreted, particularly if you are getting unexpected results,
+\code{\link{unhandled_ctl}} for detecting bad control sequences.
 }

@@ -59,9 +59,10 @@ there are some corner cases with changes (e.g. in `strwrap_ctl` SGRs embedded in
 whitespace sequences don't break the sequence).
 
 The changes are a side effect of applying more consistent treatment of corner
-cases around leading and trailing SGR in substrings.  Trailing SGR in the output
-is now omitted as it would be immediately closed (assuming `terminate=TRUE`, the
-default).  Leading SGR is interpreted and re-output.
+cases around leading and trailing control sequences and (partially) invalid
+control sequences.  Trailing SGR in the output is now omitted as it would be
+immediately closed (assuming `terminate=TRUE`, the default).  Leading SGR is
+interpreted and re-output.
 
 Normally output consistency alone would not be a reason to change behavior, but
 in this case the changes should be almost always undetectable in the
@@ -70,7 +71,6 @@ finicky C string manipulation code.
 
 Other changes:
 
-* `substr_ctl` errors instead of just warning on invalid UTF-8 sequences.
 * CSI sequences with more than one "intermediate" byte are now considered valid,
   even though they are likely to be very rare.
 * `strip_ctl` only warns with malformed CSI and OSC if they are reported as
@@ -80,6 +80,9 @@ Other changes:
 * "unknown" encoded strings are no longer translated to UTF-8 in UTF-8 locales.
 * `nchar_ctl` now preserves `dim`, `dimnames`, and `names` as the base functions
   do.
+* UTF-8 known to be valid should not be output, even if present in input (UTF-8
+  validation is not complete, only sequences that are obviously wrong are
+  detected).
 
 ### Bug Fixes
 

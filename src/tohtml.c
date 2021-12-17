@@ -17,14 +17,6 @@
 
 #include "fansi.h"
 
-// Which styles actuall produce HTML
-// DANGER: make sure not to add so many as to risk unsigned int overflow
-static const unsigned int css_html_style[8] = {
-  1, 2, 3, 4, 5, 6,
-  // 7,                // Inverse doesn't actually produces a style
-  8, 9
-};
-static unsigned int css_html_mask = 0;
 /*
  * Looks like we don't need to worry about C0 sequences, however we must
  * parse all ESC sequences as HTML gladly displays everything right after the
@@ -59,21 +51,12 @@ static const struct FANSI_css css_style[9] = {
 };
 // Generate mask for html styles in first pass
 
-static unsigned int style_html_mask() {
-  if(!css_html_mask) {
-    int style_n = sizeof(css_html_style) / sizeof(unsigned int);
-    for(int i = 0; i < style_n; ++i)
-      css_html_mask |= 1U << css_html_style[i];
-  }
-  return css_html_mask;
-}
 static int sgr_has_color(struct FANSI_sgr sgr) {
-  return sgr.color >= 0 || sgr.bg_color >= 0;
+  return sgr.color.x || sgr.bgcol.x;
 }
 static int sgr_has_style_html(struct FANSI_sgr sgr) {
   // generate mask first time around.
-  return (sgr.style & style_html_mask()) ||
-    sgr.color >= 0 || sgr.bg_color >= 0;
+  return (sgr.style & FANSI_STL_MASK2) || sgr.color.x || sgr.bgcol.x;
 }
 static int sgr_comp_html(
   struct FANSI_sgr target, struct FANSI_sgr current
@@ -83,14 +66,14 @@ static int sgr_comp_html(
     FANSI_sgr_comp_color(target, current) ||
     // HTML rendered styles are different
     (
-      (target.style & style_html_mask()) !=
-      (current.style & style_html_mask())
+      (target.style & FANSI_STL_MASK2) !=
+      (current.style & FANSI_STL_MASK2)
     ) ||
     // If one has color both have the same color, but we need to check
     // whether they have different invert status
     (
       (sgr_has_color(target)) &&
-      (target.style & (1U << 7)) ^ (current.style & (1U << 7))
+      (target.style & FANSI_STL_INVERT) ^ (current.style & FANSI_STL_INVERT)
     );
 }
 /*
@@ -101,19 +84,12 @@ static int sgr_comp_html(
  *
  * Recall colors in 30:39 and 40:49 already converted to 0:9.
  */
-static int color_to_8bit(int color, int* color_extra) {
+static int color_to_8bit(struct FANSI_color color) {
   int col256 = -1;
-  if (color >= 0 && color <= 7) {
-    // Basic colors
-    col256 = color % 10;
-  } else if ((color >= 100 && color <= 107) || (color >= 90 && color <= 97)) {
-    // Brights
-    col256 = color % 10 + 8;
-  } else if ((color == 8) && color_extra[0] == 5) {
-    // 8 Bit colors
-    col256 = color_extra[1];
-    if(col256 < 0 || col256 > 255)
-      error("Internal Error: 0-255 color outside of that range."); // nocov
+  switch(color.x & FANSI_CLR_MASK) {
+    case FANSI_CLR_8:       col256 = color.x & ~FANSI_CLR_MASK;        break;
+    case FANSI_CLR_BRIGHT:  col256 = (color.x & ~FANSI_CLR_MASK) + 8;  break;
+    case FANSI_CLR_256:     col256 = color.extra[0];                   break;
   }
   return col256;
 }
@@ -128,9 +104,9 @@ static int color_to_8bit(int color, int* color_extra) {
  */
 
 static const char * get_color_class(
-  int color, int* color_extra, SEXP color_classes, int bg
+  struct FANSI_color color, SEXP color_classes, int bg
 ) {
-  int col8bit = color_to_8bit(color, color_extra);
+  int col8bit = color_to_8bit(color);
   if(col8bit >= 0 && XLENGTH(color_classes) / 2 > (R_xlen_t) col8bit)
     return CHAR(STRING_ELT(color_classes, col8bit * 2 + bg));
   else return NULL;
@@ -148,7 +124,7 @@ static const char * get_color_class(
  * @return the *buff pointer
  */
 
-static char * color_to_html(int color, int * color_extra, char * buff) {
+static char * color_to_html(struct FANSI_color color, char * buff) {
   // CAREFUL: DON'T WRITE MORE THAN 7 BYTES + NULL TERMINATOR
 
   const char * dectohex = "0123456789ABCDEF";
@@ -170,80 +146,65 @@ static char * color_to_html(int color, int * color_extra, char * buff) {
     "555555", "FF5555", "55FF55", "FFFF55",
     "5555FF", "FF55FF", "55FFFF", "FFFFFF"
   };
+  unsigned char clrval = color.x & ~FANSI_CLR_MASK;
+  if(clrval == 9) error("Internal Error: applying non-color.");
+
   char * buff_track = buff;
+  *(buff_track++) = '#';
 
-  if(color == 9) {
-    error(
-      "Internal Error: should not be applying no-color; contact maintainer."
-    );
-  } else if(color >= 0 && color < 10) {
-    *(buff_track++) = '#';
-
-    if(color == 8) {
-      if(color_extra[0] == 2) {
-        for(int i = 1; i < 4; ++i) {
-          char hi = dectohex[color_extra[i] / 16];
-          char lo = dectohex[color_extra[i] % 16];
+  switch(color.x & FANSI_CLR_MASK) {
+    case FANSI_CLR_8:
+      memcpy(buff_track, std_8[clrval], 6);
+      buff_track += 6;
+      break;
+    case FANSI_CLR_BRIGHT:
+      memcpy(buff_track, bright[clrval], 6);
+      buff_track += 6;
+      break;
+    case FANSI_CLR_256: {
+      int color_5 = color.extra[0];
+      if(color_5 < 16) {
+        memcpy(buff_track, std_16[color_5], 6);
+        buff_track += 6;
+      } else if (color_5 < 232) {
+        int c5 = color_5 - 16;
+        int c5_r = c5 / 36;
+        int c5_g = (c5 % 36) / 6;
+        int c5_b = c5 % 6;
+        if(c5_r > 5 || c5_g > 5 || c5_b > 5)
+          error("Internal Error: out of bounds computing 6^3 clr."); // nocov
+        memcpy(buff_track, std_5[c5_r], 2);
+        buff_track += 2;
+        memcpy(buff_track, std_5[c5_g], 2);
+        buff_track += 2;
+        memcpy(buff_track, std_5[c5_b], 2);
+        buff_track += 2;
+      } else {
+        int c_bw = (color_5 - 232) * 10 + 8;
+        char hi = dectohex[c_bw / 16];
+        char lo = dectohex[c_bw % 16];
+        for(int i = 0; i < 3; ++i) {
           *(buff_track++) = hi;
           *(buff_track++) = lo;
         }
-      } else if(color_extra[0] == 5) {
-        // These are the 0-255 color codes
-        int color_5 = color_extra[1];
-        if(color_5 < 0 || color_5 > 255)
-          error("Internal Error: 0-255 color outside of that range."); // nocov
-        if(color_5 < 16) {
-          // Standard colors
-          memcpy(buff_track, std_16[color_5], 6);
-          buff_track += 6;
-        } else if (color_5 < 232) {
-          int c5 = color_5 - 16;
-          int c5_r = c5 / 36;
-          int c5_g = (c5 % 36) / 6;
-          int c5_b = c5 % 6;
-
-          if(c5_r > 5 || c5_g > 5 || c5_b > 5)
-            error("Internal Error: out of bounds computing 6^3 clr."); // nocov
-
-          memcpy(buff_track, std_5[c5_r], 2);
-          buff_track += 2;
-          memcpy(buff_track, std_5[c5_g], 2);
-          buff_track += 2;
-          memcpy(buff_track, std_5[c5_b], 2);
-          buff_track += 2;
-        } else {
-          int c_bw = (color_5 - 232) * 10 + 8;
-          char hi = dectohex[c_bw / 16];
-          char lo = dectohex[c_bw % 16];
-          for(int i = 0; i < 3; ++i) {
-            *(buff_track++) = hi;
-            *(buff_track++) = lo;
-          }
-        }
-      } else
-        // nocov start
-        error(
-          "Internal Error: invalid 256 or tru color code; contact maintainer."
-        );
-        // nocov end
-    } else {
-      memcpy(buff_track, std_8[color], 6);
-      buff_track += 6;
+      }
+      break;
     }
-  } else if(
-    (color >= 90 && color <= 97) ||
-    (color >= 100 && color <= 107)
-  ) {
-    *(buff_track++) = '#';
-    int c_bright = color >= 100 ? color - 100 : color - 90;
-    memcpy(buff_track, bright[c_bright], 6);
-    buff_track += 6;
-  } else {
-    error("Internal Error: invalid color code %d", color); // nocov
+    case FANSI_CLR_TRU:
+      for(int i = 0; i < 3; ++i) {
+        char hi = dectohex[color.extra[i] / 16];
+        char lo = dectohex[color.extra[i] % 16];
+        *(buff_track++) = hi;
+        *(buff_track++) = lo;
+      }
+      break;
+    default:
+      error("Internal Error: unknown color mode."); // nocov
   }
   *buff_track = 0;
   int dist = (int) (buff_track - buff);
-  if(dist != 7) error("Internal Error: unexpected byte count for color.");
+  if(dist != 7)
+    error("Internal Error: unexpected byte count for color (%d).", dist);
 
   return buff;
 }
@@ -255,8 +216,9 @@ static char * oe_sgr_html_err = "Expanding SGR sequences to HTML";
  * DANGER: this is a 'W' function, see 'src/write.c' for details.
  */
 static int W_state_as_html(
-  struct FANSI_state state,
   struct FANSI_buff * buff,
+  struct FANSI_state state,
+  struct FANSI_state state_prev,
   SEXP color_classes, R_xlen_t i
 ) {
   /****************************************************\
@@ -266,19 +228,18 @@ static int W_state_as_html(
 
   // Not all basic styles are html styles (e.g. invert), so sgr only changes
   // on invert when current or previous also has a color style
-  int has_cur_sgr = sgr_has_style_html(state.sgr);
-  int has_prev_sgr = sgr_has_style_html(state.sgr_prev);
-  int sgr_change = sgr_comp_html(state.sgr, state.sgr_prev);
+  int has_cur_sgr = sgr_has_style_html(state.fmt.sgr);
+  int has_prev_sgr = sgr_has_style_html(state_prev.fmt.sgr);
+  int sgr_change = sgr_comp_html(state.fmt.sgr, state_prev.fmt.sgr);
 
-  int has_cur_url = FANSI_url_active(state.url);
-  int has_prev_url = FANSI_url_active(state.url_prev);
-  int url_change = FANSI_url_comp(state.url, state.url_prev);
+  int has_cur_url = FANSI_url_active(state.fmt.url);
+  int has_prev_url = FANSI_url_active(state_prev.fmt.url);
+  int url_change = FANSI_url_comp(state.fmt.url, state_prev.fmt.url);
 
   const char * err_msg = oe_sgr_html_err;
-  struct FANSI_sgr sgr = state.sgr;
+  struct FANSI_sgr sgr = state.fmt.sgr;
 
   // FANSI_W_COPY requires variables len, i, and err_msg
-
   if(sgr_change || url_change) {
     // Close previous
     if(has_prev_sgr) FANSI_W_COPY(buff, "</span>");
@@ -287,27 +248,22 @@ static int W_state_as_html(
     if(has_cur_url) {
       // users responsibility to escape html special chars
       FANSI_W_COPY(buff, "<a href='");
-      FANSI_W_MCOPY(buff, state.url.url.val, state.url.url.len);
+      FANSI_W_MCOPY(buff, URL_STRING(state.fmt.url), URL_LEN(state.fmt.url));
       FANSI_W_COPY(buff, "'>");
     }
     if(has_cur_sgr) {
        FANSI_W_COPY(buff, "<span");
       // Styles
-      int invert = sgr.style & (1U << 7U);
-      int color = invert ? sgr.bg_color : sgr.color;
-      int * color_extra = invert ? sgr.bg_color_extra : sgr.color_extra;
-      int bg_color = invert ? sgr.color : sgr.bg_color;
-      int * bg_color_extra = invert ? sgr.color_extra : sgr.bg_color_extra;
+      int invert = sgr.style & FANSI_STL_INVERT;
+      struct FANSI_color color = invert ? sgr.bgcol : sgr.color;
+      struct FANSI_color bgcol = invert ? sgr.color : sgr.bgcol;
 
       // Use provided classes instead of inline styles?
-      const char * color_class =
-        get_color_class(color, color_extra, color_classes, 0);
-      const char * bgcol_class =
-        get_color_class(bg_color, bg_color_extra, color_classes, 1);
+      const char * color_class = get_color_class(color, color_classes, 0);
+      const char * bgcol_class = get_color_class(bgcol, color_classes, 1);
 
       // Class based colors e.g. " class='fansi-color-06 fansi-bgcolor-04'"
       // Brights remapped to 8-15
-
       if(color_class || bgcol_class) {
         FANSI_W_COPY(buff, " class='");
         if(color_class) FANSI_W_COPY(buff, color_class);
@@ -317,29 +273,28 @@ static int W_state_as_html(
       }
       // inline style and/or colors
       if(
-        sgr.style & style_html_mask() ||
-        (color >= 0 && (!color_class)) ||
-        (bg_color >= 0 && (!bgcol_class))
+        sgr.style & FANSI_STL_MASK2 ||
+        (color.x && (!color_class)) || (bgcol.x && (!bgcol_class))
       ) {
         FANSI_W_COPY(buff, " style='");
         int has_style = 0;
         char color_tmp[8];
-        if(color >= 0 && (!color_class)) {
+        if(color.x && (!color_class)) {
           has_style += FANSI_W_COPY(buff, "color: ");
-          FANSI_W_COPY(buff, color_to_html(color, color_extra, color_tmp));
+          FANSI_W_COPY(buff, color_to_html(color, color_tmp));
         }
-        if(bg_color >= 0 && (!bgcol_class)) {
+        if(bgcol.x && (!bgcol_class)) {
           if(has_style) has_style += FANSI_W_COPY(buff, "; ");
           has_style += FANSI_W_COPY(buff,  "background-color: ");
           FANSI_W_COPY(
-            buff, color_to_html(bg_color, bg_color_extra, color_tmp)
+            buff, color_to_html(bgcol, color_tmp)
           );
         }
         // Styles (need to go after color for transparent to work)
-        for(unsigned int i = 1U; i < 10U; ++i)
-          if(sgr.style & style_html_mask() & (1U << i)) {
+        for(unsigned int i = 0U; i < 9U; ++i)
+          if(sgr.style & FANSI_STL_MASK2 & (1U << i)) {
             if(has_style) FANSI_W_COPY(buff, "; ");
-            has_style += FANSI_W_COPY(buff, css_style[i - 1].css);
+            has_style += FANSI_W_COPY(buff, css_style[i].css);
           }
         FANSI_W_COPY(buff, ";'");
       }
@@ -360,6 +315,7 @@ SEXP FANSI_esc_to_html(
   if(TYPEOF(color_classes) != STRSXP)
     error("Internal Error: `color_classes` must be a character vector");  // nocov
 
+  const char * arg = "x";
   struct FANSI_buff buff;
   FANSI_INIT_BUFF(&buff);
 
@@ -371,12 +327,11 @@ SEXP FANSI_esc_to_html(
   R_xlen_t x_len = XLENGTH(x);
   struct FANSI_state state, state_prev, state_init;
   SEXP empty = PROTECT(mkString(""));
-  state = FANSI_state_init(empty, warn, term_cap, (R_xlen_t) 0, "x");
+  state = FANSI_state_init(empty, warn, term_cap, (R_xlen_t) 0);
   UNPROTECT(1);
 
   state_prev = state_init = state;
-  state_prev.sgr = state_carry.sgr;
-  state_prev.url = state_carry.url;
+  state_prev.fmt = state_carry.fmt;
 
   SEXP res = x;
   // Reserve spot on protection stack
@@ -397,8 +352,9 @@ SEXP FANSI_esc_to_html(
     else state = state_init;
 
     state.string = string;
-    struct FANSI_state state_start = FANSI_reset_pos(state);
-    state.warned = 0;
+    struct FANSI_state state_start = state;
+    FANSI_reset_pos(&state_start);
+    state.status &= ~FANSI_STAT_WARNED;
     state_prev = state_init;  // but there are no styles in the string yet
 
     int bytes_init = (int) LENGTH(chrsxp);
@@ -407,7 +363,7 @@ SEXP FANSI_esc_to_html(
     // an ESC from a prior element even if they have no ESCs.
     int has_esc = 0;
     int has_state =
-      sgr_has_style_html(state.sgr) || FANSI_url_active(state.url);
+      sgr_has_style_html(state.fmt.sgr) || FANSI_url_active(state.fmt.url);
     int trail_span, trail_a;
     trail_span = trail_a = 0;
 
@@ -426,7 +382,7 @@ SEXP FANSI_esc_to_html(
           // Allocate buffer and reset states for second pass
           FANSI_size_buff(&buff);
           string = state.string;  // always points to first byte
-          state_start.warned = state.warned;
+          state_start.status |= state.status & FANSI_STAT_WARNED;
           state = state_start;
           state_prev = state_init;
         } else break;
@@ -437,42 +393,39 @@ SEXP FANSI_esc_to_html(
 
       if(
         *string && *string != 0x1b &&
-        (sgr_has_style_html(state.sgr) || FANSI_url_active(state.url))
+        (sgr_has_style_html(state.fmt.sgr) || FANSI_url_active(state.fmt.url))
       ) {
-        // dirty hack, state.sgr_prev is not exaclty right at beginning
-        state.sgr_prev = state_prev.sgr;
-        state.url_prev = state_prev.url;
-        W_state_as_html(state, &buff, color_classes, i);
+        // dirty hack, state_prev sgr_prev is not exaclty right at beginning
+        W_state_as_html(&buff, state, state_prev, color_classes, i);
         state_prev = state;
       }
       // New in this element
       while(1) {
         const char * string_prev = string;
-        trail_span = sgr_has_style_html(state_prev.sgr);
-        trail_a = FANSI_url_active(state_prev.url);
+        trail_span = sgr_has_style_html(state_prev.fmt.sgr);
+        trail_a = FANSI_url_active(state_prev.fmt.url);
         string = strchr(string, 0x1b);
         if(!string) string = state.string + bytes_init;
         else {
           has_esc = 1;
-          state.pos_byte = (string - state.string);
+          state.pos.x = (string - state.string);
         }
         // Intervening bytes before next state
         int bytes_prev = string - string_prev;  // cannot overflow int
         FANSI_W_MCOPY(&buff, string_prev, bytes_prev);
-        state.pos_byte = (string - state.string);
+        state.pos.x = (string - state.string);
 
         // State as html, skip if at end of string
         if(*string) {
-          state = FANSI_read_next(state, i, 1);
-          string = state.string + state.pos_byte;
-          // dirty hack, state.sgr_prev is not exaclty right at beginning
-          state.sgr_prev = state_prev.sgr;
-          state.url_prev = state_prev.url;
-          if(*string) W_state_as_html(state, &buff, color_classes, i);
+          FANSI_read_next(&state, i, arg);
+          string = state.string + state.pos.x;
+          // dirty hack, state_prev sgr_prev is not exaclty right at beginning
+          if(*string)
+            W_state_as_html(&buff, state, state_prev, color_classes, i);
 
           state_prev = state;
-          has_state |=
-            sgr_has_style_html(state.sgr) || FANSI_url_active(state.url);
+          has_state |= sgr_has_style_html(state.fmt.sgr) ||
+            FANSI_url_active(state.fmt.url);
           if(!*string) break; // nothing after state, so done
         } else break;
       }
@@ -498,6 +451,8 @@ SEXP FANSI_esc_to_html(
  *
  * x is a 5 x N matrix where, for each column the first value is a color code,
  * and subsequent values correspond to the state.sgr.color_extra values.
+ *
+ * Does not allow for bright mode?
  */
 
 SEXP FANSI_color_to_html_ext(SEXP x) {
@@ -517,7 +472,17 @@ SEXP FANSI_color_to_html_ext(SEXP x) {
   SEXP res = PROTECT(allocVector(STRSXP, len / 5));
 
   for(R_xlen_t i = 0; i < len; i += 5) {
-    color_to_html(x_int[i], x_int + (i + 1), buff.buff);
+    struct FANSI_color color;
+    unsigned int color_mode = 0;
+    if(x_int[i] == 8) {
+      if(x_int[i + 1] == 2) color_mode = FANSI_CLR_TRU;
+      else color_mode = FANSI_CLR_256;
+    } else color_mode = FANSI_CLR_8;
+    color.x = x_int[i] | color_mode;
+    color.extra[0] = (unsigned char)x_int[i + 2];
+    color.extra[1] = (unsigned char)x_int[i + 3];
+    color.extra[2] = (unsigned char)x_int[i + 4];
+    color_to_html(color, buff.buff);
     SEXP chrsxp = PROTECT(mkCharLenCE(buff.buff, 7, CE_BYTES));
     SET_STRING_ELT(res, i / 5, chrsxp);
     UNPROTECT(1);

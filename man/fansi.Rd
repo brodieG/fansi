@@ -27,34 +27,37 @@ delete in this set, even though technically it is not part of it).
 Introducer (CSI) sequences, of which the Select Graphic Rendition (SGR)
 sequences used to format terminal output are a subset.
 \item Sequences starting in "ESC]", also known as Operating System
-Commands (OSC).
+Commands (OSC), of which the subset beginning with "8" is used to encode
+URI based hyperlinks.
 \item Sequences starting in "ESC" and followed by something other than "[".
 }
 
 \emph{Control Sequences} starting with ESC are assumed to be two characters
 long (including the ESC) unless they are of the CSI or OSC variety, in which
 case their length is computed as per the \href{https://www.ecma-international.org/publications-and-standards/standards/ecma-48/}{ECMA-48 specification},
-with the exception that \href{#osc-anchored-urls}{OSC-anchored URLs} may be
-terminated with BEL ("\\a") in addition to ST ("ESC\\").
-
-\code{fansi} handles most common \emph{Control Sequences} in its parsing
-algorithms, but it is not a conforming implementation of ECMA-48.  For
-example, there are non-CSI/OSC escape sequences that may be longer than two
-characters, but \code{fansi} will (incorrectly) treat them as if they were
-two characters long.  There are many more unimplemented ECMA-48
-specifications.
+with the exception that \href{#osc-hyperlinks}{OSC hyperlinks} may be terminated
+with BEL ("\\a") in addition to ST ("ESC\\").  \code{fansi} handles most common
+\emph{Control Sequences} in its parsing algorithms, but it is not a conforming
+implementation of ECMA-48.  For example, there are non-CSI/OSC escape
+sequences that may be longer than two characters, but \code{fansi} will
+(incorrectly) treat them as if they were two characters long.  There are many
+more unimplemented ECMA-48 specifications.
 
 In theory it is possible to encode CSI sequences with a single byte
 introducing character in the 0x40-0x5F range instead of the traditional
 "ESC[".  Since this is rare and it conflicts with UTF-8 encoding, \code{fansi}
 does not support it.
 
-The special treatment of \emph{Control Sequences} is to compute their
-display/character width as zero.  For the SGR subset of the CSI sequences and
-OSC-anchored URLs, \code{fansi} will also parse, interpret, and reapply the
-sequences to the text as needed.  Whether a particular type of \emph{Control
-Sequence} is treated specially can be specified via the \code{ctl} parameter to
-the \code{fansi} functions that have it.
+Within \emph{Control Sequences}, \code{fansi} further distinguishes CSI SGR and OSC
+hyperlinks by recording format specification and URIs into string state, and
+applying the same to any output strings according to the semantics of the
+functions in use.  CSI SGR and OSC hyperlinks are known together as \emph{Sepcial
+Sequences}.  See the following sections for details.
+
+Additionally, all \emph{Control Sequences}, whether special or not,
+do not count as characters, graphemes, or display width.  You can cause
+\code{fansi} to treat particular \emph{Control Sequences} as regular characters with
+the \code{ctl} parameter.
 }
 
 \section{CSI SGR Control Sequences}{
@@ -116,13 +119,13 @@ substring to the substring.  In many case the bulk of those accumulated tags
 will be irrelevant as their effects will have been superseded by subsequent
 tags.
 
-\code{fansi} assumes that CSI SGR sequences should be interpreted in cumulative
-"Graphic Rendition Combination Mode".  This means new SGR sequences add to
-rather than replace previous ones, although in some cases the effect is the
-same as replacement (e.g. if you have a color active and pick another one).
+\code{fansi} interprets CSI SGR sequences in cumulative "Graphic Rendition
+Combination Mode".  This means new SGR sequences add to rather than replace
+previous ones, although in some cases the effect is the same as replacement
+(e.g. if you have a color active and pick another one).
 }
 
-\section{OSC Anchored URLs}{
+\section{OSC Hyperlinks}{
 
 
 Operating System Commands are interpreted by terminal emulators typically to
@@ -130,20 +133,20 @@ engage actions external to the display of text proper, such as setting a
 window title or changing the active color palette.
 
 \href{https://iterm2.com/documentation-escape-codes.html}{Some terminals} have
-added support for associating URLs to text with OSCs in a similar way to
+added support for associating URIs to text with OSCs in a similar way to
 anchors in HTML, so \code{fansi} interprets them and outputs or terminates them as
 needed.  For example:\preformatted{"\\033]8;;xy.z\\033\\\\LINK\\033]8;;\\033\\\\"
 }
 
 Might be interpreted as \href{x.z}{LINK}.  To make the encoding pattern clearer,
-we replace "\033]" with "<OSC>" and "\033\\\\" with "<ST>" below:\preformatted{<OSC>8;;URL<ST>LINK TEXT<OSC>8;;<ST>
+we replace "\033]" with "<OSC>" and "\033\\\\" with "<ST>" below:\preformatted{<OSC>8;;URI<ST>LINK TEXT<OSC>8;;<ST>
 }
 }
 
 \section{State Interactions}{
 
 
-The cumulative nature of state as specified by SGR or OSC-anchored URLs means
+The cumulative nature of state as specified by SGR or OSC hyperlinks means
 that unterminated strings that are spliced will interact with each other.
 Additionally, a substring does not inherently contain all the information
 required to recreate its state as it appeared in the source string.  The

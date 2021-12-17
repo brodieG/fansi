@@ -488,11 +488,11 @@ void FANSI_W_fill(
 }
 int FANSI_W_normalize_or_copy(
   struct FANSI_buff *buff, struct FANSI_state state, int norm_i,
-  int stop, R_xlen_t i, const char * err_msg
+  int stop, R_xlen_t i, const char * err_msg, const char * arg
 ) {
   int res = -1;
-  int start = state.pos_byte;
-  if(norm_i) res = FANSI_W_normalize(buff, &state, stop, i, err_msg);
+  int start = state.pos.x;
+  if(norm_i) res = FANSI_W_normalize(buff, &state, stop, i, err_msg, arg);
   if(res < 0){
     const char * string = state.string + start;
     int bytes = stop - start;
@@ -524,25 +524,25 @@ void FANSI_W_sgr_close(
   struct FANSI_buff * buff, struct FANSI_sgr sgr, int normalize, R_xlen_t i
 ) {
   const char * err_msg = "Generating closing SGR";
-
   if(FANSI_sgr_active(sgr)) {
     if(normalize) {
       // We're deliberate in only closing things we know how to close in
       // both the state and in the ouptut string, that way we can check
       // state at the end to make sure we did actually close everything.
 
-      if(sgr.font) {
-        sgr.font = 0;
+      if(sgr.style & FANSI_FONT_MASK) {
+        sgr.style &= ~FANSI_FONT_MASK;
         FANSI_W_COPY(buff, "\033[10m");
       }
-      unsigned int s_boldfaint = (1U << 1U | 1U << 2U);
-      unsigned int s_frakital = (1U << 3U | 1U << 10U);
-      unsigned int s_underline = (1U << 4U | 1U << 11U);
-      unsigned int s_blink = (1U << 5U | 1U << 6U);
-      unsigned int s_propspc = 1U << 12U;
-      unsigned int s_inverse = 1U << 7U;
-      unsigned int s_conceal = 1U << 8U;
-      unsigned int s_strikethrough = 1U << 9U;
+      // blur == faint
+      unsigned int s_boldfaint = (FANSI_STL_BOLD | FANSI_STL_BLUR);
+      unsigned int s_frakital = (FANSI_STL_ITALIC | FANSI_STL_FRAKTUR);
+      unsigned int s_underline = (FANSI_STL_UNDER | FANSI_STL_UNDER2);
+      unsigned int s_blink = (FANSI_STL_BLINK1 | FANSI_STL_BLINK2);
+      unsigned int s_propspc = FANSI_STL_PROPSPC;
+      unsigned int s_inverse = FANSI_STL_INVERT;
+      unsigned int s_conceal = FANSI_STL_CONCEAL;
+      unsigned int s_strikethrough = FANSI_STL_CROSSOUT;
 
       if(sgr.style & s_boldfaint) {
         sgr.style &= ~s_boldfaint;
@@ -574,12 +574,12 @@ void FANSI_W_sgr_close(
         FANSI_W_COPY(buff, "\033[29m");
       }
       // Colors
-      if(sgr.color >= 0) {
-        sgr.color = -1;
+      if(sgr.color.x) {
+        sgr.color.x = 0;
         FANSI_W_COPY(buff, "\033[39m");
       }
-      if(sgr.bg_color >= 0) {
-        sgr.bg_color = -1;
+      if(sgr.bgcol.x) {
+        sgr.bgcol.x = 0;
         FANSI_W_COPY(buff, "\033[49m");
       }
       // Prop spacing
@@ -588,16 +588,20 @@ void FANSI_W_sgr_close(
         FANSI_W_COPY(buff, "\033[50m");
       }
       // Border and ideogram
-      if(sgr.border & (1U << 1U | 1U << 2U)) {
-        sgr.border &= ~(1U << 1U | 1U << 2U);
+
+      unsigned int b_frmedencirc =
+        (FANSI_BRD_FRAMED | FANSI_BRD_ENCIRC);
+
+      if(sgr.style & b_frmedencirc) {
+        sgr.style &= ~b_frmedencirc;
         FANSI_W_COPY(buff, "\033[54m");
       }
-      if(sgr.border & (1U << 3U)) {
-        sgr.border &= ~(1U << 3U);
+      if(sgr.style & (FANSI_BRD_OVERLN)) {
+        sgr.style &= ~(FANSI_BRD_OVERLN);
         FANSI_W_COPY(buff, "\033[55m");
       }
-      if(sgr.ideogram > 0U) {
-        for(unsigned int k = 0; k < 5; ++k) sgr.ideogram &= ~(1U << k);
+      if(sgr.style & FANSI_IDG_MASK) {
+        sgr.style &= ~(FANSI_IDG_MASK);
         FANSI_W_COPY(buff, "\033[65m");
       }
 
@@ -607,9 +611,9 @@ void FANSI_W_sgr_close(
       if(FANSI_sgr_active(sgr))
         // nocov start
         error(
-          "Internal Error: %s (clr: %d bg: %d st: %u bd: %u id %u).",
+          "Internal Error: %s (clr: %d bg: %d st: %u).",
           "did not successfully close all styles",
-          sgr.color, sgr.bg_color, sgr.style, sgr.border, sgr.ideogram
+          sgr.color.x, sgr.bgcol.x, sgr.style
         );
         // nocov end
     } else {
@@ -618,6 +622,7 @@ void FANSI_W_sgr_close(
     }
   }
 }
+
 /*
  * End Active URL
  */
@@ -626,6 +631,12 @@ void FANSI_W_url_close(
 ) {
   const char * err_msg = "Generating URL end";
   if(FANSI_url_active(url)) FANSI_W_COPY(buff, "\033]8;;\033\\");
+}
+void FANSI_W_close(
+  struct FANSI_buff * buff, struct FANSI_format fmt, int normalize, R_xlen_t i
+) {
+  FANSI_W_sgr_close(buff, fmt.sgr, normalize, i);
+  FANSI_W_url_close(buff, fmt.url, i);
 }
 
 /*
@@ -653,7 +664,7 @@ static char * make_token(char * buff, const char * val, int normalize) {
  * largest: "\033[48;2;255;255;255m", 19 chars + NULL
  */
 static char * color_token(
-  char * buff, int color, int * color_extra, int mode, int normalize
+  char * buff, struct FANSI_color color, int mode, int normalize
 ) {
   if(mode != 3 && mode != 4)
     error("Internal Error: color mode must be 3 or 4");  // nocov
@@ -664,40 +675,44 @@ static char * color_token(
     *(buff_track++) = '\033';
     *(buff_track++) = '[';
   }
-  if(color >= 0 && color < 10) {  // should this be < 9?
+  unsigned int clrval = color.x & ~FANSI_CLR_MASK;
+
+  if((color.x & FANSI_CLR_MASK) == FANSI_CLR_BRIGHT) {
+    // Bright colors
+    if(mode == 3) {
+      *(buff_track++) = '9';
+    } else {
+      *(buff_track++) = '1';
+      *(buff_track++) = '0';
+    }
+    *(buff_track++) = '0' + clrval;
+  } else {
+    // Other colors
     *(buff_track++) = '0' + mode;
-    *(buff_track++) = '0' + color;
-    if(color == 8) {
+    *(buff_track++) = '0' + clrval;
+    if(color.x & (FANSI_CLR_256 | FANSI_CLR_TRU)) {
       *(buff_track++) = ';';
       int write_chrs = 0;
-      if(color_extra[0] == 2) {
+      if(color.x & FANSI_CLR_TRU) {
         write_chrs = sprintf(
           buff_track, "2;%d;%d;%d",
-          color_extra[1], color_extra[2], color_extra[3]
+          color.extra[0], color.extra[1], color.extra[2]
         );
-      } else if(color_extra[0] == 5) {
-        write_chrs = sprintf(buff_track, "5;%d", color_extra[1]);
-      } else error("Internal Error: unexpected color code.");  // nocov
+      } else {
+        write_chrs = sprintf(buff_track, "5;%d", color.extra[0]);
+      }
       if(write_chrs < 0)
         error("Internal Error: failed writing color code.");   // nocov
       buff_track += write_chrs;
+    } else if (!(color.x & FANSI_CLR_8)) {
+      error("Internal Error: unexpected color mode.");  // nocov
     }
-  } else if(color >= 100 && color <= 107) {
-    // bright colors, we don't actually need to worry about bg vs fg since the
-    // actual color values are different
-    *(buff_track++) = '1';
-    *(buff_track++) = '0';
-    *(buff_track++) = '0' + color - 100;
-  } else if(color >= 90 && color <= 97) {
-    *(buff_track++) = '9';
-    *(buff_track++) = '0' + color - 90;
-  } else {
-    error("Internal Error: unexpected color code.");  // nocov
   }
   if(normalize) *(buff_track++) = 'm';
   else *(buff_track++) = ';';
   *buff_track = 0;
-  if(buff_track - buff > 19)  // too late if this happened...
+  // Check for overflow, even if too late.
+  if(buff_track - buff >= (FANSI_CLR_BUFF_SIZE - 1))
     error("Internal Error: exceeded color buffer.");  // nocov
   return buff;
 }
@@ -733,61 +748,73 @@ void FANSI_W_sgr(
   if(FANSI_sgr_active(sgr)) {
     if(!normalize && enclose) FANSI_W_COPY(buff, "\033[");
     // styles
-    char tokval[2] = {0};
-    for(unsigned int i = 1; i < 10; i++) {
-      if((1U << i) & sgr.style) {
-        *tokval = '0' + (char) i;
-        FANSI_W_COPY(buff, make_token(tmp, tokval, normalize));
-    } }
-    // styles outside 0-9
-
-    if(sgr.style & (1 << 10)) {
-      // fraktur
+    if(sgr.style & FANSI_STL_BOLD)
+      FANSI_W_COPY(buff, make_token(tmp, "1", normalize));
+    if(sgr.style & FANSI_STL_BLUR)
+      FANSI_W_COPY(buff, make_token(tmp, "2", normalize));
+    if(sgr.style & FANSI_STL_ITALIC)
+      FANSI_W_COPY(buff, make_token(tmp, "3", normalize));
+    if(sgr.style & FANSI_STL_UNDER)
+      FANSI_W_COPY(buff, make_token(tmp, "4", normalize));
+    if(sgr.style & FANSI_STL_BLINK1)
+      FANSI_W_COPY(buff, make_token(tmp, "5", normalize));
+    if(sgr.style & FANSI_STL_BLINK2)
+      FANSI_W_COPY(buff, make_token(tmp, "6", normalize));
+    if(sgr.style & FANSI_STL_INVERT)
+      FANSI_W_COPY(buff, make_token(tmp, "7", normalize));
+    if(sgr.style & FANSI_STL_CONCEAL)
+      FANSI_W_COPY(buff, make_token(tmp, "8", normalize));
+    if(sgr.style & FANSI_STL_CROSSOUT)
+      FANSI_W_COPY(buff, make_token(tmp, "9", normalize));
+    if(sgr.style & FANSI_STL_FRAKTUR)
       FANSI_W_COPY(buff, make_token(tmp, "20", normalize));
-    }
-    if(sgr.style & (1 << 11)) {
-      // double underline
+    if(sgr.style & FANSI_STL_UNDER2)
       FANSI_W_COPY(buff, make_token(tmp, "21", normalize));
-    }
-    if(sgr.style & (1 << 12)) {
-      // prop spacing
+    if(sgr.style & FANSI_STL_PROPSPC)
       FANSI_W_COPY(buff, make_token(tmp, "26", normalize));
-    }
+
     // colors
-    if(sgr.color > -1) {
-      char tokval[17] = {0};  // largest: "38;2;255;255;255", 16 chars + NULL
+    if(sgr.color.x) {
+      // largest: "38;2;255;255;255", 16 chars + NULL
+      char tokval[FANSI_CLR_BUFF_SIZE] = {0};
       FANSI_W_COPY(
         buff,
-        color_token(tokval, sgr.color, sgr.color_extra, 3, normalize)
+        color_token(tokval, sgr.color, 3, normalize)
       );
     }
-    if(sgr.bg_color > -1) {
-      char tokval[17] = {0};
+    if(sgr.bgcol.x) {
+      char tokval[FANSI_CLR_BUFF_SIZE] = {0};
       FANSI_W_COPY(
         buff,
-        color_token(tokval, sgr.bg_color, sgr.bg_color_extra, 4, normalize)
+        color_token(tokval, sgr.bgcol, 4, normalize)
       );
     }
     // Borders
-    if(sgr.border) {
-      char tokval[3] = {'5', '0'};
-      for(int i = 1; i < 4; ++i) {
-        if((1 << i) & sgr.border) {
-          tokval[1] = '0' + i;
-          FANSI_W_COPY(buff, make_token(tmp, tokval, normalize));
-    } } }
+    if(sgr.style & FANSI_BRD_FRAMED)
+      FANSI_W_COPY(buff, make_token(tmp, "51", normalize));
+    if(sgr.style & FANSI_BRD_ENCIRC)
+      FANSI_W_COPY(buff, make_token(tmp, "52", normalize));
+    if(sgr.style & FANSI_BRD_OVERLN)
+      FANSI_W_COPY(buff, make_token(tmp, "53", normalize));
+
     // Ideogram
-    if(sgr.ideogram) {
-      char tokval[3] = {'6', '0'};
-      for(int i = 0; i < 5; ++i){
-        if((1 << i) & sgr.ideogram) {
-          tokval[1] = '0' + i;
-          FANSI_W_COPY(buff, make_token(tmp, tokval, normalize));
-    } } }
+    if(sgr.style & FANSI_IDG_UNDERL)
+      FANSI_W_COPY(buff, make_token(tmp, "60", normalize));
+    if(sgr.style & FANSI_IDG_UNDERL2)
+      FANSI_W_COPY(buff, make_token(tmp, "61", normalize));
+    if(sgr.style & FANSI_IDG_OVERL)
+      FANSI_W_COPY(buff, make_token(tmp, "62", normalize));
+    if(sgr.style & FANSI_IDG_OVERL2)
+      FANSI_W_COPY(buff, make_token(tmp, "63", normalize));
+    if(sgr.style & FANSI_IDG_STRESS)
+      FANSI_W_COPY(buff, make_token(tmp, "64", normalize));
+
     // font
-    if(sgr.font) {
+    unsigned int font =
+      FANSI_GET_RNG(sgr.style, FANSI_FONT_START, FANSI_FONT_ALL);
+    if(font) {
       char tokval[3] = {'1', '0'};
-      tokval[1] = '0' + (sgr.font % 10);
+      tokval[1] = '0' + (font % 10);
       FANSI_W_COPY(buff, make_token(tmp, tokval, normalize));
     }
     // Finalize (replace trailing ';' with 'm')
@@ -806,7 +833,7 @@ void FANSI_W_sgr(
  * Return how many needed / written bytes.
  */
 void FANSI_W_url(
-  struct FANSI_buff * buff, struct FANSI_url url, int normalize, R_xlen_t i
+  struct FANSI_buff * buff, struct FANSI_url url, R_xlen_t i
 ) {
   /****************************************************\
   | IMPORTANT:                                         |
@@ -817,14 +844,12 @@ void FANSI_W_url(
   if(FANSI_url_active(url)) {
     const char * err_msg = "Writing URL"; // for FANSI_W_M?COPY
     FANSI_W_COPY(buff, "\033]8;");
-    if(normalize) {
-      if(url.id.val)
-        FANSI_W_MCOPY(buff, url.id.val, url.id.len);
-    } else if(url.params.val) {
-      FANSI_W_MCOPY(buff, url.params.val, url.params.len);
+    if(ID_LEN(url)) {
+      FANSI_W_COPY(buff, "id=");
+      FANSI_W_MCOPY(buff, ID_STRING(url), ID_LEN(url));
     }
     FANSI_W_COPY(buff, ";");
-    FANSI_W_MCOPY(buff, url.url.val, url.url.len);
+    FANSI_W_MCOPY(buff, URL_STRING(url), URL_LEN(url));
     FANSI_W_COPY(buff, "\033\\");  // ST
   }
   // for debugging, buff always should have 1 byte

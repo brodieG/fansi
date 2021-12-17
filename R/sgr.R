@@ -61,9 +61,9 @@ strip_ctl <- function(x, ctl='all', warn=getOption('fansi.warn', TRUE), strip) {
     ctl <- strip
   }
   ## modifies / creates NEW VARS in fun env
-  VAL_IN_ENV(x=x, ctl=ctl, warn=warn, warn.mask=set_bits(5, 7, 9))
+  VAL_IN_ENV(x=x, ctl=ctl, warn=warn, warn.mask=get_warn_worst())
 
-  if(length(ctl)) .Call(FANSI_strip_csi, enc_to_utf8(x), CTL.INT, WARN.INT)
+  if(length(ctl)) .Call(FANSI_strip_csi, x, CTL.INT, WARN.INT)
   else x
 }
 #' Strip Control Sequences
@@ -81,7 +81,7 @@ strip_ctl <- function(x, ctl='all', warn=getOption('fansi.warn', TRUE), strip) {
 
 strip_sgr <- function(x, warn=getOption('fansi.warn', TRUE)) {
   ## modifies / creates NEW VARS in fun env
-  VAL_IN_ENV(x=x, warn=warn, warn.mask=set_bits(5, 7, 9))
+  VAL_IN_ENV(x=x, warn=warn, warn.mask=get_warn_worst())
   ctl.int <- match(c("sgr", "url"), VALID.CTL)
   .Call(FANSI_strip_csi, x, ctl.int, WARN.INT)
 }
@@ -89,11 +89,13 @@ strip_sgr <- function(x, warn=getOption('fansi.warn', TRUE)) {
 #' Check for Presence of Control Sequences
 #'
 #' `has_ctl` checks for any _Control Sequence_.  You can check for different
-#' types of sequences with the `ctl` parameter.
+#' types of sequences with the `ctl` parameter.  Warnings are only emitted for
+#' malformed CSI or OSC sequences.
 #'
 #' @export
 #' @seealso [`?fansi`][fansi] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results.
+#'   interpreted, particularly if you are getting unexpected results,
+#'   [`unhandled_ctl`] for detecting bad control sequences.
 #' @inheritParams substr_ctl
 #' @inheritParams strip_ctl
 #' @param which character, deprecated in favor of `ctl`.
@@ -111,7 +113,7 @@ has_ctl <- function(x, ctl='all', warn=getOption('fansi.warn', TRUE), which) {
     ctl <- which
   }
   ## modifies / creates NEW VARS in fun env
-  VAL_IN_ENV(x=x, ctl=ctl, warn=warn, warn.mask=set_bits(5, 7, 9))
+  VAL_IN_ENV(x=x, ctl=ctl, warn=warn, warn.mask=get_warn_mangled())
   if(length(CTL.INT)) {
     .Call(FANSI_has_csi, x, CTL.INT, WARN.INT)
   } else rep(FALSE, length(x))

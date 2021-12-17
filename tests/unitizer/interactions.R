@@ -76,6 +76,7 @@ unitizer_sect("carry corner cases", {
   substr_ctl("", 0, 1, carry="\033[33m", terminate=FALSE)
   # Should close because we do request one character
   substr_ctl("\033[39m", 0, 1, carry="\033[33m", terminate=FALSE)
+  substr_ctl("\033[39m", 0, 1, carry="\033[33m", terminate=FALSE, normalize=TRUE)
   substr_ctl("", 0, 0, carry="\033[33m")
   substr_ctl("", 0, 0, carry="\033[33m", terminate=FALSE)
   # No close because we read nothing at all

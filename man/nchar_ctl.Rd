@@ -108,8 +108,9 @@ other things.  For the most part \code{fansi} (currently) uses the internals of
 the future.
 
 How a particular display format is encoded in \emph{Control Sequences} is
-not guaranteed to be stable across \code{fansi} versions, although we will
-strive to keep the rendered appearance stable.
+not guaranteed to be stable across \code{fansi} versions.  Additionally, which
+\emph{Special Sequences} are re-encoded vs transcribed untouched may change.
+In general we will strive to keep the rendered appearance stable.
 
 To maximize the odds of getting stable output set \code{normalize_state} to
 \code{TRUE} and \code{type} to \code{"chars"} in functions that allow it, and
@@ -123,9 +124,9 @@ set \code{term.cap} to a specific set of capabilities.
 grapheme breaks that work for most common graphemes, including emoji
 combining sequences.  The heuristic is known to work incorrectly with
 invalid combining sequences, prepending marks, and sequence interruptors.
-\code{fansi} does not provide a full implementation to avoid carrying a copy of
-the Unicode grapheme breaks table, and also because the hope is that R will
-add the feature eventually itself.
+\code{fansi} does not provide a full implementation of grapheme break detection to
+avoid carrying a copy of the Unicode grapheme breaks table, and also because
+the hope is that R will add the feature eventually itself.
 
 The \href{https://cran.r-project.org/package=utf8}{\code{utf8}} package provides a
 conforming grapheme parsing implementation.
@@ -155,5 +156,6 @@ nzchar_ctl("\n\033[42;31m\033[123P\a")
 }
 \seealso{
 \code{\link[=fansi]{?fansi}} for details on how \emph{Control Sequences} are
-interpreted, particularly if you are getting unexpected results.
+interpreted, particularly if you are getting unexpected results,
+\code{\link{unhandled_ctl}} for detecting bad control sequences.
 }

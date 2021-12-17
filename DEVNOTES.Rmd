@@ -4,29 +4,242 @@ These are internal developer notes.
 
 ## Immediate Next Steps
 
+Check into whether we can fold do_encoding in C code.
+
+Still a bit curious why we don't get closer to substr?
+
+
 ## Todo
 
-* Change the `warn` business to be more compatible with reinit, in particular we
-  might want a `warned` field (warn_max?) to know when not to issue warnings
-  anymore so that we can retain the warning level info when we re-init.
-  Otherwise the semantics of the `warn` argument are different than others e.g.
-  `term_cap` wrt to reinit (see below point).
+* Check that newlines width calculation is consistent with older versions
+  (currently treating newlines as controls and not counting them).
 
-* state init should allow specification of a warning mask (see above point).
+* Fix `read_utf8_until` so it does not change RI or ZWJ state until we know
+  we're committing to keeping that extra char.
 
-* Would be nice if `read_next` warnings gave the parameter name, but that means
-  we need to pass it in everywhere.  Could be a NULL default maybe?
+* Hunt down more instances of OSC-anchored URL to replace with OSC hyperlink.
 
-* Check whether `bridge` (and others?) could be switched to
-  `FANSI_state_reinit`.
+* get rid of `read_all`
 
-* Get rid of all the Rprintf.
+* Should the default color mode be truecolor?  The big issue is that presumably
+  strings that contain such are intended to be interpreted as truecolor,
+  irrespective of what the terminal can handle.
+
+* Does wrap need `normalize_or_copy`?
+
+* It would be nice if in replacement mode, lead and mid can account for each
+  other to produce the minimal style.  
+
+* Remove `Rprintf`.
+
+* Update copyright in test files.
+
+* Add the capability to re-use the prior string/state if string the same (what
+  does it mean for carry?).
+
+* What are the semantics of `carry` when there is an NA element in the input?
+
+* Move the interrupt to be `_read_next` based with an unsigned counter?  With
+  maybe the SGR reads contributing more to the counter?  What about writes?  Is
+  there a more universal way to check for interrupts?  Main issue is that it's
+  possible (though perhaps unlikely) that there will be some very slow
+  individual loop iterations as we saw with `tabs_as_spaces`.
+
+* Do sgr_to_HTML (sgr_to_html2?), add check to sgr_to_html if any of the bad
+  characters are found to escape or use `sgr_to_html2`.  Or do we just
+  check for unescaped '<', '>', and '&'?
+
+We just live with it as is?  Should just warn.
+
+## Done
+
+* Write a section on performance in the fansi section (note that overhead is
+  actually higher for small strings for substr; it looked really low either b/c
+  substr was slower before, or because it is still slow for longer strings due
+  to utf8 validation).  Not sure if we can re-use between README and docs.  Yes
+  we can with `includeRmd`.  Actually, we really need to move the fansi-package
+  doc to a vignette.  But it would be the only vignette.  Is it worth doing this
+  for `fansi`?  We could remove the suggests to `knitr` and `rmarkdown`.  Maybe
+  split the docs and have a page with links to the various sub-topics?
+
+* Confirm that int and unsigned int are the same width.
+
+* Update `strwrap` to exclude trail SGR.
+
+* Add test to ensure correct UTF-8 encoding is selected for substrings (and
+  wrapped strings) where the entire string contains utf8, but a substring does
+  not.  Make sure to test one byte past to ensure working correctly.
+
+* Rationalize the wrap vs substr business.  One part we could possibly do is
+  write functions that do both writing and terminating SGR/URL, including
+  detection of need to do so, and re-use those (`FANSI_W_state`,
+  `FANSI_W_state_close`).  A drawback is then we pass the entire state object or
+  the URL and SGR as distinct objects...  Problem here is the spaces.
+
+Not going to do this, but bridge cleans up the logic a little bit.
+
+* Test carry across elements with wrap.
+
+* `wrap` needs to bridge.
+
+* Inconsistency with `terminate=FALSE` for `strwrap` vs `substr`.  The latter
+  does not keep trailing SGR, but the former does.  Can we get away with this
+  being inconsistent?  Probably would be better for it to be consistent.  Won't
+  matter in most cases.  It makes sense not to include SGR, but to include other
+  zero width things, because the other zero width things get merged into the
+  glyph (see trail chars discussion).
+
+Wrap no longer includes trailing.
+
+* Verify that recycling behavior of `x` in substr is correctly documented.
+
+`x` is not recycled, only happened internally.
+
+* Test start with zero width (pretty sure this is exists).
+
+Yes, diacritic tests in utf8.
+
+* Test carry with replacement where the difference between anchor and carry is
+  clear (e.g. in the trail string, what happens when we change color from prior
+  element, vs we don't).  I.e. is there in an example where `carry` actually
+  affects the behavior of the lead/trail substrings.  Maybe test with `normalize
+  = TRUE` to see what closing sequences are issued (yes, should do it)?  
+
+* Normalize inside substr.c.
+
+* How does `carry` actually work in replacement mode?  Main issue is that it can
+  cause the beginning of a string to change, which conflicts with our treatment
+  of not terminating the ends (i.e. simulating an in-place modification)?  So we
+  need to omit any leading SGR/OSC that would be added when `carry=TRUE`?
+
+`carry` doesn't cause any new SGR to be emitted at the front, but it will affect
+any bridging at the boundaries.
+
+* Check that we are able to substring an entire "INT_MAX" long string (i.e. are
+  we able to get the last char)?
+
+* Test interactions of replacement with subset replacement (`substr(x[3], 1, 2)
+  <- y[3])`).
+
+* Add tests for different styles (font, etc.), to make sure bridge and other
+  logic is correct for them too.
+
+* Also possibly the case where the mid string is truly empty (I think this is
+  handled already?  Maybe not when it's empty not because of start/stop but
+  because `value` is "")).
+
+More comprehensive skipping.
+
+* Test replacement corner cases where we replace the entire string, possibly
+  including going outside of the boundaries completely.  Similarly, extracting
+  completely past end of string, do we grab state from that?
+  `substr_ctl("", 2, 4, carry = "\033[33m", terminate = FALSE)` should be blank
+  or not?  Need to be consistent with select past end rationale.  Seems like it
+  should not be blank to be consistent, b/c we always inherit preceding
+  unterminated styles.  What about:
+
+    unitizer> substr_ctl("", 0, 0, carry = "\033[33m")
+    [1] ""
+    unitizer> substr_ctl("", 0, 1, carry = "\033[33m")
+    [1] "\033[33m\033[0m"
+
+Don't carry into empty strings when terminating.
+
+* Does it make sense that in this specific circumstances the second coloring is
+  issued?  It doesn't hurt, but in "single document mode" it wouldn't be
+  necessary.  The challenge is knowing whether the style was issued in the
+  previous one (actually, no, if it is in the end style of the substring, it can
+  be assumed to have been issued at some point).  It gets extra messy in
+  replacement mode.  So if not in terminate mode, we should open with bridge (I
+  guess we can always do this provided the termination is accounted for in the
+  end-state, which it might not be?).
+
+    > substr_ctl(c("\033[31mAB", "CD"), 2,2, carry=TRUE, terminate=FALSE)
+    [1] "\033[31mB" "\033[31mD"
+
+It is no longer issued by properly handling references.
+
+* Special case where replacement is zero width but contains escapes only?
+
+* Do we still need `sgr_prev` in struct now that we changed normalize to use
+  bridge?
+
+We got rid of it, along with `url_prev` (with noticeable performance
+improvements).  Looks like HTML code could benefit from a bridge analogue?
+
+* Test to ensure that encoding is set properly when UTF-8 is in mid, trail,
+  end, or actually omitted via replacement.
+
+Tests added.
+
+
+* `tabs_as_spaces` for `substr_ctl<-`?
+
+Only in `value`
+
+* Check that we reject any `x` that is not UTF-8 encoded in replace mode (IIRC
+  we do).
+
+
 
 * Probably for 1.1, do normalize as part of first pass, will require rewriting
   every encountered SGR.
 
-* Try to assess impact of large size of state object being re-used every
-  character read.
+I don't remember what the point of this was.  Optimization?
+
+* Add test that confirms were not messing up the integer overflow check
+  for the start indices.  Not sure how to do this.  
+
+I don't remember what this is about.  Seems like it should be about
+`state_at_pos2`, but not clear at all where that would go wrong.
+
+* Look into hiding global functions / structures, and split off fansi.h into the
+  internal and external functions.  Maybe also split off the write functions
+  from general utilities.  Update: hiding entry point utility limited because it
+  has different mechanisms for UNIX vs Windows and appears unavailable for Mac
+  OS?  If we do this, we would just hide everything and expose the init.c entry
+  points.
+
+Added hiding for Unix/Windows, made as many functions static as possible,
+reviewed "fansi.h".
+
+* Change copyright notice to make sure it's GPL-2 or GPL-3, not 'any later
+  version'.
+
+* Bunch of docs don't have @return tags, oddly (fixed some).
+
+* Get rid of all the Rprintf.
+
+* Make sure we check we're not using `intmax_t` or `uintmax_t` in a tight loop
+  anywhere.  We're using for each character read to check overflow. Related,
+  Cleanup limits structure, is it really needed now we have a better view of
+  what we're dealing with?
+
+Done, although we kept the limit structs for organization.
+
+* Do we need better UTF-8 validation?  We feed it to `R_nchar` which IIRC does
+  its own, but we do also compute our own code points.  Could someone feed us a
+  bad code point somehow?  All we do is use it for graphemes, so probably don't
+  worry about it?
+
+Documented that fansi can't be relied on for full validation.
+
+* Simplify FANSI_valid_utf8 by having it call clen and return number of bytes.
+  (problem is when invalid due to requesting bytes beyond null terminator, how
+  do we designate that, negative bytes?).  We can probably do this, moving all
+  of utf8 into the read translation unit.
+
+Done.
+
+* Delete unused code (e.g. FANSI_color_size, digits_in_int, etc.).
+
+* Do we know what happens with bytes encoded strings?
+
+Looks like we disallow them in most cases.
+
+* Check double warnings in all functions doing the two pass reading.
+
+This probably mostly done
 
 * Rewrite the COPY/MCOPY macros to use the buffer origin to measure size instead
   of `len`?  That should be safer.  Additionally, by passing the full buffer we
@@ -38,45 +251,30 @@ These are internal developer notes.
   keep the origin always, and probably also need an alloc_len to know what size
   the previously allocated buffer is.
 
-* Add test that confirms were not messing up the integer overflow check
-  for the start indices.  Not sure how to do this.
+I think this is done, but it's been so long that I'm assessing this by looking
+at code and thinking it meets the above description.
 
-* Simplify FANSI_valid_utf8 by having it call clen and return number of bytes.
-  (problem is when invalid due to requesting bytes beyond null terminator, how
-  do we designate that, negative bytes?).
+* Better document all instabilities (e.g. as we have for width in `nchar`,
+  really should be everywhere that uses `width`), including width and specifics
+  of SGR output.
 
-* Move the interrupt to be `_read_next` based with an unsigned counter?  With
-  maybe the SGR reads contributing more to the counter?  What about writes?  Is
-  there a more universal way to check for interrupts?  Main issue is that it's
-  possible (though perhaps unlikely) that there will be some very slow
-  individual loop iterations as we saw with `tabs_as_spaces`.
+* Add a grapheme section to e.g. `substr_ctl` and have it be inherited by all
+  the relevant help pages.
 
-* Write a section on performance in the fansi section (note that overhead is
-  actually higher for small strings for substr; it looked really low either b/c
-  substr was slower before, or because it is still slow for longer strings due
-  to utf8 validation).
+* Would be nice if `read_next` warnings gave the parameter name, but that means
+  we need to pass it in everywhere.  Could be a NULL default maybe?
 
-* Look into hiding global functions / structures, and split off fansi.h into the
-  internal and external functions.  Maybe also split off the write functions
-  from general utilities.
+* Check whether `bridge` (and others?) could be switched to
+  `FANSI_state_reinit`.
 
-* Delete unused code (e.g. FANSI_color_size, digits_in_int, etc.).
 
-* Check double warnings in all functions doing the two pass reading.
+* Change the `warn` business to be more compatible with reinit, in particular we
+  might want a `warned` field (warn_max?) to know when not to issue warnings
+  anymore so that we can retain the warning level info when we re-init.
+  Otherwise the semantics of the `warn` argument are different than others e.g.
+  `term_cap` wrt to reinit (see below point).
 
-* Bunch of docs don't have @return tags, oddly (fixed some).
-
-* Make sure we check we're not using `intmax_t` or `uintmax_t` in a tight loop
-  anywhere.
-
-* Cleanup limits structure, is it really needed now we have a better view of
-  what we're dealing with?
-
-* Do sgr_to_HTML (sgr_to_html2?), add check to sgr_to_html if any of the bad
-  characters are found to escape or use `sgr_to_html2`.  Or do we just
-  check for unescaped '<', '>', and '&'?
-
-## Done
+* state init should allow specification of a warning mask (see above point).
 
 * `substr` and carry don't work correctly (see `carry` notes)
 
@@ -272,6 +470,45 @@ unsigned one (I think).
 Currently takes STRSXP.  A little awkward though, but we did it that way because
 we had the index.
 
+## read_next
+
+Instances of read next:
+
+* Consume leading specials x2
+* Seeking for a particular character e.g. space or tab.
+* Reading a single "character" to e.g. confirm it is an escape.
+
+It is not possible to replace `read_next` with some call to `read_until`
+because:
+
+* `read_until` will consume escapes sandwiched between UTF-8 pieces.
+* `read_until` is purely a width concept, and we can't temporarily change mode
+  from e.g. width to grapheme as then the width measures will be messed up.
+
+For code that cares about `width` and uses this (`strwrap` basically), we need a
+version like `read_until` except that we have break chars.  But it's a mess.
+
+So really we want something that behaves exactly like `read_next`.  But one
+problem with `read_next` is it does not handle the `zwj` business correctly.
+But it could probably be made to so across calls, by preserving state, and
+making sure that `strwrap` always tries again.  
+
+Can we use `read_utf8_until`?  Yes, we should be able to as it does not read any
+escapes on its own.  However, we will need to adapt the wrapping code which
+right now will not naturally consume zero width trailing?
+
+One thing about the wrapping code is that it always finds a space (which is
+non-zero width) character to do the wrapping at.  For wrapping zero-width should
+not really matter because if we go over, we naturally step back to the prior
+character.  But some question of whether we want to end in trailing controls or
+escapes, so maybe we need to double check the end.
+
+Trying to remember why it was necessary for `read_next` to handle RI and ZWJ.
+Maybe it was only for `subtr_ctl`?  For wrap it isn't a big deal because we
+always step back, and always the first character has some width (especially now
+that we change to read the first RI as two wide).
+
+
 ## `carry`
 
 This was handled with bridge.
@@ -326,6 +563,31 @@ knowing how we reached a particular state.  It could have been through the
 close-all + re-open, or just close some.  And what about the case where we just
 change a color.  We don't need to close anything, just change the color.
 Setdiff handles this correctly already.
+
+Should we bridge from end of original string, or substring?  Presumably the
+substring?  Latter is probably okay because user is responsible for ending
+leading styles?  A bit of funniness in the case where the user expects a
+particular substring to always terminate an incoming style because it leads with
+the termination tag, but the termination tag is not actually doing anything in
+relation to the prior element in the string.  But that's okay, it's never the
+case that `fansi` can know about prepended styles.
+
+Good example to flesh out:
+```
+unitizer> `substr_ctl<-`(txt4, 1, 1, carry = TRUE, "#")
+[1] "#\033[33;44mBCD" "#\033[33;44mBCD" "#\033[44mBCD"  
+unitizer> `substr_ctl<-`(txt4, 2, 2, carry = TRUE, "#")
+[1] "\033[33mA\033[0m#\033[33;44mCD" "A\033[0m#\033[33;44mCD"        
+[3] "\033[39mA\033[0m#\033[44mCD"  
+```
+
+The key issue here is that the leading closing element is not issued when we
+replace the beginning of the string.  This fits in with the idea of things
+replacing the entirety of the string.  It seems we need some bridging for the
+second substring in cases where the first substring is obliterated (or we always
+prevent obliteration).  What about if the bridging event would happen inside the
+substring that is replaced?  That's probably what we need to do.  In the
+replacement case, we bridge the lead and trail strings.
 
 ## Consumption of Zero Width
 
@@ -383,6 +645,32 @@ aggressive to do this, but the more I think about it it probably is consistent.
 
 So now we strip all trailing SGR, even things that would cleanly close preceding
 SGR, and close with a ESC[0m.  While aggressive, this is more consistent.
+
+Update 11/12/21
+
+A counterargument is that it makes sense not to include SGR, but to include
+other zero width things, because the other zero width things get merged into the
+glyph (see trail chars discussion).  Examples to ponder:
+
+```
+substr_ctl("AB\033[31mC", 1, 2)
+substr_ctl("AB\033[31mC", 1, 3)
+substr_ctl("ABC\033[31m", 1, 3)   # <- does not select whole string?
+substr_ctl("ABC\033[31m", 1, 4)
+```
+
+Thinking about the first example, it might make sense not to include the
+trailing sequence, as when visually look at the string, we think of "AB" not
+having a style applied, so why would extracting those from the string cause
+subsequent strings to be colored?
+
+But the problem with that is that the pattern
+`substr(x, 1, nchar(x))` no longer extracts the full string.  Similarly, there
+is no way to select just the SGR.  And by extension, there is no means to insert
+just an SGR at a specific position with `substr_ctl<-`.  This is all probably
+okay.
+
+So change in plans, trailing SGRs not included.
 
 ## Overflow
 
@@ -699,14 +987,14 @@ fit the width gap? This seems like a natural outcome:
 
 ```
 `substr2_ctl<-("aXXcd", 2, 4, "YYZZ")
-## [1] "aYYcd"
+[1] "aYYcd"
 ```
 
 But then if:
 
 ```
 `substr2_ctl<-("aXXde", 2, 4, "YYZZ")
-## [1] "aYYde"
+[1] "aYYde"
 ```
 
 Does it need to be multi-pass b/c we might be required to try to reclaim

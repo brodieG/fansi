@@ -74,12 +74,13 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
   }
   // Now strip
   char * chr_buff;
+  const char * arg = "x";
   struct FANSI_state state;
 
   for(i = 0; i < len; ++i) {
     // Now full check
-    if(!i) state = FANSI_state_init_ctl(x, warn, ctl, i, "x");
-    else state = FANSI_state_reinit(state, x, i);
+    if(!i) state = FANSI_state_init_ctl(x, warn, ctl, i);
+    else FANSI_state_reinit(&state, x, i);
 
     SEXP x_chr = STRING_ELT(x, i);
     if(x_chr == NA_STRING) continue;
@@ -94,23 +95,14 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     // vector, which is why we re-assign to chr_buff here.  chr_buff will be
     // allocated in the loop below the first time it is needed, but we need to
     // re-assign re_start / res_track.
-
     res_start = res_track = chr_buff;
 
-    // Check whether there anything that could plausibly pass for an escape
-    // before doing a proper (more expensive) check
-    int off_init = FANSI_seek_ctl(chr);
-    if(!*(chr + off_init)) continue;
+    struct FANSI_position pos_prev = state.pos;
 
-    state.pos_byte = off_init;
-    struct FANSI_ctl_pos pos_prev = {0, 0, 0};
-
-    while(1) {
-      struct FANSI_ctl_pos pos = FANSI_find_ctl(state, i);
-      if(pos.warn_max && state.warn) state.warned = 1;
-      if(pos.len) {
+    while(state.string[state.pos.x]) {
+      int pos = FANSI_find_ctl(&state, i, arg);
+      if(has_ansi || (state.status & FANSI_CTL_MASK)) {
         has_ansi = 1;
-
         // As soon as we encounter ansi in any of the character vector elements,
         // allocate vector to track what has ansi
         if(!any_ansi) {
@@ -118,26 +110,20 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
 
           // We need to allocate a result vector since we'll be stripping ANSI
           // pos, and also the buffer we'll use to re-write the pos less strings
-
           REPROTECT(res_fin = duplicate(x), ipx);
 
           // Buffer is guaranteed to be an over-allocation, as it fits the
           // longest string in the vector, re-used for all strings.  It should
           // be no longer than R_LEN_T_MAX.
-
           chr_buff = (char *) R_alloc(((size_t) mem_req) + 1, sizeof(char));
           res_start = res_track = chr_buff;
         }
-        int w_len = pos.offset - (pos_prev.offset + pos_prev.len);
+        int w_len = pos - pos_prev.x;
         memcpy(res_track, chr_track, w_len);
         res_track += w_len;
-        state.pos_byte = pos.offset + pos.len;
-        chr_track = state.string + state.pos_byte;
-        pos_prev = pos;
-      } else {
-        break;
-      }
-    }
+        chr_track = state.string + state.pos.x;
+        pos_prev = state.pos;
+    } }
     // Update string
 
     if(has_ansi) {
@@ -154,7 +140,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
             "contact maintainer."
           );
           // nocov end
-        } else if(chr_end > state.string + state.pos_byte) {
+        } else if(chr_end > state.string + state.pos.x) {
           memcpy(res_track, chr_track, chr_end - chr_track);
           res_track += chr_end - chr_track;
       } }
@@ -199,6 +185,7 @@ SEXP FANSI_process(
   SEXP R_true = PROTECT(ScalarLogical(1)); ++prt;
   SEXP R_zero = PROTECT(ScalarInteger(0)); ++prt;
   char * err_msg = "Processing whitespace";
+  const char * arg = "x";
 
   int strip_any = 0;          // Have any elements in the STRSXP been stripped
 
@@ -214,11 +201,10 @@ SEXP FANSI_process(
     if(!i) {
       // AFAICT process only for strwrap, and testing
       state = FANSI_state_init_full(
-        input, warn, term_cap, allowNA, keepNA, width, ctl, i, "x"
+        input, warn, term_cap, allowNA, keepNA, width, ctl, i
       );
-    } else {
-      state = FANSI_state_reinit(state, input, i);
-    }
+    } else FANSI_state_reinit(&state, input, i);
+
     const char * string = state.string;
     const char * string_start = string;
 
@@ -273,13 +259,11 @@ SEXP FANSI_process(
       int special_len = 0;
 
       if(special) { // Check that it is really special.
-        int pos_prev = state.pos_byte = j;
-        int pos_raw = state.pos_raw;
-        state = FANSI_read_next(state, i, 1);
-
-        // Sequence is special if pos_raw does not advance
-        if(state.pos_raw == pos_raw) {
-          special_len = state.pos_byte - pos_prev;
+        int pos_prev = state.pos.x = j;
+        FANSI_read_next(&state, i, arg);
+        // Sequence is special if it is a recognized control
+        if(state.status & FANSI_CTL_ALL) {
+          special_len = state.pos.x - pos_prev;
         } else {
           special = special_len = 0;
         }
@@ -327,7 +311,8 @@ SEXP FANSI_process(
           spc_chr = "\n";
         }
         // Copy the portion up to the point we know should be copied, will add
-        // back spaces and/or newlines as needed
+        // back spaces and/or newlines as needed.  This does not skip specials,
+        // just delays them!
 
         int copy_bytes =
           copy_to -      // current position
@@ -349,9 +334,9 @@ SEXP FANSI_process(
         int copy_end = j_last + copy_bytes;
         for(int k = copy_end; k < copy_end + to_strip0; ++k) {
           if(is_special(string[k])) {
-            state.pos_byte = k;
-            state = FANSI_read_next(state, i, 1);
-            int bytes = state.pos_byte - k;
+            state.pos.x = k;
+            FANSI_read_next(&state, i, arg);
+            int bytes = state.pos.x - k;
             FANSI_W_MCOPY(buff, string + k, bytes);
             k += bytes - 1;
           }

@@ -81,6 +81,14 @@ unitizer_sect('ctl', {
   nzchar_ctl("\n\t\n", ctl=c('nl'), warn=FALSE)
   nzchar_ctl("\t\n", ctl=c('nl'), warn=FALSE)
 })
+unitizer_sect('corner cases', {
+  ## Bad byte in ESC, generally okay as they are not emitted
+  nchar_ctl("\033\x80")
+  nchar_ctl("\033[31;\x80m")
+  nchar_ctl("\033[31;\x80p")
+  nchar_ctl("\033]8;\x80;a.b\033\\")
+  nchar_ctl("\033];\x80;a.b\033\\")
+})
 unitizer_sect('bad inputs', {
   nchar_ctl(9:10, warn=1:3)
   nchar_ctl("hello\033[31m world", allowNA=1:3)

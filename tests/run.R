@@ -20,8 +20,9 @@ if(getRversion() < "3.2.2") {
     # warnPartialMatchDollar = TRUE
   )
   on.exit(old.opt)
-  pattern <- "^[^.].*\\.[Rr]$"
-  # pattern <- "substr"
+  pat.all <- "^[^.].*\\.[Rr]$"
+  pattern <- pat.all
+  # pattern <- "subs"
   unitize_dir(
     'unitizer',
     pattern=pattern,
@@ -32,7 +33,7 @@ if(getRversion() < "3.2.2") {
 
   if(
     !grepl("solaris|sun", Sys.info()[['sysname']], ignore.case=TRUE) &&
-    identical(pattern, "^[^.].*\\.[Rr]$")
+    identical(pattern, pat.all)
   ) {
     unitize_dir('special', state='suggested')
   }

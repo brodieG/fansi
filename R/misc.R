@@ -58,7 +58,7 @@ tabs_as_spaces <- function(
 ) {
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(
-    x=x, warn=warn, ctl=ctl, warn.mask=set_bits(5, 7, 9), tab.stops=tab.stops
+    x=x, warn=warn, ctl=ctl, warn.mask=get_warn_worst(), tab.stops=tab.stops
   )
   term.cap.int <- 1L
   .Call(
@@ -522,3 +522,10 @@ dflt_term_cap <- function() {
 dflt_css <- function() {
   "PRE.fansi SPAN {padding-top: .25em; padding-bottom: .25em};"
 }
+
+read_all <- function(x) {
+  VAL_IN_ENV(x=x, warn=TRUE, term.cap='all')
+  .Call(FANSI_read_all, x, WARN.INT, TERM.CAP.INT)
+}
+
+

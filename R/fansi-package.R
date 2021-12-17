@@ -36,34 +36,37 @@
 #'   Introducer (CSI) sequences, of which the Select Graphic Rendition (SGR)
 #'   sequences used to format terminal output are a subset.
 #' * Sequences starting in "ESC&#93;", also known as Operating System
-#'   Commands (OSC).
+#'   Commands (OSC), of which the subset beginning with "8" is used to encode
+#'   URI based hyperlinks.
 #' * Sequences starting in "ESC" and followed by something other than "&#91;".
 #'
 #' _Control Sequences_ starting with ESC are assumed to be two characters
 #' long (including the ESC) unless they are of the CSI or OSC variety, in which
 #' case their length is computed as per the [ECMA-48
 #' specification](https://www.ecma-international.org/publications-and-standards/standards/ecma-48/),
-#' with the exception that [OSC-anchored URLs](#osc-anchored-urls) may be
-#' terminated with BEL ("\\a") in addition to ST ("ESC\\").
-#'
-#' `fansi` handles most common _Control Sequences_ in its parsing
-#' algorithms, but it is not a conforming implementation of ECMA-48.  For
-#' example, there are non-CSI/OSC escape sequences that may be longer than two
-#' characters, but `fansi` will (incorrectly) treat them as if they were
-#' two characters long.  There are many more unimplemented ECMA-48
-#' specifications.
+#' with the exception that [OSC hyperlinks](#osc-hyperlinks) may be terminated
+#' with BEL ("\\a") in addition to ST ("ESC\\").  `fansi` handles most common
+#' _Control Sequences_ in its parsing algorithms, but it is not a conforming
+#' implementation of ECMA-48.  For example, there are non-CSI/OSC escape
+#' sequences that may be longer than two characters, but `fansi` will
+#' (incorrectly) treat them as if they were two characters long.  There are many
+#' more unimplemented ECMA-48 specifications.
 #'
 #' In theory it is possible to encode CSI sequences with a single byte
 #' introducing character in the 0x40-0x5F range instead of the traditional
 #' "ESC&#91;".  Since this is rare and it conflicts with UTF-8 encoding, `fansi`
 #' does not support it.
 #'
-#' The special treatment of _Control Sequences_ is to compute their
-#' display/character width as zero.  For the SGR subset of the CSI sequences and
-#' OSC-anchored URLs, `fansi` will also parse, interpret, and reapply the
-#' sequences to the text as needed.  Whether a particular type of _Control
-#' Sequence_ is treated specially can be specified via the `ctl` parameter to
-#' the `fansi` functions that have it.
+#' Within _Control Sequences_, `fansi` further distinguishes CSI SGR and OSC
+#' hyperlinks by recording format specification and URIs into string state, and
+#' applying the same to any output strings according to the semantics of the
+#' functions in use.  CSI SGR and OSC hyperlinks are known together as _Sepcial
+#' Sequences_.  See the following sections for details.
+#'
+#' Additionally, all _Control Sequences_, whether special or not,
+#' do not count as characters, graphemes, or display width.  You can cause
+#' `fansi` to treat particular _Control Sequences_ as regular characters with
+#' the `ctl` parameter.
 #'
 #' @section CSI SGR Control Sequences:
 #'
@@ -122,19 +125,19 @@
 #' will be irrelevant as their effects will have been superseded by subsequent
 #' tags.
 #'
-#' `fansi` assumes that CSI SGR sequences should be interpreted in cumulative
-#' "Graphic Rendition Combination Mode".  This means new SGR sequences add to
-#' rather than replace previous ones, although in some cases the effect is the
-#' same as replacement (e.g. if you have a color active and pick another one).
+#' `fansi` interprets CSI SGR sequences in cumulative "Graphic Rendition
+#' Combination Mode".  This means new SGR sequences add to rather than replace
+#' previous ones, although in some cases the effect is the same as replacement
+#' (e.g. if you have a color active and pick another one).
 #'
-#' @section OSC Anchored URLs:
+#' @section OSC Hyperlinks:
 #'
 #' Operating System Commands are interpreted by terminal emulators typically to
 #' engage actions external to the display of text proper, such as setting a
 #' window title or changing the active color palette.
 #'
 #' [Some terminals](https://iterm2.com/documentation-escape-codes.html) have
-#' added support for associating URLs to text with OSCs in a similar way to
+#' added support for associating URIs to text with OSCs in a similar way to
 #' anchors in HTML, so `fansi` interprets them and outputs or terminates them as
 #' needed.  For example:
 #'
@@ -146,12 +149,12 @@
 #' we replace "\033]" with "&lt;OSC&gt;" and "\033\\\\" with "&lt;ST&gt;" below:
 #'
 #' ```
-#' <OSC>8;;URL<ST>LINK TEXT<OSC>8;;<ST>
+#' <OSC>8;;URI<ST>LINK TEXT<OSC>8;;<ST>
 #' ```
 #'
 #' @section State Interactions:
 #'
-#' The cumulative nature of state as specified by SGR or OSC-anchored URLs means
+#' The cumulative nature of state as specified by SGR or OSC hyperlinks means
 #' that unterminated strings that are spliced will interact with each other.
 #' Additionally, a substring does not inherently contain all the information
 #' required to recreate its state as it appeared in the source string.  The

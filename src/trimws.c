@@ -18,7 +18,8 @@ SEXP FANSI_trimws(
   if(TYPEOF(norm) != LGLSXP || XLENGTH(norm) != 1)
     error("Internal Error: `norm` should scalar logical.");  // nocov
 
-  R_xlen_t i, len = xlength(x);
+  const char * arg = "x";
+  R_xlen_t i, len = XLENGTH(x);
   SEXP res_fin = x;
   int which_i = asInteger(which);
   if(which_i < 0 || which_i > 2)
@@ -41,9 +42,9 @@ SEXP FANSI_trimws(
       allowNA = keepNA = PROTECT(ScalarLogical(0)); ++prt;
       type = PROTECT(ScalarInteger(0)); ++prt;
       state = FANSI_state_init_full(
-        x, warn, term_cap, allowNA, keepNA, type, ctl, (R_xlen_t) 0, "x"
+        x, warn, term_cap, allowNA, keepNA, type, ctl, (R_xlen_t) 0
       );
-    } else state = FANSI_state_reinit(state, x, i);
+    } else FANSI_state_reinit(&state, x, i);
     state_lead = state_trail = state_last = state;
 
     SEXP x_chr = STRING_ELT(x, i);
@@ -60,56 +61,50 @@ SEXP FANSI_trimws(
     // in fansi.
     if(which_i == 0 || which_i == 1) {
       while(1) {
-        switch(state.string[state.pos_byte]) {
+        switch(state.string[state.pos.x]) {
           case ' ':
           case '\n':
           case '\r':
           case '\t':
-            ++state.pos_byte;
+            ++state.pos.x;
             continue;
           default:
-            if(
-              (unsigned char)state.string[state.pos_byte] >= 0x20 &&
-              (unsigned char)state.string[state.pos_byte] <= 0x7e
-            ) {
+            if(IS_PRINT(state.string[state.pos.x])) {
               goto ENDLEAD;
             } else {
-              state = FANSI_read_next(state, i, 1);
-              if(state.last_ctl) break;
+              FANSI_read_next(&state, i, arg);
+              if(state.status & FANSI_CTL_MASK) break;
               else goto ENDLEAD;
             }
       } }
       ENDLEAD:
       state_lead = state;
-      string_start = state_lead.pos_byte;
+      string_start = state_lead.pos.x;
     }
     // Find first space that has no subsequent non-spaces
     if(which_i == 0 || which_i == 2) {
-      while(state.string[state.pos_byte]) {
-        switch(state.string[state.pos_byte]) {
+      while(state.string[state.pos.x]) {
+        switch(state.string[state.pos.x]) {
           case ' ':
           case '\n':
           case '\r':
           case '\t':
             if(!string_end) {
-              string_end = state.pos_byte;
+              string_end = state.pos.x;
               state_trail = state;
             }
-            ++state.pos_byte;
+            ++state.pos.x;
             continue;
           default:
-            if(
-              (unsigned char)state.string[state.pos_byte] >= 0x20 &&
-              (unsigned char)state.string[state.pos_byte] <= 0x7e
-            ) {
+            if(IS_PRINT(state.string[state.pos.x])) {
               string_end = 0;
-              ++state.pos_byte;
+              ++state.pos.x;
             } else {
-              state = FANSI_read_next(state, i, 1);
-              if(state.last_ctl) continue;
+              FANSI_read_next(&state, i, arg);
+              if(state.status & FANSI_CTL_MASK) continue;
               else {
                 string_end = 0;
-                ++state.pos_byte;
+                ++state.pos.x;
             } }
       } }
       state_last = state;
@@ -128,16 +123,16 @@ SEXP FANSI_trimws(
       for(int k = 0; k < 2; ++k) {
         if(!k) FANSI_reset_buff(&buff);
         else   FANSI_size_buff(&buff);
-        state = FANSI_state_reinit(state, x, i);
+        FANSI_state_reinit(&state, x, i);
 
         // Any leading SGR
         if(string_start) {
-          FANSI_W_sgr(&buff, state_lead.sgr, norm_i, 1, i);
-          FANSI_W_url(&buff, state_lead.url, norm_i, i);
+          FANSI_W_sgr(&buff, state_lead.fmt.sgr, norm_i, 1, i);
+          FANSI_W_url(&buff, state_lead.fmt.url, i);
         }
         // Body of string
         FANSI_W_normalize_or_copy(
-          &buff, state_lead, norm_i, string_end, i, err_msg
+          &buff, state_lead, norm_i, string_end, i, err_msg, "x"
         );
         // Trailing state
         if(string_end)

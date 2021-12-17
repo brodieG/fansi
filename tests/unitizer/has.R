@@ -23,13 +23,15 @@ unitizer_sect("has", {
   has_ctl("hello\033p world")
 })
 unitizer_sect("corner cases", {
-  tryCatch(has_ctl("hello\033[31#0mworld"), warning=conditionMessage)
+  has_ctl("hello\033[31#0mworld")
   suppressWarnings(has_ctl("hello\033[31#0mworld"))
   has_ctl("hello world", ctl=c('sgr', 'sgr'))
+  has_ctl("hello\033[31#0")
 })
 unitizer_sect("select ctl", {
   has_ctl("hello\033[31mworld", ctl=c('sgr'))
   has_ctl("hello\033[31mworld", ctl=c('csi'))
+  has_ctl("hello\033[31!mworld", ctl=c('sgr'))
   has_ctl("hello\033[31!mworld", ctl=c('csi'))
   has_ctl("hello\033[31lworld", ctl=c('csi'))
   has_ctl("hello\nworld", ctl=c('all', 'nl'))

@@ -196,14 +196,8 @@ sgr_to_html <- function(
 #' @family HTML functions
 #' @importFrom grDevices col2rgb rgb
 #' @export
-#' @param classes a character vector of either 16, 32, or 512 class names, or a
-#'   scalar integer with value 8, 16, or 256.  The character vectors are
-#'   described in [`to_html`].  The scalar integers will cause this function
-#'   to generate classes for the basic colors (8), basic + bright (16), or all
-#'   256 8-bit colors (256), with class names in "fansi-color-###" (or
-#'   "fansi-bgcol-###" for background colors), which is what [`to_html`]
-#'   generates when-user defined classes are not provided.  TRUE is also a valid
-#'   input and is equivalent to 256.
+#' @param classes a character vector of either 16, 32, or 512 class names.  The
+#'   character vectors are described in [`to_html`].
 #' @param rgb.mix 3 x 3 numeric matrix to remix color channels.  Given a N x 3
 #'   matrix of numeric RGB colors `rgb`, the colors used in the style sheet will
 #'   be `rgb %*% rgb.mix`.  Out of range values are clipped to the nearest bound

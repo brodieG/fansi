@@ -17,14 +17,11 @@
 
 #include "fansi.h"
 
-static struct FANSI_state state_at_end(
-  struct FANSI_state state, R_xlen_t i
+void state_at_end(
+  struct FANSI_state *state, R_xlen_t i, const char * arg
 ) {
-  while(state.string[state.pos_byte]) {
-    state = FANSI_read_next(state, i, 1);
-  }
-  state = FANSI_reset_pos(state);
-  return state;
+  FANSI_read_all(state, i, arg);
+  FANSI_reset_pos(state);
 }
 
 SEXP FANSI_state_at_end_ext(
@@ -56,9 +53,9 @@ SEXP FANSI_state_at_end_ext(
 
   struct FANSI_state state_prev = FANSI_state_init_full(
     carry_string, warn, term_cap, allowNA, keepNA, width,
-    ctl, (R_xlen_t) 0, "carry"
+    ctl, (R_xlen_t) 0
   );
-  state_prev = state_at_end(state_prev, 0);
+  state_at_end(&state_prev, 0, "carry");
 
   R_xlen_t len = XLENGTH(x);
   struct FANSI_buff buff;
@@ -71,14 +68,13 @@ SEXP FANSI_state_at_end_ext(
     FANSI_interrupt(i);
     if(!i) {
       state = FANSI_state_init_full(
-        x, warn, term_cap, allowNA, keepNA, width, ctl, i, arg_chr
+        x, warn, term_cap, allowNA, keepNA, width, ctl, i
       );
-    } else {
-      state = FANSI_state_reinit(state, x, i);
-    }
-    if(do_carry) state.sgr = state_prev.sgr;
+    } else FANSI_state_reinit(&state, x, i);
 
-    state = state_at_end(state, i);
+    if(do_carry) state.fmt.sgr = state_prev.fmt.sgr;
+
+    state_at_end(&state, i, arg_chr);
     FANSI_state_as_chr(&buff, state, normalize, i);
 
     SEXP reschr = PROTECT(FANSI_mkChar(buff, CE_NATIVE, i));
@@ -111,9 +107,9 @@ struct FANSI_state FANSI_carry_init(
   // Read-in any pre-existing state to carry
   struct FANSI_state state_carry = FANSI_state_init_full(
     carry_string, warn, term_cap, allowNA, keepNA,
-    width, ctl, (R_xlen_t) 0, "carry"
+    width, ctl, (R_xlen_t) 0
   );
-  state_carry = state_at_end(state_carry, (R_xlen_t) 0);
+  state_at_end(&state_carry, (R_xlen_t) 0, "carry");
   UNPROTECT(prt);
   return state_carry;
 }
@@ -135,8 +131,8 @@ int FANSI_W_bridge(
   // rely on an e.g. color change to change a pre-existing color, whereas in
   // non-normalize we close explicitly and need to re-open.
   struct FANSI_sgr to_close, to_open;
-  to_close = FANSI_sgr_setdiff(end.sgr, restart.sgr, !normalize);
-  to_open = FANSI_sgr_setdiff(restart.sgr, end.sgr, !normalize);
+  to_close = FANSI_sgr_setdiff(end.fmt.sgr, restart.fmt.sgr, !normalize);
+  to_open = FANSI_sgr_setdiff(restart.fmt.sgr, end.fmt.sgr, !normalize);
 
   if(!normalize) {
     // We need to combine all the style tokens, which means we need to write the
@@ -145,14 +141,8 @@ int FANSI_W_bridge(
     // re-opened after an all-close.
     struct FANSI_sgr renew;
     // If we close everything, we need to re-open the stuff that was active
-    renew = FANSI_sgr_intersect(end.sgr, restart.sgr);
-    /*
-    Rprintf("to_open %d to_close %d renew %d\n",
-      FANSI_sgr_active(to_open),
-      FANSI_sgr_active(to_close),
-      FANSI_sgr_active(renew)
-      );
-    */
+    renew = FANSI_sgr_intersect(end.fmt.sgr, restart.fmt.sgr);
+
     int active_open = FANSI_sgr_active(to_open);
     int active_close = FANSI_sgr_active(to_close);
 
@@ -167,19 +157,19 @@ int FANSI_W_bridge(
       if(buff->buff) *((buff->buff) - 1) = 'm';
     } else {
       FANSI_W_sgr(
-        buff, FANSI_sgr_setdiff(restart.sgr, end.sgr, 0), normalize, 1, i
-      );
-    }
+        buff, FANSI_sgr_setdiff(restart.fmt.sgr, end.fmt.sgr, 0),
+        normalize, 1, i
+    );}
   } else {
     FANSI_W_sgr_close(buff, to_close, normalize, i);
     FANSI_W_sgr(buff, to_open, normalize, 1, i);
   }
   // Any changed URLs will need to be written (empty URL acts as a closer
   // so simpler than with SGR).
-  if(FANSI_url_comp(end.url, restart.url)) {
-    if(!FANSI_url_active(restart.url))
-      FANSI_W_url_close(buff, end.url, i);
-    FANSI_W_url(buff, restart.url, normalize, i);
+  if(FANSI_url_comp(end.fmt.url, restart.fmt.url)) {
+    if(!FANSI_url_active(restart.fmt.url))
+      FANSI_W_url_close(buff, end.fmt.url, i);
+    FANSI_W_url(buff, restart.fmt.url, i);
   }
   return buff->len;
 }
@@ -222,13 +212,15 @@ SEXP FANSI_bridge_state_ext(SEXP end, SEXP restart, SEXP term_cap, SEXP norm) {
     }
     // Do not warn here, so arg does not matter
     if(!i) {
-      st_end =
-        state_at_end(FANSI_state_init(end, warn, term_cap, i, NULL), i);
-      st_rst =
-        state_at_end(FANSI_state_init(restart, warn, term_cap, i, NULL), i);
+      st_end = FANSI_state_init(end, warn, term_cap, i);
+      state_at_end(&st_end, i, NULL);
+      st_rst = FANSI_state_init(restart, warn, term_cap, i);
+      state_at_end(&st_rst, i, NULL);
     } else {
-      st_end = state_at_end(FANSI_state_reinit(st_end, end, i), i);
-      st_rst = state_at_end(FANSI_state_reinit(st_rst, restart, i), i);
+      FANSI_state_reinit(&st_end, end, i);
+      state_at_end(&st_end, i, NULL);
+      FANSI_state_reinit(&st_rst, restart, i);
+      state_at_end(&st_rst, i, NULL);
     }
     FANSI_reset_buff(&buff);
 

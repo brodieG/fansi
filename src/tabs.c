@@ -21,7 +21,7 @@ static struct FANSI_state FANSI_inc_width(
   struct FANSI_state state, int inc, R_xlen_t i
 ) {
   if(inc < 0) error("Internal Error: inc may not be negative.");  // nocov
-  if(state.pos_width > FANSI_lim.lim_int.max - inc)
+  if(state.pos.w > FANSI_lim.lim_int.max - inc)
     // This error can't really trigger because when expanding tabs to spaces we
     // already check for overflow
     // nocov start
@@ -31,7 +31,7 @@ static struct FANSI_state FANSI_inc_width(
     );
     // nocov end
 
-  state.pos_width += inc;
+  state.pos.w += inc;
   return state;
 }
 /*
@@ -45,10 +45,10 @@ static int tab_width(
   struct FANSI_state state, int * tab_stops, R_xlen_t stops,
   int * stop_idx, int * tab_width
 ) {
-  if(*(state.string + state.pos_byte) != '\t')
+  if(*(state.string + state.pos.x) != '\t')
     error("Internal Error: computing tab width on not a tab"); // nocov
 
-  while(state.pos_width >= *tab_width) {
+  while(state.pos.w >= *tab_width) {
     int stop_size = *(tab_stops + *stop_idx);
     if(stop_size < 1)
       error("Internal Error: stop size less than 1.");  // nocov
@@ -57,7 +57,7 @@ static int tab_width(
     *tab_width += stop_size;
     if(*stop_idx < stops - 1) (*stop_idx)++;
   }
-  return *tab_width - state.pos_width;
+  return *tab_width - state.pos.w;
 }
 
 SEXP FANSI_tabs_as_spaces(
@@ -83,6 +83,7 @@ SEXP FANSI_tabs_as_spaces(
       error("Internal Error: stop size less than 1.");  // nocov
   }
   const char * err_msg = "Converting tabs to spaces";
+  const char * arg = "x";
   const char * source;
   int tabs_in_str = 0;
 
@@ -103,11 +104,10 @@ SEXP FANSI_tabs_as_spaces(
     FANSI_interrupt(i);
     if(!i) {
       state = FANSI_state_init_full(
-        vec, warn, term_cap, allowNA, keepNA, width, ctl, i, "x"
+        vec, warn, term_cap, allowNA, keepNA, width, ctl, i
       );
-    } else {
-      state = FANSI_state_reinit(state, vec, i);
-    }
+    } else FANSI_state_reinit(&state, vec, i);
+
     int tab_count = 0;
 
     SEXP chr = STRING_ELT(vec, i);
@@ -145,13 +145,13 @@ SEXP FANSI_tabs_as_spaces(
 
       char cur_chr;
 
-      int last_byte = state.pos_byte;
-      unsigned int warn_old = state.warn;
+      int last_byte = state.pos.x;
+      unsigned int settings = state.settings;  // backup copy of settings
       int tab_acc_width, tab_stop;
       tab_acc_width = tab_stop = 0;
 
       while(1) {
-        cur_chr = state.string[state.pos_byte];
+        cur_chr = state.string[state.pos.x];
 
         int extra_spaces = 0;
 
@@ -159,34 +159,34 @@ SEXP FANSI_tabs_as_spaces(
           extra_spaces =
             tab_width(state, tab_stops_i, len_stops, &tab_acc_width, &tab_stop);
         } else if (cur_chr == '\n') {
-          state = FANSI_reset_width(state);
+          FANSI_reset_width(&state);
           tab_acc_width = 0;
           tab_stop = 0;
         }
         // Write string
         if(cur_chr == '\t' || !cur_chr) {
-          int write_bytes = state.pos_byte - last_byte;
+          int write_bytes = state.pos.x - last_byte;
           FANSI_W_MCOPY(buff, state.string + last_byte, write_bytes);
 
           // consume tab and advance, temporarily suppressing warning
-          state.warn = 0;
-          state = FANSI_read_next(state, i, 1);
-          state.warn = warn_old;
-          cur_chr = state.string[state.pos_byte];
+          state.settings &= ~FANSI_WARN_MASK;
+          FANSI_read_next(&state, i, arg);
+          state.settings = settings;
+          cur_chr = state.string[state.pos.x];
           state = FANSI_inc_width(state, extra_spaces, i);
-          last_byte = state.pos_byte;
+          last_byte = state.pos.x;
 
           // actually write the extra spaces
           FANSI_W_FILL(buff, ' ', extra_spaces);
         } else {
-          state = FANSI_read_next(state, i, 1);
+          FANSI_read_next(&state, i, arg);
         }
         if(!cur_chr) break;
       }
       // Write the CHARSXP
 
       cetype_t chr_type = CE_NATIVE;
-      if(state.has_utf8) chr_type = CE_UTF8;
+      if(state.utf8) chr_type = CE_UTF8;
       SEXP chr_sxp =
         PROTECT(FANSI_mkChar0(buff->buff0, buff->buff, chr_type, i));
       SET_STRING_ELT(res_sxp, i, chr_sxp);

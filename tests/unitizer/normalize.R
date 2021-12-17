@@ -44,7 +44,9 @@ unitizer_sect("broad code test", {
 unitizer_sect("errors and warnings", {
   normalize_state(list(1, 2, 3))
   x <- c("A\033[38;2;100;150;3;36mBC\033[mD")
+  ## warning, and also note 100 is _not_ written as bright not supported
   normalize_state(x, term.cap=character())
+  normalize_state(x, term.cap='bright')
   ## no warning
   normalize_state(x, term.cap=c('bright', '256', 'truecolor'))
   substr_ctl(x, 1, 2, normalize="yeah baby")

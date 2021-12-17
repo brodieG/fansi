@@ -25,17 +25,17 @@
  * @param buff if NULL, computes the size required, if not writes it.
  * @param *state state by reference so that we can recover the changed state
  *   info from reading for use in the `carry` case.
- * @param stop pos_byte corresponding to the position to stop normalizing.
+ * @param stop pos.x corresponding to the position to stop normalizing.
  */
 
 int FANSI_W_normalize(
   struct FANSI_buff * buff, struct FANSI_state *state,
-  int stop, R_xlen_t i, const char * err_msg
+  int stop, R_xlen_t i, const char * err_msg, const char * arg
 ) {
   struct FANSI_state state_int, state_prev;
   state_int = state_prev  = *state;
   const char * string, * string_prev, * string_last;
-  string_prev = string_last = string = state_int.string + state_int.pos_byte;
+  string_prev = string_last = string = state_int.string + state_int.pos.x;
   int any_to_exp = 0;
 
   // Logic originally based on FANSI_esc_to_html, adapted for explicit stop
@@ -44,8 +44,8 @@ int FANSI_W_normalize(
   while(1) {
     string = strchr(string_prev, 0x1b);
     if(!string) string = string_prev + strlen(string_prev);
-    state_int.pos_byte = (string - state_int.string);
-    if(state_int.pos_byte >= stop) {
+    state_int.pos.x = (string - state_int.string);
+    if(state_int.pos.x >= stop) {
       // Overshot target length
       if(any_to_exp) {
         FANSI_W_MCOPY(buff, string_last, stop - (string_last - state->string));
@@ -54,11 +54,11 @@ int FANSI_W_normalize(
     } else if (*string && *string == 0x1b) {
       // We encountered an ESC
       state_prev = state_int;
-      state_int = FANSI_read_next(state_int, i, 1);
+      FANSI_read_next(&state_int, i, arg);
       // Any special sequence will be re-written.  In some cases, we don't need
       // to do so, but even when things are already normalized, the order of the
       // elements may not be the same.
-      if(state_int.last_special) {
+      if(state_int.status & FANSI_STAT_SPECIAL) {
         any_to_exp = 1;
         // stuff prior to SGR/URL
         FANSI_W_MCOPY(buff, string_last, string - string_last);
@@ -66,9 +66,9 @@ int FANSI_W_normalize(
         FANSI_W_bridge(buff, state_prev, state_int, 1, i, err_msg);
 
         // Keep track of the last point we copied
-        string_last = state_int.string + state_int.pos_byte;
+        string_last = state_int.string + state_int.pos.x;
       }
-      string = state_int.string + state_int.pos_byte;
+      string = state_int.string + state_int.pos.x;
     } else if (*string == 0) {
       // We ran out of string
       if(any_to_exp) {
@@ -106,24 +106,25 @@ static SEXP normalize_state_int(
   for(R_xlen_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i + index0);
     if(!i) {
-      state = FANSI_state_init(x, warn, term_cap, i, "x");
-    } else {
-      state = FANSI_state_reinit(state, x, i);
-    }
+      state = FANSI_state_init(x, warn, term_cap, i);
+    } else FANSI_state_reinit(&state, x, i);
+
     SEXP chrsxp = STRING_ELT(x, i);
     if(chrsxp == NA_STRING) continue;
 
     // Measure
     if(do_carry) {
-      state.sgr = state_carry.sgr;
-      state.url = state_carry.url;
+      state.fmt.sgr = state_carry.fmt.sgr;
+      state.fmt.url = state_carry.fmt.url;
     }
     state_start = state;
 
     FANSI_reset_buff(buff);
-    int len = FANSI_W_normalize(buff, &state, (int)LENGTH(chrsxp), i, err_msg);
-    state_carry.sgr = state.sgr;
-    state_carry.url = state.url;
+    int len = FANSI_W_normalize(
+      buff, &state, (int)LENGTH(chrsxp), i, err_msg, "x"
+    );
+    state_carry.fmt.sgr = state.fmt.sgr;
+    state_carry.fmt.url = state.fmt.url;
 
     if(len < 0) continue;
 
@@ -131,8 +132,10 @@ static SEXP normalize_state_int(
     if(res == x) REPROTECT(res = duplicate(x), ipx);
     FANSI_size_buff(buff);
     state = state_start;
-    state.warned = 1;  // avoid double warnings
-    FANSI_W_normalize(buff, &state, (int)LENGTH(chrsxp), i, err_msg);
+    state.status |= FANSI_STAT_WARNED;  // avoid double warnings
+    FANSI_W_normalize(
+      buff, &state, (int)LENGTH(chrsxp), i, err_msg, "x"
+    );
 
     cetype_t chr_type = getCharCE(chrsxp);
     SEXP reschr = PROTECT(FANSI_mkChar(*buff, chr_type, i));

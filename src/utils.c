@@ -99,34 +99,21 @@ SEXP FANSI_add_int_ext(SEXP x, SEXP y) {
   return ScalarInteger(FANSI_ADD_INT(asInteger(x), asInteger(y)));
 }
 /*
- * Compute Location and Size of Next Control Sequences
+ * Seek a state up until a known control.
  *
- * @param one_only give up after a single failed attempt, otherwise keep going
- *   until a recognized control sequence is found.
+ * Beware that the position offsets other than .x will be incorrect.
  */
-struct FANSI_ctl_pos FANSI_find_ctl(struct FANSI_state state, R_xlen_t i) {
-  int raw_prev, pos_prev, found, err_prev;
-  unsigned int warn_max = 0;
-  found = 0;
-
-  while(state.string[state.pos_byte]) {
-    raw_prev = state.pos_raw;
-    pos_prev = state.pos_byte;
-    err_prev = state.err_code;
-    state = FANSI_read_next(state, i, 1);
-    if(state.err_code) warn_max |= (1U << (state.err_code - 1U));
+int FANSI_find_ctl(
+  struct FANSI_state *state, R_xlen_t i, const char * arg
+) {
+  int pos = state->pos.x;
+  while(state->string[state->pos.x]) {
+    pos = state->pos.x += FANSI_seek_ctl(state->string + state->pos.x);
+    FANSI_read_next(state, i, arg);
     // Known control read
-    if(state.pos_raw == raw_prev) {
-      found = 1;
-      break;
-    }
-    state.pos_byte += FANSI_seek_ctl(state.string + state.pos_byte);
+    if(state->status & FANSI_CTL_MASK) break;
   }
-  int res = 0;
-  if(found) res = state.pos_byte - pos_prev;
-  return (struct FANSI_ctl_pos) {
-    .offset = pos_prev, .len = res, .warn_max=warn_max
-  };
+  return pos;
 }
 static int FANSI_maybe_ctl(const char x) {
   // Controls range from 0000 0001 (0x01) to 0001 1111 (0x1F), plus 0x7F;
@@ -150,7 +137,7 @@ int FANSI_seek_ctl(const char * x) {
  * ctl as a bit.
  */
 
-int FANSI_ctl_as_int(SEXP ctl) {
+unsigned int FANSI_ctl_as_int(SEXP ctl) {
   int ctl_int = 0;
   int flip_bits = 0;
   for(R_xlen_t i = 0; i < XLENGTH(ctl); ++i) {
@@ -161,7 +148,7 @@ int FANSI_ctl_as_int(SEXP ctl) {
     if(ctl_val > 6)
       error("Internal Error: max ctl value allowed is 6.");
     if(ctl_val < 0) flip_bits = 1;
-    else ctl_int |= 1 << ctl_val;
+    else ctl_int |= 1U << ctl_val;
   }
   if(flip_bits) ctl_int ^= FANSI_CTL_ALL;
   return ctl_int;
@@ -181,12 +168,21 @@ int FANSI_term_cap_as_int(SEXP term_cap) {
     if(term_cap_val < 0) flip_bits = 1;
     else term_cap_int |= 1 << term_cap_val;
   }
-  if(flip_bits) term_cap_int ^= FANSI_TERM_CAP_ALL;
+  if(flip_bits) term_cap_int ^= FANSI_TERM_ALL;
   return term_cap_int;
 }
 
 SEXP FANSI_get_warn_all() {
-  return ScalarInteger(FANSI_WARN_ALL);
+  return ScalarInteger(FANSI_WARN_MASK);
+}
+SEXP FANSI_get_warn_mangled() {
+  return ScalarInteger(FANSI_WARN_MANGLED);
+}
+SEXP FANSI_get_warn_utf8() {
+  return ScalarInteger(FANSI_WARN_UTF8);
+}
+SEXP FANSI_get_warn_error() {
+  return ScalarInteger(FANSI_WARN_ERROR);
 }
 // concept borrowed from utf8-lite, but is not great because we're
 // still doing the calculation every iteration.  Probably okay though, the
@@ -430,7 +426,7 @@ void FANSI_val_args(SEXP x, SEXP norm, SEXP carry) {
 // Utilitiy fun
 // nocov start
 
-void FANSI_print(char * x) {
+void FANSI_print(const char * x) {
   if(x) {
     size_t len = strlen(x);
     for(size_t i = 0; i < len; ++i)
@@ -441,27 +437,63 @@ void FANSI_print(char * x) {
     Rprintf("\n");
   }
 }
+void FANSI_print_len(const char * x, int len) {
+  for(int i = 0; i < len; ++i)
+    if(*(x + i) < 0x20 || *(x + i) > 0x7F)
+      Rprintf("\\x%2x", *(x + i));
+    else
+      Rprintf("%c", *(x + i));
+  Rprintf("\n");
+}
+void FANSI_print_bits(unsigned int x) {
+  unsigned int uintbits = (sizeof(x) * CHAR_BIT);
+  for(unsigned int i = uintbits; i > 0; --i) {
+    if(i < uintbits && !(i % 8)) Rprintf(" ");
+    Rprintf("%d", (x & (1U << (i - 1))) > 0);
+  }
+}
 void FANSI_print_sgr(struct FANSI_sgr s) {
   Rprintf(
-    "  color: %d %d %d;%d;%d bgcolor: %d %d %d;%d;%d\n",
-    s.color, s.color_extra[0],
-    s.color_extra[1], s.color_extra[2], s.color_extra[3],
-    s.bg_color, s.bg_color_extra[0],
-    s.bg_color_extra[1], s.bg_color_extra[2], s.bg_color_extra[3]
+    "  color:  %d %d %d;%d;%d bgcolor:  %d %d %d;%d;%d\n",
+    s.color.x & FANSI_CLR_MASK,
+    s.color.x & ~FANSI_CLR_MASK, 
+    s.color.extra[0], s.color.extra[1], s.color.extra[2],
+    s.bgcol.x & FANSI_CLR_MASK,
+    s.bgcol.x & ~FANSI_CLR_MASK, 
+    s.bgcol.extra[0], s.bgcol.extra[1], s.bgcol.extra[2]
   );
-  Rprintf(
-    "  style %x ideogram %x  border %x font %d\n",
-    s.style, s.ideogram, s.border, s.font
-  );
+  Rprintf("  style:  ");
+  FANSI_print_bits(s.style);
+  Rprintf("\n");
 }
 void FANSI_print_state(struct FANSI_state x) {
   Rprintf("- State -------\n");
-  FANSI_print_sgr(x.sgr);
+  FANSI_print_sgr(x.fmt.sgr);
   Rprintf(
-    "  pos: b %d r %d a %d w %d\n",
-    x.pos_byte, x.pos_raw, x.pos_ansi, x.pos_width
+    "  pos: byte %d width %d\n",
+    x.pos.x, x.pos.w
   );
-  Rprintf("  warn %d err %x\n", x.warn, x.err_code);
-  Rprintf("- End State ---\n");
+  Rprintf("  status: ");
+  FANSI_print_bits(x.status);
+  Rprintf("\n  settng: ");
+  FANSI_print_bits(x.settings);
+  Rprintf("\n- End State ---\n");
 }
-// nocov end
+
+SEXP FANSI_read_all_ext(SEXP x, SEXP warn, SEXP term_cap) {
+  R_xlen_t len = XLENGTH(x);
+  SEXP res = PROTECT(allocVector(INTSXP, len));
+  int * res_i = INTEGER(res);
+  const char * arg = "x";
+  struct FANSI_state state;
+  for(R_xlen_t i = 0; i < len; ++i) {
+    if(!i) state = FANSI_state_init(x, warn, term_cap, i);
+    else FANSI_state_reinit(&state, x,  i);
+
+    FANSI_read_all(&state, i, arg);
+    res_i[i] = state.pos.x;
+  }
+  UNPROTECT(1);
+  return res;
+}
+
