@@ -8,8 +8,10 @@ trimws_ctl(
   x,
   which = c("both", "left", "right"),
   whitespace = "[ \\t\\r\\n]",
+  warn = getOption("fansi.warn", TRUE),
+  term.cap = getOption("fansi.term.cap", dflt_term_cap()),
   ctl = "all",
-  warn = getOption("fansi.warn", TRUE)
+  normalize = getOption("fansi.normalize", FALSE)
 )
 }
 \arguments{
@@ -21,6 +23,26 @@ trimws_ctl(
 
 \item{whitespace}{must be set to the default value, in the future it may
 become possible to change this parameter.}
+
+\item{warn}{TRUE (default) or FALSE, whether to warn when potentially
+problematic \emph{Control Sequences} are encountered.  These could cause the
+assumptions \code{fansi} makes about how strings are rendered on your display
+to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
+If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
+parameter on functions that have it, or the \code{tabs_as_spaces} function, to
+turn the tabs to spaces and resolve the warning that way.  At most one
+warning will be issued per element in each input vector.  Will also warn
+about some badly encoded UTF-8 strings, but a lack of UTF-8 warnings is not
+a guarantee of correct encoding (use \verb{[validUTF8]} for that).}
+
+\item{term.cap}{character a vector of the capabilities of the terminal, can
+be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
+starting with "38;5" or "48;5"), "truecolor" (SGR codes starting with
+"38;2" or "48;2"), and "all". Changing this parameter changes how \code{fansi}
+interprets escape sequences, so you should ensure that it matches your
+terminal capabilities. See \code{\link{term_cap_test}} for details.  "all" behaves as
+it does for the \code{ctl} parameter: "all" combined with any other value means
+all terminal capabilities except that one.}
 
 \item{ctl}{character, which \emph{Control Sequences} should be treated
 specially.  Special treatment is context dependent, and may include
@@ -42,16 +64,11 @@ for newlines and the actual ESC (0x1B) character.
 above, in which case it means "all but".
 }}
 
-\item{warn}{TRUE (default) or FALSE, whether to warn when potentially
-problematic \emph{Control Sequences} are encountered.  These could cause the
-assumptions \code{fansi} makes about how strings are rendered on your display
-to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
-If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
-parameter on functions that have it, or the \code{tabs_as_spaces} function, to
-turn the tabs to spaces and resolve the warning that way.  At most one
-warning will be issued per element in each input vector.  Will also warn
-about some badly encoded UTF-8 strings, but a lack of UTF-8 warnings is not
-a guarantee of correct encoding (use \verb{[validUTF8]} for that).}
+\item{normalize}{TRUE or FALSE (default) whether SGR sequence should be
+normalized out such that there is one distinct sequence for each SGR code.
+normalized strings will occupy more space (e.g. "\033[31;42m" becomes
+"\033[31m\033[42m"), but will work better with code that assumes each SGR
+code will be in its own escape as \code{crayon} does.}
 }
 \value{
 The input with white space removed as described.
@@ -76,8 +93,9 @@ other things.  For the most part \code{fansi} (currently) uses the internals of
 the future.
 
 How a particular display format is encoded in \emph{Control Sequences} is
-not guaranteed to be stable across \code{fansi} versions, although we will
-strive to keep the rendered appearance stable.
+not guaranteed to be stable across \code{fansi} versions.  Additionally, which
+\emph{Special Sequences} are re-encoded vs transcribed untouched may change.
+In general we will strive to keep the rendered appearance stable.
 
 To maximize the odds of getting stable output set \code{normalize_state} to
 \code{TRUE} and \code{type} to \code{"chars"} in functions that allow it, and

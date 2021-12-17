@@ -181,7 +181,7 @@ If \code{stop} < \code{start}, the return value is always an empty string.
 When computing substrings, \emph{Normal} (non-control) characters are considered
 to occupy positions in strings, whereas \emph{Control Sequences} occupy the
 interstices between them.  The string \code{"hello-\\033[31mworld\\033[m!"} is
-interpreted as:\preformatted{ 0                 1
+interpreted as:\preformatted{                   1 1 1
  1 2 3 4 5 6 7 8 9 0 1 2
  h e l l o -|w o r l d|!
             ^         ^
@@ -191,13 +191,18 @@ interpreted as:\preformatted{ 0                 1
 \code{start} and \code{stop} reference character positions so they never explicitly
 select for the interstitial \emph{Control Sequences}.  The latter are implicitly
 selected if they appear in interstices after the first character and before
-the last.  Additionally, because \emph{Control Sequences} affect all subsequent
-characters in a string, any active \emph{Control Sequence}, whether opened just
-before a character or much before, will be reflected in the state \code{fansi}
-prepends to the beginning of each substring.  It is possible to select
-\emph{Control Sequences} at the end of a string by specifying \code{stop} values past
-the end of the string, although this will only produce a visible result if
-\code{terminate} is set to \code{FALSE}.
+the last.  Additionally, because \emph{Special Sequences} (CSI SGR and OSC
+hyperlinks) affect all subsequent characters in a string, any active \emph{Special
+Sequence}, whether opened just before a character or much before, will be
+reflected in the state \code{fansi} prepends to the beginning of each substring.
+
+It is possible to select \emph{Control Sequences} at the end of a string by
+specifying \code{stop} values past the end of the string, although for \emph{Special
+Sequences} this only produces visible results if \code{terminate} is set to
+\code{FALSE}.  Similarly, it is possible to select \emph{Control Sequences} preceding
+the beginning of a string by specifying \code{start} values less than one,
+although as noted earlier this is unnecessary for \emph{Special Sequences} as
+those are output by \code{fansi} before each substring.
 
 Because exact substrings on anything other than character count cannot be
 guaranteed (e.g. as a result of multi-byte encodings, or double display-width
@@ -211,25 +216,15 @@ that character is included in the substring, while any similar partially
 included character via the \code{stop} is left out.  The converse is true if we
 use "stop" as the \code{round} value.  "neither" would cause all partial
 characters to be dropped irrespective whether they correspond to \code{start} or
-\code{stop}, and "both" could cause all of them to be included.
-
-For example, if we consider "WW" to be a single wide character, and "n" to be
-a single narrow one:\preformatted{      12345
-x <- "WWnWW"
-substr_ctl(x, 2, 4, type='width' round='start')    -> "WWn"
-substr_ctl(x, 2, 4, type='width' round='stop')     -> "nWW"
-substr_ctl(x, 2, 4, type='width' round='neither')  -> "n"
-substr_ctl(x, 2, 4, type='width' round='both')     -> "WWnWW"
-}
+\code{stop}, and "both" could cause all of them to be included.  See examples.
 
 A number of \emph{Normal} characters such as combining diacritic marks have
 reported width of zero.  These are typically displayed overlaid on top of the
 preceding glyph, as in the case of \code{"e\\u301"} forming \code{"é"}.  Unlike \emph{Control
 Sequences}, which also have reported width of zero, \code{fansi} groups zero-width
 \emph{Normal} characters with the last preceding non-zero width \emph{Normal}
-character.  This is not the right thing to do for some rare zero-width
-\emph{Normal} characters such as prepending marks (see "Output Stability" and
-"Graphemes").
+character.  This is incorrect for some rare zero-width \emph{Normal} characters
+such as prepending marks (see "Output Stability" and "Graphemes").
 }
 
 \section{Output Stability}{
@@ -247,8 +242,9 @@ other things.  For the most part \code{fansi} (currently) uses the internals of
 the future.
 
 How a particular display format is encoded in \emph{Control Sequences} is
-not guaranteed to be stable across \code{fansi} versions, although we will
-strive to keep the rendered appearance stable.
+not guaranteed to be stable across \code{fansi} versions.  Additionally, which
+\emph{Special Sequences} are re-encoded vs transcribed untouched may change.
+In general we will strive to keep the rendered appearance stable.
 
 To maximize the odds of getting stable output set \code{normalize_state} to
 \code{TRUE} and \code{type} to \code{"chars"} in functions that allow it, and
@@ -272,8 +268,8 @@ interactions of state in \code{x} and \code{value}.
 The \code{carry} parameter causes state to carry within the original string and
 the replacement values independently, as if they were columns of text cut
 from different pages and pasted together.  String values for \code{carry} are
-illegal in replacement mode as it is ambiguous which of \code{x} or \code{value} they
-would modify (see examples).
+disallowed in replacement mode as it is ambiguous which of \code{x} or \code{value}
+they would modify (see examples).
 
 When in \code{type = 'width'} mode, it is only guaranteed that the result will be
 no wider than the original \code{x}.  Narrower strings may result if a mixture
@@ -289,9 +285,9 @@ implicit ones generated for \code{value}) do not align with grapheme boundaries.
 grapheme breaks that work for most common graphemes, including emoji
 combining sequences.  The heuristic is known to work incorrectly with
 invalid combining sequences, prepending marks, and sequence interruptors.
-\code{fansi} does not provide a full implementation to avoid carrying a copy of
-the Unicode grapheme breaks table, and also because the hope is that R will
-add the feature eventually itself.
+\code{fansi} does not provide a full implementation of grapheme break detection to
+avoid carrying a copy of the Unicode grapheme breaks table, and also because
+the hope is that R will add the feature eventually itself.
 
 The \href{https://cran.r-project.org/package=utf8}{\code{utf8}} package provides a
 conforming grapheme parsing implementation.
@@ -301,14 +297,15 @@ conforming grapheme parsing implementation.
 substr_ctl("\033[42mhello\033[m world", 1, 9)
 substr_ctl("\033[42mhello\033[m world", 3, 9)
 
-## Width 2 and 3 are in the middle of an ideogram as
-## start and stop positions respectively, so we control
-## what we get with `round`
-cn.string <- paste0("\033[42m", "\u4E00\u4E01\u4E03", "\033[m")
-substr2_ctl(cn.string, 2, 3, type='width')
-substr2_ctl(cn.string, 2, 3, type='width', round='both')
-substr2_ctl(cn.string, 2, 3, type='width', round='start')
-substr2_ctl(cn.string, 2, 3, type='width', round='stop')
+## Positions 2 and 4 are in the middle of the full width Ｗ for
+## the `start` and `stop` positions respectively. Use `round`
+## to control result:
+##    12345
+x <- "ＷnＷ"
+substr2_ctl(x, 2, 4, type='width', round='start')
+substr2_ctl(x, 2, 4, type='width', round='stop')
+substr2_ctl(x, 2, 4, type='width', round='neither')
+substr2_ctl(x, 2, 4, type='width', round='both')
 
 ## We can specify which escapes are considered special:
 substr_ctl("\033[31mhello\tworld", 1, 6, ctl='sgr', warn=FALSE)

@@ -69,5 +69,6 @@ strip_ctl(string, c("all", "nl", "c0"))
 }
 \seealso{
 \code{\link[=fansi]{?fansi}} for details on how \emph{Control Sequences} are
-interpreted, particularly if you are getting unexpected results.
+interpreted, particularly if you are getting unexpected results,
+\code{\link{unhandled_ctl}} for detecting bad control sequences.
 }

@@ -149,8 +149,9 @@ other things.  For the most part \code{fansi} (currently) uses the internals of
 the future.
 
 How a particular display format is encoded in \emph{Control Sequences} is
-not guaranteed to be stable across \code{fansi} versions, although we will
-strive to keep the rendered appearance stable.
+not guaranteed to be stable across \code{fansi} versions.  Additionally, which
+\emph{Special Sequences} are re-encoded vs transcribed untouched may change.
+In general we will strive to keep the rendered appearance stable.
 
 To maximize the odds of getting stable output set \code{normalize_state} to
 \code{TRUE} and \code{type} to \code{"chars"} in functions that allow it, and

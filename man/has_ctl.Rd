@@ -48,7 +48,8 @@ in return
 }
 \description{
 \code{has_ctl} checks for any \emph{Control Sequence}.  You can check for different
-types of sequences with the \code{ctl} parameter.
+types of sequences with the \code{ctl} parameter.  Warnings are only emitted for
+malformed CSI or OSC sequences.
 }
 \examples{
 has_ctl("hello world")
@@ -58,5 +59,6 @@ has_ctl("hello\033[31mworld\033[m", "sgr")
 }
 \seealso{
 \code{\link[=fansi]{?fansi}} for details on how \emph{Control Sequences} are
-interpreted, particularly if you are getting unexpected results.
+interpreted, particularly if you are getting unexpected results,
+\code{\link{unhandled_ctl}} for detecting bad control sequences.
 }
