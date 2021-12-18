@@ -115,19 +115,19 @@ int FANSI_find_ctl(
   }
   return pos;
 }
-static int FANSI_maybe_ctl(const char x) {
+static int maybe_ctl(const char x) {
   // Controls range from 0000 0001 (0x01) to 0001 1111 (0x1F), plus 0x7F;
-  // We don't treat C1 controls as specials, apparently
+  // We don't treat C1 (C1, not C0) controls as specials, apparently
   return x && (!(x & (~0x1F)) || x == 0x7F);
 }
 /*
  * Searches for start of next possible control character, if there is one,
- * and returns the offset from the current point
+ * and returns the offset from the current point.
  */
 
 int FANSI_seek_ctl(const char * x) {
   const char * x0 = x;
-  while(*x && !FANSI_maybe_ctl(*x)) x++;
+  while(*x && !maybe_ctl(*x)) x++;
   if(x - x0 > FANSI_lim.lim_int.max)
     error("Internal error: sought past INT_MAX, should not happen.");  // nocov
   return (x - x0);
