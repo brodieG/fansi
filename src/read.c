@@ -20,7 +20,7 @@
 /*
  * GENERAL NOTES ON read_ FUNCTIONS
  *
- * * read_* should never be used directly, use FANSI_read_next.
+ * * read_* should never be used directly, use FANSI_read_(next|until).
  * * state.pos.x will be the first unread character after a call to `read_*`
  * * It is assumed that the string pointed to by a state cannot be longer than
  *   INT_MAX, so we do not check for overflow (this is checked on state init)
@@ -30,7 +30,16 @@
  * the `pos.x` offset.  Typically this is done when we don't care about thing
  * such as UTF-8 or widths.  In these cases, care should be taken to ensure none
  * of the subsequent uses of the state object rely on the specific states that
- * `FANSI_read_next` leaves it in.
+ * `FANSI_read_(next|until)` leaves it in.
+ *
+ * `FANSI_read_until` will be faster anytime we need to read a sequence of
+ * characters, particularly if they are all e.g. "ASCII", as it avoid having to
+ * jump in and out of the function requiring moving stuff in and out of memory.
+ * `FANSI_read_next` is needed when we specifically just want to read one
+ * "character" to check it.  It might be possible to replace `FANSI_read_next`
+ * with a careful call to `FANSI_read_until`, but there are enough corner cases
+ * that it was deemed easier to just have a different function (and IIRC there
+ * might have been deal breaker, but I forget what).
  */
 
 /*- Error Data ----------------------------------------------------------------\
@@ -195,9 +204,9 @@ static void alert(struct FANSI_state * state, R_xlen_t i, const char * arg) {
 
 unsigned int parse_token(struct FANSI_state * state) {
   unsigned int mult, val;
-  int len, len_intermediate, len_tail, last, non_standard, private,
+  int len, len_intermediate, len_tail, is_csi, non_standard, private,
     leading_zeros, not_zero, is_sgr, err_code;
-  len = len_intermediate = len_tail = last = non_standard = private =
+  len = len_intermediate = len_tail = is_csi = non_standard = private =
     leading_zeros = not_zero = is_sgr = err_code = 0;
   mult = 1;
   val = 0U;
@@ -225,17 +234,17 @@ unsigned int parse_token(struct FANSI_state * state) {
   }
   // check for final byte
   is_sgr = 0;
-  last = 1;
+  is_csi = 1;  // Really means "is escape 'complete'"
   if((*string == ';' || *string == 'm') && !len_intermediate) {
     // valid end of SGR parameter substring
     if(non_standard) err_code = ERR_BAD_SUB;
-    if(*string == ';') last = 0;
-    // technically non-sgrness is implicit in last + err_code, but because we
+    if(*string == ';') is_csi = 0;
+    // technically non-sgrness is implicit in is_csi + err_code, but because we
     // can parse multiple CSI sequences one after the other, and we accumulate
     // the err_code value, it's cleaner to just explicitly determine whether
     // sequence is actually sgr.
   } else if(*string >= 0x40 && *string <= 0x7E) {
-    // valid final byte
+    // valid final byte, but not SGR
     err_code = ERR_NOT_SPECIAL;
   } else {
     // Invalid end, consume until find a valid end or end string
@@ -252,27 +261,29 @@ unsigned int parse_token(struct FANSI_state * state) {
       err_code = ERR_BAD_CSI_OSC;
   }
   if(*string == 'm') is_sgr = 1;
-  else if(*string >= 0x40 && *string <= 0x7E) last = 1;
-  if(err_code && err_code < ERR_EXCEED_CAP && !is_sgr)
-    err_code = ERR_NOT_SPECIAL_BAD_SUB;
 
-  // Final interpretations; note that anything over 255 cannot be part of a
-  // valid SGR sequence
-  if(!err_code && (len - leading_zeros) > 3) {
-    err_code = ERR_UNKNOWN_SUB;
-  }
-  if(!err_code) {
+  int bad_sub = err_code == ERR_BAD_SUB || err_code == ERR_NOT_SPECIAL_BAD_SUB;
+
+  // Check num length to avoid overflow.
+  if(len - leading_zeros > 3) bad_sub = 1;
+  if(!bad_sub && err_code < ERR_BAD_SUB) {
     int len2 = len - leading_zeros;
     while(len2--) {
       val += (as_num(--string) * mult);
       mult *= 10;
   } }
-  if(err_code < ERR_BAD_SUB && val > 255) err_code = ERR_BAD_SUB;
+  // Anything over 255 cannot be part of a valid CSI.
+  if(val > 255) bad_sub = 1;
+
+  if(bad_sub && !is_sgr && err_code < ERR_NOT_SPECIAL_BAD_SUB)
+    err_code = ERR_NOT_SPECIAL_BAD_SUB;
+  else if(bad_sub && err_code < ERR_BAD_SUB) err_code = ERR_BAD_SUB;
 
   state->pos.x += len + len_intermediate + len_tail;
   state->status = set_err(state->status, err_code);
+  // csi/sgr mutually exclusive
   if(is_sgr) state->status |= FANSI_CTL_SGR;
-  else if(last) state->status |= FANSI_CTL_CSI;
+  else if(is_csi) state->status |= FANSI_CTL_CSI;
   return val;
 }
 /*
@@ -537,7 +548,7 @@ unsigned int parse_url(struct FANSI_state * state) {
           (end - state->string) < URL_LEN(state->fmt.url) ||
           (end - state->string) < ID_LEN(state->fmt.url)
         )
-          error("Internal Error: bad URI size.");
+          error("Internal Error: bad URI size.");  // nocov
       }
     } else err_tmp = ERR_BAD_CSI_OSC;
 
@@ -853,9 +864,10 @@ void read_esc(struct FANSI_state * state, int term_i) {
       // We have no way of knowning whether something could be SGR or other CSI
       // until we read the whole sequence.  If we do not support SGRs, the
       // behavior should be to just treat it as a two char ESC.  If we do
-      // support it but it is bad, we consume as much of it as we can.
+      // support it but it is bad, we consume as much of it as we can and treat
+      // it as CSI.
       //
-      // CSI and SGR status are exclusive (i.e. you get one or the other from
+      // CSI and SGR status are exclusive (i.e. you get one xor the other from
       // parse_token)
 
       unsigned int sgr, csi;
@@ -863,9 +875,6 @@ void read_esc(struct FANSI_state * state, int term_i) {
       csi = state->status & FANSI_CTL_CSI;
       if(sgr && sgr_sup) esc_types |= 2U;
       else if(csi && csi_sup) esc_types |= 1U;
-      else if((!sgr && sgr_sup) && (!csi && csi_sup))
-        // Bad sequence, read as much as possible but reset formats
-        state->fmt = state_prev.fmt;
       else if((sgr && !sgr_sup) || (csi && !csi_sup)) {
         // Good sequence, but don't support it, so just read 1 char from prev
         *state = state_prev;
@@ -992,12 +1001,14 @@ void read_c0(struct FANSI_state * state) {
 /*
  * Read a Series of UTF8 (and ASCII) Characters
  *
+ * See GENERAL NOTES atop.
+ *
  * Hacky grapheme approximation ensures flags (RI) aren't split, sets skin
  * modifiers to width zero (so greedy / not greedy searches will / will  not
  * grab them), and sets width zero to anything following a ZWJ (for  the same
  * reason).  This will work in many cases, provided that the emoji sequences
  * are valid and recognized by the display device.  Other graphemes work
- * similarly to the extent continuation code points are   zero width naturally.
+ * similarly to the extent continuation code points are  zero width naturally.
  * Prefixes, sequence interruptors, and other things will not work.
  *
  * @param until width target
@@ -1149,16 +1160,20 @@ void FANSI_read_next(
 /*
  * Consume bytes until a certain width is met.
  *
+ * See GENERAL NOTES atop.
+ *
  * Will read as many bytes as possible within each of the child `read_*`
  * functions, but will need to drop out occasionally.  UTF8 state should survive
- * across calls to escape functions as Terminals ignore them when composing
+ * across calls to escape functions as terminals ignore them when composing
  * compound UTF8 graphemes.
  *
  * We always consume all controls less than target `until` but never those
  * greater than that.
  *
  * Two loop structure, where the second one cleans up any additional items that
- * do not add width.
+ * do not add width.  `read_utf8_until` does read trailing zero width, but
+ * cannot handle the case where there are controls sandwiched between zero width
+ * chars so we need to do it here.
  *
  * @param until width measure not to exceed (subject to overshoot)
  * @param overshoot allow a wide character to overshoot `until`
@@ -1196,7 +1211,7 @@ void FANSI_read_until(
   // This handles mixed zero widths and escapes in trailing (utf8_until only
   // does zero width utf8s).
   //
-  // 1. Consume all remaining zero width characters (+ those made so by ZWJ)
+  // 1. Consume all remaining zero width characters (+ those made so by ZWJ/RI)
   // 2. Consume all trailing controls, so long as they are followed by more
   //    zero width char or we are in start mode.
 
