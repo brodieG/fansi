@@ -376,12 +376,12 @@ substr2_ctl <- function(
     stop=stop, type=type, carry=carry
   )
   # In replace mode we shouldn't change the encoding
-  if(!all(enc.diff <- Encoding(x) ==  Encoding(x0)))
+  if(!all(enc.diff <- Encoding(x) == Encoding(x0)))
     stop(
       "`x` may only contain ASCII or marked UTF-8 encoded strings; ",
       "you can use `enc2utf8` to convert `x` prior to use with ",
-      "`substr_ctl<-` (replacement form).  Illegal value at position ",
-      min(which(enc.diff)), "."
+      "`substr_ctl<-` (replacement form).  Illegal value at position [",
+      min(which(!enc.diff)), "]."
     )
 
   value <- as.character(value)
