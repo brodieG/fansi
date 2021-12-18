@@ -993,15 +993,16 @@ void read_esc(struct FANSI_state * state, int term_i) {
  * See GENERAL NOTES atop.
  */
 void read_c0(struct FANSI_state * state) {
+  int nl_sup = state->settings & FANSI_CTL_NL;
+  int c0_sup = state->settings & FANSI_CTL_C0;
   int is_nl = state->string[state->pos.x] == '\n';
-  state->status &= FANSI_STAT_WARNED;
+
+  state->status &= FANSI_STAT_WARNED;  // reset state (UTF8 really)
   if(!is_nl) state->status = set_err(state->status, ERR_C0);
   read_one(state);
+
   // If C0/NL are being actively processed, treat them as width zero
-  if(
-    (is_nl && (state->settings & FANSI_CTL_NL)) ||
-    (!is_nl && (state->settings & FANSI_CTL_C0))
-  ) {
+  if((is_nl && nl_sup) || (!is_nl && c0_sup)) {
     --state->pos.w;
     state->status |= is_nl ? FANSI_CTL_NL : FANSI_CTL_C0;
   }
