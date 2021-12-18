@@ -147,7 +147,8 @@ static char * color_to_html(struct FANSI_color color, char * buff) {
     "5555FF", "FF55FF", "55FFFF", "FFFFFF"
   };
   unsigned char clrval = color.x & ~FANSI_CLR_MASK;
-  if(clrval == 9) error("Internal Error: applying non-color.");
+  if(clrval == 9)
+    error("Internal Error: applying non-color."); // nocov
 
   char * buff_track = buff;
   *(buff_track++) = '#';
@@ -204,7 +205,7 @@ static char * color_to_html(struct FANSI_color color, char * buff) {
   *buff_track = 0;
   int dist = (int) (buff_track - buff);
   if(dist != 7)
-    error("Internal Error: unexpected byte count for color (%d).", dist);
+    error("Internal Error: bad byte count for color (%d).", dist); // nocov
 
   return buff;
 }
