@@ -1123,15 +1123,6 @@ void read_utf8_until(struct FANSI_state * state, int until, int overshoot) {
   }
 }
 /*
- * Read UTF8 character
- *
- * See GENERAL NOTES atop.
- */
-void read_utf8(struct FANSI_state * state) {
-  int overshoot = 1;  // always read at least one char
-  read_utf8_until(state, state->pos.w + 1, overshoot);
-}
-/*
  * Read a Character Off and Update State
  *
  * See GENERAL NOTES atop.

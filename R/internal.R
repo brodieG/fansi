@@ -19,11 +19,6 @@ R.ver.gte.3.2.2 <- NA
 
 ## Internal functions, used primarily for testing
 
-## A version of unique that isn't terrible for very long strings that are
-## actually the same
-
-unique_chr <- function(x) .Call(FANSI_unique_chr, enc_to_utf8(x))
-
 ## Testing interface for color code to HTML conversion
 
 esc_color_code_to_html <- function(x) {
@@ -37,10 +32,6 @@ check_assumptions <- function() .Call(FANSI_check_assumptions)  # nocov
 add_int <- function(x, y) .Call(FANSI_add_int, as.integer(x), as.integer(y))
 
 ## testing interface for low overhead versions of R funs
-
-cleave <- function(x) .Call(FANSI_cleave, x)
-forder <- function(x) .Call(FANSI_order, x)
-sort_chr <- function(x) .Call(FANSI_sort_chr, x)
 
 set_int_max <- function(x) .Call(FANSI_set_int_max, as.integer(x)[1])
 get_int_max <- function(x) .Call(FANSI_get_int_max)  # nocov for debug only
