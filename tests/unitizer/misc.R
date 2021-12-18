@@ -39,16 +39,14 @@ unitizer_sect("unhandled", {
   unhandled_ctl(string.0)
   # some more interesting cases
   string.1 <- c(
-    "foo\033[22>mhello\033[9999m", "a\033[31k", "hello\033m world \033"
+    "foo\033[22>mhello\033[9999m", "a\033[31k", "hello\033m \033[180mworld \033"
   )
   unhandled_ctl(string.1)
 
   # A malformed ESCape
-
   unhandled_ctl("hello\033\033\033[45p wor\ald")
 
   # Specifying term cap
-
   unhandled_ctl("\033[38;5;220mworld\033[m", "bright")
   unhandled_ctl("\033[38;2;10;20;30mworld\033[m", "bright")
   unhandled_ctl("\033[38;2;10;20;30mworld\033[m", "bri")
@@ -59,6 +57,8 @@ unitizer_sect("unhandled", {
   # Unterminated OSC consumes everything
   unhandled_ctl("AB\033[34m\033]9\033[1m\033[2LCD")
 
+  # Non-SGR and SGR bad tokens
+  unhandled_ctl("A\033[45#1pB\033[256pC\033[256mD")
 })
 unitizer_sect("strtrim", {
   strtrim_ctl(" hello world", 7)
