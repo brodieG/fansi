@@ -265,14 +265,16 @@ unsigned int parse_token(struct FANSI_state * state) {
   int bad_sub = err_code == ERR_BAD_SUB || err_code == ERR_NOT_SPECIAL_BAD_SUB;
 
   // Check num length to avoid overflow.
-  if(len - leading_zeros > 3) bad_sub = 1;
+  if(len - leading_zeros > 3) bad_sub = 1;  // see val > 255 below
   if(!bad_sub && err_code < ERR_BAD_SUB) {
     int len2 = len - leading_zeros;
     while(len2--) {
       val += (as_num(--string) * mult);
       mult *= 10;
   } }
-  // Anything over 255 cannot be part of a valid CSI.
+  // Anything over 255 cannot be part of a valid CSI (reference?).  It seems as
+  // if the standards only specify it should be a decimal number, so this is not
+  // strictly correct.
   if(val > 255) bad_sub = 1;
 
   if(bad_sub && !is_sgr && err_code < ERR_NOT_SPECIAL_BAD_SUB)
@@ -636,6 +638,10 @@ static void read_one(struct FANSI_state * state) {
  *
  * See GENERAL NOTES atop, and notes for each parse_ function.
  *
+ * Based on ECMA-48 (see extra/Ecma-048.pdf) and CCITT Recommendation T.416 (the
+ * latter cannot be conveyed for copyright reasons, but is published online in
+ * draft form).
+ *
  * In particular, special treatment for ANSI CSI SGR and OSC URL sequences.
  * Reading is greedy, where sequences will continue to be read until a valid
  * terminator is encountered (or target length achieved), even if there are
@@ -658,8 +664,11 @@ static void read_one(struct FANSI_state * state) {
  *       reserved for future use
  *     * Leading zeros can be omitted
  *     * Empty substrings allowed, and trailing delimiter can/should be omitted
- *  * Intermediate bytes 02/00-02/15 (0x20-0x2F): [ !"#$%&'()*+,\-./]
- *  * Final bytes 04/00-07/14 (0x40-0x7E): [@A-Z\[\\\]\%_`a-z{|}~]
+ * * Intermediate bytes 02/00-02/15 (0x20-0x2F): [ !"#$%&'()*+,\-./]
+ * * Final bytes 04/00-07/14 (0x40-0x7E): [@A-Z\[\\\]\%_`a-z{|}~]
+ *
+ * Spec appears to allow any number of decimal digits, but we cap to 3 in
+ * [0,255] as integers.
  *
  * @section Possible Outcomes:
  *
