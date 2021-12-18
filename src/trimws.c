@@ -51,14 +51,12 @@ SEXP FANSI_trimws(
     if(x_chr == NA_STRING) continue;
     FANSI_interrupt(i);
 
-    int string_start, string_end;
-    string_start = string_end = 0;
-
     // Two (really three) pass process: find begin and end points of string to
     // keep, compute required size for final string (due to normalize and other
     // factors, can't really know just based on input), and finally write.  The
     // last two are part of the standard two pass measure/write framework used
     // in fansi.
+    int string_start = 0;
     if(which_i == 0 || which_i == 1) {
       while(1) {
         switch(state.string[state.pos.x]) {
@@ -72,8 +70,13 @@ SEXP FANSI_trimws(
             if(IS_PRINT(state.string[state.pos.x])) {
               goto ENDLEAD;
             } else {
-              FANSI_read_next(&state, i, arg);
-              if(state.status & FANSI_CTL_MASK) break;
+              struct FANSI_state state_tmp = state;
+              FANSI_read_next(&state_tmp, i, arg);
+              state.status |= state_tmp.status & FANSI_STAT_WARNED;
+              if(state_tmp.status & FANSI_CTL_MASK) {
+                state = state_tmp;
+                break;  // break out of switch, NOT out of while
+              }
               else goto ENDLEAD;
             }
       } }
@@ -82,6 +85,7 @@ SEXP FANSI_trimws(
       string_start = state_lead.pos.x;
     }
     // Find first space that has no subsequent non-spaces
+    int string_end = -1; // -1 dissambiguates something with nothing but spaces
     if(which_i == 0 || which_i == 2) {
       while(state.string[state.pos.x]) {
         switch(state.string[state.pos.x]) {
@@ -89,7 +93,7 @@ SEXP FANSI_trimws(
           case '\n':
           case '\r':
           case '\t':
-            if(!string_end) {
+            if(string_end < 0) {
               string_end = state.pos.x;
               state_trail = state;
             }
@@ -97,19 +101,23 @@ SEXP FANSI_trimws(
             continue;
           default:
             if(IS_PRINT(state.string[state.pos.x])) {
-              string_end = 0;
+              string_end = -1;
               ++state.pos.x;
             } else {
-              FANSI_read_next(&state, i, arg);
-              if(state.status & FANSI_CTL_MASK) continue;
-              else {
-                string_end = 0;
+              struct FANSI_state state_tmp = state;
+              FANSI_read_next(&state_tmp, i, arg);
+              state.status |= state_tmp.status & FANSI_STAT_WARNED;
+              if(state_tmp.status & FANSI_CTL_MASK) {
+                state = state_tmp;
+                continue;
+              } else {
+                string_end = -1;
                 ++state.pos.x;
             } }
       } }
       state_last = state;
     }
-    if(!string_end) {
+    if(string_end < 0) {
       string_end = LENGTH(x_chr);
       state_trail = state_last;
     }
