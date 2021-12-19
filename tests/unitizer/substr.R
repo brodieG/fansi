@@ -403,9 +403,9 @@ unitizer_sect("Rep Funs - Corner Cases", {
   `substr_ctl<-`(txt8, 1, 3, "\033[1m", terminate=FALSE)
 
   ## Errors
-  `substr_ctl<-`(txt8, 1, 3, "A", carry="\033[41m")
+  tce(`substr_ctl<-`(txt8, 1, 3, "A", carry="\033[41m"))
   lat <- "fa\xe7ile"
   Encoding(lat) <- "latin1"
-  `substr_ctl<-`(lat, 1, 3, "ABC")
+  tce(`substr_ctl<-`(lat, 1, 3, "ABC"))
 })
 
