@@ -27,8 +27,8 @@
 #'
 #' When computing substrings, _Normal_ (non-control) characters are considered
 #' to occupy positions in strings, whereas _Control Sequences_ occupy the
-#' interstices between them.  The string `"hello-\033[31mworld\033[m!"` is
-#' interpreted as:
+#' interstices between them.  The string
+#' `"hello-\033&lsqb;31mworld\033&lsqb;m!"` is interpreted as:
 #'
 #' ```
 #'                    1 1 1
