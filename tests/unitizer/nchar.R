@@ -88,6 +88,12 @@ unitizer_sect('corner cases', {
   nchar_ctl("\033[31;\x80p")
   nchar_ctl("\033]8;\x80;a.b\033\\")
   nchar_ctl("\033];\x80;a.b\033\\")
+
+  ## Old R version behavior
+  fansi:::set_rver(numeric_version("3.2.1"))
+  nzchar_ctl(c("\033[31mA", "\033[31m"))
+  nchar_ctl(c("\033[31mA", "\033[31m"))
+  fansi:::set_rver()
 })
 unitizer_sect('bad inputs', {
   nchar_ctl(9:10, warn=1:3)
