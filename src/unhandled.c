@@ -59,7 +59,7 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
         x, no_warn, term_cap, allowNA, keepNA, width, ctl_all, i
       );
       // Read one escape at a time
-      state.settings = state.settings |= SET_ESCONE;
+      state.settings |= SET_ESCONE;
     } else FANSI_state_reinit(&state, x, i);
 
     if(chrsxp != NA_STRING && LENGTH(chrsxp)) {
