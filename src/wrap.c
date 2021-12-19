@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+ * Go to <https://www.r-project.org/Licenses> for a copies of the licenses.
  */
 
 #include "fansi.h"
@@ -184,6 +184,8 @@ static SEXP writeline(
       FANSI_W_MCOPY(buff, pre_dat.string, pre_dat.bytes);
     }
     // Actual string, remember state_bound.pos.x is one past what we need
+    // We could use _normalize_or_copy, but right now doing it at R level as
+    // doing it here requires a bit of tweaking.
     const char * string = state_start.string + state_start.pos.x;
     int bytes = state_bound.pos.x - state_start.pos.x;
     FANSI_W_MCOPY(buff, string, bytes);
