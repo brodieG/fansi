@@ -216,6 +216,7 @@ unsigned int parse_token(struct FANSI_state * state) {
   // `private` a bit redundant since we don't actually use it differentially to
   // non-normal
   private = *string >= 0x3C && * string <= 0x3F;
+  int bad_sub = 0;
 
   // cycle through valid parameter bytes [0-9:;<=>?]
   while(*string >= 0x30 && *string <= 0x3F && *string != ';') {
@@ -226,6 +227,8 @@ unsigned int parse_token(struct FANSI_state * state) {
     ++string;
     ++len;
   }
+  if(non_standard) bad_sub = 1;
+
   // check for for intermediate bytes, we allow 'infinite' here as per
   // ECMA48, although they note 1 byte is likely sufficient.
   while(*string >= 0x20 && *string <= 0x2F) {
@@ -237,7 +240,6 @@ unsigned int parse_token(struct FANSI_state * state) {
   is_csi = 1;  // Really means "is escape 'complete'"
   if((*string == ';' || *string == 'm') && !len_intermediate) {
     // valid end of SGR parameter substring
-    if(non_standard) err_code = ERR_BAD_SUB;
     if(*string == ';') is_csi = 0;
     // technically non-sgrness is implicit in is_csi + err_code, but because we
     // can parse multiple CSI sequences one after the other, and we accumulate
@@ -253,16 +255,10 @@ unsigned int parse_token(struct FANSI_state * state) {
       ++string;
       ++len_tail;
     }
-    if(*string == 'm' && err_code < ERR_BAD_SUB)
-      err_code = ERR_BAD_SUB;
-    else if(*string && err_code < ERR_NOT_SPECIAL_BAD_SUB)
-      err_code = ERR_NOT_SPECIAL_BAD_SUB;
-    else if(!*string && err_code < ERR_BAD_CSI_OSC)
-      err_code = ERR_BAD_CSI_OSC;
+    bad_sub = 1;
+    if(!*string && err_code < ERR_BAD_CSI_OSC) err_code = ERR_BAD_CSI_OSC;
   }
   if(*string == 'm') is_sgr = 1;
-
-  int bad_sub = err_code == ERR_BAD_SUB || err_code == ERR_NOT_SPECIAL_BAD_SUB;
 
   // Check num length to avoid overflow.
   if(len - leading_zeros > 3) bad_sub = 1;  // see val > 255 below
