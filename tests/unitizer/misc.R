@@ -39,16 +39,14 @@ unitizer_sect("unhandled", {
   unhandled_ctl(string.0)
   # some more interesting cases
   string.1 <- c(
-    "foo\033[22>mhello\033[9999m", "a\033[31k", "hello\033m world \033"
+    "foo\033[22>mhello\033[9999m", "a\033[31k", "hello\033m \033[180mworld \033"
   )
   unhandled_ctl(string.1)
 
   # A malformed ESCape
-
   unhandled_ctl("hello\033\033\033[45p wor\ald")
 
   # Specifying term cap
-
   unhandled_ctl("\033[38;5;220mworld\033[m", "bright")
   unhandled_ctl("\033[38;2;10;20;30mworld\033[m", "bright")
   unhandled_ctl("\033[38;2;10;20;30mworld\033[m", "bri")
@@ -59,6 +57,8 @@ unitizer_sect("unhandled", {
   # Unterminated OSC consumes everything
   unhandled_ctl("AB\033[34m\033]9\033[1m\033[2LCD")
 
+  # Non-SGR and SGR bad tokens
+  unhandled_ctl("A\033[45#1pB\033[256pC\033[256mD")
 })
 unitizer_sect("strtrim", {
   strtrim_ctl(" hello world", 7)
@@ -99,20 +99,6 @@ unitizer_sect("strtrim", {
 
   strtrim2_ctl(hello2.0, width=10, ctl=0)
   strtrim2_ctl(hello2.0, width=10, ctl='bananas')
-})
-unitizer_sect("C funs", {
-  fansi:::cleave(1:10)
-  fansi:::cleave(1:9)
-  fansi:::cleave(1:10 + .1)
-
-  # sort_chr doesn't guarantee that things will be sorted lexically, just that
-  # alike things will be contiguous
-
-  set.seed(42)
-  jumbled <- as.character(rep(1:10, 10))[sample(1:100)]
-  sorted <- fansi:::sort_chr(jumbled)
-
-  which(as.logical(diff(as.numeric(sorted))))
 })
 unitizer_sect("enc check", {
   x <- y <- "He\x9f"
@@ -245,9 +231,6 @@ unitizer_sect("output funs", {
   fansi_lines(1:3)
   fansi_lines(1:3, step='hello')
   capture.output(fwl("\033[43mhello"))
-})
-unitizer_sect("unique_chr", {
-  fansi:::unique_chr(rep("o\033[31m ", 2))
 })
 unitizer_sect("validation", {
   fansi:::VAL_IN_ENV(booboo="error")

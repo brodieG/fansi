@@ -115,19 +115,19 @@ int FANSI_find_ctl(
   }
   return pos;
 }
-static int FANSI_maybe_ctl(const char x) {
+static int maybe_ctl(const char x) {
   // Controls range from 0000 0001 (0x01) to 0001 1111 (0x1F), plus 0x7F;
-  // We don't treat C1 controls as specials, apparently
+  // We don't treat C1 (C1, not C0) controls as specials, apparently
   return x && (!(x & (~0x1F)) || x == 0x7F);
 }
 /*
  * Searches for start of next possible control character, if there is one,
- * and returns the offset from the current point
+ * and returns the offset from the current point.
  */
 
 int FANSI_seek_ctl(const char * x) {
   const char * x0 = x;
-  while(*x && !FANSI_maybe_ctl(*x)) x++;
+  while(*x && !maybe_ctl(*x)) x++;
   if(x - x0 > FANSI_lim.lim_int.max)
     error("Internal error: sought past INT_MAX, should not happen.");  // nocov
   return (x - x0);
@@ -189,135 +189,6 @@ SEXP FANSI_get_warn_error() {
 // alternative is just too much of a pain.
 
 void FANSI_interrupt(R_xlen_t i) {if(!(i & 1023)) R_CheckUserInterrupt();}
-/*
- * Split an integer vector into two equal size pieces
- */
-
-SEXP FANSI_cleave(SEXP x) {
-  if(TYPEOF(x) != INTSXP || XLENGTH(x) % 2)
-    error("Internal error, need even length INTSXP.");  // nocov
-
-  R_xlen_t len = XLENGTH(x) / 2;  // R_xlen_t checked to be < SIZE_MAX
-
-  SEXP a, b;
-  a = PROTECT(allocVector(INTSXP, len));
-  b = PROTECT(allocVector(INTSXP, len));
-
-  // see sort_chr
-  size_t size = 0;
-  for(int i = 0; i < (int) sizeof(int); ++i) {
-    if(size > FANSI_lim.lim_size_t.max - len)
-      error("Internal error: vector too long to cleave."); // nocov
-    size += len;
-  }
-  memcpy(INTEGER(a), INTEGER(x), size);
-  memcpy(INTEGER(b), INTEGER(x) + len, size);
-
-  SEXP res = PROTECT(allocVector(VECSXP, 2));
-  SET_VECTOR_ELT(res, 0, a);
-  SET_VECTOR_ELT(res, 1, b);
-  UNPROTECT(3);
-  return res;
-}
-struct datum {int val; R_xlen_t idx;};
-
-static int cmpfun (const void * p, const void * q) {
-  struct datum a = *(struct datum *) p;
-  struct datum b = *(struct datum *) q;
-  return(a.val > b.val ? 1 : (a.val < b.val ? -1 : 0));
-}
-/*
- * Equivalent to `order`, but less overhead.  May not be faster for longer
- * vectors but since we call it potentially repeatedly via our initial version
- * of strsplit, we want to do this to make somewhat less sub-optimal
- *
- * Does this actually have less overhead now with the radix sort available?
- */
-SEXP FANSI_order(SEXP x) {
-  if(TYPEOF(x) != INTSXP)
-    error("Internal error: this order only supports ints.");  // nocov
-
-  R_xlen_t len = XLENGTH(x);  // R_xlen_t checked to be < SIZE_MAX
-  SEXP res;
-
-  if(len) {
-    size_t size = 0;
-    // See chr_sort
-    for(int i = 0; i < (int) sizeof(struct datum); ++i) {
-      if(size > FANSI_lim.lim_size_t.max - len)
-        error("Internal error: vector too long to order."); // nocov
-      size += len;
-    }
-    struct datum * data = (struct datum *) R_alloc(len, sizeof(struct datum));
-
-    for(R_xlen_t i = 0; i < len; ++i)
-      *(data + i) = (struct datum){.val=INTEGER(x)[i], .idx=i + 1};
-
-    qsort(data, (size_t) len, sizeof(struct datum), cmpfun);
-
-    res = PROTECT(allocVector(INTSXP, len));
-
-    for(R_xlen_t i = 0; i < len; ++i) INTEGER(res)[i] = (data + i)->idx;
-  } else {
-    res = PROTECT(allocVector(INTSXP, 0));
-  }
-  UNPROTECT(1);
-  return res;
-}
-struct datum2 {SEXP val; R_xlen_t idx;};
-
-static int cmpfun3 (const void * p, const void * q) {
-  struct datum2 a = *(struct datum2 *) p;
-  struct datum2 b = *(struct datum2 *) q;
-  const char * a_chr = CHAR(a.val);
-  const char * b_chr = CHAR(b.val);
-  return(a_chr > b_chr ? 1 : (a_chr < b_chr ? -1 : 0));
-}
-/*
- * Sort chars so that equal values are contiguous
- *
- * Beware, the sort is not lexical, instead this is sorted by the memory addess
- * of the character strings backing each CHARSXP.
- *
- * The only purpose of this is to support the unique_chr function.
- */
-
-SEXP FANSI_sort_chr(SEXP x) {
-  if(TYPEOF(x) != STRSXP)
-    error("Internal error: this sort only supports char vecs.");  // nocov
-
-  R_xlen_t len = XLENGTH(x);  // R_xlen_t checked to be < SIZE_MAX
-  SEXP res = x;
-
-  if(len > 2) {
-    // Check overflow by adding len as many times as there are bytes in the
-    // atomic unit.  We could divide, but there aren't many bytes.
-
-    size_t size = 0;
-    for(int i = 0; i < (int) sizeof(struct datum); ++i) {
-      if(size > FANSI_lim.lim_size_t.max - len)
-        error("Internal error: vector too long to order."); // nocov
-      size += len;
-    }
-    struct datum2 * data = (struct datum2 *) R_alloc(len, sizeof(struct datum2));
-
-    for(R_xlen_t i = 0; i < len; ++i)
-      *(data + i) = (struct datum2){.val=STRING_ELT(x, i), .idx=i};
-
-    qsort(data, (size_t) len, sizeof(struct datum2), cmpfun3);
-
-    res = PROTECT(allocVector(STRSXP, len));
-
-    for(R_xlen_t i = 0; i < len; ++i)
-      SET_STRING_ELT(res, i, STRING_ELT(x, (data + i)->idx));
-
-    UNPROTECT(1);
-  }
-  return res;
-}
-SEXP FANSI_sort_chr_ext(SEXP x) {
-  return FANSI_sort_chr(x);
-}
 
 /*
  * So we can use a consistent integer type in printing possibly large indeces.
@@ -382,13 +253,15 @@ static SEXP mkChar_core(
   }
 
   // Annoyingly mkCharLenCE accepts int parameter instead of R_len_t, so we need
-  // to check that too.
+  // to check that too.  Not sure this can actually be triggered realistically.
   if(buff.len > FANSI_lim.lim_int.max)
+    // nocov start
     error(
       "%s at index [%jd].",
       "Attempting to create CHARSXP longer than INT_MAX",
       FANSI_ind(i)
     );
+    // nocov end
 
   return mkCharLenCE(buff.buff0, buff.len, enc);
 
@@ -479,21 +352,5 @@ void FANSI_print_state(struct FANSI_state x) {
   FANSI_print_bits(x.settings);
   Rprintf("\n- End State ---\n");
 }
-
-SEXP FANSI_read_all_ext(SEXP x, SEXP warn, SEXP term_cap) {
-  R_xlen_t len = XLENGTH(x);
-  SEXP res = PROTECT(allocVector(INTSXP, len));
-  int * res_i = INTEGER(res);
-  const char * arg = "x";
-  struct FANSI_state state;
-  for(R_xlen_t i = 0; i < len; ++i) {
-    if(!i) state = FANSI_state_init(x, warn, term_cap, i);
-    else FANSI_state_reinit(&state, x,  i);
-
-    FANSI_read_all(&state, i, arg);
-    res_i[i] = state.pos.x;
-  }
-  UNPROTECT(1);
-  return res;
-}
+// nocov end
 

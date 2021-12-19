@@ -41,8 +41,7 @@ static void FANSI_check_chr_size(char * start, char * end, R_xlen_t i) {
  * Code copied into trimws.c.
  *
  * Warn was used pre 1.0 to request to return warn info in attributes e.g. by
- * setting it to two, but that feature was dropped in favor of bit-encoded
- * warning levels.
+ * setting it to two, but that feature was dropped.
  */
 
 SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
@@ -86,7 +85,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     if(x_chr == NA_STRING) continue;
     FANSI_interrupt(i);
 
-    int has_ansi = 0;
+    int has_ctl = 0;
     const char * chr = CHAR(x_chr);
     const char * chr_track = chr;
     char * res_track = NULL, * res_start = NULL;
@@ -101,8 +100,9 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
 
     while(state.string[state.pos.x]) {
       int pos = FANSI_find_ctl(&state, i, arg);
-      if(has_ansi || (state.status & FANSI_CTL_MASK)) {
-        has_ansi = 1;
+      // This will also trigger for end-of-string if `has_ctl` is already true
+      if(has_ctl || (state.status & FANSI_CTL_MASK)) {
+        has_ctl = 1;
         // As soon as we encounter ansi in any of the character vector elements,
         // allocate vector to track what has ansi
         if(!any_ansi) {
@@ -125,27 +125,11 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
         pos_prev = state.pos;
     } }
     // Update string
-
-    if(has_ansi) {
+    if(has_ctl) {
       // Copy final chunk if it exists because above we only memcpy when we
       // encounter the tag
 
-      if(chr_track) {
-        const char * chr_end = chr + LENGTH(x_chr);
-        if(!chr_end) {
-          // nocov start
-          error(
-            "%s%s",
-            "Internal Error: failed to find str end, ",
-            "contact maintainer."
-          );
-          // nocov end
-        } else if(chr_end > state.string + state.pos.x) {
-          memcpy(res_track, chr_track, chr_end - chr_track);
-          res_track += chr_end - chr_track;
-      } }
       *res_track = '\0';
-
       FANSI_check_chr_size(res_start, res_track, i);
       SEXP chr_sexp = PROTECT(
         FANSI_mkChar0(res_start, res_track, getCharCE(x_chr), i)

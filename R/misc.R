@@ -523,9 +523,3 @@ dflt_css <- function() {
   "PRE.fansi SPAN {padding-top: .25em; padding-bottom: .25em};"
 }
 
-read_all <- function(x) {
-  VAL_IN_ENV(x=x, warn=TRUE, term.cap='all')
-  .Call(FANSI_read_all, x, WARN.INT, TERM.CAP.INT)
-}
-
-

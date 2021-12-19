@@ -69,7 +69,6 @@ SEXP FANSI_tabs_as_spaces(
   SEXP vec, SEXP tab_stops, struct FANSI_buff * buff, SEXP warn,
   SEXP term_cap, SEXP ctl
 );
-SEXP FANSI_sort_chr(SEXP x);
 
 int FANSI_find_ctl(
   struct FANSI_state * state, R_xlen_t i, const char * arg

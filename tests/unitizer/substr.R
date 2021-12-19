@@ -106,16 +106,13 @@ unitizer_sect("Corner cases", {
   substr_ctl("hello", NA_integer_, 1)
 
   # Nested
-
   substr_ctl(rep("\033[31mhello\033[m", 3), c(3,2,1), c(3,4,5))
 
   # Preserve attributes
-
   str.3 <- structure("fu\033[42mba\033[0mr", class="foo", at="bar")
   substr_ctl(str.3, 2, 3)
 
   # Turn off sgr
-
   substr_ctl(str.2, 2, 6, ctl=c('all', 'sgr'))
   substr_ctl(str.2, 8, 10, ctl=c('all', 'sgr'))
 
@@ -404,5 +401,11 @@ unitizer_sect("Rep Funs - Corner Cases", {
 
   ## Zero width gets inserted
   `substr_ctl<-`(txt8, 1, 3, "\033[1m", terminate=FALSE)
+
+  ## Errors
+  tce(`substr_ctl<-`(txt8, 1, 3, "A", carry="\033[41m"))
+  lat <- "fa\xe7ile"
+  Encoding(lat) <- "latin1"
+  tce(`substr_ctl<-`(lat, 1, 3, "ABC"))
 })
 

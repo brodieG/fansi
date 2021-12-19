@@ -70,13 +70,14 @@ int FANSI_W_normalize(
       }
       string = state_int.string + state_int.pos.x;
     } else if (*string == 0) {
-      // We ran out of string
-      if(any_to_exp) {
-        FANSI_W_MCOPY(buff, string_last, string - string_last);
-      }
+      // We ran out of string (should be impossible if `stop` used correctly)
+      error("Internal Error: unexpected `stop` value for normalize."); // nocov
+      // if(any_to_exp) {
+      //   FANSI_W_MCOPY(buff, string_last, string - string_last);
+      // }
       break;
     }
-    else error("Internal Error: logic error HDFAJJH."); // nocov
+    else error("Internal Error: normalize logic error."); // nocov
     string_prev = string;
   }
   *state = state_int;

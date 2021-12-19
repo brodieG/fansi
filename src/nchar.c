@@ -40,7 +40,7 @@ SEXP FANSI_nchar(
   int type_int = asInteger(type);
   int zz = asLogical(z);
   if(zz && (type_int != FANSI_COUNT_CHARS || !asLogical(allowNA)))
-    error("Internal Error: `type` must be \"char\" for `nzchar_ctl`");
+    error("Internal Error: `type` must be \"char\" for `nzchar_ctl`"); // nocov
 
   const char * arg = "x";;
 

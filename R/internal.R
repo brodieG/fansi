@@ -19,11 +19,6 @@ R.ver.gte.3.2.2 <- NA
 
 ## Internal functions, used primarily for testing
 
-## A version of unique that isn't terrible for very long strings that are
-## actually the same
-
-unique_chr <- function(x) .Call(FANSI_unique_chr, enc_to_utf8(x))
-
 ## Testing interface for color code to HTML conversion
 
 esc_color_code_to_html <- function(x) {
@@ -37,10 +32,6 @@ check_assumptions <- function() .Call(FANSI_check_assumptions)  # nocov
 add_int <- function(x, y) .Call(FANSI_add_int, as.integer(x), as.integer(y))
 
 ## testing interface for low overhead versions of R funs
-
-cleave <- function(x) .Call(FANSI_cleave, x)
-forder <- function(x) .Call(FANSI_order, x)
-sort_chr <- function(x) .Call(FANSI_sort_chr, x)
 
 set_int_max <- function(x) .Call(FANSI_set_int_max, as.integer(x)[1])
 get_int_max <- function(x) .Call(FANSI_get_int_max)  # nocov for debug only
@@ -92,7 +83,7 @@ VAL_IN_ENV <- function(
       c(
         'x', 'warn', 'term.cap', 'ctl', 'normalize', 'carry', 'terminate',
         'tab.stops', 'tabs.as.spaces', 'strip.spaces', 'round', 'type',
-        'start', 'stop', 'keepNA', 'allowNA',
+        'start', 'stop', 'keepNA', 'allowNA', 'value',
 
         # meta parameters (i.e. internal parameters)
         'valid.types'    # nchar and substr allow different things
@@ -162,7 +153,7 @@ VAL_IN_ENV <- function(
     if(is.na(carry))
       stop2("Argument `carry` may not be NA.")
     if('value' %in% argnm && !is.logical(carry))
-      stop2("Argumetn `carry` must be TRUE or FALSE in replacement mode.")
+      stop2("Argument `carry` must be TRUE or FALSE in replacement mode.")
     if(is.logical(carry)) if(carry) carry <- "" else carry = NA_character_
     args[['carry']] <- carry
   }
