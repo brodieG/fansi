@@ -362,9 +362,6 @@ substr2_ctl <- function(
   carry=getOption('fansi.carry', FALSE),
   terminate=getOption('fansi.terminate', TRUE)
 ) {
-  # More restrictive carry
-  if(!is.logical(carry) || length(carry) != 1 || is.na(carry))
-    stop("Argument `carry` must be TRUE or FALSE.")
   # So warning are issued here
   start <- as.integer(start)
   stop <- as.integer(stop)
@@ -373,7 +370,7 @@ substr2_ctl <- function(
   VAL_IN_ENV(
     x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
     tab.stops=tab.stops, tabs.as.spaces=tabs.as.spaces, round=round, start=start,
-    stop=stop, type=type, carry=carry
+    stop=stop, type=type, carry=carry, value=value
   )
   # In replace mode we shouldn't change the encoding
   if(!all(enc.diff <- Encoding(x) == Encoding(x0)))

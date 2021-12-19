@@ -83,7 +83,7 @@ VAL_IN_ENV <- function(
       c(
         'x', 'warn', 'term.cap', 'ctl', 'normalize', 'carry', 'terminate',
         'tab.stops', 'tabs.as.spaces', 'strip.spaces', 'round', 'type',
-        'start', 'stop', 'keepNA', 'allowNA',
+        'start', 'stop', 'keepNA', 'allowNA', 'value',
 
         # meta parameters (i.e. internal parameters)
         'valid.types'    # nchar and substr allow different things
@@ -153,7 +153,7 @@ VAL_IN_ENV <- function(
     if(is.na(carry))
       stop2("Argument `carry` may not be NA.")
     if('value' %in% argnm && !is.logical(carry))
-      stop2("Argumetn `carry` must be TRUE or FALSE in replacement mode.")
+      stop2("Argument `carry` must be TRUE or FALSE in replacement mode.")
     if(is.logical(carry)) if(carry) carry <- "" else carry = NA_character_
     args[['carry']] <- carry
   }

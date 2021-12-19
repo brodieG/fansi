@@ -253,13 +253,15 @@ static SEXP mkChar_core(
   }
 
   // Annoyingly mkCharLenCE accepts int parameter instead of R_len_t, so we need
-  // to check that too.
+  // to check that too.  Not sure this can actually be triggered realistically.
   if(buff.len > FANSI_lim.lim_int.max)
+    // nocov start
     error(
       "%s at index [%jd].",
       "Attempting to create CHARSXP longer than INT_MAX",
       FANSI_ind(i)
     );
+    // nocov end
 
   return mkCharLenCE(buff.buff0, buff.len, enc);
 
