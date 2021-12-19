@@ -93,7 +93,7 @@ tabs_as_spaces <- function(
 #' Functions with the `term.cap` parameter like `substr_ctl` will warn if they
 #' encounter 256 or true color SGR sequences and `term.cap` indicates they are
 #' unsupported as such a terminal may misinterpret those sequences.  Bright
-#' codes and OSC encoded URLs in terminals that do not support will likely be
+#' codes and OSC hyperlinks in terminals that do not support them will likely be
 #' silently ignored, so `fansi` functions do not warn about those.
 #'
 #' @seealso [`dflt_term_cap`], [`has_ctl`].
@@ -220,7 +220,7 @@ html_code_block <- function(x, class='fansi-output') {
 #' contain CSI SGR are shown in their HTML equivalent form.
 #'
 #' The replacement hook function tests for the presence of CSI SGR
-#' sequences in chunk output with [`has_sgr`], and if it is detected then
+#' sequences in chunk output with [`has_ctl`], and if it is detected then
 #' processes it with the user provided `proc.fun`.  Chunks that do not contain
 #' CSI SGR are passed off to the previously set hook function.  The default
 #' `proc.fun` will run the output through [`html_esc`], [`to_html`], and
@@ -235,7 +235,7 @@ html_code_block <- function(x, class='fansi-output') {
 #'   `rmarkdown`.
 #'
 #' @export
-#' @seealso [`has_sgr`], [`to_html`], [`html_esc`], [`html_code_block`],
+#' @seealso [`has_ctl`], [`to_html`], [`html_esc`], [`html_code_block`],
 #'   [`knitr` output hooks](https://yihui.org/knitr/hooks/#output-hooks),
 #'   [embedding CSS in
 #'   Rmd](https://bookdown.org/yihui/rmarkdown/language-engines.html#javascript-and-css),
@@ -369,8 +369,8 @@ set_knit_hooks <- function(
       # If the output has SGR in it, then convert to HTML and wrap
       # in PRE/CODE tags
 
-      if(any(has_sgr(x))) {
-        if(split.nl) x <- unlist(strsplit_sgr(x, '\n', fixed=TRUE))
+      if(any(has_ctl(x, c('sgr', 'url')))) {
+        if(split.nl) x <- unlist(strsplit_ctl(x, '\n', fixed=TRUE))
         res <- try(proc.fun(x=x, class=class))
         if(inherits(res, "try-error"))
           stop(
