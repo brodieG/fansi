@@ -76,7 +76,7 @@
 #' writeLines(
 #'   c(
 #'     paste(red, "he\033[0mllo", "\033[0m"),
-#'     paste(red, normalize_state("he\033[0mllo"), "\033[0m")
+#'     paste(red, normalize_state("he\033[0mllo"), "\033[0m"),
 #'     paste(red, normalize_state("he\033[0mllo", carry=red), "\033[0m")
 #' ) )
 
