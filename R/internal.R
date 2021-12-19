@@ -19,7 +19,9 @@ FANSI.ENV <- new.env()
 
 ## Global variables
 
-utils::globalVariables(c())
+utils::globalVariables(
+  c("TERM.CAP.INT", "WARN.INT", "CTL.INT", "TYPE.INT", "ROUND.INT", "X.LEN")
+)
 
 ## Internal functions, used primarily for testing
 
