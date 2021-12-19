@@ -39,7 +39,7 @@ SEXP FANSI_nchar(
   int keepNA_int = asLogical(keepNA);
   int type_int = asInteger(type);
   int zz = asLogical(z);
-  if(zz && (type_int != FANSI_COUNT_CHARS || !asLogical(allowNA)))
+  if(zz && (type_int != COUNT_CHARS || !asLogical(allowNA)))
     error("Internal Error: `type` must be \"char\" for `nzchar_ctl`"); // nocov
 
   const char * arg = "x";;
@@ -65,7 +65,7 @@ SEXP FANSI_nchar(
         keepNA_int == 1 ||
         (
           keepNA_int == NA_LOGICAL &&
-          !(type_int == FANSI_COUNT_WIDTH || type_int == FANSI_COUNT_GRAPH) &&
+          !(type_int == COUNT_WIDTH || type_int == COUNT_GRAPH) &&
           !zz
         )
       ) {
@@ -82,7 +82,7 @@ SEXP FANSI_nchar(
         FANSI_read_all(&state, i, arg);
         unsigned int err_tmp = FANSI_GET_ERR(state.status);
         if (err_tmp == ERR_BAD_UTF8) {
-          if(state.settings & FANSI_SET_ALLOWNA) resi[i] = NA_INTEGER;
+          if(state.settings & SET_ALLOWNA) resi[i] = NA_INTEGER;
           else error("Internal Error: invalid encoding unhandled."); // nocov
         } else resi[i] = state.pos.w;
   } } }

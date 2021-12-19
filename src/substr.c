@@ -45,7 +45,7 @@ static int substr_range(
   // - Start Point -----------------------------------------------------------
 
   struct FANSI_state state_tmp;
-  int overshoot = !(rnd_i == FANSI_RND_START || rnd_i == FANSI_RND_BOTH);
+  int overshoot = !(rnd_i == RND_START || rnd_i == RND_BOTH);
   int mode = 0;               // start wants the beginning byte
 
   // Always consume leading controls, unless starting before string, in which
@@ -54,15 +54,15 @@ static int substr_range(
   if(start0 < 0 && stop > 0) {
     state_tmp = *state_start;
     FANSI_read_next(&state_tmp, i, arg);
-    if(state_tmp.status & FANSI_STAT_SPECIAL) *state_start = state_tmp;
-    state_start->status |= state_tmp.status & FANSI_STAT_WARNED;
+    if(state_tmp.status & STAT_SPECIAL) *state_start = state_tmp;
+    state_start->status |= state_tmp.status & STAT_WARNED;
   } else {
     FANSI_read_until(state_start, start0, overshoot, term_i, mode, i, arg);
   }
   // - End Point -------------------------------------------------------------
 
   *state_stop = *state_start;
-  overshoot = (rnd_i == FANSI_RND_STOP || rnd_i == FANSI_RND_BOTH);
+  overshoot = (rnd_i == RND_STOP || rnd_i == RND_BOTH);
   mode = 1;                   // stop wants the last byte
   FANSI_read_until(state_stop, stop, overshoot, term_i, mode, i, arg);
 
@@ -294,7 +294,7 @@ static SEXP substr_replace(
     // "what you selected gets replaced", so that lead/trail sequences are left
     // in unless you clearly select past them on each side.
     write_ld = start_ii > 0 &&
-      (st_x0.pos.w > 0 || !(st_x0.status & FANSI_CTL_ALL) || !term_i);
+      (st_x0.pos.w > 0 || !(st_x0.status & CTL_ALL) || !term_i);
     write_md =
       (stop_ii >= start_ii) && (st_v1.pos.x > st_v0.pos.x || !term_i);
     write_tr = (start_tr - 1) <= st_x2.pos.w; // stop_ii isn't scooched
@@ -369,9 +369,9 @@ SEXP FANSI_substr(
     error("Internal Error: invalid `terminate`."); // nocov
   if(TYPEOF(type) == INTSXP && XLENGTH(type) == 1) {
     switch(asInteger(type)) {
-      case FANSI_COUNT_CHARS:
-      case FANSI_COUNT_WIDTH:
-      case FANSI_COUNT_GRAPH:
+      case COUNT_CHARS:
+      case COUNT_WIDTH:
+      case COUNT_GRAPH:
         break;
       default: error("Internal Error: invalid `type` for `substr`."); // nocov
   } }

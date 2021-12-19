@@ -72,8 +72,8 @@ SEXP FANSI_trimws(
             } else {
               struct FANSI_state state_tmp = state;
               FANSI_read_next(&state_tmp, i, arg);
-              state.status |= state_tmp.status & FANSI_STAT_WARNED;
-              if(state_tmp.status & FANSI_CTL_MASK) {
+              state.status |= state_tmp.status & STAT_WARNED;
+              if(state_tmp.status & CTL_MASK) {
                 state = state_tmp;
                 break;  // break out of switch, NOT out of while
               }
@@ -106,8 +106,8 @@ SEXP FANSI_trimws(
             } else {
               struct FANSI_state state_tmp = state;
               FANSI_read_next(&state_tmp, i, arg);
-              state.status |= state_tmp.status & FANSI_STAT_WARNED;
-              if(state_tmp.status & FANSI_CTL_MASK) {
+              state.status |= state_tmp.status & STAT_WARNED;
+              if(state_tmp.status & CTL_MASK) {
                 state = state_tmp;
                 continue;
               } else {

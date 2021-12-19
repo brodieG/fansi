@@ -36,7 +36,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 // the table is we can auto-fill it an be less likely to make mistakes in
 // specifying the constants, and then we have fewer shifts.
 //
-// See fansi-cnst.h, FANSI_SET_*, FANSI_STAT_*.
+// See fansi-cnst.h, SET_*, STAT_*.
 //
 // Needed by state.c, read.c, state.c
 //
@@ -48,7 +48,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   (((x) & ~((bits) << (offset))) | ((val) << (offset)))
 
 #define FANSI_GET_ERR(x)                                            \
-  FANSI_GET_RNG((x), FANSI_STAT_ERR_START, FANSI_STAT_ERR_ALL)
+  FANSI_GET_RNG((x), STAT_ERR_START, STAT_ERR_ALL)
 
 #define URL_STRING(x) ((x).string + (x).url.start)
 #define URL_LEN(x) ((x).url.len)

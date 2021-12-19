@@ -72,7 +72,7 @@ struct FANSI_buff {
 };
 struct FANSI_color {
   /*
-   * Most significant 4 bits are the color mode (see FANSI_CLR_*), least
+   * Most significant 4 bits are the color mode (see CLR_*), least
    * significant are the actual colors for 8 bit and bright modes.
    */
   unsigned char x;
@@ -151,10 +151,10 @@ struct FANSI_state {
 
   const char * string;
 
-  // R level settings, see FANSI_SET_*
+  // R level settings, see SET_*
   unsigned int settings;
 
-  // Status flags, see FANSI_STAT_*
+  // Status flags, see STAT_*
   unsigned int status;
 
   // Are there bytes outside of 0-127 (i.e. UTF-8 since that is the only way

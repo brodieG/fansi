@@ -32,6 +32,6 @@ VALID.TERM.CAP <- c('all', 'bright', '256', 'truecolor')
 ## which acts as a negation (see FANSI_ctl_as_int), so "nl" is 2^0, "c0" is 2^1,
 ## and so on.
 ##
-## REMEMBER TO UPDATE FANSI_CTL_ALL CONSTANT IF WE MODIFY THIS
+## REMEMBER TO UPDATE CTL_ALL CONSTANT IF WE MODIFY THIS
 
 VALID.CTL <- c("all", "nl", "c0", "sgr", "csi", "esc", "url", "osc")

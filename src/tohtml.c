@@ -56,7 +56,7 @@ static int sgr_has_color(struct FANSI_sgr sgr) {
 }
 static int sgr_has_style_html(struct FANSI_sgr sgr) {
   // generate mask first time around.
-  return (sgr.style & FANSI_STL_MASK2) || sgr.color.x || sgr.bgcol.x;
+  return (sgr.style & STL_MASK2) || sgr.color.x || sgr.bgcol.x;
 }
 static int sgr_comp_html(
   struct FANSI_sgr target, struct FANSI_sgr current
@@ -66,14 +66,14 @@ static int sgr_comp_html(
     FANSI_sgr_comp_color(target, current) ||
     // HTML rendered styles are different
     (
-      (target.style & FANSI_STL_MASK2) !=
-      (current.style & FANSI_STL_MASK2)
+      (target.style & STL_MASK2) !=
+      (current.style & STL_MASK2)
     ) ||
     // If one has color both have the same color, but we need to check
     // whether they have different invert status
     (
       (sgr_has_color(target)) &&
-      (target.style & FANSI_STL_INVERT) ^ (current.style & FANSI_STL_INVERT)
+      (target.style & STL_INVERT) ^ (current.style & STL_INVERT)
     );
 }
 /*
@@ -86,10 +86,10 @@ static int sgr_comp_html(
  */
 static int color_to_8bit(struct FANSI_color color) {
   int col256 = -1;
-  switch(color.x & FANSI_CLR_MASK) {
-    case FANSI_CLR_8:       col256 = color.x & ~FANSI_CLR_MASK;        break;
-    case FANSI_CLR_BRIGHT:  col256 = (color.x & ~FANSI_CLR_MASK) + 8;  break;
-    case FANSI_CLR_256:     col256 = color.extra[0];                   break;
+  switch(color.x & CLR_MASK) {
+    case CLR_8:       col256 = color.x & ~CLR_MASK;        break;
+    case CLR_BRIGHT:  col256 = (color.x & ~CLR_MASK) + 8;  break;
+    case CLR_256:     col256 = color.extra[0];                   break;
   }
   return col256;
 }
@@ -146,23 +146,23 @@ static char * color_to_html(struct FANSI_color color, char * buff) {
     "555555", "FF5555", "55FF55", "FFFF55",
     "5555FF", "FF55FF", "55FFFF", "FFFFFF"
   };
-  unsigned char clrval = color.x & ~FANSI_CLR_MASK;
+  unsigned char clrval = color.x & ~CLR_MASK;
   if(clrval == 9)
     error("Internal Error: applying non-color."); // nocov
 
   char * buff_track = buff;
   *(buff_track++) = '#';
 
-  switch(color.x & FANSI_CLR_MASK) {
-    case FANSI_CLR_8:
+  switch(color.x & CLR_MASK) {
+    case CLR_8:
       memcpy(buff_track, std_8[clrval], 6);
       buff_track += 6;
       break;
-    case FANSI_CLR_BRIGHT:
+    case CLR_BRIGHT:
       memcpy(buff_track, bright[clrval], 6);
       buff_track += 6;
       break;
-    case FANSI_CLR_256: {
+    case CLR_256: {
       int color_5 = color.extra[0];
       if(color_5 < 16) {
         memcpy(buff_track, std_16[color_5], 6);
@@ -191,7 +191,7 @@ static char * color_to_html(struct FANSI_color color, char * buff) {
       }
       break;
     }
-    case FANSI_CLR_TRU:
+    case CLR_TRU:
       for(int i = 0; i < 3; ++i) {
         char hi = dectohex[color.extra[i] / 16];
         char lo = dectohex[color.extra[i] % 16];
@@ -255,7 +255,7 @@ static int W_state_as_html(
     if(has_cur_sgr) {
        FANSI_W_COPY(buff, "<span");
       // Styles
-      int invert = sgr.style & FANSI_STL_INVERT;
+      int invert = sgr.style & STL_INVERT;
       struct FANSI_color color = invert ? sgr.bgcol : sgr.color;
       struct FANSI_color bgcol = invert ? sgr.color : sgr.bgcol;
 
@@ -274,7 +274,7 @@ static int W_state_as_html(
       }
       // inline style and/or colors
       if(
-        sgr.style & FANSI_STL_MASK2 ||
+        sgr.style & STL_MASK2 ||
         (color.x && (!color_class)) || (bgcol.x && (!bgcol_class))
       ) {
         FANSI_W_COPY(buff, " style='");
@@ -293,7 +293,7 @@ static int W_state_as_html(
         }
         // Styles (need to go after color for transparent to work)
         for(unsigned int i = 0U; i < 9U; ++i)
-          if(sgr.style & FANSI_STL_MASK2 & (1U << i)) {
+          if(sgr.style & STL_MASK2 & (1U << i)) {
             if(has_style) FANSI_W_COPY(buff, "; ");
             has_style += FANSI_W_COPY(buff, css_style[i].css);
           }
@@ -355,7 +355,7 @@ SEXP FANSI_esc_to_html(
     state.string = string;
     struct FANSI_state state_start = state;
     FANSI_reset_pos(&state_start);
-    state.status &= ~FANSI_STAT_WARNED;
+    state.status &= ~STAT_WARNED;
     state_prev = state_init;  // but there are no styles in the string yet
 
     int bytes_init = (int) LENGTH(chrsxp);
@@ -383,7 +383,7 @@ SEXP FANSI_esc_to_html(
           // Allocate buffer and reset states for second pass
           FANSI_size_buff(&buff);
           string = state.string;  // always points to first byte
-          state_start.status |= state.status & FANSI_STAT_WARNED;
+          state_start.status |= state.status & STAT_WARNED;
           state = state_start;
           state_prev = state_init;
         } else break;
@@ -476,9 +476,9 @@ SEXP FANSI_color_to_html_ext(SEXP x) {
     struct FANSI_color color;
     unsigned int color_mode = 0;
     if(x_int[i] == 8) {
-      if(x_int[i + 1] == 2) color_mode = FANSI_CLR_TRU;
-      else color_mode = FANSI_CLR_256;
-    } else color_mode = FANSI_CLR_8;
+      if(x_int[i + 1] == 2) color_mode = CLR_TRU;
+      else color_mode = CLR_256;
+    } else color_mode = CLR_8;
     color.x = x_int[i] | color_mode;
     color.extra[0] = (unsigned char)x_int[i + 2];
     color.extra[1] = (unsigned char)x_int[i + 3];

@@ -281,8 +281,8 @@ static SEXP strwrap(
 
   // Consume any leading specials (to be re-output)
   FANSI_read_next(&state_tmp, index, arg);
-  if(state_tmp.status & FANSI_STAT_SPECIAL) state_start = state_tmp;
-  else state_start.status |= state_tmp.status & FANSI_STAT_WARNED;
+  if(state_tmp.status & STAT_SPECIAL) state_start = state_tmp;
+  else state_start.status |= state_tmp.status & STAT_WARNED;
 
   state_bound = state_prev = state_start;
 
@@ -304,10 +304,10 @@ static SEXP strwrap(
         // substr_ctl(x, 0, n),  does.
         if(
           state_bound.string[state_bound.pos.x] == 0x1b &&
-          !(state_tmp.status & FANSI_STAT_SPECIAL)
+          !(state_tmp.status & STAT_SPECIAL)
         ) {
           // avoid double warnings
-          state_bound.status |= state_tmp.status & FANSI_STAT_WARNED;
+          state_bound.status |= state_tmp.status & STAT_WARNED;
           break;
         }
         state_bound = state_tmp;
@@ -322,14 +322,14 @@ static SEXP strwrap(
     state_next = state; // if we hit end of string, re-use state as next
     // Look ahead one element
     if(!end) FANSI_read_next(&state_next, index, arg);
-    if(state_next.status & FANSI_STAT_WARNED) { // avoid 2x warning
-      state.status |= FANSI_STAT_WARNED;
-      state_bound.status |= FANSI_STAT_WARNED;
+    if(state_next.status & STAT_WARNED) { // avoid 2x warning
+      state.status |= STAT_WARNED;
+      state_bound.status |= STAT_WARNED;
     }
     // Always strip trailing SGR to behave same way as substr_ctl, except if
     // we're adding padding, or really at end of string.
     int strip_trail_sgr =
-       (state.status & FANSI_STAT_SPECIAL) && (!end || terminate) &&
+       (state.status & STAT_SPECIAL) && (!end || terminate) &&
       !((*pad_chr) && state.pos.w < width_tar);
 
     // detect word boundaries and paragraph starts; we need to track
@@ -454,7 +454,7 @@ static SEXP strwrap(
       // position.
       if(has_boundary && para_start) {
         do FANSI_read_next(&state_bound, index, arg);
-        while (state_bound.status & FANSI_STAT_SPECIAL);
+        while (state_bound.status & STAT_SPECIAL);
       } else if(!has_boundary) {
         state_bound = state;
       }
