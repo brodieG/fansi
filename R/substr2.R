@@ -80,8 +80,8 @@
 #'
 #' Several factors could affect the exact output produced by `fansi`
 #' functions across versions of `fansi`, `R`, and/or across systems.
-#' **In general it is likely best not to rely on the exact `fansi` output,
-#' e.g. by embedding it in tests.**
+#' **In general it is best not to rely on exact `fansi` output, e.g. by
+#' embedding it in tests**.
 #'
 #' Width and grapheme calculations depend on locale, Unicode database
 #' version, and grapheme processing logic (which is still in development), among
@@ -164,7 +164,7 @@
 #' @param ctl character, which _Control Sequences_ should be treated
 #'   specially.  Special treatment is context dependent, and may include
 #'   detecting them and/or computing their display/character width as zero.  For
-#'   the SGR subset of the ANSI CSI sequences, and OSC-anchored URLs, `fansi`
+#'   the SGR subset of the ANSI CSI sequences, and OSC hyperlinks, `fansi`
 #'   will also parse, interpret, and reapply the sequences as needed.  You can
 #'   modify whether a _Control Sequence_ is treated specially with the `ctl`
 #'   parameter.
@@ -174,8 +174,8 @@
 #'     for newlines and the actual ESC (0x1B) character.
 #'   * "sgr": ANSI CSI SGR sequences.
 #'   * "csi": all non-SGR ANSI CSI sequences.
-#'   * "url": OSC-anchored URLs
-#'   * "osc": all non-OSC-anchored URL OSC sequences.
+#'   * "url": OSC hyperlinks
+#'   * "osc": all non-OSC-hyperlink OSC sequences.
 #'   * "esc": all other escape sequences.
 #'   * "all": all of the above, except when used in combination with any of the
 #'     above, in which case it means "all but".

@@ -68,9 +68,9 @@ character vector same length as \code{x}.
 }
 \description{
 \code{state_at_end} reads through strings computing the accumulated SGR and
-OSC-anchored URLs, and outputs the active state at the end of them
-\code{close_state} produces the sequence that closes active SGR and OSC-anchored
-URLs at the end of each input string.  If \code{normalize = FALSE} (default), it
+OSC hyperlinks, and outputs the active state at the end of them
+\code{close_state} produces the sequence that closes active SGR and OSC hyperlinks
+at the end of each input string.  If \code{normalize = FALSE} (default), it
 will emit the reset code "ESC[0m" if any SGR is present. It is more
 interesting for closing SGRs if \code{normalize = TRUE}.  Unlike \code{state_at_end}
 and other functions \code{close_state} has no concept of \code{carry}: it will only
@@ -81,8 +81,8 @@ emit closing sequences for states explicitly active at the end of a string.
 
 Several factors could affect the exact output produced by \code{fansi}
 functions across versions of \code{fansi}, \code{R}, and/or across systems.
-\strong{In general it is likely best not to rely on the exact \code{fansi} output,
-e.g. by embedding it in tests.}
+\strong{In general it is best not to rely on exact \code{fansi} output, e.g. by
+embedding it in tests}.
 
 Width and grapheme calculations depend on locale, Unicode database
 version, and grapheme processing logic (which is still in development), among

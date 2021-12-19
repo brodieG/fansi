@@ -89,8 +89,8 @@ SPAN HTML tags.
 }
 \description{
 This function is a wrapper around \code{\link{to_html}} and is kept around for legacy
-reasons.  When we added capabilities for handling OSC-anchored URLs, the
-\code{sgr_} part of the name became an incomplete description of what the function
+reasons.  When we added capabilities for handling OSC hyperlinks, the \code{sgr_}
+part of the name became an incomplete description of what the function
 does.
 }
 \note{

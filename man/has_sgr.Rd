@@ -25,7 +25,7 @@ logical of same length as \code{x}; NA values in \code{x} result in NA values
 in return
 }
 \description{
-This function is deprecated in favor of the \link[=has_ctl]{\verb{_ctl} flavor}.  It
-checks for CSI SGR and OSC-anchored URL sequences.
+This function is deprecated in favor of the \code{\link{has_ctl}}.  It
+checks for CSI SGR and OSC hyperlink sequences.
 }
 \keyword{internal}

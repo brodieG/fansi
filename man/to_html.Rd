@@ -88,7 +88,7 @@ sequences removed and any basic ANSI CSI SGR escape sequences applied via
 SPAN HTML tags.
 }
 \description{
-Interprets CSI SGR sequences and OSC-anchored URLs to produce strings with
+Interprets CSI SGR sequences and OSC hyperlinks to produce strings with
 the state reproduced with SPAN elements, inline CSS styles, and A anchors.
 Optionally for colors, the SPAN elements may be assigned classes instead of
 inline styles, in which case it is the user's responsibility to provide a

@@ -26,7 +26,7 @@ stripped
 }
 \description{
 This function is deprecated in favor of the \link[=strip_ctl]{\verb{_ctl} flavor}.  It
-strips for CSI SGR and OSC-anchored URL sequences.
+strips CSI SGR and OSC hyperlink sequences.
 }
 \examples{
 ## convenience function, same as `strip_ctl(ctl=c('sgr', 'url'))`
