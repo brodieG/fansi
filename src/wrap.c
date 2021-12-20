@@ -646,9 +646,7 @@ SEXP FANSI_strwrap_ext(
     } else FANSI_state_reinit(&state, x, i);
 
     FANSI_interrupt(i);
-    SEXP chr = STRING_ELT(x, i);
-    if(chr == NA_STRING) continue;
-
+    // Implicitly treat NAs like the string 'NA' as the base version does
     SEXP str_i = PROTECT(
       strwrap(
         width_int,
