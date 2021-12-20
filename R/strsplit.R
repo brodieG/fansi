@@ -42,7 +42,7 @@
 #' @examples
 #' strsplit_ctl("\033[31mhello\033[42m world!", " ")
 #'
-#' ## Splitting by newlines does now work as they are _Control
+#' ## Splitting by newlines does not work as they are _Control
 #' ## Sequences_, but we can use `ctl` to treat them as ordinary
 #' strsplit_ctl("\033[31mhello\033[42m\nworld!", "\n")
 #' strsplit_ctl("\033[31mhello\033[42m\nworld!", "\n", ctl=c("all", "nl"))

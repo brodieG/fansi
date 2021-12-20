@@ -98,12 +98,13 @@ next vector element, simulating what happens with a document with active
 state at the end of a line.  If FALSE each vector element is interpreted as
 if there were no active state when it begins.  If character, then the
 active state at the end of the \code{carry} string is carried into the first
-element of \code{x} (see "Replacement Functions" for differences there).
-Semantically, the carried state is injected in the interstice between an
-imaginary zeroeth character and the first character of a vector element.
-See the "Position Semantics" section of \code{\link{substr_ctl}} and the "State
-Interactions" section of \code{\link[=fansi]{?fansi}}
-for details.}
+element of \code{x} (see "Replacement Functions" for differences there).  The
+carried state is injected in the interstice between an imaginary zeroeth
+character and the first character of a vector element.  See the "Position
+Semantics" section of \code{\link{substr_ctl}} and the "State Interactions" section
+of \code{\link[=fansi]{?fansi}} for details.  Except for \code{\link{strwrap_ctl}} where \code{NA} is
+treated as the string \code{"NA"}, \code{carry} will cause \code{NA}s in inputs to
+propagate through the remaining vector elements.}
 
 \item{terminate}{TRUE (default) or FALSE whether substrings should have
 active state closed to avoid it bleeding into other strings they may be
@@ -161,7 +162,7 @@ set \code{term.cap} to a specific set of capabilities.
 \examples{
 strsplit_ctl("\033[31mhello\033[42m world!", " ")
 
-## Splitting by newlines does now work as they are _Control
+## Splitting by newlines does not work as they are _Control
 ## Sequences_, but we can use `ctl` to treat them as ordinary
 strsplit_ctl("\033[31mhello\033[42m\nworld!", "\n")
 strsplit_ctl("\033[31mhello\033[42m\nworld!", "\n", ctl=c("all", "nl"))

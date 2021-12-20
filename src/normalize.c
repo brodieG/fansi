@@ -100,6 +100,7 @@ static SEXP normalize_state_int(
 
   SEXP ctl = PROTECT(ScalarInteger(1)); ++prt;  // "all"
   int do_carry = STRING_ELT(carry, 0) != NA_STRING;
+  int any_na = 0;
   struct FANSI_state state_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
   struct FANSI_state state_start, state;
   const char * err_msg = "Normalizing state";
@@ -111,8 +112,13 @@ static SEXP normalize_state_int(
     } else FANSI_state_reinit(&state, x, i);
 
     SEXP chrsxp = STRING_ELT(x, i);
-    if(chrsxp == NA_STRING) continue;
-
+    if(chrsxp == NA_STRING || (any_na && do_carry)) {
+      // duplicate input vector if needed
+      if(res == x) REPROTECT(res = duplicate(x), ipx);
+      any_na = 1;
+      SET_STRING_ELT(res, i, NA_STRING);
+      continue;
+    }
     // Measure
     if(do_carry) {
       state.fmt.sgr = state_carry.fmt.sgr;
@@ -159,7 +165,8 @@ SEXP FANSI_normalize_state_ext(SEXP x, SEXP warn, SEXP term_cap, SEXP carry) {
   return res;
 }
 // List version to use with result of `strwrap_ctl(..., unlist=FALSE)`
-// Just a lower overhead version.
+// Just a lower overhead version.  Needed b/c `strwrap_ctl` calls normalize from
+// R level instead of doing it internally.
 
 SEXP FANSI_normalize_state_list_ext(
   SEXP x, SEXP warn, SEXP term_cap, SEXP carry

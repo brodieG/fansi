@@ -226,4 +226,9 @@ unitizer_sect("carry", {
   to_html(string.2, carry=FALSE)
   to_html(string.2, carry="\033[33m")
   to_html(string.2, carry="\033[33m\033]8;;https://w.z\033\\")
+
+  ## NA propagation
+  string.3 <- c("A\33[44m", "\033[31mC", NA, "\033[39mD")
+  to_html(string.3)
+  to_html(string.3, carry=FALSE)
 })

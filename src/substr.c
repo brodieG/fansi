@@ -151,6 +151,7 @@ static SEXP substr_extract(
   state_ref = state_carry;
   int * start_i = INTEGER(start);
   int * stop_i = INTEGER(stop);
+  int any_na = 0;
   const char * arg = "x";
 
   for(R_xlen_t i = 0; i < len; ++i) {
@@ -160,8 +161,10 @@ static SEXP substr_extract(
     int stop_ii = stop_i[i];
     if(
       STRING_ELT(x, i) == NA_STRING ||
-      start_ii == NA_INTEGER || stop_ii == NA_INTEGER
+      start_ii == NA_INTEGER || stop_ii == NA_INTEGER ||
+      (any_na && carry_i)
     ) {
+      any_na = any_na || STRING_ELT(x, i) == NA_STRING;
       SET_STRING_ELT(res, i, NA_STRING);
     } else {
       // We do the full process even if stop_ii < start_ii for consistency
@@ -171,12 +174,12 @@ static SEXP substr_extract(
         substr_one(
           &state, state_ref, buff, i,
           start_ii, stop_ii, rnd_i, norm_i, term_i
-      ) );
-      if(carry_i) {
-        state_ref = state;
-        FANSI_read_all(&state, i, arg);
-        state_carry.fmt = state.fmt;
-  } } }
+    ) );}
+    if(carry_i && STRING_ELT(x, i) != NA_STRING) {
+      state_ref = state;
+      FANSI_read_all(&state, i, arg);
+      state_carry.fmt = state.fmt;
+  } }
   UNPROTECT(prt);
   return res;
 }
@@ -198,8 +201,8 @@ static SEXP substr_replace(
   int * start_i = INTEGER(start);
   int * stop_i = INTEGER(stop);
   int carry_i = STRING_ELT(carry, 0) != NA_STRING;
-  int write_ld, write_tr, write_md;
-  write_ld = write_tr = write_md = 0;
+  int write_ld, write_tr, write_md, any_na;
+  write_ld = write_tr = write_md = any_na = 0;
 
   struct FANSI_state st_x0, st_x1, st_x2, st_xlast, st_xref,
                      st_v0, st_v1, st_vlast, st_vref;
@@ -207,9 +210,17 @@ static SEXP substr_replace(
     st_v0 = st_v1 = st_vlast = st_vref = state;
 
   for(R_xlen_t i = 0; i < len; ++i) {
+    FANSI_interrupt(i);
+    if(
+      STRING_ELT(x, i) == NA_STRING || STRING_ELT(value, i) == NA_STRING ||
+      (carry_i && any_na)
+    ) {
+      any_na = 1;
+      SET_STRING_ELT(res, i, NA_STRING);
+      continue;
+    }
     // - Setup -----------------------------------------------------------------
 
-    FANSI_interrupt(i);
     // Reference state is the end of the last written substring.
     if(!term_i && write_md) st_vref = st_v1;
     // initial init done in caller as really all we're doing is setting all the

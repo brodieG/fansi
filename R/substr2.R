@@ -210,12 +210,13 @@
 #'   state at the end of a line.  If FALSE each vector element is interpreted as
 #'   if there were no active state when it begins.  If character, then the
 #'   active state at the end of the `carry` string is carried into the first
-#'   element of `x` (see "Replacement Functions" for differences there).
-#'   Semantically, the carried state is injected in the interstice between an
-#'   imaginary zeroeth character and the first character of a vector element.
-#'   See the "Position Semantics" section of [`substr_ctl`] and the "State
-#'   Interactions" section of [`?fansi`][fansi]
-#'   for details.
+#'   element of `x` (see "Replacement Functions" for differences there).  The
+#'   carried state is injected in the interstice between an imaginary zeroeth
+#'   character and the first character of a vector element.  See the "Position
+#'   Semantics" section of [`substr_ctl`] and the "State Interactions" section
+#'   of [`?fansi`][fansi] for details.  Except for [`strwrap_ctl`] where `NA` is
+#'   treated as the string `"NA"`, `carry` will cause `NA`s in inputs to
+#'   propagate through the remaining vector elements.
 #' @param terminate TRUE (default) or FALSE whether substrings should have
 #'   active state closed to avoid it bleeding into other strings they may be
 #'   prepended onto.  This does not stop state from carrying if `carry = TRUE`.
@@ -317,10 +318,8 @@ substr2_ctl <- function(
     start=start, stop=stop
   )
   res <- x
-  no.na <- !(is.na(x) | is.na(start & stop))
-
-  res[no.na] <- substr_ctl_internal(
-    x[no.na], start=start[no.na], stop=stop[no.na],
+  res[] <- substr_ctl_internal(
+    x, start=start, stop=stop,
     type.int=TYPE.INT,
     tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops,
     warn.int=WARN.INT, term.cap.int=TERM.CAP.INT,
@@ -329,7 +328,6 @@ substr2_ctl <- function(
     ctl.int=CTL.INT, normalize=normalize,
     carry=carry, terminate=terminate
   )
-  res[!no.na] <- NA_character_
   res
 }
 #' @rdname substr_ctl

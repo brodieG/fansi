@@ -322,6 +322,7 @@ SEXP FANSI_esc_to_html(
 
   SEXP ctl = PROTECT(ScalarInteger(1));  // "all"
   int do_carry = STRING_ELT(carry, 0) != NA_STRING;
+  int any_na = 0;
   struct FANSI_state state_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
   UNPROTECT(1);
 
@@ -343,7 +344,13 @@ SEXP FANSI_esc_to_html(
     FANSI_interrupt(i);
 
     SEXP chrsxp = STRING_ELT(x, i);
-    if(chrsxp == NA_STRING) continue;
+    if(chrsxp == NA_STRING || (any_na && do_carry)) {
+      // Allocate target vector if it hasn't been yet
+      if(res == x) REPROTECT(res = duplicate(x), ipx);
+      SET_STRING_ELT(res, i, NA_STRING);
+      any_na = 1;
+      continue;
+    }
     FANSI_check_chrsxp(chrsxp, i);
     const char * string = CHAR(chrsxp);
 

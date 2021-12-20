@@ -399,6 +399,12 @@ unitizer_sect("corner cases", {
   ## Don't double warn w/ leading strip
   strwrap2_ctl("\033[35phello \033[35p world", 5, strip.spaces=FALSE)
 
+  ## NA treatment
+  identical(
+    strwrap(c(NA, "a b"), 4, prefix=">"),
+    strwrap_ctl(c(NA, "a b"), 4, prefix=">")
+  )
+  identical(strwrap("a b", 4, prefix=NA), strwrap_ctl("a b", 4, prefix=NA))
 })
 unitizer_sect("bad inputs", {
   strwrap_ctl(1:3)

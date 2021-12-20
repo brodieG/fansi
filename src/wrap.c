@@ -619,6 +619,7 @@ SEXP FANSI_strwrap_ext(
 
   // Prep for carry
   int do_carry = STRING_ELT(carry, 0) != NA_STRING;
+  int any_na = 0;
   struct FANSI_state state_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
 
   // Could be a little faster avoiding this allocation if it turns out nothing
@@ -646,9 +647,17 @@ SEXP FANSI_strwrap_ext(
     } else FANSI_state_reinit(&state, x, i);
 
     FANSI_interrupt(i);
-    SEXP chr = STRING_ELT(x, i);
-    if(chr == NA_STRING) continue;
-
+    // strtrim treats NA as NA, but strwrap treats it as the string "NA"
+    if(
+      first_only_int && (
+        STRING_ELT(x, i) == NA_STRING ||
+        (do_carry && any_na)
+    ) ) {
+      any_na = TRUE;
+      SET_STRING_ELT(res, i, NA_STRING);
+      continue;
+    }
+    // Implicitly treat NAs like the string 'NA' as the base version does
     SEXP str_i = PROTECT(
       strwrap(
         width_int,
