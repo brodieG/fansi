@@ -198,8 +198,8 @@ static SEXP substr_replace(
   int * start_i = INTEGER(start);
   int * stop_i = INTEGER(stop);
   int carry_i = STRING_ELT(carry, 0) != NA_STRING;
-  int write_ld, write_tr, write_md;
-  write_ld = write_tr = write_md = 0;
+  int write_ld, write_tr, write_md, any_na;
+  write_ld = write_tr = write_md = any_na = 0;
 
   struct FANSI_state st_x0, st_x1, st_x2, st_xlast, st_xref,
                      st_v0, st_v1, st_vlast, st_vref;
@@ -207,9 +207,17 @@ static SEXP substr_replace(
     st_v0 = st_v1 = st_vlast = st_vref = state;
 
   for(R_xlen_t i = 0; i < len; ++i) {
+    FANSI_interrupt(i);
+    if(
+      STRING_ELT(x, i) == NA_STRING || STRING_ELT(value, i) == NA_STRING ||
+      (carry_i && any_na)
+    ) {
+      any_na = 1;
+      SET_STRING_ELT(res, i, NA_STRING);
+      continue;
+    }
     // - Setup -----------------------------------------------------------------
 
-    FANSI_interrupt(i);
     // Reference state is the end of the last written substring.
     if(!term_i && write_md) st_vref = st_v1;
     // initial init done in caller as really all we're doing is setting all the

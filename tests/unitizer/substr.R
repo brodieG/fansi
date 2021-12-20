@@ -302,6 +302,14 @@ unitizer_sect("Rep Funs - Equivalence", {
   substr(txt3a[2], 2, 2) <- "_"
   substr_ctl(txt3b[2], 2, 2) <- "_"
   identical(txt3a, txt3b)
+
+  ## NA handling
+  identical(
+    `substr_ctl<-`(txt0, 2, 3, NA_character_),
+    `substr<-`(txt0, 2, 3, NA_character_)
+  )
+  txt.na <- NA_character_
+  identical(`substr_ctl<-`(txt.na, 1, 2, "AB"),`substr<-`(txt.na, 1, 2,  "AB"))
 })
 
 unitizer_sect("Rep Funs - SGR", {
