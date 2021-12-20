@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+ * Go to <https://www.r-project.org/Licenses> for a copies of the licenses.
  */
 
 #include "fansi.h"
@@ -59,7 +59,7 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
         x, no_warn, term_cap, allowNA, keepNA, width, ctl_all, i
       );
       // Read one escape at a time
-      state.settings = state.settings |= FANSI_SET_ESCONE;
+      state.settings |= SET_ESCONE;
     } else FANSI_state_reinit(&state, x, i);
 
     if(chrsxp != NA_STRING && LENGTH(chrsxp)) {
@@ -74,7 +74,7 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
         int esc_start_byte = state.pos.x;
         int ctl_bytes = 0;
         FANSI_read_next(&state, i, arg);
-        if(state.status & FANSI_CTL_MASK) {
+        if(state.status & CTL_MASK) {
           ctl_bytes = state.pos.x - esc_start_byte;
           ctl_bytes_all += ctl_bytes;
         }

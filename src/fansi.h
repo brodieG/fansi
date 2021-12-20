@@ -1,19 +1,19 @@
 /*
-Copyright (C) 2021 Brodie Gaslam
-
-This file is part of "fansi - ANSI Control Sequence Aware String Functions"
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 2 or 3 of the License.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
-*/
+ * Copyright (C) 2021  Brodie Gaslam
+ *
+ * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 or 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * Go to <https://www.r-project.org/Licenses> for a copies of the licenses.
+ */
 
 #ifndef _FANSI_H
 #define _FANSI_H
@@ -36,7 +36,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 // the table is we can auto-fill it an be less likely to make mistakes in
 // specifying the constants, and then we have fewer shifts.
 //
-// See fansi-cnst.h, FANSI_SET_*, FANSI_STAT_*.
+// See fansi-cnst.h, SET_*, STAT_*.
 //
 // Needed by state.c, read.c, state.c
 //
@@ -48,7 +48,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
   (((x) & ~((bits) << (offset))) | ((val) << (offset)))
 
 #define FANSI_GET_ERR(x)                                            \
-  FANSI_GET_RNG((x), FANSI_STAT_ERR_START, FANSI_STAT_ERR_ALL)
+  FANSI_GET_RNG((x), STAT_ERR_START, STAT_ERR_ALL)
 
 #define URL_STRING(x) ((x).string + (x).url.start)
 #define URL_LEN(x) ((x).url.len)

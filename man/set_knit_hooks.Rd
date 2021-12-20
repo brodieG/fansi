@@ -63,7 +63,7 @@ contain CSI SGR are shown in their HTML equivalent form.
 }
 \details{
 The replacement hook function tests for the presence of CSI SGR
-sequences in chunk output with \code{\link{has_sgr}}, and if it is detected then
+sequences in chunk output with \code{\link{has_ctl}}, and if it is detected then
 processes it with the user provided \code{proc.fun}.  Chunks that do not contain
 CSI SGR are passed off to the previously set hook function.  The default
 \code{proc.fun} will run the output through \code{\link{html_esc}}, \code{\link{to_html}}, and
@@ -116,7 +116,7 @@ do.call(knitr::knit_hooks$set, old.hooks)
 }
 }
 \seealso{
-\code{\link{has_sgr}}, \code{\link{to_html}}, \code{\link{html_esc}}, \code{\link{html_code_block}},
+\code{\link{has_ctl}}, \code{\link{to_html}}, \code{\link{html_esc}}, \code{\link{html_code_block}},
 \href{https://yihui.org/knitr/hooks/#output-hooks}{\code{knitr} output hooks},
 \href{https://bookdown.org/yihui/rmarkdown/language-engines.html#javascript-and-css}{embedding CSS in Rmd},
 and the vignette \code{vignette(package='fansi', 'sgr-in-rmd')}.

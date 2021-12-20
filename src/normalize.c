@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+ * Go to <https://www.r-project.org/Licenses> for a copies of the licenses.
  */
 
 #include "fansi.h"
@@ -58,7 +58,7 @@ int FANSI_W_normalize(
       // Any special sequence will be re-written.  In some cases, we don't need
       // to do so, but even when things are already normalized, the order of the
       // elements may not be the same.
-      if(state_int.status & FANSI_STAT_SPECIAL) {
+      if(state_int.status & STAT_SPECIAL) {
         any_to_exp = 1;
         // stuff prior to SGR/URL
         FANSI_W_MCOPY(buff, string_last, string - string_last);
@@ -133,7 +133,7 @@ static SEXP normalize_state_int(
     if(res == x) REPROTECT(res = duplicate(x), ipx);
     FANSI_size_buff(buff);
     state = state_start;
-    state.status |= FANSI_STAT_WARNED;  // avoid double warnings
+    state.status |= STAT_WARNED;  // avoid double warnings
     FANSI_W_normalize(
       buff, &state, (int)LENGTH(chrsxp), i, err_msg, "x"
     );

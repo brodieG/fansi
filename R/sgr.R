@@ -11,7 +11,7 @@
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ## GNU General Public License for more details.
 ##
-## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+## Go to <https://www.r-project.org/Licenses> for copies of the licenses.
 
 #' Strip Control Sequences
 #'
@@ -69,7 +69,7 @@ strip_ctl <- function(x, ctl='all', warn=getOption('fansi.warn', TRUE), strip) {
 #' Strip Control Sequences
 #'
 #' This function is deprecated in favor of the [`_ctl` flavor][strip_ctl].  It
-#' strips for CSI SGR and OSC-anchored URL sequences.
+#' strips CSI SGR and OSC hyperlink sequences.
 #'
 #' @inheritParams strip_ctl
 #' @inherit strip_ctl return
@@ -120,8 +120,8 @@ has_ctl <- function(x, ctl='all', warn=getOption('fansi.warn', TRUE), which) {
 }
 #' Check for Presence of Control Sequences
 #'
-#' This function is deprecated in favor of the [`_ctl` flavor][has_ctl].  It
-#' checks for CSI SGR and OSC-anchored URL sequences.
+#' This function is deprecated in favor of the [`has_ctl`].  It
+#' checks for CSI SGR and OSC hyperlink sequences.
 #'
 #' @inheritParams has_ctl
 #' @inherit has_ctl return
@@ -134,10 +134,10 @@ has_sgr <- function(x, warn=getOption('fansi.warn', TRUE))
 #' Utilities for Managing CSI and OSC State  In Strings
 #'
 #' `state_at_end` reads through strings computing the accumulated SGR and
-#' OSC-anchored URLs, and outputs the active state at the end of them
-#' `close_state` produces the sequence that closes active SGR and OSC-anchored
-#' URLs at the end of each input string.  If `normalize = FALSE` (default), it
-#' will emit the reset code "ESC[0m" if any SGR is present. It is more
+#' OSC hyperlinks, and outputs the active state at the end of them
+#' `close_state` produces the sequence that closes active SGR and OSC hyperlinks
+#' at the end of each input string.  If `normalize = FALSE` (default), it
+#' will emit the reset code "ESC&lbrack;0m" if any SGR is present. It is more
 #' interesting for closing SGRs if `normalize = TRUE`.  Unlike `state_at_end`
 #' and other functions `close_state` has no concept of `carry`: it will only
 #' emit closing sequences for states explicitly active at the end of a string.

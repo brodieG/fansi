@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+ * Go to <https://www.r-project.org/Licenses> for a copies of the licenses.
  */
 
 #include "fansi.h"
@@ -80,7 +80,7 @@ struct FANSI_state FANSI_state_init_full(
       type2char(TYPEOF(warn)), XLENGTH(warn)
     );
   int warn_int = asInteger(warn);
-  if((unsigned int) warn_int & ~FANSI_WARN_MASK)
+  if((unsigned int) warn_int & ~WARN_MASK)
     error(
       "Internal error: state_init with OOB value for warn (%d)",
       warn_int
@@ -89,16 +89,16 @@ struct FANSI_state FANSI_state_init_full(
 
   unsigned int settings = 0;
   settings = FANSI_SET_RNG(
-    settings, FANSI_SET_TERMCAP, FANSI_TERM_ALL, FANSI_term_cap_as_int(term_cap)
+    settings, SET_TERMCAP, TERM_ALL, FANSI_term_cap_as_int(term_cap)
   );
   settings = FANSI_SET_RNG(
-    settings, FANSI_SET_WIDTH, FANSI_COUNT_ALL, asInteger(width)
+    settings, SET_WIDTH, COUNT_ALL, asInteger(width)
   );
   settings = FANSI_SET_RNG(
-    settings, FANSI_SET_CTL, FANSI_CTL_ALL, FANSI_ctl_as_int(ctl)
+    settings, SET_CTL, CTL_ALL, FANSI_ctl_as_int(ctl)
   );
-  settings |= asLogical(allowNA) ? FANSI_SET_ALLOWNA : 0;
-  settings |= asLogical(keepNA) ? FANSI_SET_KEEPNA : 0;
+  settings |= asLogical(allowNA) ? SET_ALLOWNA : 0;
+  settings |= asLogical(keepNA) ? SET_KEEPNA : 0;
   settings |= (unsigned int) warn_int;
 
   // All others struct-inited to zero.
@@ -190,9 +190,9 @@ void FANSI_reset_width(struct FANSI_state * state) {
  */
 void FANSI_reset_pos(struct FANSI_state * state) {
   state->pos = (struct FANSI_position){0};
-  unsigned int warned = state->status & FANSI_STAT_WARNED;
+  unsigned int warned = state->status & STAT_WARNED;
   state->status = 0U;
-  if(warned) state->status |= FANSI_STAT_WARNED;
+  if(warned) state->status |= STAT_WARNED;
 }
 /*
  * Reset state without changing index/string
@@ -233,8 +233,8 @@ static int sgr_comp_color(
 ) {
   unsigned char tclr = target.x;
   unsigned char cclr = current.x;
-  int c256 = tclr & (FANSI_CLR_256 | FANSI_CLR_TRU);
-  int cTRU = tclr & FANSI_CLR_TRU;
+  int c256 = tclr & (CLR_256 | CLR_TRU);
+  int cTRU = tclr & CLR_TRU;
   return
     tclr != cclr  ||
     // Can't use memcmp because we don't necessarly cleanup extra
@@ -278,17 +278,17 @@ struct FANSI_sgr FANSI_sgr_setdiff(
   }
   // We don't bother to shift the fonts here since both are already encoded
   unsigned int font_old, font_new;
-  font_old = old.style & FANSI_FONT_MASK;
-  font_new = new.style & FANSI_FONT_MASK;
+  font_old = old.style & FONT_MASK;
+  font_new = new.style & FONT_MASK;
   if(
     (!mode && (font_old != font_new)) || (mode && font_old && !font_new)
   )
-    res.style = (res.style & ~FANSI_FONT_MASK) | font_old;
+    res.style = (res.style & ~FONT_MASK) | font_old;
 
   // All non font styles are just bit flags
   unsigned int style_old, style_new;
-  style_old = old.style & ~FANSI_FONT_MASK;
-  style_new = new.style & ~FANSI_FONT_MASK;
+  style_old = old.style & ~FONT_MASK;
+  style_new = new.style & ~FONT_MASK;
   res.style |= style_old & ~style_new;
   return res;
 }
@@ -307,14 +307,14 @@ struct FANSI_sgr FANSI_sgr_intersect(
     memcpy(res.bgcol.extra, new.bgcol.extra, sizeof(new.bgcol.extra));
   }
   unsigned int font_old, font_new;
-  font_old = old.style & FANSI_FONT_MASK;
-  font_new = new.style & FANSI_FONT_MASK;
-  if(font_old == font_new) res.style &= font_new | ~FANSI_FONT_MASK;
+  font_old = old.style & FONT_MASK;
+  font_new = new.style & FONT_MASK;
+  if(font_old == font_new) res.style &= font_new | ~FONT_MASK;
 
   // All non font styles are just bit flags
   unsigned int style_old, style_new;
-  style_old = old.style & ~FANSI_FONT_MASK;
-  style_new = new.style & ~FANSI_FONT_MASK;
+  style_old = old.style & ~FONT_MASK;
+  style_new = new.style & ~FONT_MASK;
   res.style |= style_old & style_new;
   return res;
 }

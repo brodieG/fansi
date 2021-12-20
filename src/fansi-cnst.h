@@ -1,19 +1,19 @@
 /*
-Copyright (C) 2021 Brodie Gaslam
-
-This file is part of "fansi - ANSI Control Sequence Aware String Functions"
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 2 or 3 of the License.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
-*/
+ * Copyright (C) 2021  Brodie Gaslam
+ *
+ * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 or 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * Go to <https://www.r-project.org/Licenses> for a copies of the licenses.
+ */
 
 #ifndef _FANSI_CNST_H
 #define _FANSI_CNST_H
@@ -30,7 +30,7 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 //
 // Generally: _MASK >> _START == _ALL.
 //
-// Use the FANSI_GET_RNG and FANSI_SET_RNG macros to get/set the decimal values
+// Use the FANSI_GET_RNG and SET_RNG macros to get/set the decimal values
 // embedded in the larger unsigned int objects.
 //
 // Ideally, this would all be script generated to avoid risks of manual errors,
@@ -39,59 +39,59 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 // - Settings ------------------------------------------------------------------
 
 // Offset for starting bytes for various settings
-#define FANSI_SET_CTL       0
-#define FANSI_SET_TERMCAP   7
-#define FANSI_SET_WARN     10
-#define FANSI_SET_WIDTH    21
+#define SET_CTL       0
+#define SET_TERMCAP   7
+#define SET_WARN     10
+#define SET_WIDTH    21
 
 // bits 0-6: recognized controls (also used in .status)
-#define FANSI_CTL_NL           1
-#define FANSI_CTL_C0           2
-#define FANSI_CTL_SGR          4
-#define FANSI_CTL_CSI          8
-#define FANSI_CTL_ESC         16
-#define FANSI_CTL_URL         32
-#define FANSI_CTL_OSC         64
+#define CTL_NL           1
+#define CTL_C0           2
+#define CTL_SGR          4
+#define CTL_CSI          8
+#define CTL_ESC         16
+#define CTL_URL         32
+#define CTL_OSC         64
 
-#define FANSI_CTL_ALL        127
-#define FANSI_CTL_MASK       127
-#define FANSI_CTL_ESC_CTL    124   // Controls starting with ESC
+#define CTL_ALL        127
+#define CTL_MASK       127
+#define CTL_ESC_CTL    124   // Controls starting with ESC
 
 // Bits 7-9: term caps
-#define FANSI_TERM_BRIGHT    128
-#define FANSI_TERM_256       256
-#define FANSI_TERM_TRUECOLOR 512
+#define TERM_BRIGHT    128
+#define TERM_256       256
+#define TERM_TRUECOLOR 512
 
-#define FANSI_TERM_ALL         7
-#define FANSI_TERM_MASK      896
+#define TERM_ALL         7
+#define TERM_MASK      896
 
 // Bits 10-20: warning level (see ERR_*)
-#define FANSI_WARN_MASK    2096128 // 0111 1111 1111 << FANSI_SET_WARN
-#define FANSI_WARN_ALL        2047 // 0111 1111 1111
+#define WARN_MASK    2096128 // 0111 1111 1111 << SET_WARN
+#define WARN_ALL        2047 // 0111 1111 1111
 // Warnings for situations jeopardizing width computation and similar
-#define FANSI_WARN_MANGLED  163840 // 0000 1010 0000 << FANSI_SET_WARN
-#define FANSI_WARN_UTF8     524288
+#define WARN_MANGLED  163840 // 0000 1010 0000 << SET_WARN
+#define WARN_UTF8     524288
 // These should not be suppressed by warn=FALSE (but an be turned off by
 // functions that don't care about them).
-#define FANSI_WARN_ERROR   1572864 // 0110 0000 0000 << FANSI_SET_WARN
+#define WARN_ERROR   1572864 // 0110 0000 0000 << SET_WARN
 
 // bits 21-22: Width mode, this is an integer, not bit flags, so
-// First shift by FANSI_SET_WIDTH
-#define FANSI_COUNT_CHARS    0
-#define FANSI_COUNT_WIDTH    1
-#define FANSI_COUNT_GRAPH    2
-#define FANSI_COUNT_BYTES    3
+// First shift by SET_WIDTH
+#define COUNT_CHARS    0
+#define COUNT_WIDTH    1
+#define COUNT_GRAPH    2
+#define COUNT_BYTES    3
 
-#define FANSI_COUNT_ALL      3
+#define COUNT_ALL      3
 
 // bits 23-25: other settings
-#define FANSI_SET_ALLOWNA  8388608
-#define FANSI_SET_KEEPNA  16777216
-#define FANSI_SET_ESCONE  33554432  // consume only one ESC at a time
+#define SET_ALLOWNA  8388608
+#define SET_KEEPNA  16777216
+#define SET_ESCONE  33554432  // consume only one ESC at a time
 
 // - Status --------------------------------------------------------------------
 
-#define FANSI_STAT_ERR_START  7
+#define STAT_ERR_START  7
 
 // bits 0-6: identical to .settings (controls found).  It's not clear that we
 // actually want this to be a bit field, it might be better to have it be an
@@ -100,8 +100,8 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 // bits 7-10: integer error code (not bit flags), see read.c/err_msgs[] and
 // `?unhandled_ctl` for details.
 
-#define FANSI_STAT_ERR_ALL    15
-#define FANSI_STAT_ERR_MASK 1920
+#define STAT_ERR_ALL    15
+#define STAT_ERR_MASK 1920
 
 // These are all integer values that must be shifted by _ERR_START for encoding
 // into ->status.  Subtract 1 for ->settings byte positions (relative to the
@@ -120,71 +120,71 @@ Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
 
 // bits 11-16: additional status flags, some of these are no longer strictly
 // necessary with the switch to read_until (from read_next).
-#define FANSI_STAT_ZWJ       2048
-#define FANSI_STAT_RI        4096
-#define FANSI_STAT_AGAIN     8192 // Read past requested width
-#define FANSI_STAT_WARNED   16384 // Warning already issued
-#define FANSI_STAT_SPECIAL  32768 // Valid SGR or URL (no critical errors)
-#define FANSI_STAT_OVERSHOT 65536 // Read past requested width
-#define FANSI_STAT_DONE    131072 // Hit end with special
+#define STAT_ZWJ       2048
+#define STAT_RI        4096
+#define STAT_AGAIN     8192 // Read past requested width
+#define STAT_WARNED   16384 // Warning already issued
+#define STAT_SPECIAL  32768 // Valid SGR or URL (no critical errors)
+#define STAT_OVERSHOT 65536 // Read past requested width
+#define STAT_DONE    131072 // Hit end with special
 
-#define FANSI_STAT_PERSIST  22528 // _ZWJ | _RI | _WARNED
+#define STAT_PERSIST  22528 // _ZWJ | _RI | _WARNED
 
 // - sgr.style -----------------------------------------------------------------
 
 // style encodings, used against sgr.style
-#define FANSI_STL_BOLD         1
-#define FANSI_STL_BLUR         2   // or faint
-#define FANSI_STL_ITALIC       4
-#define FANSI_STL_UNDER        8
-#define FANSI_STL_BLINK1      16   // slow blink
-#define FANSI_STL_BLINK2      32   // fast blink
-#define FANSI_STL_INVERT      64
-#define FANSI_STL_CONCEAL    128
-#define FANSI_STL_CROSSOUT   256
-#define FANSI_STL_FRAKTUR    512
-#define FANSI_STL_UNDER2    1024   // double underline
-#define FANSI_STL_PROPSPC   2048   // prop spacing
+#define STL_BOLD         1
+#define STL_BLUR         2   // or faint
+#define STL_ITALIC       4
+#define STL_UNDER        8
+#define STL_BLINK1      16   // slow blink
+#define STL_BLINK2      32   // fast blink
+#define STL_INVERT      64
+#define STL_CONCEAL    128
+#define STL_CROSSOUT   256
+#define STL_FRAKTUR    512
+#define STL_UNDER2    1024   // double underline
+#define STL_PROPSPC   2048   // prop spacing
 
-#define FANSI_STL_MASK      4095
-#define FANSI_STL_MASK1      511   // Basic styles (i.e. 1-9 codes, sum(2^(0:8))
-#define FANSI_STL_MASK2      447   // Basic styles for HTML, excludes inverse
+#define STL_MASK      4095
+#define STL_MASK1      511   // Basic styles (i.e. 1-9 codes, sum(2^(0:8))
+#define STL_MASK2      447   // Basic styles for HTML, excludes inverse
 
-#define FANSI_BRD_FRAMED    4096
-#define FANSI_BRD_ENCIRC    8192
-#define FANSI_BRD_OVERLN   16384
+#define BRD_FRAMED    4096
+#define BRD_ENCIRC    8192
+#define BRD_OVERLN   16384
 
-#define FANSI_BRD_MASK     28672   // sum(2^(12:14))
+#define BRD_MASK     28672   // sum(2^(12:14))
 
-#define FANSI_IDG_UNDERL   32768 // ideogram underline or right side line
-#define FANSI_IDG_UNDERL2  65536 // ideogram dbl underline or dbl line on right
-#define FANSI_IDG_OVERL   131072 // ideogram overline or left side line
-#define FANSI_IDG_OVERL2  262144 // ideogram dbl overline or dbl line on left
-#define FANSI_IDG_STRESS  524288 // ideogram stress marking
-#define FANSI_IDG_MASK   1015808 // sum(2^(15:19))
+#define IDG_UNDERL   32768 // ideogram underline or right side line
+#define IDG_UNDERL2  65536 // ideogram dbl underline or dbl line on right
+#define IDG_OVERL   131072 // ideogram overline or left side line
+#define IDG_OVERL2  262144 // ideogram dbl overline or dbl line on left
+#define IDG_STRESS  524288 // ideogram stress marking
+#define IDG_MASK   1015808 // sum(2^(15:19))
 
 // Alternative fonts, 10-19, (encoded as is for simplicity, so use 5 bytes)
 
-#define FANSI_FONT_START  27
-#define FANSI_FONT_MASK 4160749568 // sum(2^(27:31))
-#define FANSI_FONT_ALL    31
+#define FONT_START  27
+#define FONT_MASK 4160749568 // sum(2^(27:31))
+#define FONT_ALL    31
 
 // - Misc ----------------------------------------------------------------------
 
-#define FANSI_CLR_BUFF_SIZE  17   // big enough for e.g. 38;2;255;255;255
+#define CLR_BUFF_SIZE  17   // big enough for e.g. 38;2;255;255;255
 
 // Color modes
-#define FANSI_CLR_MASK    240    // 1111 0000
-#define FANSI_CLR_OFF       0
-#define FANSI_CLR_8        16
-#define FANSI_CLR_BRIGHT   32
-#define FANSI_CLR_256      64
-#define FANSI_CLR_TRU     128
+#define CLR_MASK    240    // 1111 0000
+#define CLR_OFF       0
+#define CLR_8        16
+#define CLR_BRIGHT   32
+#define CLR_256      64
+#define CLR_TRU     128
 
 // For start/stop rounding
-#define FANSI_RND_START     1
-#define FANSI_RND_STOP      2
-#define FANSI_RND_BOTH      3
-#define FANSI_RND_NEITHER   4
+#define RND_START     1
+#define RND_STOP      2
+#define RND_BOTH      3
+#define RND_NEITHER   4
 
 #endif  /* _FANSI_CNST_H */

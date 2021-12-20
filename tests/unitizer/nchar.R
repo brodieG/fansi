@@ -1,3 +1,18 @@
+## Copyright (C) 2021  Brodie Gaslam
+##
+## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
+##
+## This program is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 2 or 3 of the License.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## Go to <https://www.r-project.org/Licenses> for copies of the licenses.
+
 library(fansi)
 
 unitizer_sect('basic tests', {
@@ -88,6 +103,12 @@ unitizer_sect('corner cases', {
   nchar_ctl("\033[31;\x80p")
   nchar_ctl("\033]8;\x80;a.b\033\\")
   nchar_ctl("\033];\x80;a.b\033\\")
+
+  ## Old R version behavior
+  fansi:::set_rver(numeric_version("3.2.1"))
+  nzchar_ctl(c("\033[31mA", "\033[31m"))
+  nchar_ctl(c("\033[31mA", "\033[31m"))
+  fansi:::set_rver()
 })
 unitizer_sect('bad inputs', {
   nchar_ctl(9:10, warn=1:3)

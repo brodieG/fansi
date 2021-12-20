@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+ * Go to <https://www.r-project.org/Licenses> for a copies of the licenses.
  */
 
 #include "fansi.h"
@@ -111,7 +111,7 @@ int FANSI_find_ctl(
     pos = state->pos.x += FANSI_seek_ctl(state->string + state->pos.x);
     FANSI_read_next(state, i, arg);
     // Known control read
-    if(state->status & FANSI_CTL_MASK) break;
+    if(state->status & CTL_MASK) break;
   }
   return pos;
 }
@@ -150,7 +150,7 @@ unsigned int FANSI_ctl_as_int(SEXP ctl) {
     if(ctl_val < 0) flip_bits = 1;
     else ctl_int |= 1U << ctl_val;
   }
-  if(flip_bits) ctl_int ^= FANSI_CTL_ALL;
+  if(flip_bits) ctl_int ^= CTL_ALL;
   return ctl_int;
 }
 SEXP FANSI_ctl_as_int_ext(SEXP ctl) {
@@ -168,21 +168,21 @@ int FANSI_term_cap_as_int(SEXP term_cap) {
     if(term_cap_val < 0) flip_bits = 1;
     else term_cap_int |= 1 << term_cap_val;
   }
-  if(flip_bits) term_cap_int ^= FANSI_TERM_ALL;
+  if(flip_bits) term_cap_int ^= TERM_ALL;
   return term_cap_int;
 }
 
 SEXP FANSI_get_warn_all() {
-  return ScalarInteger(FANSI_WARN_MASK);
+  return ScalarInteger(WARN_MASK);
 }
 SEXP FANSI_get_warn_mangled() {
-  return ScalarInteger(FANSI_WARN_MANGLED);
+  return ScalarInteger(WARN_MANGLED);
 }
 SEXP FANSI_get_warn_utf8() {
-  return ScalarInteger(FANSI_WARN_UTF8);
+  return ScalarInteger(WARN_UTF8);
 }
 SEXP FANSI_get_warn_error() {
-  return ScalarInteger(FANSI_WARN_ERROR);
+  return ScalarInteger(WARN_ERROR);
 }
 // concept borrowed from utf8-lite, but is not great because we're
 // still doing the calculation every iteration.  Probably okay though, the
@@ -328,11 +328,11 @@ void FANSI_print_bits(unsigned int x) {
 void FANSI_print_sgr(struct FANSI_sgr s) {
   Rprintf(
     "  color:  %d %d %d;%d;%d bgcolor:  %d %d %d;%d;%d\n",
-    s.color.x & FANSI_CLR_MASK,
-    s.color.x & ~FANSI_CLR_MASK, 
+    s.color.x & CLR_MASK,
+    s.color.x & ~CLR_MASK, 
     s.color.extra[0], s.color.extra[1], s.color.extra[2],
-    s.bgcol.x & FANSI_CLR_MASK,
-    s.bgcol.x & ~FANSI_CLR_MASK, 
+    s.bgcol.x & CLR_MASK,
+    s.bgcol.x & ~CLR_MASK, 
     s.bgcol.extra[0], s.bgcol.extra[1], s.bgcol.extra[2]
   );
   Rprintf("  style:  ");

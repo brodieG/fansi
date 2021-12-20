@@ -11,7 +11,7 @@
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ## GNU General Public License for more details.
 ##
-## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+## Go to <https://www.r-project.org/Licenses> for copies of the licenses.
 
 ## Order of these is important as typically we convert them to integer codes
 ## with `match`
@@ -32,6 +32,6 @@ VALID.TERM.CAP <- c('all', 'bright', '256', 'truecolor')
 ## which acts as a negation (see FANSI_ctl_as_int), so "nl" is 2^0, "c0" is 2^1,
 ## and so on.
 ##
-## REMEMBER TO UPDATE FANSI_CTL_ALL CONSTANT IF WE MODIFY THIS
+## REMEMBER TO UPDATE CTL_ALL CONSTANT IF WE MODIFY THIS
 
 VALID.CTL <- c("all", "nl", "c0", "sgr", "csi", "esc", "url", "osc")

@@ -43,6 +43,32 @@ identical(wrapped.base, wrapped.ctl)
 rm(wrapped.base, wrapped.ctl)
 gc()
 
+system.time(nchar.ctl <- nchar_ctl(ulysses))
+##   user  system elapsed
+##  0.009   0.000   0.009
+system.time(nchar.base <- nchar(ulysses))
+##   user  system elapsed
+##  0.006   0.000   0.007
+identical(nchar.ctl, nchar.base)
+## [1] TRUE
+rm(nchar.ctl, nchar.base)
+gc()
+
+## Base oddly slow in this one
+system.time(ncharw.ctl <- nchar_ctl(ulysses, type='width'))
+##   user  system elapsed
+##  0.015   0.000   0.016
+system.time(ncharw.base <- nchar(ulysses, type='width'))
+identical(ncharw.ctl, ncharw.base)
+##   user  system elapsed
+##  0.420   0.002   0.427
+rm(ncharw.ctl, ncharw.base)
+## [1] TRUE
+gc()
+
+##   user  system elapsed
+
+
 ulysses.color <- fansi_lines(ulysses)
 writeLines(head(ulysses.color, 20))
 

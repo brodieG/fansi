@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2021  Brodie Gaslam
+ *
+ * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 or 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * Go to <https://www.r-project.org/Licenses> for a copies of the licenses.
+ */
+
 #include "fansi.h"
 
 /*
@@ -72,8 +89,8 @@ SEXP FANSI_trimws(
             } else {
               struct FANSI_state state_tmp = state;
               FANSI_read_next(&state_tmp, i, arg);
-              state.status |= state_tmp.status & FANSI_STAT_WARNED;
-              if(state_tmp.status & FANSI_CTL_MASK) {
+              state.status |= state_tmp.status & STAT_WARNED;
+              if(state_tmp.status & CTL_MASK) {
                 state = state_tmp;
                 break;  // break out of switch, NOT out of while
               }
@@ -106,8 +123,8 @@ SEXP FANSI_trimws(
             } else {
               struct FANSI_state state_tmp = state;
               FANSI_read_next(&state_tmp, i, arg);
-              state.status |= state_tmp.status & FANSI_STAT_WARNED;
-              if(state_tmp.status & FANSI_CTL_MASK) {
+              state.status |= state_tmp.status & STAT_WARNED;
+              if(state_tmp.status & CTL_MASK) {
                 state = state_tmp;
                 continue;
               } else {

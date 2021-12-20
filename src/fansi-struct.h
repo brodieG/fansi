@@ -1,19 +1,19 @@
 /*
-Copyright (C) 2021 Brodie Gaslam
-
-This file is part of "fansi - ANSI Control Sequence Aware String Functions"
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 2 or 3 of the License.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
-*/
+ * Copyright (C) 2021  Brodie Gaslam
+ *
+ * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 or 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * Go to <https://www.r-project.org/Licenses> for a copies of the licenses.
+ */
 
 #ifndef _FANSI_STRUCT_H
 #define _FANSI_STRUCT_H
@@ -72,7 +72,7 @@ struct FANSI_buff {
 };
 struct FANSI_color {
   /*
-   * Most significant 4 bits are the color mode (see FANSI_CLR_*), least
+   * Most significant 4 bits are the color mode (see CLR_*), least
    * significant are the actual colors for 8 bit and bright modes.
    */
   unsigned char x;
@@ -151,10 +151,10 @@ struct FANSI_state {
 
   const char * string;
 
-  // R level settings, see FANSI_SET_*
+  // R level settings, see SET_*
   unsigned int settings;
 
-  // Status flags, see FANSI_STAT_*
+  // Status flags, see STAT_*
   unsigned int status;
 
   // Are there bytes outside of 0-127 (i.e. UTF-8 since that is the only way

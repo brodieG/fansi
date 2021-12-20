@@ -11,7 +11,7 @@
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ## GNU General Public License for more details.
 ##
-## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+## Go to <https://www.r-project.org/Licenses> for copies of the licenses.
 
 #' Normalize CSI and OSC Sequences
 #'
@@ -76,7 +76,7 @@
 #' writeLines(
 #'   c(
 #'     paste(red, "he\033[0mllo", "\033[0m"),
-#'     paste(red, normalize_state("he\033[0mllo"), "\033[0m")
+#'     paste(red, normalize_state("he\033[0mllo"), "\033[0m"),
 #'     paste(red, normalize_state("he\033[0mllo", carry=red), "\033[0m")
 #' ) )
 

@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+ * Go to <https://www.r-project.org/Licenses> for a copies of the licenses.
  */
 
 #include "fansi.h"
@@ -169,7 +169,7 @@ SEXP FANSI_tabs_as_spaces(
           FANSI_W_MCOPY(buff, state.string + last_byte, write_bytes);
 
           // consume tab and advance, temporarily suppressing warning
-          state.settings &= ~FANSI_WARN_MASK;
+          state.settings &= ~WARN_MASK;
           FANSI_read_next(&state, i, arg);
           state.settings = settings;
           cur_chr = state.string[state.pos.x];

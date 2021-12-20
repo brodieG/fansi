@@ -43,7 +43,7 @@ work correctly with R >= 3.2.2.  See \code{\link[base:nchar]{?nchar}}.}
 \item{ctl}{character, which \emph{Control Sequences} should be treated
 specially.  Special treatment is context dependent, and may include
 detecting them and/or computing their display/character width as zero.  For
-the SGR subset of the ANSI CSI sequences, and OSC-anchored URLs, \code{fansi}
+the SGR subset of the ANSI CSI sequences, and OSC hyperlinks, \code{fansi}
 will also parse, interpret, and reapply the sequences as needed.  You can
 modify whether a \emph{Control Sequence} is treated specially with the \code{ctl}
 parameter.
@@ -53,8 +53,8 @@ parameter.
 for newlines and the actual ESC (0x1B) character.
 \item "sgr": ANSI CSI SGR sequences.
 \item "csi": all non-SGR ANSI CSI sequences.
-\item "url": OSC-anchored URLs
-\item "osc": all non-OSC-anchored URL OSC sequences.
+\item "url": OSC hyperlinks
+\item "osc": all non-OSC-hyperlink OSC sequences.
 \item "esc": all other escape sequences.
 \item "all": all of the above, except when used in combination with any of the
 above, in which case it means "all but".
@@ -98,8 +98,8 @@ The \code{keepNA} parameter is ignored for R < 3.2.2.
 
 Several factors could affect the exact output produced by \code{fansi}
 functions across versions of \code{fansi}, \code{R}, and/or across systems.
-\strong{In general it is likely best not to rely on the exact \code{fansi} output,
-e.g. by embedding it in tests.}
+\strong{In general it is best not to rely on exact \code{fansi} output, e.g. by
+embedding it in tests}.
 
 Width and grapheme calculations depend on locale, Unicode database
 version, and grapheme processing logic (which is still in development), among

@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+ * Go to <https://www.r-project.org/Licenses> for a copies of the licenses.
  */
 
 #include "fansi.h"
@@ -101,7 +101,7 @@ SEXP FANSI_strip(SEXP x, SEXP ctl, SEXP warn) {
     while(state.string[state.pos.x]) {
       int pos = FANSI_find_ctl(&state, i, arg);
       // This will also trigger for end-of-string if `has_ctl` is already true
-      if(has_ctl || (state.status & FANSI_CTL_MASK)) {
+      if(has_ctl || (state.status & CTL_MASK)) {
         has_ctl = 1;
         // As soon as we encounter ansi in any of the character vector elements,
         // allocate vector to track what has ansi
@@ -246,7 +246,7 @@ SEXP FANSI_process(
         int pos_prev = state.pos.x = j;
         FANSI_read_next(&state, i, arg);
         // Sequence is special if it is a recognized control
-        if(state.status & FANSI_CTL_ALL) {
+        if(state.status & CTL_ALL) {
           special_len = state.pos.x - pos_prev;
         } else {
           special = special_len = 0;

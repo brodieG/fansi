@@ -11,7 +11,7 @@
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ## GNU General Public License for more details.
 ##
-## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+## Go to <https://www.r-project.org/Licenses> for copies of the licenses.
 
 #' Control Sequence Aware Version of nchar
 #'
@@ -68,15 +68,22 @@ nchar_ctl <- function(
     ctl <- strip
   }
   ## modifies / creates NEW VARS in fun env
-  VAL_IN_ENV(
-    x=x, ctl=ctl, warn=warn, type=type, allowNA=allowNA, keepNA=keepNA,
-    valid.types=c('chars', 'width', 'graphemes', 'bytes'),
-    warn.mask=if(isTRUE(allowNA)) get_warn_mangled() else get_warn_worst()
-  )
-  nchar_ctl_internal(
-    x=x, type.int=TYPE.INT, allowNA=allowNA, keepNA=keepNA, ctl.int=CTL.INT,
-    warn.int=WARN.INT, z=FALSE
-  )
+  if(FANSI.ENV[['r.ver']] >= "3.2.2") {
+    VAL_IN_ENV(
+      x=x, ctl=ctl, warn=warn, type=type, allowNA=allowNA, keepNA=keepNA,
+      valid.types=c('chars', 'width', 'graphemes', 'bytes'),
+      warn.mask=if(isTRUE(allowNA)) get_warn_mangled() else get_warn_worst()
+    )
+    nchar_ctl_internal(
+      x=x, type.int=TYPE.INT, allowNA=allowNA, keepNA=keepNA, ctl.int=CTL.INT,
+      warn.int=WARN.INT, z=FALSE
+    )
+  } else {
+    nchar(
+      strip_ctl(x, ctl=ctl, warn=warn),
+      type=type, allowNA=allowNA, keepNA=keepNA
+    )
+  }
 }
 #' @export
 #' @rdname nchar_ctl
@@ -84,30 +91,28 @@ nchar_ctl <- function(
 nzchar_ctl <- function(
   x, keepNA=FALSE, ctl='all', warn=getOption('fansi.warn', TRUE)
 ) {
-  ## modifies / creates NEW VARS in fun env
-  VAL_IN_ENV(
-    x=x, ctl=ctl, warn=warn, type='chars', keepNA=keepNA,
-    valid.types=c('chars', 'width', 'bytes'),
-    warn.mask=get_warn_mangled()
-  )
-  nchar_ctl_internal(
-    x=x, type.int=TYPE.INT, allowNA=TRUE, keepNA=keepNA, ctl.int=CTL.INT,
-    warn.int=WARN.INT, z=TRUE
-  )
+  if(FANSI.ENV[['r.ver']] >= "3.2.2") {
+    ## modifies / creates NEW VARS in fun env
+    VAL_IN_ENV(
+      x=x, ctl=ctl, warn=warn, type='chars', keepNA=keepNA,
+      valid.types=c('chars', 'width', 'bytes'),
+      warn.mask=get_warn_mangled()
+    )
+    nchar_ctl_internal(
+      x=x, type.int=TYPE.INT, allowNA=TRUE, keepNA=keepNA, ctl.int=CTL.INT,
+      warn.int=WARN.INT, z=TRUE
+    )
+  } else nzchar(strip_ctl(x, ctl=ctl, warn=warn), keepNA=keepNA)
 }
 nchar_ctl_internal <- function(
   x, type.int, allowNA, keepNA, ctl.int, warn.int, z
 ) {
   term.cap.int <- 1L
-  R.ver.gte.3.2.2 <- R.ver.gte.3.2.2 # "import" symbol from namespace
-  res <- if(R.ver.gte.3.2.2)
-    .Call(
-      FANSI_nchar_esc,
-      x, type.int, keepNA, allowNA,
-      warn.int, term.cap.int, ctl.int, z
-    )
-  else nchar(stripped, type=type, allowNA=allowNA) # nocov
-
+  res <- .Call(
+    FANSI_nchar_esc,
+    x, type.int, keepNA, allowNA,
+    warn.int, term.cap.int, ctl.int, z
+  )
   dim(res) <- dim(x)
   dimnames(res) <- dimnames(x)
   names(res) <- names(x)

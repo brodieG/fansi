@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+ * Go to <https://www.r-project.org/Licenses> for a copies of the licenses.
  */
 
 /*
@@ -45,7 +45,7 @@ SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn) {
       if(xc + off_init) {
         state.pos.x = off_init;
         FANSI_find_ctl(&state, i, arg);
-        res = (state.status & FANSI_CTL_MASK) > 0;
+        res = (state.status & CTL_MASK) > 0;
       }
       res_int[i] = res;
     } else {

@@ -11,11 +11,11 @@
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ## GNU General Public License for more details.
 ##
-## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+## Go to <https://www.r-project.org/Licenses> for copies of the licenses.
 
 #' Convert Control Sequences to HTML Equivalents
 #'
-#' Interprets CSI SGR sequences and OSC-anchored URLs to produce strings with
+#' Interprets CSI SGR sequences and OSC hyperlinks to produce strings with
 #' the state reproduced with SPAN elements, inline CSS styles, and A anchors.
 #' Optionally for colors, the SPAN elements may be assigned classes instead of
 #' inline styles, in which case it is the user's responsibility to provide a
@@ -166,8 +166,8 @@ to_html <- function(
 #' Convert Control Sequences to HTML Equivalents
 #'
 #' This function is a wrapper around [`to_html`] and is kept around for legacy
-#' reasons.  When we added capabilities for handling OSC-anchored URLs, the
-#' `sgr_` part of the name became an incomplete description of what the function
+#' reasons.  When we added capabilities for handling OSC hyperlinks, the `sgr_`
+#' part of the name became an incomplete description of what the function
 #' does.
 #'
 #' @note Unlike other functions, including [`to_html`], the default is `carry =

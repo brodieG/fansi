@@ -37,7 +37,7 @@ variable.
 Functions with the \code{term.cap} parameter like \code{substr_ctl} will warn if they
 encounter 256 or true color SGR sequences and \code{term.cap} indicates they are
 unsupported as such a terminal may misinterpret those sequences.  Bright
-codes and OSC encoded URLs in terminals that do not support will likely be
+codes and OSC hyperlinks in terminals that do not support them will likely be
 silently ignored, so \code{fansi} functions do not warn about those.
 }
 \examples{

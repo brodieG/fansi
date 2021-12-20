@@ -11,11 +11,17 @@
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ## GNU General Public License for more details.
 ##
-## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+## Go to <https://www.r-project.org/Licenses> for copies of the licenses.
 
-## Tracks whether we are running in R > 3.2.2 or not (see .onLoad)
+## Internal environment (mostly just to store version)
 
-R.ver.gte.3.2.2 <- NA
+FANSI.ENV <- new.env()
+
+## Global variables
+
+utils::globalVariables(
+  c("TERM.CAP.INT", "WARN.INT", "CTL.INT", "TYPE.INT", "ROUND.INT", "X.LEN")
+)
 
 ## Internal functions, used primarily for testing
 
@@ -44,6 +50,13 @@ get_warn_mangled <- function() .Call(FANSI_get_warn_mangled)
 get_warn_utf8 <- function() .Call(FANSI_get_warn_utf8)
 get_warn_worst <- function() bitwOr(get_warn_mangled(), get_warn_utf8())
 get_warn_error <- function() .Call(FANSI_get_warn_error)
+
+## For testing version specific code
+set_rver <- function(x=getRversion()) {
+  old <- FANSI.ENV[['r.ver']]
+  FANSI.ENV[['r.ver']] <- x
+  invisible(old)
+}
 
 ## exposed internals for testing
 
