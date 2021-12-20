@@ -215,8 +215,8 @@
 #'   character and the first character of a vector element.  See the "Position
 #'   Semantics" section of [`substr_ctl`] and the "State Interactions" section
 #'   of [`?fansi`][fansi] for details.  Except for [`strwrap_ctl`] where `NA` is
-#'   treated as the string `"NA"`, `carry` will cause `NA` to propagate
-#'   throughout a vector.
+#'   treated as the string `"NA"`, `carry` will cause `NA`s in inputs to
+#'   propagate through the remaining vector elements.
 #' @param terminate TRUE (default) or FALSE whether substrings should have
 #'   active state closed to avoid it bleeding into other strings they may be
 #'   prepended onto.  This does not stop state from carrying if `carry = TRUE`.
