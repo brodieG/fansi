@@ -210,12 +210,13 @@
 #'   state at the end of a line.  If FALSE each vector element is interpreted as
 #'   if there were no active state when it begins.  If character, then the
 #'   active state at the end of the `carry` string is carried into the first
-#'   element of `x` (see "Replacement Functions" for differences there).
-#'   Semantically, the carried state is injected in the interstice between an
-#'   imaginary zeroeth character and the first character of a vector element.
-#'   See the "Position Semantics" section of [`substr_ctl`] and the "State
-#'   Interactions" section of [`?fansi`][fansi]
-#'   for details.
+#'   element of `x` (see "Replacement Functions" for differences there).  The
+#'   carried state is injected in the interstice between an imaginary zeroeth
+#'   character and the first character of a vector element.  See the "Position
+#'   Semantics" section of [`substr_ctl`] and the "State Interactions" section
+#'   of [`?fansi`][fansi] for details.  Except for [`strwrap_ctl`] where `NA` is
+#'   treated as the string `"NA"`, `carry` will cause `NA` to propagate
+#'   throughout a vector.
 #' @param terminate TRUE (default) or FALSE whether substrings should have
 #'   active state closed to avoid it bleeding into other strings they may be
 #'   prepended onto.  This does not stop state from carrying if `carry = TRUE`.

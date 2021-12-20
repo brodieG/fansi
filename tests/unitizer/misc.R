@@ -92,8 +92,14 @@ unitizer_sect("strtrim", {
     "\033[42m\the\allo world\033[m foobar", 12, tabs.as.spaces=TRUE,
     warn=FALSE, tab.stops=2
   )
-  # bad args
+  # NA handling
+  identical(
+    strtrim_ctl(c("AB", NA_character_, "CD"), 1),
+    strtrim(c("AB", NA_character_, "CD"), 1)
+  )
+  strtrim_ctl(c("AB", NA_character_, "CD"), 1, carry=TRUE)
 
+  # bad args
   hello2.0 <- "\033[42m\thello world\033[m foobar"
   strtrim_ctl(1:3, width=10)
   strtrim_ctl(hello2.0, width="35")
