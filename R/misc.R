@@ -370,7 +370,7 @@ set_knit_hooks <- function(
       # in PRE/CODE tags
 
       if(any(has_ctl(x, c('sgr', 'url')))) {
-        if(split.nl) x <- unlist(strsplit_ctl(x, '\n', fixed=TRUE))
+        if(split.nl) x <- unlist(strsplit_sgr(x, '\n', fixed=TRUE))
         res <- try(proc.fun(x=x, class=class))
         if(inherits(res, "try-error"))
           stop(
