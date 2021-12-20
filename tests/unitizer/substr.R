@@ -158,10 +158,15 @@ unitizer_sect("Corner cases", {
   # Select leading controls
   substr_ctl("\033[45pA", 1, 1, warn=FALSE)
   substr_ctl("\033[45pA", 0, 1, warn=FALSE)
+
+  # NA handling
+  substr_ctl(c("AB", NA, "CD"), 1, 2)
+  substr_ctl(c("AB", NA, "CD"), 1, 2, carry=TRUE)
+  substr_ctl(c("AB", "CD"), c(NA, 1), 2)
+  substr_ctl(c("AB", "CD"), c(NA, 1), 2, carry=TRUE)
 })
 unitizer_sect("Obscure escapes", {
   # illegal 38/48
-
   tryCatch(
     substr_ctl("\033[38;6;31mworld\033[m", 2, 3),
     warning=conditionMessage
@@ -204,7 +209,6 @@ unitizer_sect("Obscure escapes", {
 })
 unitizer_sect('bad args', {
   # bad args
-
   hello2.0 <- "\033[42m\thello world\033[m foobar"
   substr2_ctl(hello2.0, 1, 2, warn=NULL)
 
@@ -219,11 +223,9 @@ unitizer_sect('bad args', {
 
   substr2_ctl(hello2.0, 1, 2, ctl='bananas')
   substr2_ctl(hello2.0, 1, 2, ctl=0)
-
 })
 unitizer_sect('`ctl` related issues', {
   # Make sure SGR end properly detected
-
   substr_sgr("\033[31;42mhello world", 2, 4)
 
   # Repeated SGR
@@ -339,9 +341,7 @@ unitizer_sect("Rep Funs - SGR", {
   `substr_ctl<-`(txt1, 2, 3, terminate=FALSE, "#\033[0m?\033[45m-")
   `substr_ctl<-`(txt1, 2, 3, terminate=FALSE, "#\033[0m\033[45m?-")
 
-
   txt4 <- c(txt2, txt0, "\033[39mABCD")
-
   ## Different lengths
   `substr_ctl<-`(txt4, 2, 3, "#")
   `substr_ctl<-`(txt4, 2, 3, c("#", "?"))
@@ -414,5 +414,11 @@ unitizer_sect("Rep Funs - Corner Cases", {
   lat <- "fa\xe7ile"
   Encoding(lat) <- "latin1"
   tce(`substr_ctl<-`(lat, 1, 3, "ABC"))
+
+  ## NA handling
+  txt.na2 <- c("AB", NA, "BC")
+  `substr_ctl<-`(txt.na2, 1, 1, "#")
+  txt.nona <- c("AB", "BC", "CD")
+  `substr_ctl<-`(txt.nona, 1, 1, c("#", NA), carry=TRUE)
 })
 

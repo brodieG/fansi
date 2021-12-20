@@ -151,6 +151,7 @@ static SEXP substr_extract(
   state_ref = state_carry;
   int * start_i = INTEGER(start);
   int * stop_i = INTEGER(stop);
+  int any_na = 0;
   const char * arg = "x";
 
   for(R_xlen_t i = 0; i < len; ++i) {
@@ -160,8 +161,10 @@ static SEXP substr_extract(
     int stop_ii = stop_i[i];
     if(
       STRING_ELT(x, i) == NA_STRING ||
-      start_ii == NA_INTEGER || stop_ii == NA_INTEGER
+      start_ii == NA_INTEGER || stop_ii == NA_INTEGER ||
+      (any_na && carry_i)
     ) {
+      any_na = any_na || STRING_ELT(x, i) == NA_STRING;
       SET_STRING_ELT(res, i, NA_STRING);
     } else {
       // We do the full process even if stop_ii < start_ii for consistency
@@ -171,12 +174,12 @@ static SEXP substr_extract(
         substr_one(
           &state, state_ref, buff, i,
           start_ii, stop_ii, rnd_i, norm_i, term_i
-      ) );
-      if(carry_i) {
-        state_ref = state;
-        FANSI_read_all(&state, i, arg);
-        state_carry.fmt = state.fmt;
-  } } }
+    ) );}
+    if(carry_i && STRING_ELT(x, i) != NA_STRING) {
+      state_ref = state;
+      FANSI_read_all(&state, i, arg);
+      state_carry.fmt = state.fmt;
+  } }
   UNPROTECT(prt);
   return res;
 }

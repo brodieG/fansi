@@ -317,10 +317,8 @@ substr2_ctl <- function(
     start=start, stop=stop
   )
   res <- x
-  no.na <- !(is.na(x) | is.na(start & stop))
-
-  res[no.na] <- substr_ctl_internal(
-    x[no.na], start=start[no.na], stop=stop[no.na],
+  res[] <- substr_ctl_internal(
+    x, start=start, stop=stop,
     type.int=TYPE.INT,
     tabs.as.spaces=tabs.as.spaces, tab.stops=tab.stops,
     warn.int=WARN.INT, term.cap.int=TERM.CAP.INT,
@@ -329,7 +327,6 @@ substr2_ctl <- function(
     ctl.int=CTL.INT, normalize=normalize,
     carry=carry, terminate=terminate
   )
-  res[!no.na] <- NA_character_
   res
 }
 #' @rdname substr_ctl
