@@ -37,6 +37,7 @@ SEXP FANSI_state_at_end_ext(
   if(STRING_ELT(arg, 0) == NA_STRING) arg_chr = NULL;
   else arg_chr = CHAR(STRING_ELT(arg, 0));  // should be ASCII
   int prt = 0;
+  int any_na = 0;
   int normalize = asInteger(norm);
 
   // Read-in any pre-existing state to carry
@@ -71,7 +72,11 @@ SEXP FANSI_state_at_end_ext(
         x, warn, term_cap, allowNA, keepNA, width, ctl, i
       );
     } else FANSI_state_reinit(&state, x, i);
-
+    if(STRING_ELT(x, i) == NA_STRING || (any_na && do_carry)) {
+      any_na = 1;
+      SET_STRING_ELT(res, i, NA_STRING);
+      continue;
+    }
     if(do_carry) state.fmt.sgr = state_prev.fmt.sgr;
 
     state_at_end(&state, i, arg_chr);

@@ -178,6 +178,8 @@ unitizer_sect("at end / close", {
   state_at_end(x, carry=TRUE, normalize=TRUE)
   state_at_end("a\033[pb")
   state_at_end("a\033[pb", warn=FALSE)
+  state_at_end(c("\033[42mA", NA_character_, "\033[31mA"))
+  state_at_end(c("\033[42mA", NA_character_, "\033[31mA"), carry=TRUE)
 
   close_state(x)
   close_state(x, normalize=TRUE)
