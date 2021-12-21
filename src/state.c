@@ -88,8 +88,12 @@ struct FANSI_state FANSI_state_init_full(
   // nocov end
 
   unsigned int settings = 0;
+  unsigned int term_cap_raw = FANSI_term_cap_as_int(term_cap);
+  // slightly hacky, the "old term capability" mode is crammed into the raw term
+  // cap integer, and needs to be extracted out.
+  if(term_cap_raw > TERM_ALL) settings |= SET_TERMOLD;
   settings = FANSI_SET_RNG(
-    settings, SET_TERMCAP, TERM_ALL, FANSI_term_cap_as_int(term_cap)
+    settings, SET_TERMCAP, TERM_ALL, term_cap_raw & TERM_ALL
   );
   settings = FANSI_SET_RNG(
     settings, SET_WIDTH, COUNT_ALL, asInteger(width)

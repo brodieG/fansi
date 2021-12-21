@@ -210,7 +210,6 @@ unsigned int parse_token(struct FANSI_state * state) {
     leading_zeros = not_zero = is_sgr = err_code = 0;
   mult = 1;
   val = 0U;
-
   const char * string = state->string + state->pos.x;
 
   // `private` a bit redundant since we don't actually use it differentially to
@@ -322,54 +321,60 @@ void parse_colors(
         // terminal and iTerm)
         state->pos.x = prev_x;
         state->status = set_err(state->status, ERR_UNKNOWN_SUB);
-      } else if (
-        // terminal doesn't have 256 or true color capability
-        (tok_val == 2 && !(state->settings & TERM_TRUECOLOR)) ||
-        (tok_val == 5 && !(state->settings & TERM_256))
-      ) {
-        // right now this is same as when not 2/5 following a 38, but maybe in
-        // the future we want different treatment?
-        state->pos.x = prev_x;
-        state->status = set_err(state->status, ERR_EXCEED_CAP);
       } else {
-        unsigned char tmp_col[3] = {0};
-        int colors = tok_val;
-        int err_col = 0;
-        int early_end = 0;
-        i_max = colors == 5 ? 1 : 3;
-        // Parse through the subsequent tokens
-        for(int i = 0; i < i_max; ++i) {
-          tok_val = parse_token(state);  // advances state by ref!
+        // terminal doesn't have 256 or true color capability?
+        int cap_exceeded =
+          (tok_val == 2 && !(state->settings & TERM_TRUECOLOR)) ||
+          (tok_val == 5 && !(state->settings & TERM_256));
 
-          err_col = FANSI_GET_ERR(state->status);
-          early_end = state->string[state->pos.x] != ';' && i < (i_max - 1);
-          if(early_end && err_col < ERR_BAD_SUB) {
-            state->status = set_err(state->status, ERR_BAD_SUB);
-            err_col = ERR_BAD_SUB;
+        if(cap_exceeded && (state->settings & SET_TERMOLD)) {
+          // Pre 1.0 treatement of term cap exceedance was to emulate a
+          // terminal that can't handle the 38/48 codes, we preserve that as
+          // an option with SET_TERMOLD
+          state->pos.x = prev_x;
+          state->status = set_err(state->status, ERR_EXCEED_CAP);
+        } else {
+          unsigned char tmp_col[3] = {0};
+          int colors = tok_val;
+          int err_col = 0;
+          int early_end = 0;
+          i_max = colors == 5 ? 1 : 3;
+          // Parse through the subsequent tokens
+          for(int i = 0; i < i_max; ++i) {
+            tok_val = parse_token(state);  // advances state by ref!
+
+            err_col = FANSI_GET_ERR(state->status);
+            early_end = state->string[state->pos.x] != ';' && i < (i_max - 1);
+            if(early_end && err_col < ERR_BAD_SUB) {
+              state->status = set_err(state->status, ERR_BAD_SUB);
+              err_col = ERR_BAD_SUB;
+            }
+            // this may overflow, but usigned so ok, + that's how Iterm2 seems
+            // to interpret the value
+            tmp_col[i] = tok_val;
+            if(state->string[state->pos.x] && i < (i_max - 1) && !early_end)
+              ++state->pos.x; // consume semi-colon except last one
+            if(early_end) break;
           }
-          // this may overflow, but usigned so ok, + that's how Iterm2 seems to
-          // interpret the value
-          tmp_col[i] = tok_val;
-          if(state->string[state->pos.x] && i < (i_max - 1) && !early_end)
-            ++state->pos.x; // consume semi-colon except last one
-          if(early_end) break;
-        }
-        // Only change a color if all sub-tokens parse correctly (arguably we
-        // could allow e.g. 900 as a color channel value as Iterm2 does.
-        if(!err_col && !early_end) {
-          if(colors == 2) {
-            if(mode == 3) state->fmt.sgr.color.x = CLR_TRU | 8U;
-            else          state->fmt.sgr.bgcol.x = CLR_TRU | 8U;
-            i_max = 3;
-          } else if (colors == 5) {
-            if(mode == 3) state->fmt.sgr.color.x = CLR_256 | 8U;
-            else          state->fmt.sgr.bgcol.x = CLR_256 | 8U;
-            i_max = 1;
-          } else error("Internal Error: 1301341"); // nocov
-          if(mode == 3)
-            memcpy(state->fmt.sgr.color.extra, tmp_col, sizeof(tmp_col));
-          else
-            memcpy(state->fmt.sgr.bgcol.extra, tmp_col, sizeof(tmp_col));
+          // Only change a color if all sub-tokens parse correctly (arguably we
+          // could allow e.g. 900 as a color channel value as Iterm2 does.
+          if(!err_col && !early_end) {
+            if(colors == 2) {
+              if(mode == 3) state->fmt.sgr.color.x = CLR_TRU | 8U;
+              else          state->fmt.sgr.bgcol.x = CLR_TRU | 8U;
+              i_max = 3;
+            } else if (colors == 5) {
+              if(mode == 3) state->fmt.sgr.color.x = CLR_256 | 8U;
+              else          state->fmt.sgr.bgcol.x = CLR_256 | 8U;
+              i_max = 1;
+            } else error("Internal Error: 1301341"); // nocov
+            if(mode == 3)
+              memcpy(state->fmt.sgr.color.extra, tmp_col, sizeof(tmp_col));
+            else
+              memcpy(state->fmt.sgr.bgcol.extra, tmp_col, sizeof(tmp_col));
+          }
+          if(cap_exceeded && err_col < ERR_EXCEED_CAP)
+            state->status = set_err(state->status, ERR_EXCEED_CAP);
         }
       }
     } else if(!err_tmp) state->status = set_err(state->status, ERR_BAD_SUB);
@@ -772,12 +777,13 @@ void read_esc(struct FANSI_state * state, int term_i) {
             (tok_val >=  90 && tok_val <=  97) ||
             (tok_val >= 100 && tok_val <= 107)
           ) {
-            // Does terminal support bright colors? We do not consider it an
-            // error if it doesn't because the color will just be ignored
-            // and won't cause a trainwreck like unsupported truecolor.
-            // However, we do not write it because if the terminal doesn't
-            // support it presumably it doesn't change the color at all.
-            if(state->settings & TERM_BRIGHT) {
+            // Old behavior: don't warn if exceed, and don't record color.  New
+            // behavior (post v1.0) warn if exceed, but record color.
+            int term_old = state->settings & SET_TERMOLD;
+            if((state->settings & TERM_BRIGHT) || !term_old) {
+              if(!(state->settings & TERM_BRIGHT) && !term_old)
+                state->status = set_err(state->status, ERR_EXCEED_CAP);
+
               int fg = tok_val < 100;
               unsigned int col_code = tok_val - (fg ? 90 : 100);
               unsigned int col_enc = CLR_BRIGHT | col_code;
@@ -962,7 +968,7 @@ void read_esc(struct FANSI_state * state, int term_i) {
     if(esc_recognized) {
       if(
         esc_types == 2U && (
-          err_code <= ERR_EXCEED_CAP ||
+          (err_code <= ERR_EXCEED_CAP || !(state->settings & SET_TERMOLD)) ||
           // URLs always special since we know from begining what they are
           (state->status & CTL_URL)
       ) ) {
