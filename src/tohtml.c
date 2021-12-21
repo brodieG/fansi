@@ -210,7 +210,40 @@ static char * color_to_html(struct FANSI_color color, char * buff) {
   return buff;
 }
 static char * oe_sgr_html_err = "Expanding SGR sequences to HTML";
+/*
+ * Seek for an esc or, warn if run into "<", ">" (maybe ">" is not necessary).
+ *
+ * We do not warn for "&"  because if we did `to_html(html_esc())` could produce
+ * warnings.
+ */
 
+static const char * find_esc_or_warn(
+  const char * string, int * warned, R_xlen_t i, const char * arg
+) {
+  while(*string) {
+    switch(*string) {
+      case 0x1b: goto EXIT;
+      case '>':
+      case '<':
+        // Warn
+        if(!*warned) {
+          warning(
+            "`%s` %s '%c' at index [%jd] (see ?html_esc)%s",
+            arg,
+            "contains unescaped HTML special character",
+            *string, FANSI_ind(i),
+            "; you can use `warn=FALSE` to turn off these warnings."
+          );
+          *warned = 1;
+        }
+    }
+    ++string;
+  }
+  EXIT:
+
+  if(!*string) return (const char *) 0;
+  else return string;
+}
 /*
  * Write individual SGR sequence as HTML
  *
@@ -287,9 +320,7 @@ static int W_state_as_html(
         if(bgcol.x && (!bgcol_class)) {
           if(has_style) has_style += FANSI_W_COPY(buff, "; ");
           has_style += FANSI_W_COPY(buff,  "background-color: ");
-          FANSI_W_COPY(
-            buff, color_to_html(bgcol, color_tmp)
-          );
+          FANSI_W_COPY(buff, color_to_html(bgcol, color_tmp));
         }
         // Styles (need to go after color for transparent to work)
         for(unsigned int i = 0U; i < 9U; ++i)
@@ -374,6 +405,7 @@ SEXP FANSI_esc_to_html(
       sgr_has_style_html(state.fmt.sgr) || FANSI_url_active(state.fmt.url);
     int trail_span, trail_a;
     trail_span = trail_a = 0;
+    int html_spec_warned = (state.settings & WARN_MASK & ~WARN_ERROR) == 0;
 
     // We cheat by only using FANSI_read_next to read escape sequences as we
     // don't care about display width, etc.  Normally we would _read_next over
@@ -412,7 +444,8 @@ SEXP FANSI_esc_to_html(
         const char * string_prev = string;
         trail_span = sgr_has_style_html(state_prev.fmt.sgr);
         trail_a = FANSI_url_active(state_prev.fmt.url);
-        string = strchr(string, 0x1b);
+        string = find_esc_or_warn(string, &html_spec_warned, i, arg);
+
         if(!string) string = state.string + bytes_init;
         else {
           has_esc = 1;
