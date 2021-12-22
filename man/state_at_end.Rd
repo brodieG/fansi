@@ -36,11 +36,15 @@ a guarantee of correct encoding (use \verb{[validUTF8]} for that).}
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
 starting with "38;5" or "48;5"), "truecolor" (SGR codes starting with
-"38;2" or "48;2"), and "all". Changing this parameter changes how \code{fansi}
-interprets escape sequences, so you should ensure that it matches your
-terminal capabilities. See \code{\link{term_cap_test}} for details.  "all" behaves as
-it does for the \code{ctl} parameter: "all" combined with any other value means
-all terminal capabilities except that one.}
+"38;2" or "48;2"), and "all". "all" behaves as it does for the \code{ctl}
+parameter: "all" combined with any other value means all terminal
+capabilities except that one.  \code{fansi} will warn if it encounters SGR codes
+that exceed the terminal capabilities specified (see \code{\link{term_cap_test}}
+for details).  In versions prior to 1.0, \code{fansi} would also skip exceeding
+SGRs entirely instead of interpreting them.  You may add the string "old"
+to any otherwise valid \code{term.cap} spec to restore the pre 1.0 behavior.
+"old" will not interact with "all" the way other valid values for this
+parameter do.}
 
 \item{normalize}{TRUE or FALSE (default) whether SGR sequence should be
 normalized out such that there is one distinct sequence for each SGR code.
