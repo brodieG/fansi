@@ -164,6 +164,27 @@ unitizer_sect("Corner cases", {
   substr_ctl(c("AB", NA, "CD"), 1, 2, carry=TRUE)
   substr_ctl(c("AB", "CD"), c(NA, 1), 2)
   substr_ctl(c("AB", "CD"), c(NA, 1), 2, carry=TRUE)
+
+  # Old vs new term.cap behavior (almost certainly captured already, but adding
+  # specific tests).
+  substr_ctl("\033[38;5;4mA", 1, 1, term.cap="bright")
+  substr_ctl("\033[38;5;4mA", 1, 1, term.cap=c("bright", "old"))
+  substr_ctl("\033[38;5;4mA", 1, 1, term.cap=c("all", "256"))
+  substr_ctl("\033[38;5;4mA", 1, 1, term.cap=c("all", "256", "old"))
+  substr_ctl("\033[38;5;4mA", 1, 1, term.cap=c("256"))
+  substr_ctl("\033[38;5;4mA", 1, 1, term.cap=c("256", "old"))
+  substr_ctl("\033[38;2;1;1;1mA", 1, 1, term.cap="bright")
+  substr_ctl("\033[38;2;1;1;1mA", 1, 1, term.cap=c("bright", "old"))
+  substr_ctl("\033[38;2;1;1;1mA", 1, 1, term.cap=c("all", "truecolor"))
+  substr_ctl("\033[38;2;1;1;1mA", 1, 1, term.cap=c("all", "truecolor", "old"))
+  substr_ctl("\033[38;2;1;1;1mA", 1, 1, term.cap=c("truecolor"))
+  substr_ctl("\033[38;2;1;1;1mA", 1, 1, term.cap=c("truecolor", "old"))
+  substr_ctl("\033[107mA", 1, 1, term.cap="256")
+  substr_ctl("\033[107mA", 1, 1, term.cap=c("256", "old"))
+  substr_ctl("\033[107mA", 1, 1, term.cap=c("all", "bright"))
+  substr_ctl("\033[107mA", 1, 1, term.cap=c("all", "bright", "old"))
+  substr_ctl("\033[107mA", 1, 1, term.cap=c("bright"))
+  substr_ctl("\033[107mA", 1, 1, term.cap=c("bright", "old"))
 })
 unitizer_sect("Obscure escapes", {
   # illegal 38/48

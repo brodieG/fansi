@@ -212,6 +212,16 @@ unitizer_sect("Colors as classes (#65)", {
 
   ## see examples for visual testing
 })
+unitizer_sect("chars to escape", {
+  str.esc <- c("A\033[45m<B","A\033[44m>B","A\033[43m&B")
+  to_html(str.esc)
+  to_html(str.esc, warn=FALSE)
+  to_html(html_esc(str.esc))
+
+  str.esc2 <- c("A\033[45m<B","A\033[200m>B","A\033[201mB")
+  to_html(str.esc2)
+  to_html(str.esc2, warn=FALSE)
+})
 unitizer_sect("helpers", {
   html <- sgr_to_html("\033[42mHello")
   f <- in_html(html, css="span {background-color: #CCC;}", display=FALSE)

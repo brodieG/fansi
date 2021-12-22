@@ -20,8 +20,8 @@
 #' Optionally for colors, the SPAN elements may be assigned classes instead of
 #' inline styles, in which case it is the user's responsibility to provide a
 #' style sheet.  Input that contains special HTML characters ("<", ">", "&",
-#' "'", and "\""), particularly the first two, should be escaped with
-#' [`html_esc`].
+#' "'", and "\"") likely should be escaped with [`html_esc`], and `to_html` will
+#' warn if it encounters the first two.
 #'
 #' Only "observable" formats are translated.  These include colors,
 #' background-colors, and basic styles (CSI SGR codes 1-6, 8, 9).  Style 7, the
@@ -103,7 +103,7 @@
 #' in_html(
 #'   c(
 #'     to_html(html_esc(x)),  # Good
-#'     to_html(x)             # Bad!
+#'     to_html(x)             # Bad (warning)!
 #' ) )
 #' }
 #' ## Generate some class names for basic colors

@@ -22,7 +22,7 @@ if(getRversion() < "3.2.2") {
   on.exit(old.opt)
   pat.all <- "^[^.].*\\.[Rr]$"
   pattern <- pat.all
-  # pattern <- "subs"
+  # pattern <- "html"
   unitize_dir(
     'unitizer',
     pattern=pattern,

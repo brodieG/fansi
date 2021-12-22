@@ -84,10 +84,11 @@
 
 #define COUNT_ALL      3
 
-// bits 23-25: other settings
+// bits 23-26: other settings
 #define SET_ALLOWNA  8388608
 #define SET_KEEPNA  16777216
 #define SET_ESCONE  33554432  // consume only one ESC at a time
+#define SET_TERMOLD 67108864  // Use < v1.0 terminal mode
 
 // - Status --------------------------------------------------------------------
 

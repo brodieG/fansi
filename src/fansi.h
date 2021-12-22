@@ -79,7 +79,7 @@ void FANSI_reset_state(struct FANSI_state * state);
 
 void FANSI_check_chrsxp(SEXP x, R_xlen_t i);
 
-int FANSI_term_cap_as_int(SEXP term_cap);
+unsigned int FANSI_term_cap_as_int(SEXP term_cap);
 unsigned int FANSI_ctl_as_int(SEXP ctl);
 
 void FANSI_init_buff(struct FANSI_buff * buff, const char * fun);
