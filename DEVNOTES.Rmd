@@ -2,41 +2,24 @@
 
 These are internal developer notes.
 
+## Release Steps
+
+[x] Coverage 100%
+
+[x] valgrind
+[x] SAN
+[ ] Rchk
+
+[ ] R 3.2
+[ ] R CMD check
+[ ] Revdep
+[ ] CRAN policy
+
 ## Immediate Next Steps
-
-Check into whether we can fold do_encoding in C code.
-
-Still a bit curious why we don't get closer to substr?
-
 
 ## Todo
 
-* Check that newlines width calculation is consistent with older versions
-  (currently treating newlines as controls and not counting them).
-
-* Hunt down more instances of OSC-anchored URL to replace with OSC hyperlink.
-
-* Should the default color mode be truecolor?  The big issue is that presumably
-  strings that contain such are intended to be interpreted as truecolor,
-  irrespective of what the terminal can handle.
-
-* Does wrap need `normalize_or_copy`?
-
-* It would be nice if in replacement mode, lead and mid can account for each
-  other to produce the minimal style.  
-
-* Update copyright in test files.
-
-* Add the capability to re-use the prior string/state if string the same (what
-  does it mean for carry?).
-
-* What are the semantics of `carry` when there is an NA element in the input?
-
-* Move the interrupt to be `_read_next` based with an unsigned counter?  With
-  maybe the SGR reads contributing more to the counter?  What about writes?  Is
-  there a more universal way to check for interrupts?  Main issue is that it's
-  possible (though perhaps unlikely) that there will be some very slow
-  individual loop iterations as we saw with `tabs_as_spaces`.
+## Done
 
 * Do sgr_to_HTML (sgr_to_html2?), add check to sgr_to_html if any of the bad
   characters are found to escape or use `sgr_to_html2`.  Or do we just
@@ -44,7 +27,41 @@ Still a bit curious why we don't get closer to substr?
 
 We just live with it as is?  Should just warn.
 
-## Done
+* Should the default color mode be truecolor?  The big issue is that presumably
+  strings that contain such are intended to be interpreted as truecolor,
+  irrespective of what the terminal can handle.  Probably.
+
+* What are the semantics of `carry` when there is an NA element in the input?
+  Right now the carry element is skipped.  In theory the correct answer is that
+  everything subsequent becomes NA, and that's what we implemented.
+
+* Do we need grdevices?  Not worth the effort to get rid of.
+
+* Move the interrupt to be `_read_next` based with an unsigned counter?  With
+  maybe the SGR reads contributing more to the counter?  What about writes?  Is
+  there a more universal way to check for interrupts?  Main issue is that it's
+  possible (though perhaps unlikely) that there will be some very slow
+  individual loop iterations as we saw with `tabs_as_spaces`.  We're not going
+  to do this.
+
+* Add the capability to re-use the prior string/state if string the same (what
+  does it mean for carry?).  Not going to do this.
+
+* Update copyright in test files.
+
+* Hunt down more instances of OSC-anchored URL to replace with OSC hyperlink.
+
+* Does wrap need `normalize_or_copy` (no it's done from the R level by calling
+  `normalize_state` on the result?  It could be improved, but doesn't seem worth
+  it now.
+
+* It would be nice if in replacement mode, lead and mid can account for each
+  other to produce the minimal style.  Not going to bother with this ATM.
+
+* Check that newlines width calculation is consistent with older versions
+  (currently treating newlines as controls and not counting them).  Yes, it is
+  the same, question is, do we want to warn about it?  Probably should have from
+  the get-go, but since we didn't leave as is.
 
 * Fix `read_utf8_until` so it does not change RI or ZWJ state until we know
   we're committing to keeping that extra char.
