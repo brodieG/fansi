@@ -52,12 +52,13 @@ SEXP FANSI_trimws(
   struct FANSI_state state, state_lead, state_trail, state_last;
   struct FANSI_buff buff;
   FANSI_INIT_BUFF(&buff);
-
+  SEXP R_false = PROTECT(ScalarLogical(0)); ++prt;
+  SEXP R_zero = PROTECT(ScalarInteger(0)); ++prt;
   for(i = 0; i < len; ++i) {
     if(!i) {
       SEXP allowNA, keepNA, type;
-      allowNA = keepNA = PROTECT(ScalarLogical(0)); ++prt;
-      type = PROTECT(ScalarInteger(0)); ++prt;
+      type = R_zero;
+      allowNA = keepNA = R_false;
       state = FANSI_state_init_full(
         x, warn, term_cap, allowNA, keepNA, type, ctl, (R_xlen_t) 0
       );
