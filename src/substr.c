@@ -433,6 +433,7 @@ SEXP FANSI_substr(
       );
     }
   } else res = allocVector(STRSXP, len);
+  PROTECT(res); ++prt;
 
   FANSI_release_buff(&buff, 1);
   UNPROTECT(prt);
