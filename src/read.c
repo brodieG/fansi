@@ -968,9 +968,7 @@ void read_esc(struct FANSI_state * state, int term_i) {
     if(esc_recognized) {
       if(
         esc_types == 2U && (
-          (err_code <= ERR_EXCEED_CAP || !(state->settings & SET_TERMOLD)) ||
-          // URLs always special since we know from begining what they are
-          (state->status & CTL_URL)
+          (err_code <= ERR_EXCEED_CAP || !(state->settings & SET_TERMOLD))
       ) ) {
         if(term_i && !state->string[state->pos.x]) {
           *state = state_prev;
