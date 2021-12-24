@@ -145,6 +145,6 @@ A character vector, or list of character vectors if \code{simplify} is
 false.
 }
 \description{
-These functions are deprecated in favor of the \link[=strwrap_ctl]{\verb{_ctl} flavors}.
+These functions are deprecated in favor of the \code{\link{strwrap_ctl}} flavors.
 }
 \keyword{internal}

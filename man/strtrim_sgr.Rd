@@ -83,6 +83,6 @@ Like \code{\link[base:strtrim]{base::strtrim}}, except that \emph{Control Sequen
 as zero width.
 }
 \description{
-These functions are deprecated in favor of the \link[=substr_ctl]{\verb{_ctl} flavors}.
+These functions are deprecated in favor of the \code{\link{strtrim_ctl}} flavors.
 }
 \keyword{internal}

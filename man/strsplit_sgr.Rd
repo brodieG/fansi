@@ -98,6 +98,6 @@ See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for details
 Like \code{\link[base:strsplit]{base::strsplit}}, with \emph{Control Sequences} excluded.
 }
 \description{
-This function is deprecated in favor of the \link[=strsplit_ctl]{\verb{_ctl} flavor}.
+This function is deprecated in favor of the \code{\link{strsplit_ctl}}.
 }
 \keyword{internal}

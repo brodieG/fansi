@@ -29,7 +29,8 @@ sequences used to format terminal output are a subset.
 \item Sequences starting in "ESC]", also known as Operating System
 Commands (OSC), of which the subset beginning with "8" is used to encode
 URI based hyperlinks.
-\item Sequences starting in "ESC" and followed by something other than "[".
+\item Sequences starting in "ESC" and followed by something other than "[" or
+"]".
 }
 
 \emph{Control Sequences} starting with ESC are assumed to be two characters
@@ -138,8 +139,9 @@ anchors in HTML, so \code{fansi} interprets them and outputs or terminates them 
 needed.  For example:\preformatted{"\\033]8;;xy.z\\033\\\\LINK\\033]8;;\\033\\\\"
 }
 
-Might be interpreted as \href{x.z}{LINK}.  To make the encoding pattern clearer,
-we replace "\033]" with "<OSC>" and "\033\\\\" with "<ST>" below:\preformatted{<OSC>8;;URI<ST>LINK TEXT<OSC>8;;<ST>
+Might be interpreted as link to the URI "x.z".  To make the encoding pattern
+clearer, we replace "\033]" with "<OSC>" and "\033\\\\" with
+"<ST>" below:\preformatted{<OSC>8;;URI<ST>LINK TEXT<OSC>8;;<ST>
 }
 }
 

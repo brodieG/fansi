@@ -112,6 +112,6 @@ A character vector of the same length and with the same attributes as
 x (after possible coercion and re-encoding to UTF-8).
 }
 \description{
-These functions are deprecated in favor of the \link[=substr_ctl]{\verb{_ctl} flavors}.
+These functions are deprecated in favor of the \code{\link{substr_ctl}} flavors.
 }
 \keyword{internal}

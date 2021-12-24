@@ -25,7 +25,7 @@ character vector of same length as x with ANSI escape sequences
 stripped
 }
 \description{
-This function is deprecated in favor of the \link[=strip_ctl]{\verb{_ctl} flavor}.  It
+This function is deprecated in favor of the \code{\link{strip_ctl}}.  It
 strips CSI SGR and OSC hyperlink sequences.
 }
 \examples{

@@ -48,6 +48,7 @@ a guarantee of correct encoding (use \verb{[validUTF8]} for that).}
 Like \code{\link[base:nchar]{base::nchar}}, with \emph{Control Sequences} excluded.
 }
 \description{
-These functions are deprecated in favor of the \link[=nchar_ctl]{\verb{_ctl} flavors}.
+These functions are deprecated in favor of the \code{\link{nchar_ctl}} and
+\code{\link{nzchar_ctl}}.
 }
 \keyword{internal}
