@@ -5,11 +5,12 @@ These are internal developer notes.
 ## Release Steps
 
 [x] Coverage 100%
+[x] Rchk
 
-[x] valgrind
-[x] SAN
-[ ] Rchk
+[ ] valgrind
+[ ] SAN
 
+[ ] winbuilder
 [ ] R 3.2
 [ ] R CMD check
 [ ] Revdep
