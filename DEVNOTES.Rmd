@@ -9,6 +9,7 @@ These are internal developer notes.
 
 [ ] valgrind
 [ ] SAN
+[x] Rchk
 
 [ ] winbuilder
 [ ] R 3.2
