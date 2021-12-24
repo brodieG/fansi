@@ -68,7 +68,7 @@ strip_ctl <- function(x, ctl='all', warn=getOption('fansi.warn', TRUE), strip) {
 }
 #' Strip Control Sequences
 #'
-#' This function is deprecated in favor of the [`_ctl` flavor][strip_ctl].  It
+#' This function is deprecated in favor of the [`strip_ctl`].  It
 #' strips CSI SGR and OSC hyperlink sequences.
 #'
 #' @inheritParams strip_ctl

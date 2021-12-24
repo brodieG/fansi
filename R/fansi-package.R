@@ -38,7 +38,8 @@
 #' * Sequences starting in "ESC&#93;", also known as Operating System
 #'   Commands (OSC), of which the subset beginning with "8" is used to encode
 #'   URI based hyperlinks.
-#' * Sequences starting in "ESC" and followed by something other than "&#91;".
+#' * Sequences starting in "ESC" and followed by something other than "&#91;" or
+#'   "&rbrack;".
 #'
 #' _Control Sequences_ starting with ESC are assumed to be two characters
 #' long (including the ESC) unless they are of the CSI or OSC variety, in which
@@ -145,8 +146,9 @@
 #' "\033]8;;xy.z\033\\LINK\033]8;;\033\\"
 #' ```
 #'
-#' Might be interpreted as [LINK](x.z).  To make the encoding pattern clearer,
-#' we replace "\033]" with "&lt;OSC&gt;" and "\033\\\\" with "&lt;ST&gt;" below:
+#' Might be interpreted as link to the URI "x.z".  To make the encoding pattern
+#' clearer, we replace "\033]" with "&lt;OSC&gt;" and "\033\\\\" with
+#' "&lt;ST&gt;" below:
 #'
 #' ```
 #' <OSC>8;;URI<ST>LINK TEXT<OSC>8;;<ST>

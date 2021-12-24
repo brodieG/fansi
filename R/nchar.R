@@ -121,7 +121,8 @@ nchar_ctl_internal <- function(
 
 #' Control Sequence Aware Version of nchar
 #'
-#' These functions are deprecated in favor of the [`_ctl` flavors][nchar_ctl].
+#' These functions are deprecated in favor of the [`nchar_ctl`] and
+#' [`nzchar_ctl`].
 #'
 #' @inheritParams nchar_ctl
 #' @inherit nchar_ctl return

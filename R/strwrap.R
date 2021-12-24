@@ -174,7 +174,7 @@ strwrap2_ctl <- function(
 }
 #' Control Sequence Aware Version of strwrap
 #'
-#' These functions are deprecated in favor of the [`_ctl` flavors][strwrap_ctl].
+#' These functions are deprecated in favor of the [`strwrap_ctl`] flavors.
 #'
 #' @inheritParams strwrap_ctl
 #' @inherit strwrap_ctl return

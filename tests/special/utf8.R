@@ -564,29 +564,29 @@ unitizer_sect("replacement and width", {
   # on tested terminal can't merge white hair onto baby.  This is b/c we are
   # replacing two full UTF8 chars of person-brown with baby-brown, but the third
   # hair color remains.
-  `substr2_ctl<-`(emo.1, 3, 4, emo.0)
+  `substr2_ctl<-`(emo.1, 3, 4, value=emo.0)
   # Makes much more sense with width mode so the whole grapheme is replaced
-  `substr2_ctl<-`(emo.1, 3, 4, emo.0, type='width')
+  `substr2_ctl<-`(emo.1, 3, 4, value=emo.0, type='width')
 
   # This one cannot replace with an emoji because either the emoji is not
   # selected at all ("neither"), or it is selected in both the `value` and `end`
-  `substr2_ctl<-`(emo.1, 4, 4, emo.0, type='width')
-  `substr2_ctl<-`(emo.1, 4, 4, emo.0, type='width', round='stop')
-  `substr2_ctl<-`(emo.1, 4, 4, emo.0, type='width', round='neither')
+  `substr2_ctl<-`(emo.1, 4, 4, value=emo.0, type='width')
+  `substr2_ctl<-`(emo.1, 4, 4, value=emo.0, type='width', round='stop')
+  `substr2_ctl<-`(emo.1, 4, 4, value=emo.0, type='width', round='neither')
   # But we can replace with a regular 1-width character
-  `substr2_ctl<-`(emo.1, 4, 4, "#", type='width')
+  `substr2_ctl<-`(emo.1, 4, 4, value="#", type='width')
   # Or an emoji if it its fully in 'value'
-  `substr2_ctl<-`(emo.1, 4, 5, emo.0, type='width')
+  `substr2_ctl<-`(emo.1, 4, 5, value=emo.0, type='width')
 
   # Test scooching where we fill in from back
   x <- "ABCDEF"
-  `substr2_ctl<-`(x, 2, 4, emo.0, type='width')
-  `substr2_ctl<-`(x, 2, 4, emo.0, type='width', round='stop')
-  `substr2_ctl<-`(x, 2, 5, emo.0, type='width')
+  `substr2_ctl<-`(x, 2, 4, value=emo.0, type='width')
+  `substr2_ctl<-`(x, 2, 4, value=emo.0, type='width', round='stop')
+  `substr2_ctl<-`(x, 2, 5, value=emo.0, type='width')
 
   # Rounding on both sides
-  `substr2_ctl<-`(emo.1, 3, 4, emo.0, type='width', round='both')
-  `substr2_ctl<-`(emo.1, 4, 4, emo.0, type='width', round='both')
+  `substr2_ctl<-`(emo.1, 3, 4, value=emo.0, type='width', round='both')
+  `substr2_ctl<-`(emo.1, 4, 4, value=emo.0, type='width', round='both')
 
   # Mixed good/bad lengths
   a <- c(rep(emo.1, 4), rep(x, 2))
@@ -616,9 +616,9 @@ unitizer_sect("replacement and width", {
   # Can't reduce size of replacement to fit
   emo.7 <- "\U0001F600_\U0001F600"
   emo.7a <- "\U0001F600"
-  `substr2_ctl<-`(emo.7, 3, 3, type='width', round='stop', emo.7a)
+  `substr2_ctl<-`(emo.7, 3, 3, type='width', round='stop', value=emo.7a)
   # Here we can
-  `substr2_ctl<-`(emo.7, 3, 3, type='width', round='stop', "##")
+  `substr2_ctl<-`(emo.7, 3, 3, type='width', round='stop', value="##")
   # Corner case
-  `substr2_ctl<-`(emo.7a, 2, 1, type='width', round='both', emo.7a)
+  `substr2_ctl<-`(emo.7a, 2, 1, type='width', round='both', value=emo.7a)
 })

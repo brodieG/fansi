@@ -145,7 +145,7 @@ strsplit_ctl <- function(
 }
 #' Check for Presence of Control Sequences
 #'
-#' This function is deprecated in favor of the [`_ctl` flavor][strsplit_ctl].
+#' This function is deprecated in favor of the [`strsplit_ctl`].
 #'
 #' @inheritParams strsplit_ctl
 #' @inherit strsplit_ctl return

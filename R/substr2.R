@@ -338,12 +338,13 @@ substr2_ctl <- function(
 #' @export
 
 `substr_ctl<-` <- function(
-  x, start, stop, value,
+  x, start, stop,
   warn=getOption('fansi.warn', TRUE),
   term.cap=getOption('fansi.term.cap', dflt_term_cap()),
   ctl='all', normalize=getOption('fansi.normalize', FALSE),
   carry=getOption('fansi.carry', FALSE),
-  terminate=getOption('fansi.terminate', TRUE)
+  terminate=getOption('fansi.terminate', TRUE),
+  value
 ) {
   substr2_ctl(
     x=x, start=start, stop=stop, warn=warn, term.cap=term.cap, ctl=ctl,
@@ -355,14 +356,15 @@ substr2_ctl <- function(
 #' @export
 
 `substr2_ctl<-` <- function(
-  x, start, stop, value, type='chars', round='start',
+  x, start, stop, type='chars', round='start',
   tabs.as.spaces=getOption('fansi.tabs.as.spaces', FALSE),
   tab.stops=getOption('fansi.tab.stops', 8L),
   warn=getOption('fansi.warn', TRUE),
   term.cap=getOption('fansi.term.cap', dflt_term_cap()),
   ctl='all', normalize=getOption('fansi.normalize', FALSE),
   carry=getOption('fansi.carry', FALSE),
-  terminate=getOption('fansi.terminate', TRUE)
+  terminate=getOption('fansi.terminate', TRUE),
+  value
 ) {
   # So warning are issued here
   start <- as.integer(start)
@@ -405,7 +407,7 @@ substr2_ctl <- function(
 }
 #' SGR Control Sequence Aware Version of substr
 #'
-#' These functions are deprecated in favor of the [`_ctl` flavors][substr_ctl].
+#' These functions are deprecated in favor of the [`substr_ctl`] flavors.
 #'
 #' @keywords internal
 #' @inheritParams substr_ctl

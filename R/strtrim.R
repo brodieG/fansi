@@ -90,7 +90,7 @@ strtrim2_ctl <- function(
 }
 #' Control Sequence Aware Version of strtrim
 #'
-#' These functions are deprecated in favor of the [`_ctl` flavors][substr_ctl].
+#' These functions are deprecated in favor of the [`strtrim_ctl`] flavors.
 #'
 #' @inheritParams strtrim_ctl
 #' @inherit strtrim_ctl return
