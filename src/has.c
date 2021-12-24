@@ -5,15 +5,14 @@
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 2 of the License, or
- * (at your option) any later version.
+ * the Free Software Foundation, either version 2 or 3 of the License.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+ * Go to <https://www.r-project.org/Licenses> for a copies of the licenses.
  */
 
 /*
@@ -21,15 +20,6 @@
  */
 
 #include "fansi.h"
-
-int FANSI_has_int(SEXP x, int ctl) {
-  if(TYPEOF(x) != CHARSXP) error("Argument `x` must be CHRSXP.");
-  if(x == NA_STRING) return NA_LOGICAL;
-  else {
-    struct FANSI_csi_pos pos = FANSI_find_esc(CHAR(x), ctl);
-    return (pos.valid ? 1 : -1) * (pos.len != 0);
-  }
-}
 /*
  * Check if a CHARSXP contains ANSI esc sequences
  */
@@ -40,26 +30,27 @@ SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn) {
 
   SEXP res = PROTECT(allocVector(LGLSXP, len));
   int * res_int = LOGICAL(res);
-  int warn_int = asLogical(warn);
-
-  int ctl_int = FANSI_ctl_as_int(ctl);
+  struct FANSI_state state;
+  const char * arg = "x";
 
   for(R_xlen_t i = 0; i < len; ++i) {
+    if(!i) state = FANSI_state_init_ctl(x, warn, ctl, i);
+    else FANSI_state_reinit(&state, x, i);
     FANSI_interrupt(i);
     SEXP chrsxp = STRING_ELT(x, i);
-    FANSI_check_chrsxp(chrsxp, i);
-    int res_tmp = FANSI_has_int(chrsxp, ctl_int);
-    // no great, but need to watch out for NA_LOGICAL == INT_MIN
-    if(res_tmp == -1 && warn_int) {
-      res_tmp = -res_tmp;
-      warning(
-        "Encountered invalid ESC sequence at index [%jd], %s%s",
-        FANSI_ind(i),
-        "see `?unhandled_ctl`; you can use `warn=FALSE` to turn ",
-        "off these warnings."
-      );
+    if(chrsxp != NA_STRING) {
+      int res = 0;
+      const char * xc = CHAR(chrsxp);
+      int off_init = FANSI_seek_ctl(xc);
+      if(xc + off_init) {
+        state.pos.x = off_init;
+        FANSI_find_ctl(&state, i, arg);
+        res = (state.status & CTL_MASK) > 0;
+      }
+      res_int[i] = res;
+    } else {
+      res_int[i] = NA_LOGICAL;
     }
-    res_int[i] = res_tmp;
   }
   UNPROTECT(1);
   return res;

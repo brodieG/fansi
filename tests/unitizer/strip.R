@@ -1,3 +1,18 @@
+## Copyright (C) 2021  Brodie Gaslam
+##
+## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
+##
+## This program is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 2 or 3 of the License.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## Go to <https://www.r-project.org/Licenses> for copies of the licenses.
+
 library(fansi)
 
 unitizer_sect("Strip ansi", {
@@ -14,13 +29,16 @@ unitizer_sect("Strip ansi", {
   strip_sgr(1:3)
 })
 unitizer_sect("Corner cases", {
+  # Even partially recognized escapes are stripped assuming that they could be
+  # recognized at all (with the special exception that a single leading ESC will
+  # be stripped if any control is active).
   strip_ctl("hello\033")
-  # should this be stripped?  Not 100% clear since terminal seems to be waiting
-  # for input after it is cated
+  strip_ctl("hello\033", ctl=c('nl', 'c0'))
   strip_ctl("hello\033[")
+  strip_ctl("hello\033[42")
+  strip_ctl("hello\033[42", ctl=c('all', 'csi', 'sgr'))
 
   # illegal sequence
-
   strip_ctl("hello\033[31##3m illegal")
   strip_ctl("hello\033[31##m legal")
 
@@ -45,16 +63,14 @@ unitizer_sect("Whitespace", {
   fansi:::process('hello? ')
 
   # Tabs / ctrl; newlines remain
-
   fansi:::process(' \t hello')
   fansi:::process(' \t\a\r hello')
+  fansi:::process(' \t\a\r hello', ctl=c("all", "c0"))
 
   # interactiong between punct and ctrl
-
   fansi:::process('hello.  \r world.')
 
   # CSIs
-
   fansi:::process('hello.  \033[31m world.\033[0m')
 
   # Make sure we are not inadvertently changing SXPs
@@ -64,7 +80,6 @@ unitizer_sect("Whitespace", {
   str1
 
   # Paragraphs and so on
-
   fansi:::process('hello.\n\nworld')
   fansi:::process('hello.\n\n\nworld')
   fansi:::process('hello.\n\n\n\nworld')
@@ -76,6 +91,40 @@ unitizer_sect("Whitespace", {
   fansi:::process('hello.\n\nworld\n\n  ')
   fansi:::process('\n\nhello.\n\t\n\tworld\n\t\n woohoo\n ')
   fansi:::process('\n \t\nhello.\n\t\n\tworld\n\t\n woohoo\n ')
+
+  # corner cases
+  fansi:::process('hello.\n\033[44m\nworld')
+  fansi:::process('hello.\n\033[44m\n \t\nworld')
+  fansi:::process('hello.\033[44m\n\n \t\nworld')
+  fansi:::process('hello.\n\n \t\n\033[44mworld')
+  fansi:::process('hello.\n\n\033[44m \t\nworld')
+
+  fansi:::process('hello \033[44m world')
+  fansi:::process("hello. \033[44m world")
+
+  fansi:::process('hello\033[44m\033[31m world')
+  fansi:::process('hello\033[44m\033[31m\n\nworld')
+  fansi:::process('hello\n\033[44m\033[31m\nworld')
+  fansi:::process('hello\n\n\033[44m\033[31mworld')
+
+  fansi:::process('hello\033[44m\033[31d world')
+  fansi:::process('hello \033[44m\033[31d world')
+  fansi:::process('hello \033[44m \033[31d world')
+  fansi:::process('hello\033[44m\033[31d world', ctl=c("all", "csi"))
+  fansi:::process('hello \033[44m\033[31d world', ctl=c("all", "csi"))
+  fansi:::process('hello \033[44m \033[31d world', ctl=c("all", "csi"))
+  fansi:::process('hello\033[44m\a world', ctl=c("all"))
+  fansi:::process('hello\033[44m\a world', ctl=c("all", "c0"))
+  fansi:::process('hello.  \033[44m\a world', ctl=c("all"))
+  fansi:::process('hello.  \033[44m\a world', ctl=c("all", "c0"))
+  fansi:::process('hello. \033[44m \a world', ctl=c("all"))
+  fansi:::process('hello. \033[44m \a world', ctl=c("all", "c0"))
+  fansi:::process('hello.\n\033[44m \a world', ctl=c("all"))
+  fansi:::process('hello.\n\033[44m \a world', ctl=c("all", "c0"))
+  fansi:::process('hello.\n\033[44m\n\a world', ctl=c("all"))
+  fansi:::process('hello.\n\033[44m\n\a world', ctl=c("all", "c0"))
+  fansi:::process('hello.\n\033[44m\a\n world', ctl=c("all"))
+  fansi:::process('hello.\n\033[44m\a\n world', ctl=c("all", "c0"))
 })
 unitizer_sect("Selective stripping", {
   string.0 <- "hello\033k\033[45p world\n\033[31mgoodbye\a moon"
@@ -84,6 +133,7 @@ unitizer_sect("Selective stripping", {
   strip_ctl(string.0, "sgr")
   strip_ctl(string.0, c("nl", "c0", "sgr", "csi", "esc"))
   strip_ctl(string.0, "all")  # equivalently
+  # this breaks CSIs
   strip_ctl(string.0, c("c0", "esc"))
   strip_ctl(string.0, c("nl"))
 

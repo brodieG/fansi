@@ -1,3 +1,121 @@
+
+# - Reference Timings ----------------------------------------------------------
+
+# After 1.0 Improvements
+
+# ulysses <- readLines(
+#   "http://www.gutenberg.org/files/4300/4300-0.txt", encoding='UTF-8'
+# )
+# raw.txt <- readLines(unz('extra/ulysses.zip', 'ulysses.txt'))
+# raw.txt <- readLines("~/Downloads/ulysses.txt", encoding='UTF-8')
+ulysses <- tail(raw.txt, -30)
+u2 <- rep(ulysses, 20)
+
+library(fansi)
+
+system.time(split.base <- strsplit(ulysses, " "))
+##   user  system elapsed
+##  0.349   0.002   0.351
+system.time(split.ctl <- strsplit_ctl(ulysses, " "))
+##    user  system elapsed
+##   0.720   0.030   0.752
+identical(split.base, split.clt)
+rm(split.base, split.clt)
+gc()
+
+system.time(sub.ctl <- substr(u2, 20, 40))
+##    user  system elapsed
+##   0.128   0.000   0.128
+system.time(sub.base <- substr_ctl(u2, 20, 40))
+##    user  system elapsed
+##   0.406   0.017   0.426
+identical(sub.ctl, sub.base)
+rm(sub.ctl, sub.base)
+gc()
+
+system.time(wrapped.ctl <- strwrap_ctl(ulysses, 26))
+##   user  system elapsed
+##  0.161   0.002   0.162
+system.time(wrapped.base <- strwrap(ulysses, 26))
+##   user  system elapsed
+## 20.171   2.038  22.280
+identical(wrapped.base, wrapped.ctl)
+rm(wrapped.base, wrapped.ctl)
+gc()
+
+system.time(nchar.ctl <- nchar_ctl(ulysses))
+##   user  system elapsed
+##  0.009   0.000   0.009
+system.time(nchar.base <- nchar(ulysses))
+##   user  system elapsed
+##  0.006   0.000   0.007
+identical(nchar.ctl, nchar.base)
+## [1] TRUE
+rm(nchar.ctl, nchar.base)
+gc()
+
+## Base oddly slow in this one
+system.time(ncharw.ctl <- nchar_ctl(ulysses, type='width'))
+##   user  system elapsed
+##  0.015   0.000   0.016
+system.time(ncharw.base <- nchar(ulysses, type='width'))
+identical(ncharw.ctl, ncharw.base)
+##   user  system elapsed
+##  0.420   0.002   0.427
+rm(ncharw.ctl, ncharw.base)
+## [1] TRUE
+gc()
+
+##   user  system elapsed
+
+
+ulysses.color <- fansi_lines(ulysses)
+writeLines(head(ulysses.color, 20))
+
+# Wrap our ANSI escape colored text:
+wrapped <- strwrap2_ctl(ulysses.color, 26, pad.end=" ")
+
+# and display in three columns:
+col.index <- sort(rep(1:3, length.out=length(wrapped)))
+in.cols <- do.call(paste, split(wrapped, col.index))
+writeLines(head(in.cols, 30))
+
+# We can even convert to HTML
+system.time(as.html <- to_html(in.cols))
+##   user  system elapsed
+##  0.107   0.002   0.110
+
+# in_html(as.html)
+
+# Long strings
+
+ulysses.c <- paste0(ulysses, collapse='\n')
+ulysses.c.c <- paste0(ulysses.color, collapse='\n')
+ulysses.c.c.r <- rep(ulysses.c.c, n)
+
+n <- 1e4
+starts <- 1:n
+stops <- starts + 80L
+ulysses.c <- paste0(ulysses, collapse='\n')
+ulysses.c.r <- rep(ulysses.c, n)
+
+gc()
+system.time(substr(ulysses.c.r, starts, stops))
+##   user  system elapsed
+##  0.160   0.001   0.160
+gc()
+system.time(substr_ctl(ulysses.c.r, starts, stops))
+##   user  system elapsed
+##  0.103   0.000   0.104
+gc()
+system.time(stri_sub(ulysses.c.r, starts, stops))
+##   user  system elapsed
+##  0.012   0.000   0.012
+
+stop("Done")
+
+# - Scratch Space --------------------------------------------------------------
+
 # Make big UTF8 string
 
 source('tests/unitizer/_pre/lorem.R')
@@ -25,8 +143,68 @@ library(fansi)
 # Let's test fansi with a reasonable size text (from Project Guttenberg):
 
 raw.txt <- readLines("~/Downloads/ulysses.txt", encoding='UTF-8')
+# raw.txt <- readLines(unz('extra/ulysses.zip', 'ulysses.txt'))
 ulysses <- tail(raw.txt, -30)
-length(ulysses)
+library(fansi)
+u2 <- rep(ulysses, 20)
+system.time(substr(u2, 20, 40))
+system.time(substr_ctl(u2, 20, 40))
+
+# Sequence of 1.0 improvements, AFTER transitioning substr_ctl to all C
+
+# system.time(for(i in 1:10) substr_ctl(u2, 20, 40))
+
+##    user  system elapsed
+##   2.556   0.046   2.645
+
+## After by-ref read_next:
+
+##    user  system elapsed
+##   1.399   0.025   1.446
+
+## After by-ref reset (didn't do anything, maybe worse)
+
+##    user  system elapsed
+##   1.386   0.038   1.453
+
+## Getting rid of .sgr_prev and .url_prev
+
+##    user  system elapsed
+##   1.128   0.014   1.148
+
+## Compacting fmt.sgr
+
+## system.time(substr_ctl(u2, 20, 40))
+##    user  system elapsed
+##   0.872   0.011   0.889
+
+## After finishing cleanup
+
+## system.time(substr_ctl(u2, 20, 40))
+##    user  system elapsed
+##   0.928   0.014   0.956
+
+## After removing pos.r/pos.a (we had seen times more like 980 just before doing
+## this)
+
+## system.time(substr_ctl(u2, 20, 40))
+##    user  system elapsed
+##   0.941   0.012   0.957
+
+## Slimming down URL data
+
+## system.time(substr_ctl(u2, 20, 40))
+##    user  system elapsed
+##   0.860   0.009   0.872
+
+# After adding the _until flavors.
+
+## system.time(substr_ctl(u2, 20, 40))
+##    user  system elapsed
+##   0.458   0.010   0.473
+
+# Most of the time seems spent loading stuff into registers from memory, and
+# vice versa.
 
 # To make it interesting we color each line with a color from the 256
 # color palette:
@@ -47,12 +225,7 @@ writeLines(head(in.cols, 30))
 # We can even convert to HTML
 
 as.html <- fansi::sgr_to_html(head(in.cols, 30))
-as.page <- sprintf(
-  "<html><meta charset='UTF-8'><pre>%s</pre></html>",
-  paste0(as.html, collapse="\n")
-)
-writeLines(as.page, (f <- tempfile()))
-browseURL(f)
+in_html(as.html)
 
 # fansi functions are mostly comparable in speed to their base
 # counterparts, and in the case of strwrap much faster:
@@ -62,93 +235,39 @@ system.time(wrapped.base <- strwrap(ulysses, 26))
 
 identical(wrapped.base, wrapped.ctl)
 
-
 system.time(strsplit(ulysses, " "))
 system.time(strsplit_ctl(ulysses, " "))
 system.time(strwrap_ctl(ulysses, 25))
 
 ulysses.c <- paste0(ulysses, collapse='\n')
-ulysses.c.c <- paste0(ulysses.f, collapse='\n')
+ulysses.c.c <- paste0(ulysses.color, collapse='\n')
+ulysses.c.c.r <- rep(ulysses.c.c, n)
 
 n <- 1e4
 starts <- 1:n
 stops <- starts + 80L
+ulysses.c <- paste0(ulysses, collapse='\n')
 ulysses.c.r <- rep(ulysses.c, n)
-ulysses.c.c.r <- rep(ulysses.c.c, n)
 
+gc()
+system.time(substr(ulysses.c.r, starts, stops))
+gc()
 system.time(substr_ctl(ulysses.c.r, starts, stops))
+gc()
+system.time(stri_sub(ulysses.c.r, starts, stops))
+
 system.time(substr_ctl(ulysses.c.c.r, starts, stops))
 
 system.time(substr(ulysses.c.r, starts, stops))
 system.time(zz <- stri_sub(ulysses.c.r, starts, stops))
 
+system.time(for(i in 1:10) substr(ulysses.c.r, starts, stops))
+
+ulysses.10 <- replicate(10, ulysses)
+system.time(substr(ulysses.c, 20, 50))
+system.time(substr_ctl(ulysses.c, 20, 50))
+
+system.time(stri_sub(ulysses.10, 20, 50))  # substr slow for long strings
 system.time(csi <- fansi::strwrap_ctl(ulysses.c, 30))
 system.time(normal <- strwrap(ulysses.c, 30))
 
-all.equal(normal, csi)
-
-open <- sample(seq_along(ulysses), 1e4)
-close <- sample(seq_along(ulysses), 1e4)
-
-ulysses.clr <- ulysses
-ulysses.clr[open] <- paste0('\033[41m', ulysses.clr[open])
-ulysses.clr[close] <- paste0(ulysses.clr[close], '\033[m')
-
-
-system.time(csi.clr <- fansi::strwrap_esc(ulysses.clr, 30))
-
-# ulysses <- ulysses.c <- readLines(
-#   "http://www.gutenberg.org/files/4300/4300-0.txt", encoding='UTF-8'
-# )
-colorize <- function(txt) {
-  txt.c <- txt
-  bg <- ceiling((seq_along(txt)) %% 215 + 1) + 16
-  fg <- ifelse((((bg - 16) %/% 18) %% 2), 30, 37)
-  tpl <- "\033[%d;48;5;%dm%s\033[49m"
-
-  ## Apply colors to strings and collapse
-
-  nz <- nzchar(txt)
-  txt.c[nz] <- sprintf(tpl, fg[nz], bg[nz], txt[nz])
-  # res <- paste0(txt.c, collapse="\n")
-  txt.c
-}
-ulysses.c <- colorize(ulysses)
-utf8.c <- colorize(utf8.big.small)
-utf8.c <- colorize(utf8.big.wrap)
-
-## Wrap and display in three columns
-
-txt <- utf8.c
-system.time(txt.w1 <- strwrap2_esc(ulysses.c, 25, pad.end=" ", wrap.always=TRUE))
-system.time(txt.w2 <- strwrap2_esc(utf8.c, 25, pad.end=" ", wrap.always=TRUE))
-
-
-txt.w <- tail(txt.w, -37)
-mult.3.len <- (length(txt.w) %/% 3) * 3
-txt.w <- head(txt.w, mult.3.len)
-txt.w.split <- split(txt.w, rep(1:3, each=length(txt.w) / 3))
-
-cols <- c("", do.call(paste, c(txt.w.split, list(sep="   "))), "")
-system.time(cols.html <- esc_to_html(cols))
-
-
-write
-
-cols <- head(cols, 50)
-
-writeLines(cols)
-cols.html <- esc_to_html(cols)
-tmp <- tempfile()
-writeLines(
-  c("<html><meta charset='UTF-8'><pre>", cols.html, "</pre></html>"), tmp
-)
-browseURL(tmp)
-
-
-
-
-writeLines(c("", paste(" ", r.wrap[1:27], " ", r.wrap[28:54]), ""))
-
-#
-#r.wrap <- strwrap2_esc(substr(r.col,1,200), 25, pad.end=" ", wrap.always=TRUE)

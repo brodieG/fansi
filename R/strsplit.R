@@ -4,19 +4,18 @@
 ##
 ## This program is free software: you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
-## the Free Software Foundation, either version 2 of the License, or
-## (at your option) any later version.
+## the Free Software Foundation, either version 2 or 3 of the License.
 ##
 ## This program is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ## GNU General Public License for more details.
 ##
-## Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+## Go to <https://www.r-project.org/Licenses> for copies of the licenses.
 
-#' ANSI Control Sequence Aware Version of strsplit
+#' Control Sequence Aware Version of strsplit
 #'
-#' A drop-in replacement for [base::strsplit].  It will be noticeably slower,
+#' A drop-in replacement for [`base::strsplit`].  It will be noticeably slower,
 #' but should otherwise behave the same way except for _Control Sequence_
 #' awareness.
 #'
@@ -28,46 +27,45 @@
 #' You can however limit which control sequences are treated specially via the
 #' `ctl` parameters (see examples).
 #'
-#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.  The
-#'   split positions are computed after both `x` and `split` are converted to
-#'   UTF-8.
-#' @seealso [fansi] for details on how _Control Sequences_ are
-#'   interpreted, particularly if you are getting unexpected results,
-#'   [base::strsplit] for details on the splitting.
+#' @note The split positions are computed after both `x` and `split` are
+#'   converted to UTF-8.
 #' @export
-#' @param x a character vector, or, unlike [base::strsplit] an object that can
+#' @param x a character vector, or, unlike [`base::strsplit`] an object that can
 #'   be coerced to character.
 #' @inheritParams base::strsplit
 #' @inheritParams strwrap_ctl
-#' @inheritSection substr_ctl _ctl vs. _sgr
-#' @return list, see [base::strsplit].
+#' @inherit substr_ctl seealso
+#' @inheritSection substr_ctl Output Stability
+#' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
+#'   Width calculations will not work properly in R < 3.2.2.
+#' @return Like [`base::strsplit`], with _Control Sequences_ excluded.
 #' @examples
-#' strsplit_sgr("\033[31mhello\033[42m world!", " ")
+#' strsplit_ctl("\033[31mhello\033[42m world!", " ")
 #'
-#' ## Next two examples allow splitting by newlines, which
-#' ## normally doesn't work as newlines are _Control Sequences_
-#' strsplit_sgr("\033[31mhello\033[42m\nworld!", "\n")
+#' ## Splitting by newlines does not work as they are _Control
+#' ## Sequences_, but we can use `ctl` to treat them as ordinary
+#' strsplit_ctl("\033[31mhello\033[42m\nworld!", "\n")
 #' strsplit_ctl("\033[31mhello\033[42m\nworld!", "\n", ctl=c("all", "nl"))
-
 
 strsplit_ctl <- function(
   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
-  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap'),
-  ctl='all'
+  warn=getOption('fansi.warn', TRUE),
+  term.cap=getOption('fansi.term.cap', dflt_term_cap()),
+  ctl='all', normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
 ) {
-  x <- as.character(x)
-  if(any(Encoding(x) == "bytes"))
-    stop("BYTE encoded strings are not supported.")
-
+  ## modifies / creates NEW VARS in fun env
+  VAL_IN_ENV(
+    x=x, warn=warn, term.cap=term.cap, ctl=ctl, normalize=normalize,
+    carry=carry, terminate=terminate, round="start"
+  )
   if(is.null(split)) split <- ""
-  split <- enc2utf8(as.character(split))
+  split <- enc_to_utf8(as.character(split))
   if(!length(split)) split <- ""
   if(anyNA(split)) stop("Argument `split` may not contain NAs.")
-
-  if(!is.logical(warn)) warn <- as.logical(warn)
-  if(length(warn) != 1L || is.na(warn))
-    stop("Argument `warn` must be TRUE or FALSE.")
-
+  if(any(Encoding(split) == "bytes"))
+    stop("Argument `split` may not be \"bytes\" encoded.")
   if(!is.logical(fixed)) fixed <- as.logical(fixed)
   if(length(fixed) != 1L || is.na(fixed))
     stop("Argument `fixed` must be TRUE or FALSE.")
@@ -80,24 +78,6 @@ strsplit_ctl <- function(
   if(length(useBytes) != 1L || is.na(useBytes))
     stop("Argument `useBytes` must be TRUE or FALSE.")
 
-  if(!is.character(term.cap))
-    stop("Argument `term.cap` must be character.")
-  if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
-    stop(
-      "Argument `term.cap` may only contain values in ",
-      deparse(VALID.TERM.CAP)
-    )
-  if(!is.character(ctl))
-    stop("Argument `ctl` must be character.")
-  ctl.int <- integer()
-  if(length(ctl)) {
-    # duplicate values in `ctl` are okay, so save a call to `unique` here
-    if(anyNA(ctl.int <- match(ctl, VALID.CTL)))
-      stop(
-        "Argument `ctl` may contain only values in `",
-        deparse(VALID.CTL), "`"
-      )
-  }
   # Need to handle recycling, complicated by the ability of strsplit to accept
   # multiple different split arguments
 
@@ -107,7 +87,7 @@ strsplit_ctl <- function(
   s.x.seq <- rep(s.seq, length.out=length(x)) * (!x.na)
 
   matches <- res <- vector("list", length(x))
-  x.strip <- strip_ctl(x, warn=warn, ctl=ctl)
+  x.strip <- strip_ctl(x, warn=FALSE, ctl=ctl)
   chars <- nchar(x.strip)
 
   # Find the split locations and widths
@@ -144,12 +124,13 @@ strsplit_ctl <- function(
         ends <- ends[!sub.invalid]
       }
       res[[i]] <- substr_ctl_internal(
-        x=x[[i]],
+        x=rep(x[i], length.out=length(starts)),
         start=starts, stop=ends, type.int=0L,
-        round.start=TRUE, round.stop=FALSE,
-        tabs.as.spaces=FALSE, tab.stops=8L, warn=warn,
-        term.cap.int=term.cap.int, x.len=length(starts),
-        ctl.int=ctl.int
+        round.int=ROUND.INT,
+        tabs.as.spaces=FALSE, tab.stops=8L, warn.int=WARN.INT,
+        term.cap.int=TERM.CAP.INT, x.len=length(starts),
+        ctl.int=CTL.INT, normalize=normalize,
+        carry=carry, terminate=terminate
       )
     } else {
       res[[i]] <- x[[i]]
@@ -162,30 +143,25 @@ strsplit_ctl <- function(
   res[x.na] <- list(NA_character_)
   res
 }
-#' @rdname strsplit_ctl
+#' Check for Presence of Control Sequences
+#'
+#' This function is deprecated in favor of the [`_ctl` flavor][strsplit_ctl].
+#'
+#' @inheritParams strsplit_ctl
+#' @inherit strsplit_ctl return
+#' @keywords internal
 #' @export
 
 strsplit_sgr <- function(
   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
-  warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
+  warn=getOption('fansi.warn', TRUE),
+  term.cap=getOption('fansi.term.cap', dflt_term_cap()),
+  normalize=getOption('fansi.normalize', FALSE),
+  carry=getOption('fansi.carry', FALSE),
+  terminate=getOption('fansi.terminate', TRUE)
 )
   strsplit_ctl(
     x=x, split=split, fixed=fixed, perl=perl, useBytes=useBytes,
-    warn=warn, term.cap=term.cap, ctl='sgr'
+    warn=warn, term.cap=term.cap, ctl='sgr', normalize=normalize,
+    carry=carry, terminate=terminate
   )
-
-# # old interface to split happening directly in C code
-# strsplit_ctl <- function(
-#   x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE,
-#   warn=getOption('fansi.warn'), term.cap=getOption('fansi.term.cap')
-# ) {
-#   x.split <- strsplit(x, split, fixed=FALSE, perl=FALSE, useBytes=FALSE)
-#   if(anyNA(term.cap.int <- match(term.cap, VALID.TERM.CAP)))
-#     stop(
-#       "Argument `term.cap` may only contain values in ",
-#       deparse(VALID.TERM.CAP)
-#     )
-#   .Call(FANSI_strsplit, x.split, warn, term.cap.int)
-# }
-
-

@@ -93,6 +93,24 @@ unitizer_sect("substr", {
   latin.utf8 <- substr_ctl(latin, 1, 9)
   latin.utf8
   Encoding(latin.utf8)
+
+  # Start/Stop rounding - examples
+  rnd.1 <- "ＭnＷ"
+  Encoding(rnd.1) <- "UTF-8"
+  substr2_ctl(rnd.1, 2, 4, type='width', round='start')
+  substr2_ctl(rnd.1, 2, 4, type='width', round='stop')
+  substr2_ctl(rnd.1, 2, 4, type='width', round='neither')
+  substr2_ctl(rnd.1, 2, 4, type='width', round='both')
+
+  # Start/Stop rounding - end edge cases
+  rnd.2 <- "ＭＷ"
+  Encoding(rnd.2) <- "UTF-8"
+  substr2_ctl(rnd.2, 2, 3, type='width', round='start')
+  substr2_ctl(rnd.2, 2, 3, type='width', round='stop')
+  substr2_ctl(rnd.2, 1, 2, type='width', round='start')
+  substr2_ctl(rnd.2, 1, 2, type='width', round='stop')
+  substr2_ctl(rnd.2, 3, 4, type='width', round='start')
+  substr2_ctl(rnd.2, 3, 4, type='width', round='stop')
 })
 unitizer_sect("rounding", {
   # handling of subsetting when we end up in middle of wide display characters
@@ -120,6 +138,8 @@ unitizer_sect("rounding", {
   substr2_ctl(lorem.cn.col.2, 2, 3, type='width', round='neither')
   substr2_ctl(lorem.cn.col.2, 2, 4, type='width', round='neither')
   substr2_ctl(lorem.cn.col.2, 3, 4, type='width', round='neither')
+
+  substr2_ctl(lorem.cn.col.2, 2, 3, type='width', round='neither', terminate=FALSE)
 })
 unitizer_sect("multi-elem", {
   # Due to preservation of state issues, need to make sure works well with
@@ -138,11 +158,8 @@ unitizer_sect("zero width combining", {
   substr2_ctl(combo, 5, 8, type='width')
   substr2_ctl(rep(combo, 2), c(1, 5), c(5, 8), type='width')
 
-  combo1 <- "hello\u0300\u035c"
-  Encoding(combo1) <- "UTF-8"
-
-  substr2_ctl(combo, 1, 5, type='width')
-  substr2_ctl(combo, 2, 6, type='width')
+  nchar_ctl(combo, type='width')
+  nchar_ctl(combo, type='graphemes')
 
   # zero width with double width
 
@@ -154,10 +171,11 @@ unitizer_sect("zero width combining", {
   substr2_ctl(combo3, 4, 5, type='width')
 
   # start with diacritic
-
   combo4 <- paste0('\u0300hello')
   substr2_ctl(combo4, 1, 1, type='width')  # no diacritic
   substr2_ctl(combo4, 1, 1)                # diacritic only
+  substr2_ctl(combo4, 0, 1, type='width')  # with diacritic
+  substr2_ctl(combo4, 0, 0, type='width')  # empty
 })
 unitizer_sect("Emoji combining", {
   flags <- "\U0001f1e6\U0001f1f7\U0001f1e6\U0001f1f4\U0001f1e6\U0001f1ee"
@@ -178,45 +196,34 @@ unitizer_sect("Corner cases", {
   utf8.bad <- "hello \xF0 world, goodnight moon"
   Encoding(utf8.bad) <- 'UTF-8'
 
-  # # have to remove these because of the change in substr behavior, use
-  # # state_at_pos instead
-  # substr_ctl(utf8.bad, 1, 7)
-  # identical(substr_ctl(utf8.bad, 1, 7), substr(utf8.bad, 1, 7))
-  # substr_ctl(utf8.bad, 5, 10)
+  substr_ctl(utf8.bad, 1, 7)
+  substr_ctl(utf8.bad, 5, 10)
 
-  fansi:::state_at_pos(utf8.bad, 1, 7)
-  fansi:::state_at_pos(utf8.bad, 5, 10)
-  
   # Need to use `tryCatch` because the warnings vascillate for no rhyme or
   # reason between showing the call and not.  Seems to be triggered by
-  # re-installing package. now we're stuff with the try business to circumvent
+  # re-installing package. now we're stuck with the try business to circumvent
   # that variability.
 
-  tryCatch(
-    substr2_ctl(utf8.bad, 1, 7, type='width'),
-    warning=function(e) conditionMessage(e)
-  )
+  tce(substr2_ctl(utf8.bad, 1, 7, type='width'))
   # # need to remove for changes in R3.6.0
   # substr2_ctl(utf8.bad, 1, 7, type='width', warn=FALSE)
-  tryCatch(
-    substr2_ctl(utf8.bad, 5, 10, type='width'),
-    warning=function(e) conditionMessage(e)
-  )
+  tce(substr2_ctl(utf8.bad, 5, 10, type='width'))
+
   # # need to remove for changes in R3.6.0
   # substr2_ctl(utf8.bad, 5, 10, type='width', warn=FALSE)
   # ends early
 
   chrs.2 <- "hello\xee"
   Encoding(chrs.2) <- "UTF-8"
-  tryCatch(
-    substr2_ctl(chrs.2, 1, 10, type='width'),
-    warning=function(e) conditionMessage(e)
-  )
+  tce(substr2_ctl(chrs.2, 1, 10, type='width'))
   # # need to remove for changes in R3.6.0
   # substr2_ctl(chrs.2, 1, 10, type='width', warn=FALSE)
 
-  # boundaries
+  # bad utf8 in SGR and CSI
+  substr_ctl("A\033[31;\x80mB", 0, 3)
+  substr_ctl("A\033[31;\x80pB", 0, 3)
 
+  # boundaries
   b.test <- c(
     "\uc0f6\ubed9",
     "\u0301a\ubed9",  # leading diacritic
@@ -242,6 +249,10 @@ unitizer_sect("Corner cases", {
   substr2_ctl(b.t.c, 1, 4, type='width')
   substr2_ctl(b.t.c, 0, 5, type='width')
   substr2_ctl(b.t.c, 5, 5, type='width')
+
+  substr_ctl(b.t.c, 0, 4, terminate=FALSE)
+  substr2_ctl(b.t.c, 1, 4, terminate=FALSE, type='width')
+
 })
 unitizer_sect("nchar", {
   chr.dia <- 'A\u030A'
@@ -255,6 +266,8 @@ unitizer_sect("nchar", {
   w2 <- "\u4E00\u4E01\u4E03"
   nchar_ctl(w1)
   nchar_ctl(w2, type='width')
+  nchar_ctl(w2, type='graphemes')
+  nchar_ctl(w2, type='bytes')
 
   # Allow NA for illegal sequences
 
@@ -278,6 +291,7 @@ unitizer_sect("nchar", {
   Encoding(esc.1) <- 'UTF-8'
   nchar_ctl(esc.1)
   nchar_ctl(esc.1, type='width')
+  nchar_ctl(esc.1, type='bytes')
 
   nzchar_ctl(esc.1)
 
@@ -295,6 +309,10 @@ unitizer_sect("nchar", {
 
   nchar_sgr("\033[31m\thello", type='width') >=
     nchar_ctl("\033[31m\thello", type='width')
+
+  # nchar doesn't care about bad bits embedded in escapes
+  nchar_ctl("123\033[31\x80m123")
+  nchar_ctl("123\033\x80123")
 })
 unitizer_sect("unhandled", {
   # a bad utf8 string and other bad stuff
@@ -346,15 +364,10 @@ unitizer_sect("utf8clen", {
   nchar_ctl(utf8.bad.2, allowNA=TRUE)
 
   ## remove for changes in R3.6.0
-  # substr(utf8.bad.2, 1, 1)
-  # substr_ctl(utf8.bad.2, 1, 1)
-
-  fansi:::state_at_pos(utf8.bad.2, 1, 1)
-
+  substr_ctl(utf8.bad.2, 1, 1)
 })
 unitizer_sect("wrap corner cases", {
   # With UTF8
-
   pre.2 <- "\x1b[32m\xd0\x9f \x1b[0m"
   ini.2 <- "\x1b[33m\xd1\x80 \x1b[0m"
   hello.8c <- "hello Привет world"
@@ -372,9 +385,6 @@ unitizer_sect("wrap corner cases", {
   wrap.csi.4 <- strwrap_ctl(hello.8c, 15, prefix=pre.2, initial=ini.2)
   wrap.csi.4
 
-  # wrap.nrm.4 <- strwrap(hello.8c, 15, prefix=pre.3, initial=ini.3)
-  # identical(strip_ctl(wrap.csi.4, "sgr"), wrap.nrm.4)
-
   utf8.chr <- "\u76F4"
   strwrap2_ctl(utf8.chr, 1, wrap.always=TRUE)
   strwrap2_ctl(utf8.chr, 2, wrap.always=TRUE)
@@ -388,18 +398,23 @@ unitizer_sect("wrap corner cases", {
   strwrap_ctl(utf8.bad, 10)
 
   # bad prefix values
-
   utf8.bad.2 <- "\xF0"
   Encoding(utf8.bad.2) <- "UTF-8"
 
   tcw(strwrap_ctl("hello world", 6, prefix=utf8.bad.2))
   suppressWarnings(strwrap_ctl("hello world", 6, prefix=utf8.bad.2))
-  #
-  # Byte encoded strings not allowed
 
+  # Byte encoded strings not allowed
   bytes <- "\xC0\xB1\xF0\xB1\xC0\xB1\xC0\xB1"
   Encoding(bytes) <- "bytes"
   tce(strwrap_ctl(bytes))
+
+  # Encoding captured correctly
+  Encoding(strwrap_ctl("hell\u00F8 world", 5))
+  Encoding(strwrap_ctl("hello w\u00F8rld", 5))
+
+  # Caused an infinite loop in one case
+  strwrap2_ctl("\U1F600 \U1F600", 2)
 })
 unitizer_sect("wrap with wide UTF8 and ESC", {
   wrap.mix <- strwrap_ctl(lorem.mix, 25)
@@ -437,4 +452,173 @@ unitizer_sect("issue 54 ctd", {
   )
   Encoding(string4) <- "UTF-8"
   sgr_to_html(string4)
+})
+unitizer_sect("html_esc", {
+  x <- "\U0001F600"
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), x)
+})
+unitizer_sect("graphemes", {
+  # Flags
+  flags <- paste0(
+    rep("\U0001F1E6\U0001F1FF\U0001F1E7\U0001F1FE\U0001F1E8\U0001F1FD", 2),
+    collapse=""
+  )
+  strwrap2_ctl(flags, 6, wrap.always=TRUE, pad.end=' ', carry="\033[44m")
+  strwrap2_ctl(flags, 7, wrap.always=TRUE, pad.end=' ', carry="\033[44m")
+  flags.1 <- paste0("a", flags)
+  strwrap2_ctl(flags.1, 7, wrap.always=TRUE, pad.end=' ', carry="\033[44m")
+
+  substr2_ctl(flags, 1, 1, type='width')
+  substr2_ctl(flags, 1, 1, type='width', round='stop')
+  substr2_ctl(flags, 1, 2, type='width', round='neither')
+  substr2_ctl(flags, 2, 3, type='width', round='stop')
+  substr2_ctl(flags, 2, 3, type='width', round='start')
+  substr2_ctl(flags, 2, 3, type='width', round='both')
+  substr2_ctl(flags, 2, 3, type='width', round='neither')
+
+  # Emoji sequences
+  emo.0 <- "\U0001F476\U0001F3FD\U0001F468\U0001F3FF\U0001F46E\U0001F3FF"
+  emo.1 <- "A_\U0001F468\U0001F3FE\U000200D\U0001F9B3_B"
+  emo.2 <- "\U0001F468\U0001F3FE\U000200D\U0001F9B3"
+  emo.2a <- paste0("_", emo.2, "^", emo.2)
+
+  # nchar
+  nchar_ctl(c(emo.0, emo.1, emo.2), type='width')
+  nchar_ctl(c(emo.0, emo.1, emo.2), type='graphemes')
+
+  substr2_ctl(emo.0, 1, 1, type='width')
+  substr2_ctl(emo.0, 1, 1, type='width', round='stop')
+  substr2_ctl(emo.0, 1, 2, type='width', round='stop')
+  substr2_ctl(emo.0, 2, 3, type='width', round='stop')
+  substr2_ctl(emo.0, 2, 3, type='width', round='start')
+  substr2_ctl(emo.0, 2, 3, type='width', round='both')
+  substr2_ctl(emo.0, 2, 3, type='width', round='neither')
+
+  substr2_ctl(emo.1, 1, 3, type='width')
+  substr2_ctl(emo.1, 1, 3, type='width', round='stop')
+  substr2_ctl(emo.1, 3, 5, type='width')
+  substr2_ctl(emo.1, 4, 5, type='width')
+
+  emo.3 <- "\U0001F469\U0001F3FD\u200D\u2708\uFE0F"
+  emo.4 <- "\U0001F468\u200D\U0001F469\u200D\U0001F467\u200D\U0001F466"
+
+  emo.big <- rep(
+    sprintf(
+      paste0(
+        "once upon a time %s there was a humpty %s%s dumpty %s on the wall %s",
+        "and he had %s a %s big fall %s oh no %s"
+      ),
+      flags, emo.0, emo.0, emo.1, emo.2, emo.3, emo.4, emo.3, emo.2
+    ),
+    2
+  )
+  strwrap2_ctl(emo.big, 10, wrap.always=TRUE, carry="\033[44m", pad.end=" ")
+
+  # More grapheme tests
+  emo.6 <- c(emo.0, emo.2a, emo.4)
+  substr2_ctl(emo.6, 1, 2, type='graphemes')
+  substr2_ctl(emo.6, 1, 3, type='graphemes')
+  substr2_ctl(emo.6, 2, 3, type='graphemes')
+  substr2_ctl(emo.6, 3, 3, type='graphemes')
+
+  # Corner cases, effect of SGRs in emo-sequences, on OS X term they are
+  # excluded from flow so don't interrupt sequences.
+  emo.5 <- "\xf0\x9f\x91\xb6\033[43m\xf0\x9f\x8f\xbd###\033[m"
+  Encoding(emo.5) <- "UTF-8"
+
+  substr2_ctl(emo.5, 1, 2, type='width')
+  substr2_ctl(emo.5, 2, 3, type='width')
+  nchar_ctl(emo.5, type='width')
+  nchar_ctl(emo.5, type='grapheme')
+
+  # Lead/Trail controls
+  emo.0.1 <- paste0(
+    "\033[33m", substr2_ctl(emo.0, 1, 1, type='graphemes'), "\033[45m"
+  )
+  substr2_ctl(emo.0.1, 2, 2, type='width')
+  substr2_ctl(emo.0.1, 2, 2, type='width', terminate=FALSE)
+  substr2_ctl(emo.0.1, 1, 1, type='width', round='stop')
+  substr2_ctl(emo.0.1, 1, 3, type='width')
+  substr2_ctl(emo.0.1, 1, 3, type='width', terminate=FALSE)
+  substr2_ctl(emo.0.1, 1, 3, type='width', round='stop')
+
+  # keep some trailing SGR because a non-special control intercedes
+  emo.0.2 <- paste0(emo.0.1, "\a")
+  substr2_ctl(emo.0.2, 1, 3, type='width', round='start')
+  emo.0.3 <- paste0(emo.0.1, "\a\033]8;;x.yz\033\\")
+  substr2_ctl(emo.0.3, 1, 3, type='width', round='start')
+
+  # Lead/Trail OSC
+  emo.0.4 <- paste0(
+    "\033]8;;x.yz\033\\",
+    substr2_ctl(emo.0, 1, 1, type='graphemes'),
+    "\033]8;;w.ww\033\\", "\a", "\033[42m"
+  )
+  substr2_ctl(emo.0.4, 1, 3, type='width')
+  substr2_ctl(emo.0.4, 1, 3, type='width', terminate=FALSE)
+  substr2_ctl(emo.0.4, 1, 2, type='width', terminate=FALSE)
+  substr2_ctl(emo.0.4, 1, 2, type='width')
+})
+unitizer_sect("replacement and width", {
+  # weird, but correct, should be white haired light brown baby, but at least
+  # on tested terminal can't merge white hair onto baby.  This is b/c we are
+  # replacing two full UTF8 chars of person-brown with baby-brown, but the third
+  # hair color remains.
+  `substr2_ctl<-`(emo.1, 3, 4, emo.0)
+  # Makes much more sense with width mode so the whole grapheme is replaced
+  `substr2_ctl<-`(emo.1, 3, 4, emo.0, type='width')
+
+  # This one cannot replace with an emoji because either the emoji is not
+  # selected at all ("neither"), or it is selected in both the `value` and `end`
+  `substr2_ctl<-`(emo.1, 4, 4, emo.0, type='width')
+  `substr2_ctl<-`(emo.1, 4, 4, emo.0, type='width', round='stop')
+  `substr2_ctl<-`(emo.1, 4, 4, emo.0, type='width', round='neither')
+  # But we can replace with a regular 1-width character
+  `substr2_ctl<-`(emo.1, 4, 4, "#", type='width')
+  # Or an emoji if it its fully in 'value'
+  `substr2_ctl<-`(emo.1, 4, 5, emo.0, type='width')
+
+  # Test scooching where we fill in from back
+  x <- "ABCDEF"
+  `substr2_ctl<-`(x, 2, 4, emo.0, type='width')
+  `substr2_ctl<-`(x, 2, 4, emo.0, type='width', round='stop')
+  `substr2_ctl<-`(x, 2, 5, emo.0, type='width')
+
+  # Rounding on both sides
+  `substr2_ctl<-`(emo.1, 3, 4, emo.0, type='width', round='both')
+  `substr2_ctl<-`(emo.1, 4, 4, emo.0, type='width', round='both')
+
+  # Mixed good/bad lengths
+  a <- c(rep(emo.1, 4), rep(x, 2))
+  b <- c(emo.0, "#", rep(emo.0, 4))
+  starts <- c(3, 4, 4, 4, 2, 2)
+  stops <- c(4, 4, 4, 5, 4, 5)
+  x <- a
+  # writeLines(c(paste0(c(1:6,0),collapse=""),paste(x,starts,stops)))
+  substr2_ctl(x, starts, stops, type='width') <- b
+  x
+
+  # Replace in the middle of three emojis in a row (or should be five or more
+  # complexity).
+  starts <- c(3, 4, 2, 3, 4, 2)
+  ends <-   c(8, 9, 7, 7, 8, 6)
+  emo.3 <- rep(
+    paste0("\U0001F467\U0001F3FF\U0001F9D4\U0001F3FF", emo.0), length(starts)
+  )
+  emo.4 <- "\U0001F469\u200D\U0001F9B1\U0001F937\U0001F469\u200D\u2695\uFE0F"
+  x0 <- x1 <- emo.3
+  # writeLines(c(paste0(c(1:9,0),collapse=""),paste(c(x0,x1),starts,ends)))
+  substr2_ctl(x0, starts, ends, type='width') <- emo.4
+  x0
+  substr2_ctl(x1, starts, ends, type='width', round='stop') <- emo.4
+  x1
+
+  # Can't reduce size of replacement to fit
+  emo.7 <- "\U0001F600_\U0001F600"
+  emo.7a <- "\U0001F600"
+  `substr2_ctl<-`(emo.7, 3, 3, type='width', round='stop', emo.7a)
+  # Here we can
+  `substr2_ctl<-`(emo.7, 3, 3, type='width', round='stop', "##")
+  # Corner case
+  `substr2_ctl<-`(emo.7a, 2, 1, type='width', round='both', emo.7a)
 })

@@ -3,17 +3,20 @@
 \name{substr_ctl}
 \alias{substr_ctl}
 \alias{substr2_ctl}
-\alias{substr_sgr}
-\alias{substr2_sgr}
-\title{ANSI Control Sequence Aware Version of substr}
+\alias{substr_ctl<-}
+\alias{substr2_ctl<-}
+\title{Control Sequence Aware Version of substr}
 \usage{
 substr_ctl(
   x,
   start,
   stop,
-  warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"),
-  ctl = "all"
+  warn = getOption("fansi.warn", TRUE),
+  term.cap = getOption("fansi.term.cap", dflt_term_cap()),
+  ctl = "all",
+  normalize = getOption("fansi.normalize", FALSE),
+  carry = getOption("fansi.carry", FALSE),
+  terminate = getOption("fansi.terminate", TRUE)
 )
 
 substr2_ctl(
@@ -22,76 +25,130 @@ substr2_ctl(
   stop,
   type = "chars",
   round = "start",
-  tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
-  tab.stops = getOption("fansi.tab.stops"),
-  warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"),
-  ctl = "all"
+  tabs.as.spaces = getOption("fansi.tabs.as.spaces", FALSE),
+  tab.stops = getOption("fansi.tab.stops", 8L),
+  warn = getOption("fansi.warn", TRUE),
+  term.cap = getOption("fansi.term.cap", dflt_term_cap()),
+  ctl = "all",
+  normalize = getOption("fansi.normalize", FALSE),
+  carry = getOption("fansi.carry", FALSE),
+  terminate = getOption("fansi.terminate", TRUE)
 )
 
-substr_sgr(
+substr_ctl(
   x,
   start,
   stop,
-  warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap")
-)
+  warn = getOption("fansi.warn", TRUE),
+  term.cap = getOption("fansi.term.cap", dflt_term_cap()),
+  ctl = "all",
+  normalize = getOption("fansi.normalize", FALSE),
+  carry = getOption("fansi.carry", FALSE),
+  terminate = getOption("fansi.terminate", TRUE)
+) <- value
 
-substr2_sgr(
+substr2_ctl(
   x,
   start,
   stop,
   type = "chars",
   round = "start",
-  tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
-  tab.stops = getOption("fansi.tab.stops"),
-  warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap")
-)
+  tabs.as.spaces = getOption("fansi.tabs.as.spaces", FALSE),
+  tab.stops = getOption("fansi.tab.stops", 8L),
+  warn = getOption("fansi.warn", TRUE),
+  term.cap = getOption("fansi.term.cap", dflt_term_cap()),
+  ctl = "all",
+  normalize = getOption("fansi.normalize", FALSE),
+  carry = getOption("fansi.carry", FALSE),
+  terminate = getOption("fansi.terminate", TRUE)
+) <- value
 }
 \arguments{
-\item{x}{a character vector or object that can be coerced to character.}
+\item{x}{a character vector or object that can be coerced to such.}
 
-\item{start}{integer.  The first element to be replaced.}
+\item{start}{integer.  The first element to be extracted or replaced.}
 
-\item{stop}{integer.  The last element to be replaced.}
+\item{stop}{integer.  The last element to be extracted or replaced.}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
-to be incorrect, for example by moving the cursor (see \link{fansi}).}
+to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
+If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
+parameter on functions that have it, or the \code{tabs_as_spaces} function, to
+turn the tabs to spaces and resolve the warning that way.  At most one
+warning will be issued per element in each input vector.  Will also warn
+about some badly encoded UTF-8 strings, but a lack of UTF-8 warnings is not
+a guarantee of correct encoding (use \verb{[validUTF8]} for that).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
-starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
-"38;2" or "48;2"). Changing this parameter changes how \code{fansi}
-interprets escape sequences, so you should ensure that it matches your
-terminal capabilities. See \link{term_cap_test} for details.}
+starting with "38;5" or "48;5"), "truecolor" (SGR codes starting with
+"38;2" or "48;2"), and "all". "all" behaves as it does for the \code{ctl}
+parameter: "all" combined with any other value means all terminal
+capabilities except that one.  \code{fansi} will warn if it encounters SGR codes
+that exceed the terminal capabilities specified (see \code{\link{term_cap_test}}
+for details).  In versions prior to 1.0, \code{fansi} would also skip exceeding
+SGRs entirely instead of interpreting them.  You may add the string "old"
+to any otherwise valid \code{term.cap} spec to restore the pre 1.0 behavior.
+"old" will not interact with "all" the way other valid values for this
+parameter do.}
 
 \item{ctl}{character, which \emph{Control Sequences} should be treated
-specially. See the "_ctl vs. _sgr" section for details.
+specially.  Special treatment is context dependent, and may include
+detecting them and/or computing their display/character width as zero.  For
+the SGR subset of the ANSI CSI sequences, and OSC hyperlinks, \code{fansi}
+will also parse, interpret, and reapply the sequences as needed.  You can
+modify whether a \emph{Control Sequence} is treated specially with the \code{ctl}
+parameter.
 \itemize{
 \item "nl": newlines.
 \item "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except
 for newlines and the actual ESC (0x1B) character.
 \item "sgr": ANSI CSI SGR sequences.
 \item "csi": all non-SGR ANSI CSI sequences.
+\item "url": OSC hyperlinks
+\item "osc": all non-OSC-hyperlink OSC sequences.
 \item "esc": all other escape sequences.
 \item "all": all of the above, except when used in combination with any of the
 above, in which case it means "all but".
 }}
 
-\item{type}{character(1L) partial matching \code{c("chars", "width")}, although
-\code{type="width"} only works correctly with R >= 3.2.2.  With "width", whether
-C0 and C1 are treated as zero width may depend on R version and locale in
-addition what the \code{ctl} parameter is set to.  For example, for R4.1 in
-UTF-8 locales C0 and C1 will be zero width even if the value of \code{ctl} is
-such that they wouldn't be so in other circumstances.}
+\item{normalize}{TRUE or FALSE (default) whether SGR sequence should be
+normalized out such that there is one distinct sequence for each SGR code.
+normalized strings will occupy more space (e.g. "\033[31;42m" becomes
+"\033[31m\033[42m"), but will work better with code that assumes each SGR
+code will be in its own escape as \code{crayon} does.}
+
+\item{carry}{TRUE, FALSE (default), or a scalar string, controls whether to
+interpret the character vector as a "single document" (TRUE or string) or
+as independent elements (FALSE).  In "single document" mode, active state
+at the end of an input element is considered active at the beginning of the
+next vector element, simulating what happens with a document with active
+state at the end of a line.  If FALSE each vector element is interpreted as
+if there were no active state when it begins.  If character, then the
+active state at the end of the \code{carry} string is carried into the first
+element of \code{x} (see "Replacement Functions" for differences there).  The
+carried state is injected in the interstice between an imaginary zeroeth
+character and the first character of a vector element.  See the "Position
+Semantics" section of \code{\link{substr_ctl}} and the "State Interactions" section
+of \code{\link[=fansi]{?fansi}} for details.  Except for \code{\link{strwrap_ctl}} where \code{NA} is
+treated as the string \code{"NA"}, \code{carry} will cause \code{NA}s in inputs to
+propagate through the remaining vector elements.}
+
+\item{terminate}{TRUE (default) or FALSE whether substrings should have
+active state closed to avoid it bleeding into other strings they may be
+prepended onto.  This does not stop state from carrying if \code{carry = TRUE}.
+See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for details.}
+
+\item{type}{character(1L) partial matching
+\code{c("chars", "width", "graphemes")}, although types other than "chars" only
+work correctly with R >= 3.2.2.  See \code{\link[base:nchar]{?nchar}}.}
 
 \item{round}{character(1L) partial matching
 \code{c("start", "stop", "both", "neither")}, controls how to resolve
 ambiguities when a \code{start} or \code{stop} value in "width" \code{type} mode falls
-within a multi-byte character or a wide display character.  See details.}
+within a wide display character.  See details.}
 
 \item{tabs.as.spaces}{FALSE (default) or TRUE, whether to convert tabs to
 spaces.  This can only be set to TRUE if \code{strip.spaces} is FALSE.}
@@ -101,21 +158,58 @@ when converting tabs to spaces.  If there are more tabs in a line than
 defined tab stops the last tab stop is re-used.  For the purposes of
 applying tab stops, each input line is considered a line and the character
 count begins from the beginning of the input line.}
+
+\item{value}{a character vector or object that can be coerced to such.}
+}
+\value{
+A character vector of the same length and with the same attributes as
+x (after possible coercion and re-encoding to UTF-8).
 }
 \description{
 \code{substr_ctl} is a drop-in replacement for \code{substr}.  Performance is
-slightly slower than \code{substr}.  ANSI CSI SGR sequences will be included in
-the substrings to reflect the format of the substring when it was embedded in
-the source string.  Additionally, other \emph{Control Sequences} specified in
-\code{ctl} are treated as zero-width.
+slightly slower than \code{substr}, and more so for \code{type = 'width'}.  CSI SGR
+sequences will be included in the substrings to reflect the format of the
+substring when it was embedded in the source string.  \code{substr2_ctl} adds the
+ability to retrieve substrings based on display width in addition to the
+normal character width.  \code{substr2_ctl} also provides the option to convert
+tabs to spaces with \code{\link{tabs_as_spaces}} prior to taking substrings.
 }
-\details{
-\code{substr2_ctl} and \code{substr2_sgr} add the ability to retrieve substrings based
-on display width, and byte width in addition to the normal character width.
-\code{substr2_ctl} also provides the option to convert tabs to spaces with
-\link{tabs_as_spaces} prior to taking substrings.
+\note{
+Non-ASCII strings are converted to and returned in UTF-8 encoding.
+Width calculations will not work properly in R < 3.2.2.
 
-Because exact substrings on anything other than character width cannot be
+If \code{stop} < \code{start}, the return value is always an empty string.
+}
+\section{Position Semantics}{
+
+
+When computing substrings, \emph{Normal} (non-control) characters are considered
+to occupy positions in strings, whereas \emph{Control Sequences} occupy the
+interstices between them.  The string
+\code{"hello-\\033&lsqb;31mworld\\033&lsqb;m!"} is interpreted as:\preformatted{                   1 1 1
+ 1 2 3 4 5 6 7 8 9 0 1 2
+ h e l l o -|w o r l d|!
+            ^         ^
+            \\033[31m  \\033[m
+}
+
+\code{start} and \code{stop} reference character positions so they never explicitly
+select for the interstitial \emph{Control Sequences}.  The latter are implicitly
+selected if they appear in interstices after the first character and before
+the last.  Additionally, because \emph{Special Sequences} (CSI SGR and OSC
+hyperlinks) affect all subsequent characters in a string, any active \emph{Special
+Sequence}, whether opened just before a character or much before, will be
+reflected in the state \code{fansi} prepends to the beginning of each substring.
+
+It is possible to select \emph{Control Sequences} at the end of a string by
+specifying \code{stop} values past the end of the string, although for \emph{Special
+Sequences} this only produces visible results if \code{terminate} is set to
+\code{FALSE}.  Similarly, it is possible to select \emph{Control Sequences} preceding
+the beginning of a string by specifying \code{start} values less than one,
+although as noted earlier this is unnecessary for \emph{Special Sequences} as
+those are output by \code{fansi} before each substring.
+
+Because exact substrings on anything other than character count cannot be
 guaranteed (e.g. as a result of multi-byte encodings, or double display-width
 characters) \code{substr2_ctl} must make assumptions on how to resolve provided
 \code{start}/\code{stop} values that are infeasible and does so via the \code{round}
@@ -127,56 +221,142 @@ that character is included in the substring, while any similar partially
 included character via the \code{stop} is left out.  The converse is true if we
 use "stop" as the \code{round} value.  "neither" would cause all partial
 characters to be dropped irrespective whether they correspond to \code{start} or
-\code{stop}, and "both" could cause all of them to be included.
+\code{stop}, and "both" could cause all of them to be included.  See examples.
 
-These functions map string lengths accounting for ANSI CSI SGR sequence
-semantics to the naive length calculations, and then use the mapping in
-conjunction with \code{\link[base:substr]{base::substr()}} to extract the string.  This concept is
-borrowed directly from Gábor Csárdi's \code{crayon} package, although the
-implementation of the calculation is different.
+A number of \emph{Normal} characters such as combining diacritic marks have
+reported width of zero.  These are typically displayed overlaid on top of the
+preceding glyph, as in the case of \code{"e\\u301"} forming \code{"é"}.  Unlike \emph{Control
+Sequences}, which also have reported width of zero, \code{fansi} groups zero-width
+\emph{Normal} characters with the last preceding non-zero width \emph{Normal}
+character.  This is incorrect for some rare zero-width \emph{Normal} characters
+such as prepending marks (see "Output Stability" and "Graphemes").
 }
-\note{
-Non-ASCII strings are converted to and returned in UTF-8 encoding.
+
+\section{Output Stability}{
+
+
+Several factors could affect the exact output produced by \code{fansi}
+functions across versions of \code{fansi}, \code{R}, and/or across systems.
+\strong{In general it is best not to rely on exact \code{fansi} output, e.g. by
+embedding it in tests}.
+
+Width and grapheme calculations depend on locale, Unicode database
+version, and grapheme processing logic (which is still in development), among
+other things.  For the most part \code{fansi} (currently) uses the internals of
+\code{base::nchar(type='width')}, but there are exceptions and this may change in
+the future.
+
+How a particular display format is encoded in \emph{Control Sequences} is
+not guaranteed to be stable across \code{fansi} versions.  Additionally, which
+\emph{Special Sequences} are re-encoded vs transcribed untouched may change.
+In general we will strive to keep the rendered appearance stable.
+
+To maximize the odds of getting stable output set \code{normalize_state} to
+\code{TRUE} and \code{type} to \code{"chars"} in functions that allow it, and
+set \code{term.cap} to a specific set of capabilities.
 }
-\section{_ctl vs. _sgr}{
+
+\section{Replacement Functions}{
 
 
-The \verb{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
-by default.  Special treatment is context dependent, and may include
-detecting them and/or computing their display/character width as zero.  For
-the SGR subset of the ANSI CSI sequences, \code{fansi} will also parse, interpret,
-and reapply the text styles they encode if needed.  You can modify whether a
-\emph{Control Sequence} is treated specially with the \code{ctl} parameter.  You can
-exclude a type of \emph{Control Sequence} from special treatment by combining
-"all" with that type of sequence (e.g. \code{ctl=c("all", "nl")} for special
-treatment of all \emph{Control Sequences} \strong{but} newlines).  The \verb{*_sgr} versions
-only treat ANSI CSI SGR sequences specially, and are equivalent to the
-\verb{*_ctl} versions with the \code{ctl} parameter set to "sgr".
+Semantics for replacement functions have the additional requirement that the
+result appear as if it is the input modified in place between the positions
+designated by \code{start} and \code{stop}.  \code{terminate} only affects the boundaries
+between the original substring and the spliced one, \code{normalize} only affects
+the same boundaries and \code{value}, \code{tabs.as.spaces} only affects \code{value}, and
+\code{x} must be ASCII only or marked "UTF-8".
+
+\code{terminate = FALSE} only makes sense in replacement mode if only one of \code{x}
+or \code{value} contains \emph{Control Sequences}.  \code{fansi} will not account for any
+interactions of state in \code{x} and \code{value}.
+
+The \code{carry} parameter causes state to carry within the original string and
+the replacement values independently, as if they were columns of text cut
+from different pages and pasted together.  String values for \code{carry} are
+disallowed in replacement mode as it is ambiguous which of \code{x} or \code{value}
+they would modify (see examples).
+
+When in \code{type = 'width'} mode, it is only guaranteed that the result will be
+no wider than the original \code{x}.  Narrower strings may result if a mixture
+of narrow and wide graphemes cannot be replaced exactly with the same \code{width}
+value, possibly because the provided \code{start} and \code{stop} values (or the
+implicit ones generated for \code{value}) do not align with grapheme boundaries.
+}
+
+\section{Graphemes}{
+
+
+\code{fansi} approximates grapheme widths and counts by using heuristics for
+grapheme breaks that work for most common graphemes, including emoji
+combining sequences.  The heuristic is known to work incorrectly with
+invalid combining sequences, prepending marks, and sequence interruptors.
+\code{fansi} does not provide a full implementation of grapheme break detection to
+avoid carrying a copy of the Unicode grapheme breaks table, and also because
+the hope is that R will add the feature eventually itself.
+
+The \href{https://cran.r-project.org/package=utf8}{\code{utf8}} package provides a
+conforming grapheme parsing implementation.
 }
 
 \examples{
 substr_ctl("\033[42mhello\033[m world", 1, 9)
 substr_ctl("\033[42mhello\033[m world", 3, 9)
 
-## Width 2 and 3 are in the middle of an ideogram as
-## start and stop positions respectively, so we control
-## what we get with `round`
+## Positions 2 and 4 are in the middle of the full width Ｗ for
+## the `start` and `stop` positions respectively. Use `round`
+## to control result:
+##    12345
+x <- "ＷnＷ"
+substr2_ctl(x, 2, 4, type='width', round='start')
+substr2_ctl(x, 2, 4, type='width', round='stop')
+substr2_ctl(x, 2, 4, type='width', round='neither')
+substr2_ctl(x, 2, 4, type='width', round='both')
 
-cn.string <- paste0("\033[42m", "\u4E00\u4E01\u4E03", "\033[m")
+## We can specify which escapes are considered special:
+substr_ctl("\033[31mhello\tworld", 1, 6, ctl='sgr', warn=FALSE)
+substr_ctl("\033[31mhello\tworld", 1, 6, ctl=c('all', 'c0'), warn=FALSE)
 
-substr2_ctl(cn.string, 2, 3, type='width')
-substr2_ctl(cn.string, 2, 3, type='width', round='both')
-substr2_ctl(cn.string, 2, 3, type='width', round='start')
-substr2_ctl(cn.string, 2, 3, type='width', round='stop')
+## `carry` allows SGR to carry from one element to the next
+substr_ctl(c("\033[33mhello", "world"), 1, 3)
+substr_ctl(c("\033[33mhello", "world"), 1, 3, carry=TRUE)
+substr_ctl(c("\033[33mhello", "world"), 1, 3, carry="\033[44m")
 
-## the _sgr variety only treat as special CSI SGR,
-## compare the following:
+## We can omit the termination
+bleed <- substr_ctl(c("\033[41mhello", "world"), 1, 3, terminate=FALSE)
+writeLines(bleed)      # Style will bleed out of string
+end <- "\033[0m\n"
+writeLines(end)        # Stanch bleeding
 
-substr_sgr("\033[31mhello\tworld", 1, 6)
-substr_ctl("\033[31mhello\tworld", 1, 6)
-substr_ctl("\033[31mhello\tworld", 1, 6, ctl=c('all', 'c0'))
+## Trailing sequences omitted unless `stop` past end.
+substr_ctl("ABC\033[42m", 1, 3, terminate=FALSE)
+substr_ctl("ABC\033[42m", 1, 4, terminate=FALSE)
+
+## Replacement functions
+x0<- x1 <- x2 <- x3 <- c("\033[42mABC", "\033[34mDEF")
+substr_ctl(x1, 2, 2) <- "_"
+substr_ctl(x2, 2, 2) <- "\033[m_"
+substr_ctl(x3, 2, 2) <- "\033[45m_"
+writeLines(c(x0, end, x1, end, x2, end, x3, end))
+
+## With `carry = TRUE` strings look like original
+x0<- x1 <- x2 <- x3 <- c("\033[42mABC", "\033[34mDEF")
+substr_ctl(x0, 2, 2, carry=TRUE) <- "_"
+substr_ctl(x1, 2, 2, carry=TRUE) <- "\033[m_"
+substr_ctl(x2, 2, 2, carry=TRUE) <- "\033[45m_"
+writeLines(c(x0, end, x1, end, x2, end, x3, end))
+
+## Work-around to specify carry strings in replacement mode
+x <- c("ABC", "DEF")
+val <- "#"
+x2 <- c("\033[42m", x)
+val2 <- c("\033[45m", rep_len(val, length(x)))
+substr_ctl(x2, 2, 2, carry=TRUE) <- val2
+(x <- x[-1])
 }
 \seealso{
-\link{fansi} for details on how \emph{Control Sequences} are
-interpreted, particularly if you are getting unexpected results.
+\code{\link[=fansi]{?fansi}} for details on how \emph{Control Sequences} are
+interpreted, particularly if you are getting unexpected results,
+\code{\link{normalize_state}} for more details on what the \code{normalize} parameter does,
+\code{\link{state_at_end}} to compute active state at the end of strings,
+\code{\link{close_state}} to compute the sequence required to close active state.
 }

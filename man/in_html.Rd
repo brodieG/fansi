@@ -32,7 +32,7 @@ examples.
 \examples{
 txt <- "\033[31;42mHello \033[7mWorld\033[m"
 writeLines(txt)
-html <- sgr_to_html(txt)
+html <- to_html(txt)
 \dontrun{
 in_html(html) # spawns a browser window
 }
@@ -49,6 +49,6 @@ in_html(html, css)
 Other HTML functions: 
 \code{\link{html_esc}()},
 \code{\link{make_styles}()},
-\code{\link{sgr_to_html}()}
+\code{\link{to_html}()}
 }
 \concept{HTML functions}

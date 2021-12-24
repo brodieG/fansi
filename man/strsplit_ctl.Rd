@@ -2,8 +2,7 @@
 % Please edit documentation in R/strsplit.R
 \name{strsplit_ctl}
 \alias{strsplit_ctl}
-\alias{strsplit_sgr}
-\title{ANSI Control Sequence Aware Version of strsplit}
+\title{Control Sequence Aware Version of strsplit}
 \usage{
 strsplit_ctl(
   x,
@@ -11,23 +10,16 @@ strsplit_ctl(
   fixed = FALSE,
   perl = FALSE,
   useBytes = FALSE,
-  warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"),
-  ctl = "all"
-)
-
-strsplit_sgr(
-  x,
-  split,
-  fixed = FALSE,
-  perl = FALSE,
-  useBytes = FALSE,
-  warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap")
+  warn = getOption("fansi.warn", TRUE),
+  term.cap = getOption("fansi.term.cap", dflt_term_cap()),
+  ctl = "all",
+  normalize = getOption("fansi.normalize", FALSE),
+  carry = getOption("fansi.carry", FALSE),
+  terminate = getOption("fansi.terminate", TRUE)
 )
 }
 \arguments{
-\item{x}{a character vector, or, unlike \link[base:strsplit]{base::strsplit} an object that can
+\item{x}{a character vector, or, unlike \code{\link[base:strsplit]{base::strsplit}} an object that can
 be coerced to character.}
 
 \item{split}{
@@ -55,33 +47,79 @@ be coerced to character.}
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
-to be incorrect, for example by moving the cursor (see \link{fansi}).}
+to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
+If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
+parameter on functions that have it, or the \code{tabs_as_spaces} function, to
+turn the tabs to spaces and resolve the warning that way.  At most one
+warning will be issued per element in each input vector.  Will also warn
+about some badly encoded UTF-8 strings, but a lack of UTF-8 warnings is not
+a guarantee of correct encoding (use \verb{[validUTF8]} for that).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
-starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
-"38;2" or "48;2"). Changing this parameter changes how \code{fansi}
-interprets escape sequences, so you should ensure that it matches your
-terminal capabilities. See \link{term_cap_test} for details.}
+starting with "38;5" or "48;5"), "truecolor" (SGR codes starting with
+"38;2" or "48;2"), and "all". "all" behaves as it does for the \code{ctl}
+parameter: "all" combined with any other value means all terminal
+capabilities except that one.  \code{fansi} will warn if it encounters SGR codes
+that exceed the terminal capabilities specified (see \code{\link{term_cap_test}}
+for details).  In versions prior to 1.0, \code{fansi} would also skip exceeding
+SGRs entirely instead of interpreting them.  You may add the string "old"
+to any otherwise valid \code{term.cap} spec to restore the pre 1.0 behavior.
+"old" will not interact with "all" the way other valid values for this
+parameter do.}
 
 \item{ctl}{character, which \emph{Control Sequences} should be treated
-specially. See the "_ctl vs. _sgr" section for details.
+specially.  Special treatment is context dependent, and may include
+detecting them and/or computing their display/character width as zero.  For
+the SGR subset of the ANSI CSI sequences, and OSC hyperlinks, \code{fansi}
+will also parse, interpret, and reapply the sequences as needed.  You can
+modify whether a \emph{Control Sequence} is treated specially with the \code{ctl}
+parameter.
 \itemize{
 \item "nl": newlines.
 \item "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except
 for newlines and the actual ESC (0x1B) character.
 \item "sgr": ANSI CSI SGR sequences.
 \item "csi": all non-SGR ANSI CSI sequences.
+\item "url": OSC hyperlinks
+\item "osc": all non-OSC-hyperlink OSC sequences.
 \item "esc": all other escape sequences.
 \item "all": all of the above, except when used in combination with any of the
 above, in which case it means "all but".
 }}
+
+\item{normalize}{TRUE or FALSE (default) whether SGR sequence should be
+normalized out such that there is one distinct sequence for each SGR code.
+normalized strings will occupy more space (e.g. "\033[31;42m" becomes
+"\033[31m\033[42m"), but will work better with code that assumes each SGR
+code will be in its own escape as \code{crayon} does.}
+
+\item{carry}{TRUE, FALSE (default), or a scalar string, controls whether to
+interpret the character vector as a "single document" (TRUE or string) or
+as independent elements (FALSE).  In "single document" mode, active state
+at the end of an input element is considered active at the beginning of the
+next vector element, simulating what happens with a document with active
+state at the end of a line.  If FALSE each vector element is interpreted as
+if there were no active state when it begins.  If character, then the
+active state at the end of the \code{carry} string is carried into the first
+element of \code{x} (see "Replacement Functions" for differences there).  The
+carried state is injected in the interstice between an imaginary zeroeth
+character and the first character of a vector element.  See the "Position
+Semantics" section of \code{\link{substr_ctl}} and the "State Interactions" section
+of \code{\link[=fansi]{?fansi}} for details.  Except for \code{\link{strwrap_ctl}} where \code{NA} is
+treated as the string \code{"NA"}, \code{carry} will cause \code{NA}s in inputs to
+propagate through the remaining vector elements.}
+
+\item{terminate}{TRUE (default) or FALSE whether substrings should have
+active state closed to avoid it bleeding into other strings they may be
+prepended onto.  This does not stop state from carrying if \code{carry = TRUE}.
+See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for details.}
 }
 \value{
-list, see \link[base:strsplit]{base::strsplit}.
+Like \code{\link[base:strsplit]{base::strsplit}}, with \emph{Control Sequences} excluded.
 }
 \description{
-A drop-in replacement for \link[base:strsplit]{base::strsplit}.  It will be noticeably slower,
+A drop-in replacement for \code{\link[base:strsplit]{base::strsplit}}.  It will be noticeably slower,
 but should otherwise behave the same way except for \emph{Control Sequence}
 awareness.
 }
@@ -95,36 +133,48 @@ You can however limit which control sequences are treated specially via the
 \code{ctl} parameters (see examples).
 }
 \note{
-Non-ASCII strings are converted to and returned in UTF-8 encoding.  The
-split positions are computed after both \code{x} and \code{split} are converted to
-UTF-8.
+The split positions are computed after both \code{x} and \code{split} are
+converted to UTF-8.
+
+Non-ASCII strings are converted to and returned in UTF-8 encoding.
+Width calculations will not work properly in R < 3.2.2.
 }
-\section{_ctl vs. _sgr}{
+\section{Output Stability}{
 
 
-The \verb{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
-by default.  Special treatment is context dependent, and may include
-detecting them and/or computing their display/character width as zero.  For
-the SGR subset of the ANSI CSI sequences, \code{fansi} will also parse, interpret,
-and reapply the text styles they encode if needed.  You can modify whether a
-\emph{Control Sequence} is treated specially with the \code{ctl} parameter.  You can
-exclude a type of \emph{Control Sequence} from special treatment by combining
-"all" with that type of sequence (e.g. \code{ctl=c("all", "nl")} for special
-treatment of all \emph{Control Sequences} \strong{but} newlines).  The \verb{*_sgr} versions
-only treat ANSI CSI SGR sequences specially, and are equivalent to the
-\verb{*_ctl} versions with the \code{ctl} parameter set to "sgr".
+Several factors could affect the exact output produced by \code{fansi}
+functions across versions of \code{fansi}, \code{R}, and/or across systems.
+\strong{In general it is best not to rely on exact \code{fansi} output, e.g. by
+embedding it in tests}.
+
+Width and grapheme calculations depend on locale, Unicode database
+version, and grapheme processing logic (which is still in development), among
+other things.  For the most part \code{fansi} (currently) uses the internals of
+\code{base::nchar(type='width')}, but there are exceptions and this may change in
+the future.
+
+How a particular display format is encoded in \emph{Control Sequences} is
+not guaranteed to be stable across \code{fansi} versions.  Additionally, which
+\emph{Special Sequences} are re-encoded vs transcribed untouched may change.
+In general we will strive to keep the rendered appearance stable.
+
+To maximize the odds of getting stable output set \code{normalize_state} to
+\code{TRUE} and \code{type} to \code{"chars"} in functions that allow it, and
+set \code{term.cap} to a specific set of capabilities.
 }
 
 \examples{
-strsplit_sgr("\033[31mhello\033[42m world!", " ")
+strsplit_ctl("\033[31mhello\033[42m world!", " ")
 
-## Next two examples allow splitting by newlines, which
-## normally doesn't work as newlines are _Control Sequences_
-strsplit_sgr("\033[31mhello\033[42m\nworld!", "\n")
+## Splitting by newlines does not work as they are _Control
+## Sequences_, but we can use `ctl` to treat them as ordinary
+strsplit_ctl("\033[31mhello\033[42m\nworld!", "\n")
 strsplit_ctl("\033[31mhello\033[42m\nworld!", "\n", ctl=c("all", "nl"))
 }
 \seealso{
-\link{fansi} for details on how \emph{Control Sequences} are
+\code{\link[=fansi]{?fansi}} for details on how \emph{Control Sequences} are
 interpreted, particularly if you are getting unexpected results,
-\link[base:strsplit]{base::strsplit} for details on the splitting.
+\code{\link{normalize_state}} for more details on what the \code{normalize} parameter does,
+\code{\link{state_at_end}} to compute active state at the end of strings,
+\code{\link{close_state}} to compute the sequence required to close active state.
 }

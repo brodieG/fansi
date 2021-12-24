@@ -1,3 +1,18 @@
+## Copyright (C) 2021  Brodie Gaslam
+##
+## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
+##
+## This program is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 2 or 3 of the License.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## Go to <https://www.r-project.org/Licenses> for copies of the licenses.
+
 library(unitizer)
 library(fansi)
 
@@ -5,13 +20,23 @@ unitizer_sect("term_cap_test", {
   tct <- term_cap_test()
   tct
   fansi_lines(LETTERS, step=6)
-})
-unitizer_sect("digits", {
-  ints <- c(-100L, -9999L, -1L, 0L, 1L, 9L, 10L, 99L, 100L, 101L, 9999L)
-  cbind(
-    ints,
-    fansi:::digits_in_int(ints)
-  )
+
+  # should only be one warning at index 1
+  local({
+    tc <- getOption('fansi.term.cap')
+    col <- Sys.getenv('COLORTERM', unset=NA)
+    on.exit({
+      options(fansi.term.cap=tc)
+      if(is.na(col)) suppressWarnings(Sys.unsetenv("COLORTERM"))
+      else Sys.setenv(COLORTERM=col)
+    })
+    options(fansi.term.cap=NULL)
+    suppressWarnings(Sys.unsetenv("COLORTERM"))
+    string <- "a\033[38;2;50;50;50m"
+    substr_ctl(c(string, ""), 1, 10)
+    Sys.setenv(COLORTERM="truecolor")
+    substr_ctl(c("", string), 1, 10)
+  })
 })
 unitizer_sect("add_int", {
   fansi:::add_int(1, 1)
@@ -29,20 +54,26 @@ unitizer_sect("unhandled", {
   unhandled_ctl(string.0)
   # some more interesting cases
   string.1 <- c(
-    "foo\033[22>mhello\033[9999m", "a\033[31k", "hello\033m world \033"
+    "foo\033[22>mhello\033[9999m", "a\033[31k", "hello\033m \033[180mworld \033"
   )
   unhandled_ctl(string.1)
 
   # A malformed ESCape
-
   unhandled_ctl("hello\033\033\033[45p wor\ald")
 
   # Specifying term cap
-
   unhandled_ctl("\033[38;5;220mworld\033[m", "bright")
   unhandled_ctl("\033[38;2;10;20;30mworld\033[m", "bright")
   unhandled_ctl("\033[38;2;10;20;30mworld\033[m", "bri")
   unhandled_ctl("\033[38;2;10;20;30mworld\033[m", NULL)
+
+  # Malformed in sequences
+  unhandled_ctl("AB\033[34m\033]9\033\\\033[1m\033[2LCD")
+  # Unterminated OSC consumes everything
+  unhandled_ctl("AB\033[34m\033]9\033[1m\033[2LCD")
+
+  # Non-SGR and SGR bad tokens
+  unhandled_ctl("A\033[45#1pB\033[256pC\033[256mD")
 })
 unitizer_sect("strtrim", {
   strtrim_ctl(" hello world", 7)
@@ -61,8 +92,14 @@ unitizer_sect("strtrim", {
     "\033[42m\the\allo world\033[m foobar", 12, tabs.as.spaces=TRUE,
     warn=FALSE, tab.stops=2
   )
-  # bad args
+  # NA handling
+  identical(
+    strtrim_ctl(c("AB", NA_character_, "CD"), 1),
+    strtrim(c("AB", NA_character_, "CD"), 1)
+  )
+  strtrim_ctl(c("AB", NA_character_, "CD"), 1, carry=TRUE)
 
+  # bad args
   hello2.0 <- "\033[42m\thello world\033[m foobar"
   strtrim_ctl(1:3, width=10)
   strtrim_ctl(hello2.0, width="35")
@@ -84,20 +121,6 @@ unitizer_sect("strtrim", {
   strtrim2_ctl(hello2.0, width=10, ctl=0)
   strtrim2_ctl(hello2.0, width=10, ctl='bananas')
 })
-unitizer_sect("C funs", {
-  fansi:::cleave(1:10)
-  fansi:::cleave(1:9)
-  fansi:::cleave(1:10 + .1)
-
-  # sort_chr doesn't guarantee that things will be sorted lexically, just that
-  # alike things will be contiguous
-
-  set.seed(42)
-  jumbled <- as.character(rep(1:10, 10))[sample(1:100)]
-  sorted <- fansi:::sort_chr(jumbled)
-
-  which(as.logical(diff(as.numeric(sorted))))
-})
 unitizer_sect("enc check", {
   x <- y <- "He\x9f"
   Encoding(x) <- "latin1"
@@ -111,8 +134,8 @@ unitizer_sect("enc check", {
 unitizer_sect("what as int", {
   fansi:::ctl_as_int(c(1, 2, 3, 4, 5))
   fansi:::ctl_as_int(c(2, 3, 4, 5))
-  fansi:::ctl_as_int(c(1, 2, 3, 7))
-  fansi:::ctl_as_int(c(2, 3, 7))
+  fansi:::ctl_as_int(c(1, 2, 3, 9))
+  fansi:::ctl_as_int(c(2, 3, 9))
 })
 unitizer_sect("HTML helper", {
   html_esc(character())
@@ -134,6 +157,23 @@ unitizer_sect("HTML helper", {
   html_code_block(1:10)
   html_code_block(txt, class=c('not-fansi', 'plain'))
   html_code_block(txt, class=NULL)
+
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "<>")
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "><")
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "<&>")
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "'<&>")
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "'<&>\"")
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "'&>\"<")
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "")
+  ## repeated chars okay
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "'<&>\"<")
+
+  ## Errors
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), character())
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), NA_character_)
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), 1:5)
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "'<&><")
+  html_esc(c("h&e'l\"lo", "wor<ld>s", NA, ""), "'x><")
 })
 unitizer_sect("hooks", {
   h.1 <- list(
@@ -208,7 +248,11 @@ unitizer_sect("hooks", {
   set_knit_hooks(h.1, class=letters)
   set_knit_hooks(h.1, which=c('output', 'message', 'output'))
 })
-unitizer_sect("fansi lines", {
+unitizer_sect("output funs", {
   fansi_lines(1:3)
   fansi_lines(1:3, step='hello')
+  capture.output(fwl("\033[43mhello"))
+})
+unitizer_sect("validation", {
+  fansi:::VAL_IN_ENV(booboo="error")
 })

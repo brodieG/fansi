@@ -3,29 +3,28 @@
 \name{strtrim_ctl}
 \alias{strtrim_ctl}
 \alias{strtrim2_ctl}
-\alias{strtrim_sgr}
-\alias{strtrim2_sgr}
-\title{ANSI Control Sequence Aware Version of strtrim}
+\title{Control Sequence Aware Version of strtrim}
 \usage{
-strtrim_ctl(x, width, warn = getOption("fansi.warn"), ctl = "all")
+strtrim_ctl(
+  x,
+  width,
+  warn = getOption("fansi.warn", TRUE),
+  ctl = "all",
+  normalize = getOption("fansi.normalize", FALSE),
+  carry = getOption("fansi.carry", FALSE),
+  terminate = getOption("fansi.terminate", TRUE)
+)
 
 strtrim2_ctl(
   x,
   width,
-  warn = getOption("fansi.warn"),
-  tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
-  tab.stops = getOption("fansi.tab.stops"),
-  ctl = "all"
-)
-
-strtrim_sgr(x, width, warn = getOption("fansi.warn"))
-
-strtrim2_sgr(
-  x,
-  width,
-  warn = getOption("fansi.warn"),
-  tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
-  tab.stops = getOption("fansi.tab.stops")
+  warn = getOption("fansi.warn", TRUE),
+  tabs.as.spaces = getOption("fansi.tabs.as.spaces", FALSE),
+  tab.stops = getOption("fansi.tab.stops", 8L),
+  ctl = "all",
+  normalize = getOption("fansi.normalize", FALSE),
+  carry = getOption("fansi.carry", FALSE),
+  terminate = getOption("fansi.terminate", TRUE)
 )
 }
 \arguments{
@@ -37,20 +36,60 @@ strtrim2_sgr(
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
-to be incorrect, for example by moving the cursor (see \link{fansi}).}
+to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
+If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
+parameter on functions that have it, or the \code{tabs_as_spaces} function, to
+turn the tabs to spaces and resolve the warning that way.  At most one
+warning will be issued per element in each input vector.  Will also warn
+about some badly encoded UTF-8 strings, but a lack of UTF-8 warnings is not
+a guarantee of correct encoding (use \verb{[validUTF8]} for that).}
 
 \item{ctl}{character, which \emph{Control Sequences} should be treated
-specially. See the "_ctl vs. _sgr" section for details.
+specially.  Special treatment is context dependent, and may include
+detecting them and/or computing their display/character width as zero.  For
+the SGR subset of the ANSI CSI sequences, and OSC hyperlinks, \code{fansi}
+will also parse, interpret, and reapply the sequences as needed.  You can
+modify whether a \emph{Control Sequence} is treated specially with the \code{ctl}
+parameter.
 \itemize{
 \item "nl": newlines.
 \item "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except
 for newlines and the actual ESC (0x1B) character.
 \item "sgr": ANSI CSI SGR sequences.
 \item "csi": all non-SGR ANSI CSI sequences.
+\item "url": OSC hyperlinks
+\item "osc": all non-OSC-hyperlink OSC sequences.
 \item "esc": all other escape sequences.
 \item "all": all of the above, except when used in combination with any of the
 above, in which case it means "all but".
 }}
+
+\item{normalize}{TRUE or FALSE (default) whether SGR sequence should be
+normalized out such that there is one distinct sequence for each SGR code.
+normalized strings will occupy more space (e.g. "\033[31;42m" becomes
+"\033[31m\033[42m"), but will work better with code that assumes each SGR
+code will be in its own escape as \code{crayon} does.}
+
+\item{carry}{TRUE, FALSE (default), or a scalar string, controls whether to
+interpret the character vector as a "single document" (TRUE or string) or
+as independent elements (FALSE).  In "single document" mode, active state
+at the end of an input element is considered active at the beginning of the
+next vector element, simulating what happens with a document with active
+state at the end of a line.  If FALSE each vector element is interpreted as
+if there were no active state when it begins.  If character, then the
+active state at the end of the \code{carry} string is carried into the first
+element of \code{x} (see "Replacement Functions" for differences there).  The
+carried state is injected in the interstice between an imaginary zeroeth
+character and the first character of a vector element.  See the "Position
+Semantics" section of \code{\link{substr_ctl}} and the "State Interactions" section
+of \code{\link[=fansi]{?fansi}} for details.  Except for \code{\link{strwrap_ctl}} where \code{NA} is
+treated as the string \code{"NA"}, \code{carry} will cause \code{NA}s in inputs to
+propagate through the remaining vector elements.}
+
+\item{terminate}{TRUE (default) or FALSE whether substrings should have
+active state closed to avoid it bleeding into other strings they may be
+prepended onto.  This does not stop state from carrying if \code{carry = TRUE}.
+See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for details.}
 
 \item{tabs.as.spaces}{FALSE (default) or TRUE, whether to convert tabs to
 spaces.  This can only be set to TRUE if \code{strip.spaces} is FALSE.}
@@ -61,9 +100,14 @@ defined tab stops the last tab stop is re-used.  For the purposes of
 applying tab stops, each input line is considered a line and the character
 count begins from the beginning of the input line.}
 }
+\value{
+Like \code{\link[base:strtrim]{base::strtrim}}, except that \emph{Control Sequences} are treated
+as zero width.
+}
 \description{
-One difference with \link[base:strtrim]{base::strtrim} is that all C0 control characters such as
-newlines, carriage returns, etc., are treated as zero width.
+One difference with \code{\link[base:strtrim]{base::strtrim}} is that all C0 control characters such
+as newlines, carriage returns, etc., are always treated as zero width,
+whereas in base it may vary with platform / R version.
 }
 \details{
 \code{strtrim2_ctl} adds the option of converting tabs to spaces before trimming.
@@ -71,29 +115,15 @@ This is the only difference between \code{strtrim_ctl} and \code{strtrim2_ctl}.
 }
 \note{
 Non-ASCII strings are converted to and returned in UTF-8 encoding.
-Width calculations will not work correctly with R < 3.2.2.
+Width calculations will not work properly in R < 3.2.2.
 }
-\section{_ctl vs. _sgr}{
-
-
-The \verb{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
-by default.  Special treatment is context dependent, and may include
-detecting them and/or computing their display/character width as zero.  For
-the SGR subset of the ANSI CSI sequences, \code{fansi} will also parse, interpret,
-and reapply the text styles they encode if needed.  You can modify whether a
-\emph{Control Sequence} is treated specially with the \code{ctl} parameter.  You can
-exclude a type of \emph{Control Sequence} from special treatment by combining
-"all" with that type of sequence (e.g. \code{ctl=c("all", "nl")} for special
-treatment of all \emph{Control Sequences} \strong{but} newlines).  The \verb{*_sgr} versions
-only treat ANSI CSI SGR sequences specially, and are equivalent to the
-\verb{*_ctl} versions with the \code{ctl} parameter set to "sgr".
-}
-
 \examples{
 strtrim_ctl("\033[42mHello world\033[m", 6)
 }
 \seealso{
-\link{fansi} for details on how \emph{Control Sequences} are
-interpreted, particularly if you are getting unexpected results.
-\link{strwrap_ctl} is used internally by this function.
+\code{\link[=fansi]{?fansi}} for details on how \emph{Control Sequences} are
+interpreted, particularly if you are getting unexpected results,
+\code{\link{normalize_state}} for more details on what the \code{normalize} parameter does,
+\code{\link{state_at_end}} to compute active state at the end of strings,
+\code{\link{close_state}} to compute the sequence required to close active state.
 }

@@ -2,15 +2,14 @@
 % Please edit documentation in R/misc.R
 \name{set_knit_hooks}
 \alias{set_knit_hooks}
-\title{Set an Output Hook to Display ANSI CSI SGR in Rmarkdown}
+\title{Set an Output Hook Convert Control Sequences to HTML in Rmarkdown}
 \usage{
 set_knit_hooks(
   hooks,
   which = "output",
-  proc.fun = function(x, class) html_code_block(sgr_to_html(html_esc(x)), class =
-    class),
+  proc.fun = function(x, class) html_code_block(to_html(html_esc(x)), class = class),
   class = sprintf("fansi fansi-\%s", which),
-  style = getOption("fansi.css"),
+  style = getOption("fansi.css", dflt_css()),
   split.nl = FALSE,
   .test = FALSE
 )
@@ -23,7 +22,7 @@ require you pass this to avoid a run-time dependency on \code{knitr}.}
 replaced, defaults to 'output', but can also contain values
 'message', 'warning', and 'error'.}
 
-\item{proc.fun}{function that will be applied to output that contains ANSI
+\item{proc.fun}{function that will be applied to output that contains
 CSI SGR sequences.  Should accept parameters \code{x} and \code{class}, where \code{x} is
 the output, and \code{class} is the CSS class that should be applied to
 the <PRE><CODE> blocks the output will be placed in.}
@@ -39,13 +38,13 @@ height 1.5 (as is the default setting in \code{rmarkdown} documents v1.1).}
 
 \item{split.nl}{TRUE or FALSE (default), set to TRUE to split input strings
 by any newlines they may contain to avoid any newlines inside SPAN tags
-created by \code{\link[=sgr_to_html]{sgr_to_html()}}.  Some markdown->html renders can be configured
+created by \code{\link[=to_html]{to_html()}}.  Some markdown->html renders can be configured
 to convert embedded newlines into line breaks, which may lead to a doubling
 of line breaks.  With the default \code{proc.fun} the split strings are
 recombined by \code{\link[=html_code_block]{html_code_block()}}, but if you provide your own \code{proc.fun}
 you'll need to account for the possibility that the character vector it
 receives will have a different number of elements than the chunk output.
-This argument only has an effect if chunk output contains ANSI CSI SGR
+This argument only has an effect if chunk output contains CSI SGR
 sequences.}
 
 \item{.test}{TRUE or FALSE, for internal testing use only.}
@@ -56,18 +55,18 @@ named list with the prior output hooks for each of \code{which}.
 \description{
 This is a convenience function designed for use within an \code{rmarkdown}
 document.  It overrides the \code{knitr} output hooks by using
-\code{knitr::knit_hooks$set}.  It replaces the hooks with ones that convert ANSI
-CSI SGR sequences into HTML.  In addition to replacing the hook functions,
+\code{knitr::knit_hooks$set}.  It replaces the hooks with ones that convert
+\emph{Control Sequences} into HTML.  In addition to replacing the hook functions,
 this will output a <STYLE> HTML block to stdout.  These two actions are
 side effects as a result of which R chunks in the \code{rmarkdown} document that
-contain ANSI CSI SGR are shown in their HTML equivalent form.
+contain CSI SGR are shown in their HTML equivalent form.
 }
 \details{
-The replacement hook function tests for the presence of ANSI CSI SGR
-sequences in chunk output with \code{\link{has_sgr}}, and if it is detected then
+The replacement hook function tests for the presence of CSI SGR
+sequences in chunk output with \code{\link{has_ctl}}, and if it is detected then
 processes it with the user provided \code{proc.fun}.  Chunks that do not contain
-ANSI CSI SGR are passed off to the previously set hook function.  The default
-\code{proc.fun} will run the output through \code{\link{html_esc}}, \code{\link{sgr_to_html}}, and
+CSI SGR are passed off to the previously set hook function.  The default
+\code{proc.fun} will run the output through \code{\link{html_esc}}, \code{\link{to_html}}, and
 finally \code{\link{html_code_block}}.
 
 If you require more control than this function provides you can set the
@@ -94,7 +93,7 @@ old.hooks <- set_knit_hooks(knitr::knit_hooks)
 ## them (alternatively we could have done output as part of this call too)
 
 styles <- c(
-  getOption('fansi.style'),  # default style
+  getOption('fansi.style', dflt_css()),  # default style
   "PRE.fansi CODE {background-color: transparent;}",
   "PRE.fansi-error {background-color: #DD5555;}",
   "PRE.fansi-warning {background-color: #DDDD55;}",
@@ -117,7 +116,7 @@ do.call(knitr::knit_hooks$set, old.hooks)
 }
 }
 \seealso{
-\code{\link{has_sgr}}, \code{\link{sgr_to_html}}, \code{\link{html_esc}}, \code{\link{html_code_block}},
+\code{\link{has_ctl}}, \code{\link{to_html}}, \code{\link{html_esc}}, \code{\link{html_code_block}},
 \href{https://yihui.org/knitr/hooks/#output-hooks}{\code{knitr} output hooks},
 \href{https://bookdown.org/yihui/rmarkdown/language-engines.html#javascript-and-css}{embedding CSS in Rmd},
 and the vignette \code{vignette(package='fansi', 'sgr-in-rmd')}.

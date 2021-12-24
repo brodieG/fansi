@@ -1,3 +1,18 @@
+## Copyright (C) 2021  Brodie Gaslam
+##
+## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
+##
+## This program is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 2 or 3 of the License.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## Go to <https://www.r-project.org/Licenses> for copies of the licenses.
+
 library(unitizer)
 library(fansi)
 
@@ -81,19 +96,30 @@ unitizer_sect("Basic Ansi", {
     "normal \033[6mblinking quickly oh my\033[25m normal"
   )
   strwrap_ctl(hello.blinky, 10)
+  strwrap_ctl(hello.blinky, 10, terminate=FALSE)
 
   # simplify
 
   hello2.3 <- c(hello2.1, hello2.2)
   strwrap_ctl(hello2.3, 10, simplify=FALSE)
   strwrap2_ctl(hello2.3, 10, simplify=FALSE)
+
+  # closed at end
+  strwrap_ctl("aliquip \033[31mex ea commodo consequat\033[0m\n", 25)
+
 })
 unitizer_sect("Long Wrap", {
   # wrap.nrm <- strwrap(strip_ctl(lorem.r.thanks, "sgr"), 40)
   wrap.csi <- strwrap_ctl(lorem.r.thanks, 40)
 
-  # identical(wrap.nrm, strip_ctl(wrap.csi, "sgr"))
+  # # this would take forever under valgrind
+  # identical(
+  #   strwrap(strip_ctl(lorem.r.thanks, "sgr"), 40),
+  #   strip_ctl(strwrap_ctl(lorem.r.thanks, 40), "sgr")
+  # )
+  # If this changes run the `identical` check above!
   nchar(strip_ctl(wrap.csi, "sgr"))
+  # If this changes run the `identical` check above!
   nchar(wrap.csi)
 })
 unitizer_sect("Other Escapes", {
@@ -184,6 +210,7 @@ unitizer_sect("wrap2", {
 
   hello.9b <- "\033[41mhello\n\nworld."
   strwrap2_ctl(hello.9b, 8, pad.end=" ")
+  strwrap2_ctl(hello.9b, 8, pad.end=0)
 
   ## Leading spaces
 
@@ -252,6 +279,7 @@ unitizer_sect("rare escapes", {
     "hello \033[53mworld woohoo\033[55m woohoo"
   )
   strwrap_ctl(hello.border, 12)
+  strwrap_ctl(hello.border, 12, terminate=FALSE)
   hello.ideogram <- c(
     "hello \033[60mworld woohoo\033[65m woohoo",
     "hello \033[61mworld woohoo\033[65m woohoo",
@@ -259,7 +287,7 @@ unitizer_sect("rare escapes", {
     "hello \033[63mworld woohoo\033[65m woohoo",
     "hello \033[64mworld woohoo\033[65m woohoo"
   )
-  strwrap_ctl(hello.ideogram, 12)
+  strwrap_ctl(hello.ideogram, 12, terminate=FALSE)
   hello.font <- c(
     "hello \033[10mworld woohoo\033[10m woohoo",
     "hello \033[11mworld woohoo\033[10m woohoo",
@@ -272,11 +300,11 @@ unitizer_sect("rare escapes", {
     "hello \033[18mworld woohoo\033[10m woohoo",
     "hello \033[19mworld woohoo\033[10m woohoo"
   )
-  strwrap_ctl(hello.font, 12)
+  strwrap_ctl(hello.font, 12, terminate=FALSE)
 })
 unitizer_sect("term cap and bright", {
   # default term cap should recognize bright and 256, but not true color.
-  getOption('fansi.term.cap')
+  getOption('fansi.term.cap', dflt_term_cap())
   hello.bright <- '\033[42mhello \033[103mworld wowza\033[49m'
 
   strwrap_ctl(hello.bright, 13)
@@ -293,6 +321,9 @@ unitizer_sect("term cap and bright", {
 unitizer_sect("corner cases", {
   strwrap_ctl("a", -1)
   strwrap2_ctl("a", -1)
+  strwrap2_ctl("a", Inf)
+  strwrap2_ctl("a", NA_real_)
+  strwrap2_ctl("a", NA_integer_)
   strwrap2_ctl("a", -1, wrap.always=TRUE)
   strwrap2_ctl("a", 0, wrap.always=TRUE)
   strwrap2_ctl("a", 1, wrap.always=TRUE)
@@ -321,6 +352,59 @@ unitizer_sect("corner cases", {
     ),
     error=conditionMessage
   )
+  ## Test mixing of SGR with non SGR escapes; non-SGR should not be
+  ## dropped, and _trailing_ SGR should be dropped.
+  strwrap_ctl("hello world\033[31m\033A", 12)
+  strwrap_ctl("hello world\033A\033[31m", 12)
+
+  # Islanded SGR escape sequence
+  strwrap_ctl("hello \033[44m world", 5)
+  strwrap_ctl("hello \033[44m world", 6)
+  strwrap_ctl("hello \033[44m world", 5, terminate=FALSE)
+  strwrap_ctl("hello \033[44m world", 6, terminate=FALSE)
+
+  strwrap_ctl("hello\n\033[44m\nworld", 5)
+  strwrap_ctl("hello \n\033[44m\n world", 5)
+  strwrap_ctl("hello \n \033[44m\n world", 5)
+  strwrap_ctl("hello \n \n\033[44mworld", 5)
+  strwrap_ctl("hello \n \n\033[44m world", 5)
+  strwrap_ctl("hello \n \n\033[44m\nworld", 5)
+  strwrap_ctl("hello \033[44m\n\n world", 5)
+  strwrap("hello \n\n world", 5)
+
+  ## Trailing SGR followed by word break
+  strwrap_ctl("\033[33mAB\033[44m CD", 3)
+
+  ## New paragraph with wrap.always and trailing SGR
+  strwrap2_ctl("AB\033[44m\n\nCD", 3, wrap.always=TRUE)
+  strwrap2_ctl("AB\033[44m\n\nCD", 3, wrap.always=TRUE, pad.end="#")
+  strwrap2_ctl("AB\033[44m\n\nCD", 3, wrap.always=TRUE, terminate=FALSE)
+
+  ## Don't omit trail SGR when there is padding
+  strwrap2_ctl("AB\033[44m CD", 4, pad.end="#")
+  strwrap2_ctl("AB\033[44m CD", 3, pad.end="#")
+
+  ## Combine Leading SGR without stripping spaces
+  strwrap2_sgr("\033[43mAB \033[34mCD", strip.spaces=FALSE, 4)
+
+  ## Nothing bug sgrs
+  strwrap_ctl("\033[31m\033[43m", 5)
+
+  ## Hard wrap with trailing SGR
+  strwrap2_ctl("a\033[31mb", 2, wrap.always = TRUE)
+
+  ## Correctly strip trailing space
+  strwrap_ctl("A \033[31mB\033[39m", 3)
+
+  ## Don't double warn w/ leading strip
+  strwrap2_ctl("\033[35phello \033[35p world", 5, strip.spaces=FALSE)
+
+  ## NA treatment
+  identical(
+    strwrap(c(NA, "a b"), 4, prefix=">"),
+    strwrap_ctl(c(NA, "a b"), 4, prefix=">")
+  )
+  identical(strwrap("a b", 4, prefix=NA), strwrap_ctl("a b", 4, prefix=NA))
 })
 unitizer_sect("bad inputs", {
   strwrap_ctl(1:3)
@@ -338,21 +422,6 @@ unitizer_sect("bad inputs", {
   strwrap_ctl(hello2.0, ctl=1:3)
   strwrap_ctl(hello2.0, ctl="bananas")
 
-  strwrap2_ctl(1:3)
-  strwrap2_ctl(hello2.0, width="35")
-  strwrap2_ctl(hello2.0, width=NA_integer_)
-  strwrap2_ctl(hello2.0, indent=NA_integer_)
-  strwrap2_ctl(hello2.0, indent=-3)
-  strwrap2_ctl(hello2.0, exdent=-3)
-  strwrap2_ctl(hello2.0, exdent=1:3)
-  strwrap2_ctl(hello2.0, prefix=1:3)
-  strwrap2_ctl(hello2.0, initial=1:3)
-  strwrap2_ctl(hello2.0, warn=NULL)
-  strwrap2_ctl(hello2.0, term.cap=1:3)
-  strwrap2_ctl(hello2.0, term.cap="bananas")
-  strwrap2_ctl(hello2.0, ctl=1:3)
-  strwrap2_ctl(hello2.0, ctl="bananas")
-
   strwrap2_ctl(hello2.0, wrap.always=1:3)
   strwrap2_ctl(hello2.0, wrap.always=NA)
   strwrap2_ctl(hello2.0, tabs.as.spaces=NA)
@@ -361,5 +430,12 @@ unitizer_sect("bad inputs", {
   strwrap2_ctl(hello2.0, tab.stops=0)
   strwrap2_ctl(hello2.0, strip.spaces=1:3)
   strwrap2_ctl(hello2.0, tabs.as.spaces=TRUE, strip.spaces=TRUE)
+  strwrap2_ctl(hello2.0, pad.end=letters)
 
+  bytes <- "\xf0\xe3"
+  Encoding(bytes) <- "bytes"
+  strwrap_ctl(hello2.0, prefix=bytes)
+  strwrap_ctl(hello2.0, initial=bytes)
+  strwrap2_ctl(hello2.0, pad.end=bytes)
+  strwrap_ctl(c(hello2.0, bytes))
 })

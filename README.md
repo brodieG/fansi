@@ -67,11 +67,12 @@ Functions
 
 `fansi` provides counterparts to the following string functions:
 
--   `substr`
+-   `substr` (and `substr<-`)
 -   `strsplit`
 -   `strtrim`
 -   `strwrap`
 -   `nchar` / `nzchar`
+-   `trimws`
 
 These are drop-in replacements that behave (almost) identically to the
 base counterparts, except for the *Control Sequence* awareness.
@@ -81,16 +82,19 @@ as `substr2_ctl` which allows for width based substrings. There are also
 utility functions such as `strip_ctl` to remove *Control Sequences* and
 `has_ctl` to detect whether strings contain them.
 
-Most of `fansi` is written in C so you should find performance of the
-`fansi` functions to be comparable to the base functions. `strwrap_ctl`
-is much faster, and `strsplit_ctl` is somewhat slower than the
-corresponding base functions.
+Much of `fansi` is written in C so you should find performance of the
+`fansi` functions to be slightly slower than the corresponding base
+functions, with the exception that `strwrap_ctl` is much faster.
+Operations involving `type = "width"` will be slower still. We have
+prioritized convenience and safety over raw speed in the C code, but
+unless your code is primarily engaged in string manipulation `fansi`
+should be fast enough to avoid attention.
 
 HTML Translation
 ----------------
 
 You can translate ANSI CSI SGR formatted strings into their HTML
-counterparts with `sgr_to_html`:
+counterparts with `to_html`:
 
 ![translate to
 html](https://raw.githubusercontent.com/brodieG/fansi/master/extra/images/sgr_to_html.png)

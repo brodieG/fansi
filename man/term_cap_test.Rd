@@ -27,7 +27,8 @@ with a blue background and a red foreground.  For reference the corresponding
 CSI SGR sequences are displayed as well.
 
 You should compare the screen output from this function to
-\code{getOption('fansi.term.cap')} to ensure that they are self consistent.
+\code{getOption('fansi.term.cap', dflt_term_cap)} to ensure that they are self
+consistent.
 
 By default \code{fansi} assumes terminals support bright and 256 color
 modes, and also tests for truecolor support via the $COLORTERM system
@@ -36,13 +37,12 @@ variable.
 Functions with the \code{term.cap} parameter like \code{substr_ctl} will warn if they
 encounter 256 or true color SGR sequences and \code{term.cap} indicates they are
 unsupported as such a terminal may misinterpret those sequences.  Bright
-codes in terminals that do not support them are more likely to be silently
-ignored, so \code{fansi} functions do not warn about those.
+codes and OSC hyperlinks in terminals that do not support them will likely be
+silently ignored, so \code{fansi} functions do not warn about those.
 }
 \examples{
 term_cap_test()
 }
 \seealso{
-\link{fansi} for details on how \emph{Control Sequences} are
-interpreted, particularly if you are getting unexpected results.
+\code{\link{dflt_term_cap}}, \code{\link{has_ctl}}.
 }
