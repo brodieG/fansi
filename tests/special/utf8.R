@@ -414,7 +414,8 @@ unitizer_sect("wrap corner cases", {
   Encoding(strwrap_ctl("hello w\u00F8rld", 5))
 
   # Caused an infinite loop in one case
-  strwrap2_ctl("\U1F600 \U1F600", 2)
+  str.inf <- "\U1F600 \U1F600"
+  strwrap2_ctl(str.inf, 2)
 })
 unitizer_sect("wrap with wide UTF8 and ESC", {
   wrap.mix <- strwrap_ctl(lorem.mix, 25)
