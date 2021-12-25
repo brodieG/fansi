@@ -6,16 +6,17 @@ These are internal developer notes.
 
 [x] Coverage 100%
 [x] Rchk
-
-[ ] valgrind
-[ ] SAN
+[x] valgrind
+[x] SAN
 [x] Rchk
 
-[ ] winbuilder
+[x] R CMD check
+[x] winbuilder    r81416
 [ ] R 3.2
-[ ] R CMD check
 [ ] Revdep
 [ ] CRAN policy
+[ ] New README
+[ ] New animation
 
 ## Immediate Next Steps
 
