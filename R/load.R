@@ -15,7 +15,7 @@
 
 # nocov start
 .onLoad <- function(libname, pkgname) {
-  # Scheme defaults are fairly complex...
+  reset_limits()
   check_assumptions()
   FANSI.ENV[['r.ver']] <- getRversion()
 }
