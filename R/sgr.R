@@ -77,6 +77,7 @@ strip_ctl <- function(x, ctl='all', warn=getOption('fansi.warn', TRUE), strip) {
 #' @export
 #' @examples
 #' ## convenience function, same as `strip_ctl(ctl=c('sgr', 'url'))`
+#' string <- "hello\033k\033[45p world\n\033[31mgoodbye\a moon"
 #' strip_sgr(string)
 
 strip_sgr <- function(x, warn=getOption('fansi.warn', TRUE)) {

@@ -30,6 +30,7 @@ strips CSI SGR and OSC hyperlink sequences.
 }
 \examples{
 ## convenience function, same as `strip_ctl(ctl=c('sgr', 'url'))`
+string <- "hello\033k\033[45p world\n\033[31mgoodbye\a moon"
 strip_sgr(string)
 }
 \keyword{internal}

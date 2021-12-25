@@ -70,11 +70,12 @@
 #'
 #' A number of _Normal_ characters such as combining diacritic marks have
 #' reported width of zero.  These are typically displayed overlaid on top of the
-#' preceding glyph, as in the case of `"e\u301"` forming `"é"`.  Unlike _Control
-#' Sequences_, which also have reported width of zero, `fansi` groups zero-width
-#' _Normal_ characters with the last preceding non-zero width _Normal_
-#' character.  This is incorrect for some rare zero-width _Normal_ characters
-#' such as prepending marks (see "Output Stability" and "Graphemes").
+#' preceding glyph, as in the case of `"e\u301"` forming "e" with an acute
+#' accent.  Unlike _Control Sequences_, which also have reported width of zero,
+#' `fansi` groups zero-width _Normal_ characters with the last preceding
+#' non-zero width _Normal_ character.  This is incorrect for some rare
+#' zero-width _Normal_ characters such as prepending marks (see "Output
+  #' Stability" and "Graphemes").
 #'
 #' @section Output Stability:
 #'
@@ -232,11 +233,11 @@
 #' substr_ctl("\033[42mhello\033[m world", 1, 9)
 #' substr_ctl("\033[42mhello\033[m world", 3, 9)
 #'
-#' ## Positions 2 and 4 are in the middle of the full width Ｗ for
+#' ## Positions 2 and 4 are in the middle of the full width W (\uFF37) for
 #' ## the `start` and `stop` positions respectively. Use `round`
 #' ## to control result:
-#' ##    12345
-#' x <- "ＷnＷ"
+#' x <- "\uFF37n\uFF37"
+#' x
 #' substr2_ctl(x, 2, 4, type='width', round='start')
 #' substr2_ctl(x, 2, 4, type='width', round='stop')
 #' substr2_ctl(x, 2, 4, type='width', round='neither')

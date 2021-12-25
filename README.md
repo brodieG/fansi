@@ -153,7 +153,7 @@ Acknowledgments
 -   R Core for developing and maintaining such a wonderful language.
 -   CRAN maintainers, for patiently shepherding packages onto CRAN and
     maintaining the repository, and Uwe Ligges in particular for
-    maintaining [Winbuilder](http://win-builder.r-project.org/).
+    maintaining [Winbuilder](https://win-builder.r-project.org/).
 -   [Gábor Csárdi](https://github.com/gaborcsardi) for getting me
     started on the journey ANSI control sequences, and for many of the
     ideas on how to process them.
