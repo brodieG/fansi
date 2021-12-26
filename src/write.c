@@ -372,7 +372,7 @@ SEXP FANSI_buff_test_reset() {
   FANSI_INIT_BUFF(&buff);
   FANSI_W_copy(&buff, "hello", 0, "blah");
   FANSI_size_buff(&buff);
-  return R_NilValue;
+  return R_NilValue;  // nocov
 }
 SEXP FANSI_buff_test_copy_overflow() {
   struct FANSI_buff buff;
@@ -381,7 +381,7 @@ SEXP FANSI_buff_test_copy_overflow() {
   FANSI_W_copy(&buff, "hello", 0, "blah");
   FANSI_size_buff(&buff);
   FANSI_W_copy(&buff, "hello!", 0, "blah");
-  return R_NilValue;
+  return R_NilValue;  // nocov
 }
 SEXP FANSI_buff_test_mcopy_overflow() {
   struct FANSI_buff buff;
@@ -390,7 +390,7 @@ SEXP FANSI_buff_test_mcopy_overflow() {
   FANSI_W_mcopy(&buff, "hello!", 4, 0, "blah");
   FANSI_size_buff(&buff);
   FANSI_W_mcopy(&buff, "hello!", 5, 0, "blah");
-  return R_NilValue;
+  return R_NilValue;  // nocov
 }
 SEXP FANSI_buff_test_fill_overflow() {
   struct FANSI_buff buff;
@@ -399,7 +399,7 @@ SEXP FANSI_buff_test_fill_overflow() {
   FANSI_W_fill(&buff, '!', 4, 0, "blah");
   FANSI_size_buff(&buff);
   FANSI_W_fill(&buff, '!', 5, 0, "blah");
-  return R_NilValue;
+  return R_NilValue;  // nocov
 }
 /*
  * To test allocation logic is doing what is expected.  This will allocate

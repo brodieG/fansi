@@ -199,8 +199,7 @@ static char * color_to_html(struct FANSI_color color, char * buff) {
         *(buff_track++) = lo;
       }
       break;
-    default:
-      error("Internal Error: unknown color mode."); // nocov
+    default: error("Internal Error: unknown color mode."); // nocov
   }
   *buff_track = 0;
   int dist = (int) (buff_track - buff);
