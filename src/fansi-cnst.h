@@ -172,7 +172,7 @@
 
 // - Misc ----------------------------------------------------------------------
 
-#define CLR_BUFF_SIZE  17   // big enough for e.g. 38;2;255;255;255
+#define CLR_BUFF_SIZE 20   // big enough for e.g. ESC[38;2;255;255;255;NULL
 
 // Color modes
 #define CLR_MASK    240    // 1111 0000
