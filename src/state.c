@@ -267,14 +267,14 @@ struct FANSI_sgr FANSI_sgr_setdiff(
 ) {
   struct FANSI_sgr res = (struct FANSI_sgr){0};
   if(
-    (!mode && old.color.x != new.color.x) ||
+    (!mode && sgr_comp_color(old.color, new.color)) ||
     (mode && old.color.x && !new.color.x)
   ) {
     res.color.x = old.color.x;
     memcpy(res.color.extra, old.color.extra, sizeof(old.color.extra));
   }
   if(
-    (!mode && old.bgcol.x != new.bgcol.x) ||
+    (!mode && sgr_comp_color(old.bgcol, new.bgcol)) ||
     (mode && old.bgcol.x && !new.bgcol.x)
   ) {
     res.bgcol.x = old.bgcol.x;
