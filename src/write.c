@@ -712,7 +712,12 @@ static char * color_token(
   *buff_track = 0;
   // Check for overflow, even if too late.
   if(buff_track - buff >= (CLR_BUFF_SIZE - 1))
-    error("Internal Error: exceeded color buffer.");  // nocov
+    // nocov start
+    error(
+      "Internal Error: exceeded color buffer (%d vs %d).",
+      buff_track - buff, CLR_BUFF_SIZE
+    );
+    // nocov end
   return buff;
 }
 /*
