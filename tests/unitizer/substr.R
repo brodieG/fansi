@@ -185,6 +185,12 @@ unitizer_sect("Corner cases", {
   substr_ctl("\033[107mA", 1, 1, term.cap=c("all", "bright", "old"))
   substr_ctl("\033[107mA", 1, 1, term.cap=c("bright"))
   substr_ctl("\033[107mA", 1, 1, term.cap=c("bright", "old"))
+
+  # Detect changes in last truecolor byte
+  str.5 <- c("\033[48;2;100;100;100mAB", "\033[48;2;100;100;100mCD")
+  substr_ctl(str.5, 2, 2, terminate=FALSE, carry=TRUE, term.cap="all")
+  str.5a <- c("\033[48;2;100;100;100mAB", "\033[48;2;100;100;101mCD")
+  substr_ctl(str.5a, 2, 2, terminate=FALSE, carry=TRUE, term.cap="all")
 })
 unitizer_sect("Obscure escapes", {
   # illegal 38/48

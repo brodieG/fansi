@@ -74,6 +74,8 @@ unitizer_sect("unhandled", {
 
   # Non-SGR and SGR bad tokens
   unhandled_ctl("A\033[45#1pB\033[256pC\033[256mD")
+  # Abruptly ending 256/truecolor
+  unhandled_ctl("\033[38m")
 })
 unitizer_sect("strtrim", {
   strtrim_ctl(" hello world", 7)
