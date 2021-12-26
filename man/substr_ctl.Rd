@@ -108,13 +108,13 @@ slightly slower than \code{substr}.  ANSI CSI SGR sequences will be included in
 the substrings to reflect the format of the substring when it was embedded in
 the source string.  Additionally, other \emph{Control Sequences} specified in
 \code{ctl} are treated as zero-width.
-}
-\details{
+
 \code{substr2_ctl} and \code{substr2_sgr} add the ability to retrieve substrings based
 on display width, and byte width in addition to the normal character width.
 \code{substr2_ctl} also provides the option to convert tabs to spaces with
 \link{tabs_as_spaces} prior to taking substrings.
-
+}
+\details{
 Because exact substrings on anything other than character width cannot be
 guaranteed (e.g. as a result of multi-byte encodings, or double display-width
 characters) \code{substr2_ctl} must make assumptions on how to resolve provided

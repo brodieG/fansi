@@ -16,6 +16,7 @@
 
 #' ANSI Control Sequence Aware Version of substr
 #'
+#' @description
 #' `substr_ctl` is a drop-in replacement for `substr`.  Performance is
 #' slightly slower than `substr`.  ANSI CSI SGR sequences will be included in
 #' the substrings to reflect the format of the substring when it was embedded in
@@ -27,6 +28,7 @@
 #' `substr2_ctl` also provides the option to convert tabs to spaces with
 #' [tabs_as_spaces] prior to taking substrings.
 #'
+#' @details
 #' Because exact substrings on anything other than character width cannot be
 #' guaranteed (e.g. as a result of multi-byte encodings, or double display-width
 #' characters) `substr2_ctl` must make assumptions on how to resolve provided
