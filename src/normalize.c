@@ -69,13 +69,12 @@ int FANSI_W_normalize(
         string_last = state_int.string + state_int.pos.x;
       }
       string = state_int.string + state_int.pos.x;
+    // nocov start
     } else if (*string == 0) {
       // We ran out of string (should be impossible if `stop` used correctly)
-      error("Internal Error: unexpected `stop` value for normalize."); // nocov
-      // if(any_to_exp) {
-      //   FANSI_W_MCOPY(buff, string_last, string - string_last);
-      // }
+      error("Internal Error: unexpected `stop` value for normalize.");
       break;
+    // nocov end
     }
     else error("Internal Error: normalize logic error."); // nocov
     string_prev = string;
