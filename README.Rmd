@@ -22,9 +22,6 @@ library(fansi)
 Counterparts to R string manipulation functions that account for the effects of
 ANSI text formatting control sequences.
 
-```{r, comment="", results="asis", echo=FALSE}
-old.hooks <- fansi::set_knit_hooks(knitr::knit_hooks)
-```
 ## Formatting Strings with Control Sequences
 
 Many terminals will recognize special sequences of characters in strings and
@@ -33,9 +30,9 @@ change display behavior as a result.  For example, on my terminal the sequences
 foreground and background colors of text respectively:
 
 ```{r}
-fansi <- "\033[37m\033[41mF\033[42mA\033[43mN\033[44mS\033[45mI\033[m"
-writeLines(fansi)
+fansi <- "\033[30m\033[41mF\033[42mA\033[43mN\033[44mS\033[45mI\033[m"
 ```
+![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/fansi-1.png)
 
 This type of sequence is called an ANSI CSI SGR control sequence.  Most &#42;nix
 terminals support them, and newer versions of Windows and Rstudio consoles do
@@ -53,21 +50,18 @@ relationship between byte/character position in a string and display position.
 For example, to extract the "ANS" part of our colored "FANSI", we would need to
 carefully compute the character positions:
 
-```{r}
-writeLines(substr(fansi, 12, 29))
-```
+![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/fansi-2.png)
 
 With `fansi` we can select directly based on display position:
 
-```{r}
-writeLines(substr_ctl(fansi, 2, 4))
-```
+![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/fansi-3.png)
 
 If you look closely you'll notice that the text color for the `substr` version
 is wrong as the naive string extraction loses the initial`"\033[37m"` that sets
-the foreground color.
+the foreground color.  Additionally, the color from the last letter bleeds out
+into the next line.
 
-## Functions
+## `fansi` Functions
 
 `fansi` provides counterparts to the following string functions:
 

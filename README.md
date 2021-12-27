@@ -16,9 +16,6 @@ direct/recursive](https://tinyverse.netlify.app/badge/fansi)](https://tinyverse.
 Counterparts to R string manipulation functions that account for the
 effects of ANSI text formatting control sequences.
 
-<STYLE type='text/css' scoped>
-PRE.fansi SPAN {padding-top: .25em; padding-bottom: .25em};
-</STYLE>
 Formatting Strings with Control Sequences
 -----------------------------------------
 
@@ -27,11 +24,10 @@ and change display behavior as a result. For example, on my terminal the
 sequences `"\033[3?m"` and `"\033[4?m"`, where `"?"` is a digit in 1-7,
 change the foreground and background colors of text respectively:
 
-    fansi <- "\033[37m\033[41mF\033[42mA\033[43mN\033[44mS\033[45mI\033[m"
-    writeLines(fansi)
+    fansi <- "\033[30m\033[41mF\033[42mA\033[43mN\033[44mS\033[45mI\033[m"
 
-<PRE class="fansi fansi-output"><CODE><span style='color: #BBBBBB; background-color: #BB0000;'>F</span><span style='color: #BBBBBB; background-color: #00BB00;'>A</span><span style='color: #BBBBBB; background-color: #BBBB00;'>N</span><span style='color: #BBBBBB; background-color: #0000BB;'>S</span><span style='color: #BBBBBB; background-color: #BB00BB;'>I</span>
-</CODE></PRE>
+![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/fansi-1.png)
+
 This type of sequence is called an ANSI CSI SGR control sequence. Most
 \*nix terminals support them, and newer versions of Windows and Rstudio
 consoles do too. You can check whether your display supports them by
@@ -50,22 +46,19 @@ break the relationship between byte/character position in a string and
 display position. For example, to extract the “ANS” part of our colored
 “FANSI”, we would need to carefully compute the character positions:
 
-    writeLines(substr(fansi, 12, 29))
+![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/fansi-2.png)
 
-<PRE class="fansi fansi-output"><CODE><span style='background-color: #00BB00;'>A</span><span style='background-color: #BBBB00;'>N</span><span style='background-color: #0000BB;'>S
-</span></CODE></PRE>
 With `fansi` we can select directly based on display position:
 
-    writeLines(substr_ctl(fansi, 2, 4))
+![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/fansi-3.png)
 
-<PRE class="fansi fansi-output"><CODE><span style='color: #BBBBBB; background-color: #00BB00;'>A</span><span style='color: #BBBBBB; background-color: #BBBB00;'>N</span><span style='color: #BBBBBB; background-color: #0000BB;'>S</span>
-</CODE></PRE>
 If you look closely you’ll notice that the text color for the `substr`
 version is wrong as the naive string extraction loses the
-initial`"\033[37m"` that sets the foreground color.
+initial`"\033[37m"` that sets the foreground color. Additionally, the
+color from the last letter bleeds out into the next line.
 
-Functions
----------
+`fansi` Functions
+-----------------
 
 `fansi` provides counterparts to the following string functions:
 
@@ -107,28 +100,23 @@ as `substr2_ctl` which allows for width based substrings:
     wrapped <- strwrap2_ctl(paste0("\033[45m", raw), 41, wrap.always=TRUE)
 
     writeLines(wrapped)
-
-<PRE class="fansi fansi-output"><CODE><span style='background-color: #BB00BB;'>ＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷ</span>
-<span style='background-color: #BB00BB;'>ＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷ</span>
-<span style='background-color: #BB00BB;'>ＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷ</span>
-<span style='background-color: #BB00BB;'>ＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷ</span>
-<span style='background-color: #BB00BB;'>ＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷ</span>
-</CODE></PRE>
+    [45mＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷ[0m
+    [45mＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷ[0m
+    [45mＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷ[0m
+    [45mＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷ[0m
+    [45mＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷ[0m
     pizza.grin <- strrep(sprintf("\033[46m%s\033[m", "\U1F355\U1F600"), 3)
     writeLines(pizza.grin)
-
-<PRE class="fansi fansi-output"><CODE><span style='background-color: #00BBBB;'>🍕😀🍕😀🍕😀</span>
-</CODE></PRE>
+    [46m🍕😀[m[46m🍕😀[m[46m🍕😀[m
     pg.width <- nchar_ctl(pizza.grin, type='width')
     substr2_ctl(wrapped, type='width', 15, 15 + pg.width - 1) <- pizza.grin
     writeLines(wrapped)
+    [45mＭＷＭＷＭＷＭ[0m[46m🍕😀[m[46m🍕😀[m[46m🍕😀[0m[45mＷＭＷＭＷＭＷ[0m
+    [45mＭＷＭＷＭＷＭ[0m[46m🍕😀[m[46m🍕😀[m[46m🍕😀[0m[45mＷＭＷＭＷＭＷ[0m
+    [45mＭＷＭＷＭＷＭ[0m[46m🍕😀[m[46m🍕😀[m[46m🍕😀[0m[45mＷＭＷＭＷＭＷ[0m
+    [45mＭＷＭＷＭＷＭ[0m[46m🍕😀[m[46m🍕😀[m[46m🍕😀[0m[45mＷＭＷＭＷＭＷ[0m
+    [45mＭＷＭＷＭＷＭ[0m[46m🍕😀[m[46m🍕😀[m[46m🍕😀[0m[45mＷＭＷＭＷＭＷ[0m
 
-<PRE class="fansi fansi-output"><CODE><span style='background-color: #BB00BB;'>ＭＷＭＷＭＷＭ</span><span style='background-color: #00BBBB;'>🍕😀🍕😀🍕😀</span><span style='background-color: #BB00BB;'>ＷＭＷＭＷＭＷ</span>
-<span style='background-color: #BB00BB;'>ＭＷＭＷＭＷＭ</span><span style='background-color: #00BBBB;'>🍕😀🍕😀🍕😀</span><span style='background-color: #BB00BB;'>ＷＭＷＭＷＭＷ</span>
-<span style='background-color: #BB00BB;'>ＭＷＭＷＭＷＭ</span><span style='background-color: #00BBBB;'>🍕😀🍕😀🍕😀</span><span style='background-color: #BB00BB;'>ＷＭＷＭＷＭＷ</span>
-<span style='background-color: #BB00BB;'>ＭＷＭＷＭＷＭ</span><span style='background-color: #00BBBB;'>🍕😀🍕😀🍕😀</span><span style='background-color: #BB00BB;'>ＷＭＷＭＷＭＷ</span>
-<span style='background-color: #BB00BB;'>ＭＷＭＷＭＷＭ</span><span style='background-color: #00BBBB;'>🍕😀🍕😀🍕😀</span><span style='background-color: #BB00BB;'>ＷＭＷＭＷＭＷ</span>
-</CODE></PRE>
 `fansi` width calculations account for graphemes, including combining
 emoji:
 
