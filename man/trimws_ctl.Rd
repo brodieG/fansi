@@ -28,12 +28,10 @@ become possible to change this parameter.}
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
-If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
-parameter on functions that have it, or the \code{tabs_as_spaces} function, to
-turn the tabs to spaces and resolve the warning that way.  At most one
-warning will be issued per element in each input vector.  Will also warn
-about some badly encoded UTF-8 strings, but a lack of UTF-8 warnings is not
-a guarantee of correct encoding (use \verb{[validUTF8]} for that).}
+At most one warning will be issued per element in each input vector.  Will
+also warn about some badly encoded UTF-8 strings, but a lack of UTF-8
+warnings is not a guarantee of correct encoding (use \code{\link{validUTF8}} for
+that).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
@@ -82,6 +80,15 @@ Removes any whitespace before the first and/or after the last non-\emph{Control
 Sequence} character.  Unlike with the \code{\link[base:trimws]{base::trimws}}, only the default
 \code{whitespace} specification is supported.
 }
+\section{Control and Special Sequences}{
+
+
+\emph{Control Sequences} are non-printing characters or sequences of characters.
+\emph{Special Sequences} are a subset of the \emph{Control Sequences}, and include CSI
+SGR sequences which can be used to change rendered appearance of text, and
+OSC hyperlinks.  See \code{\link{fansi}} for details.
+}
+
 \section{Output Stability}{
 
 

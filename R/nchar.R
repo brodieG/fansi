@@ -30,6 +30,7 @@
 #' @inheritParams substr_ctl
 #' @inheritParams base::nchar
 #' @inheritParams strip_ctl
+#' @inheritSection substr_ctl Control and Special Sequences
 #' @inheritSection substr_ctl Output Stability
 #' @inheritSection substr_ctl Graphemes
 #' @inherit base::nchar return

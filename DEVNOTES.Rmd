@@ -2,22 +2,6 @@
 
 These are internal developer notes.
 
-## Release Steps
-
-[x] Coverage 100%
-[x] Rchk
-[x] valgrind
-[x] SAN
-[x] Rchk
-
-[x] R CMD check
-[x] winbuilder    r81416
-[ ] R 3.2
-[ ] Revdep
-[ ] CRAN policy
-[ ] New README
-[ ] New animation
-
 ## Immediate Next Steps
 
 ## Todo

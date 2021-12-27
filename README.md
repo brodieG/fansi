@@ -16,18 +16,22 @@ direct/recursive](https://tinyverse.netlify.app/badge/fansi)](https://tinyverse.
 Counterparts to R string manipulation functions that account for the
 effects of ANSI text formatting control sequences.
 
+<STYLE type='text/css' scoped>
+PRE.fansi SPAN {padding-top: .25em; padding-bottom: .25em};
+</STYLE>
 Formatting Strings with Control Sequences
 -----------------------------------------
 
 Many terminals will recognize special sequences of characters in strings
 and change display behavior as a result. For example, on my terminal the
-sequence `"\033[42m"` turns text background green:
+sequences `"\033[3?m"` and `"\033[4?m"`, where `"?"` is a digit in 1-7,
+change the foreground and background colors of text respectively:
 
-![hello
-world](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/hello.png)
+    fansi <- "\033[37m\033[41mF\033[42mA\033[43mN\033[44mS\033[45mI\033[m"
+    writeLines(fansi)
 
-The sequence itself is not shown, but the text display changes.
-
+<PRE class="fansi fansi-output"><CODE><span style='color: #BBBBBB; background-color: #BB0000;'>F</span><span style='color: #BBBBBB; background-color: #00BB00;'>A</span><span style='color: #BBBBBB; background-color: #BBBB00;'>N</span><span style='color: #BBBBBB; background-color: #0000BB;'>S</span><span style='color: #BBBBBB; background-color: #BB00BB;'>I</span>
+</CODE></PRE>
 This type of sequence is called an ANSI CSI SGR control sequence. Most
 \*nix terminals support them, and newer versions of Windows and Rstudio
 consoles do too. You can check whether your display supports them by
@@ -38,29 +42,27 @@ factors, including how your particular display handles Control
 Sequences. See `?fansi` for details, particularly if you are getting
 unexpected results.
 
-Control Sequences Require Special Handling
-------------------------------------------
+Manipulation of Formatted Strings
+---------------------------------
 
 ANSI control characters and sequences (*Control Sequences* hereafter)
 break the relationship between byte/character position in a string and
-display position.
+display position. For example, to extract the “ANS” part of our colored
+“FANSI”, we would need to carefully compute the character positions:
 
-For example, in `"Hello \033[42mWorld, Good\033[m Night Moon!"` the
-space after “World,” is thirteenth displayed character, but the
-eighteenth actual character (“\\033” is a single character, the ESC). If
-we try to split the string after the space with `substr` things go wrong
-in several ways:
+    writeLines(substr(fansi, 12, 29))
 
-![bad
-substring](https://raw.githubusercontent.com/brodieG/fansi/master/extra/images/substr.png)
+<PRE class="fansi fansi-output"><CODE><span style='background-color: #00BB00;'>A</span><span style='background-color: #BBBB00;'>N</span><span style='background-color: #0000BB;'>S
+</span></CODE></PRE>
+With `fansi` we can select directly based on display position:
 
-We end up cutting up our string in the middle of “World”, and worse the
-formatting bleeds out of our string into the prompt line. Compare to
-what happens when we use `substr_ctl`, the *Control Sequence* aware
-version of `substr`:
+    writeLines(substr_ctl(fansi, 2, 4))
 
-![good
-substring](https://raw.githubusercontent.com/brodieG/fansi/master/extra/images/substr_ctl.png)
+<PRE class="fansi fansi-output"><CODE><span style='color: #BBBBBB; background-color: #00BB00;'>A</span><span style='color: #BBBBBB; background-color: #BBBB00;'>N</span><span style='color: #BBBBBB; background-color: #0000BB;'>S</span>
+</CODE></PRE>
+If you look closely you’ll notice that the text color for the `substr`
+version is wrong as the naive string extraction loses the
+initial`"\033[37m"` that sets the foreground color.
 
 Functions
 ---------
@@ -75,12 +77,9 @@ Functions
 -   `trimws`
 
 These are drop-in replacements that behave (almost) identically to the
-base counterparts, except for the *Control Sequence* awareness.
-
-`fansi` also includes improved versions of some of those functions, such
-as `substr2_ctl` which allows for width based substrings. There are also
-utility functions such as `strip_ctl` to remove *Control Sequences* and
-`has_ctl` to detect whether strings contain them.
+base counterparts, except for the *Control Sequence* awareness. There
+are also utility functions such as `strip_ctl` to remove *Control
+Sequences* and `has_ctl` to detect whether strings contain them.
 
 Much of `fansi` is written in C so you should find performance of the
 `fansi` functions to be slightly slower than the corresponding base
@@ -88,7 +87,67 @@ functions, with the exception that `strwrap_ctl` is much faster.
 Operations involving `type = "width"` will be slower still. We have
 prioritized convenience and safety over raw speed in the C code, but
 unless your code is primarily engaged in string manipulation `fansi`
-should be fast enough to avoid attention.
+should be fast enough to keep attention away from itself.
+
+Width Based Substrings
+----------------------
+
+`fansi` also includes improved versions of some of those functions, such
+as `substr2_ctl` which allows for width based substrings:
+
+    "\uFF2D" # Full Width M
+    ## [1] "Ｍ"
+    nchar("\uFF2D", type='width')
+    ## [1] 2
+    "\uFF37" # Full Width W
+    ## [1] "Ｗ"
+    nchar("\uFF37", type='width')
+    ## [1] 2
+    raw <- strrep("\uFF2D\uFF37", 50)
+    wrapped <- strwrap2_ctl(paste0("\033[45m", raw), 41, wrap.always=TRUE)
+
+    writeLines(wrapped)
+
+<PRE class="fansi fansi-output"><CODE><span style='background-color: #BB00BB;'>ＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷ</span>
+<span style='background-color: #BB00BB;'>ＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷ</span>
+<span style='background-color: #BB00BB;'>ＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷ</span>
+<span style='background-color: #BB00BB;'>ＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷ</span>
+<span style='background-color: #BB00BB;'>ＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷ</span>
+</CODE></PRE>
+    pizza.grin <- strrep(sprintf("\033[46m%s\033[m", "\U1F355\U1F600"), 3)
+    writeLines(pizza.grin)
+
+<PRE class="fansi fansi-output"><CODE><span style='background-color: #00BBBB;'>🍕😀🍕😀🍕😀</span>
+</CODE></PRE>
+    pg.width <- nchar_ctl(pizza.grin, type='width')
+    substr2_ctl(wrapped, type='width', 15, 15 + pg.width - 1) <- pizza.grin
+    writeLines(wrapped)
+
+<PRE class="fansi fansi-output"><CODE><span style='background-color: #BB00BB;'>ＭＷＭＷＭＷＭ</span><span style='background-color: #00BBBB;'>🍕😀🍕😀🍕😀</span><span style='background-color: #BB00BB;'>ＷＭＷＭＷＭＷ</span>
+<span style='background-color: #BB00BB;'>ＭＷＭＷＭＷＭ</span><span style='background-color: #00BBBB;'>🍕😀🍕😀🍕😀</span><span style='background-color: #BB00BB;'>ＷＭＷＭＷＭＷ</span>
+<span style='background-color: #BB00BB;'>ＭＷＭＷＭＷＭ</span><span style='background-color: #00BBBB;'>🍕😀🍕😀🍕😀</span><span style='background-color: #BB00BB;'>ＷＭＷＭＷＭＷ</span>
+<span style='background-color: #BB00BB;'>ＭＷＭＷＭＷＭ</span><span style='background-color: #00BBBB;'>🍕😀🍕😀🍕😀</span><span style='background-color: #BB00BB;'>ＷＭＷＭＷＭＷ</span>
+<span style='background-color: #BB00BB;'>ＭＷＭＷＭＷＭ</span><span style='background-color: #00BBBB;'>🍕😀🍕😀🍕😀</span><span style='background-color: #BB00BB;'>ＷＭＷＭＷＭＷ</span>
+</CODE></PRE>
+`fansi` width calculations account for graphemes, including combining
+emoji:
+
+    emo <- c(
+      "\U1F468",
+      "\U1F468\U1F3FD",
+      "\U1F468\U1F3FD\u200D\U1F9B3",
+      "\U1F468\u200D\U1F469\u200D\U1F467\u200D\U1F466"
+    )
+    writeLines(
+      paste(
+        emo,
+        paste("base:", nchar(emo, type='width')),
+        paste("fansi:", nchar_ctl(emo, type='width'))
+    ) )
+    ## 👨 base: 2 fansi: 2
+    ## 👨🏽 base: 4 fansi: 2
+    ## 👨🏽‍🦳 base: 6 fansi: 2
+    ## 👨‍👩‍👧‍👦 base: 8 fansi: 2
 
 HTML Translation
 ----------------
@@ -96,17 +155,18 @@ HTML Translation
 You can translate ANSI CSI SGR formatted strings into their HTML
 counterparts with `to_html`:
 
-![translate to
-html](https://raw.githubusercontent.com/brodieG/fansi/master/extra/images/sgr_to_html.png)
+![Translate to
+HTML](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/sgr_to_html.png)
 
 Rmarkdown
 ---------
 
 It is possible to set `knitr` hooks such that R output that contains
 ANSI CSI SGR is automatically converted to the HTML formatted equivalent
-and displayed as intended. See the
-[vignette](https://htmlpreview.github.io/?https://raw.githubusercontent.com/brodieG/fansi/issue61/doc/sgr-in-rmd.html)
-for details.
+and displayed as intended. See the vignette for details.
+[vignette](https://htmlpreview.github.io/?https://raw.githubusercontent.com/brodieG/fansi/rc/doc/sgr-in-rmd.html)
+
+Most of the examples in this README are CSI SGR translated into HTML.
 
 Installation
 ------------

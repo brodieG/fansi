@@ -15,11 +15,11 @@
 
 #' Control Sequence Aware Version of strwrap
 #'
-#' Wraps strings to a specified width accounting for zero display width _Control
-#' Sequences_.  `strwrap_ctl` is intended to emulate `strwrap` closely except
-#' with respect to the _Control Sequences_ (see details for other minor
-#' differences), while `strwrap2_ctl` adds features and changes the processing
-#' of whitespace.
+#' Wraps strings to a specified width accounting for _Control Sequences_.
+#' `strwrap_ctl` is intended to emulate `strwrap` closely except with respect to
+#' the _Control Sequences_ (see details for other minor differences), while
+#' `strwrap2_ctl` adds features and changes the processing of whitespace.
+#' `strwrap_ctl` is faster than `strwrap`.
 #'
 #' `strwrap2_ctl` can convert tabs to spaces, pad strings up to `width`, and
 #' hard-break words if single words are wider than `width`.
@@ -33,6 +33,7 @@
 #' Additionally,`indent`, `exdent`, `initial`, and `prefix` will be ignored when
 #' computing tab positions.
 #'
+#' @inheritSection substr_ctl Control and Special Sequences
 #' @inheritSection substr_ctl Graphemes
 #' @inheritSection substr_ctl Output Stability
 #' @inheritParams base::strwrap

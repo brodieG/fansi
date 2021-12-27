@@ -24,8 +24,8 @@
 #' The `ctl` value contains the names of **non-overlapping** subsets of the
 #' known _Control Sequences_ (e.g. "csi" does not contain "sgr", and "c0" does
 #' not contain newlines).  The one exception is "all" which means strip every
-#' known sequence.  If you combine "all" with any other option then everything
-#' **but** that option will be stripped.
+#' known sequence.  If you combine "all" with any other options then everything
+#' **but** those options will be stripped.
 #'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #' @inheritParams substr_ctl
@@ -135,16 +135,18 @@ has_sgr <- function(x, warn=getOption('fansi.warn', TRUE))
 #' Utilities for Managing CSI and OSC State  In Strings
 #'
 #' `state_at_end` reads through strings computing the accumulated SGR and
-#' OSC hyperlinks, and outputs the active state at the end of them
-#' `close_state` produces the sequence that closes active SGR and OSC hyperlinks
-#' at the end of each input string.  If `normalize = FALSE` (default), it
-#' will emit the reset code "ESC&lbrack;0m" if any SGR is present. It is more
-#' interesting for closing SGRs if `normalize = TRUE`.  Unlike `state_at_end`
-#' and other functions `close_state` has no concept of `carry`: it will only
-#' emit closing sequences for states explicitly active at the end of a string.
+#' OSC hyperlinks, and outputs the active state at the end of them.
+#' `close_state` produces the sequence that closes any SGR active and OSC
+#' hyperlinks at the end of each input string.  If `normalize = FALSE`
+#' (default), it will emit the reset code "ESC&lbrack;0m" if any SGR is present.
+#' It is more interesting for closing SGRs if `normalize = TRUE`.  Unlike
+#' `state_at_end` and other functions `close_state` has no concept of `carry`:
+#' it will only emit closing sequences for states explicitly active at the end
+#' of a string.
 #'
 #' @export
 #' @inheritParams substr_ctl
+#' @inheritSection substr_ctl Control and Special Sequences
 #' @inheritSection substr_ctl Output Stability
 #' @inherit has_ctl seealso
 #' @return character vector same length as `x`.

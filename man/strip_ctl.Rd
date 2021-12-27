@@ -25,12 +25,10 @@ above, in which case it means "all but" (see details).
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
-If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
-parameter on functions that have it, or the \code{tabs_as_spaces} function, to
-turn the tabs to spaces and resolve the warning that way.  At most one
-warning will be issued per element in each input vector.  Will also warn
-about some badly encoded UTF-8 strings, but a lack of UTF-8 warnings is not
-a guarantee of correct encoding (use \verb{[validUTF8]} for that).}
+At most one warning will be issued per element in each input vector.  Will
+also warn about some badly encoded UTF-8 strings, but a lack of UTF-8
+warnings is not a guarantee of correct encoding (use \code{\link{validUTF8}} for
+that).}
 
 \item{strip}{character, deprecated in favor of \code{ctl}.}
 }
@@ -49,8 +47,8 @@ parameter.
 The \code{ctl} value contains the names of \strong{non-overlapping} subsets of the
 known \emph{Control Sequences} (e.g. "csi" does not contain "sgr", and "c0" does
 not contain newlines).  The one exception is "all" which means strip every
-known sequence.  If you combine "all" with any other option then everything
-\strong{but} that option will be stripped.
+known sequence.  If you combine "all" with any other options then everything
+\strong{but} those options will be stripped.
 }
 \note{
 Non-ASCII strings are converted to and returned in UTF-8 encoding.

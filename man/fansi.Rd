@@ -52,7 +52,7 @@ does not support it.
 Within \emph{Control Sequences}, \code{fansi} further distinguishes CSI SGR and OSC
 hyperlinks by recording format specification and URIs into string state, and
 applying the same to any output strings according to the semantics of the
-functions in use.  CSI SGR and OSC hyperlinks are known together as \emph{Sepcial
+functions in use.  CSI SGR and OSC hyperlinks are known together as \emph{Special
 Sequences}.  See the following sections for details.
 
 Additionally, all \emph{Control Sequences}, whether special or not,
@@ -88,37 +88,23 @@ Another possible source of problems is that different displays parse
 and interpret control sequences differently.  The common CSI SGR sequences
 that you are likely to encounter in formatted text tend to be treated
 consistently, but less common ones are not.  \code{fansi} tries to hew by the
-ECMA-48 specification \strong{for CSI control sequences}, but not all terminals
-do.
+ECMA-48 specification \strong{for CSI SGR control sequences}, but not all
+terminals do.
 
 The most likely source of problems will be 24-bit CSI SGR sequences.
 For example, a 24-bit color sequence such as "ESC[38;2;31;42;4" is a
 single foreground color to a terminal that supports it, or separate
 foreground, background, faint, and underline specifications for one that does
-not.  To mitigate this particular problem you can tell \code{fansi} what your
-terminal capabilities are via the \code{term.cap} parameter or the
-"fansi.term.cap" global option, although \code{fansi} does try to detect them by
-default.
+not.  \code{fansi} will always interpret the sequences according to ECMA-48, but
+it will warn you if encountered sequences exceed those specified by
+the \code{term.cap} parameter or the "fansi.term.cap" global option.
 
-\code{fansi} will will warn if it encounters \emph{Control Sequences} that it cannot
-interpret or that might conflict with terminal capabilities.  You can turn
-off warnings via the \code{warn} parameter or via the "fansi.warn" global option.
-Any SGR codes that it interprets and re-outputs in substrings will be
-compatible with the specified terminal capabilities; however, some parts of
-substrings are copied as-is and those will retain the original unsupported
-SGR codes.
-
-\code{fansi} can work around "C0" tab control characters by turning them into
-spaces first with \code{\link{tabs_as_spaces}} or with the \code{tabs.as.spaces} parameter
-available in some of the \code{fansi} functions.
-
-We chose to interpret CSI SGR sequences because this reduces how much string
-transcription we need to do during string manipulation.  If we do not
-interpret the sequences then we need to record all of them from the beginning
-of the string and prepend all the accumulated tags up to beginning of a
-substring to the substring.  In many case the bulk of those accumulated tags
-will be irrelevant as their effects will have been superseded by subsequent
-tags.
+\code{fansi} will will also warn if it encounters \emph{Control Sequences} that it
+cannot interpret.  You can turn off warnings via the \code{warn} parameter, which
+can be set globally via the "fansi.warn" option.  You can work around "C0"
+tabs characters by turning them into spaces first with \code{\link{tabs_as_spaces}} or
+with the \code{tabs.as.spaces} parameter available in some of the \code{fansi}
+functions
 
 \code{fansi} interprets CSI SGR sequences in cumulative "Graphic Rendition
 Combination Mode".  This means new SGR sequences add to rather than replace
@@ -150,15 +136,14 @@ clearer, we replace "\033]" with "<OSC>" and "\033\\\\" with
 
 The cumulative nature of state as specified by SGR or OSC hyperlinks means
 that unterminated strings that are spliced will interact with each other.
-Additionally, a substring does not inherently contain all the information
-required to recreate its state as it appeared in the source string.  The
+By extension, a substring does not inherently contain all the information
+required to recreate its state as it appeared in the source document. The
 default \code{fansi} configuration terminates extracted substrings and prepends
-original state to them so they present on a stand alone basis as they did as
+original state to them so they present on a stand-alone basis as they did as
 part of the original string.
 
-To allow state in substrings to affect subsequent strings that may be spliced
-onto them set \code{terminate = FALSE}.  Generally you should use \code{terminate = TRUE} unless you are willing to deal with the resulting mess (see "Terminal
-Quirks") in exchange for fine control of state bleeding.
+To allow state in substrings to affect subsequent strings set \code{terminate = FALSE}, but you will need to manually terminate them or deal with the
+consequences of not doing so (see "Terminal Quirks").
 
 By default, \code{fansi} assumes that each element in an input character vector is
 independent, but this is incorrect if the input is a single document with
@@ -237,15 +222,14 @@ to the way R does.
 These issues are most likely to occur with invalid UTF-8 sequences,
 combining character sequences, and emoji.  For example, whether special
 characters such as emoji are considered one or two wide evolves as software
-implements newer versions the Unicode databases.  Do not expect the \code{fansi}
-width calculations to always work correctly with strings containing emoji.
+implements newer versions the Unicode databases.
 
 Internally, \code{fansi} computes the width of most UTF-8 character sequences
 outside of the ASCII range using the native \code{R_nchar} function.  This will
 cause such characters to be processed slower than ASCII characters.  Unlike R
 (at least as of version 4.1), \code{fansi} can account for graphemes.
 
-Because \code{fansi} implements it's own internal UTF-8 parsing it is possible
+Because \code{fansi} implements its own internal UTF-8 parsing it is possible
 that you will see results different from those that R produces even on
 strings without \emph{Control Sequences}.
 }

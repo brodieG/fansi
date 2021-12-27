@@ -15,9 +15,9 @@
 
 #' Control Sequence Aware Version of strtrim
 #'
-#' One difference with [`base::strtrim`] is that all C0 control characters such
-#' as newlines, carriage returns, etc., are always treated as zero width,
-#' whereas in base it may vary with platform / R version.
+#' A drop in replacement for [`base::strtrim`], with the difference that all
+#' C0 control characters such as newlines, carriage returns, etc., are always
+#' treated as zero width, whereas in base it may vary with platform / R version.
 #'
 #' `strtrim2_ctl` adds the option of converting tabs to spaces before trimming.
 #' This is the only difference between `strtrim_ctl` and `strtrim2_ctl`.

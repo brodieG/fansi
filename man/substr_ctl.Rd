@@ -74,12 +74,10 @@ substr2_ctl(
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
-If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
-parameter on functions that have it, or the \code{tabs_as_spaces} function, to
-turn the tabs to spaces and resolve the warning that way.  At most one
-warning will be issued per element in each input vector.  Will also warn
-about some badly encoded UTF-8 strings, but a lack of UTF-8 warnings is not
-a guarantee of correct encoding (use \verb{[validUTF8]} for that).}
+At most one warning will be issued per element in each input vector.  Will
+also warn about some badly encoded UTF-8 strings, but a lack of UTF-8
+warnings is not a guarantee of correct encoding (use \code{\link{validUTF8}} for
+that).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
@@ -151,7 +149,8 @@ ambiguities when a \code{start} or \code{stop} value in "width" \code{type} mode
 within a wide display character.  See details.}
 
 \item{tabs.as.spaces}{FALSE (default) or TRUE, whether to convert tabs to
-spaces.  This can only be set to TRUE if \code{strip.spaces} is FALSE.}
+spaces (and supress tab related warnings).  This can only be set to TRUE if
+\code{strip.spaces} is FALSE.}
 
 \item{tab.stops}{integer(1:n) indicating position of tab stops to use
 when converting tabs to spaces.  If there are more tabs in a line than
@@ -167,12 +166,11 @@ x (after possible coercion and re-encoding to UTF-8).
 }
 \description{
 \code{substr_ctl} is a drop-in replacement for \code{substr}.  Performance is
-slightly slower than \code{substr}, and more so for \code{type = 'width'}.  CSI SGR
-sequences will be included in the substrings to reflect the format of the
-substring when it was embedded in the source string.  \code{substr2_ctl} adds the
-ability to retrieve substrings based on display width in addition to the
-normal character width.  \code{substr2_ctl} also provides the option to convert
-tabs to spaces with \code{\link{tabs_as_spaces}} prior to taking substrings.
+slightly slower than \code{substr}, and more so for \code{type = 'width'}.  Special
+\emph{Control Sequences} will be included in the substrings to reflect their format
+when as it was when part of the source string.  \code{substr2_ctl} adds the
+ability to extract substrings based on grapheme count or display width in
+addition to the normal character width, as well as several other options.
 }
 \note{
 Non-ASCII strings are converted to and returned in UTF-8 encoding.
@@ -180,13 +178,24 @@ Width calculations will not work properly in R < 3.2.2.
 
 If \code{stop} < \code{start}, the return value is always an empty string.
 }
+\section{Control and Special Sequences}{
+
+
+\emph{Control Sequences} are non-printing characters or sequences of characters.
+\emph{Special Sequences} are a subset of the \emph{Control Sequences}, and include CSI
+SGR sequences which can be used to change rendered appearance of text, and
+OSC hyperlinks.  See \code{\link{fansi}} for details.
+}
+
 \section{Position Semantics}{
 
 
 When computing substrings, \emph{Normal} (non-control) characters are considered
 to occupy positions in strings, whereas \emph{Control Sequences} occupy the
-interstices between them.  The string
-\code{"hello-\\033&lsqb;31mworld\\033&lsqb;m!"} is interpreted as:\preformatted{                   1 1 1
+interstices between them.  The string:\preformatted{"hello-\\033[31mworld\\033[m!"
+}
+
+is interpreted as:\preformatted{                   1 1 1
  1 2 3 4 5 6 7 8 9 0 1 2
  h e l l o -|w o r l d|!
             ^         ^
@@ -264,8 +273,8 @@ Semantics for replacement functions have the additional requirement that the
 result appear as if it is the input modified in place between the positions
 designated by \code{start} and \code{stop}.  \code{terminate} only affects the boundaries
 between the original substring and the spliced one, \code{normalize} only affects
-the same boundaries and \code{value}, \code{tabs.as.spaces} only affects \code{value}, and
-\code{x} must be ASCII only or marked "UTF-8".
+the same boundaries, and \code{tabs.as.spaces} only affects \code{value}, and \code{x} must
+be ASCII only or marked "UTF-8".
 
 \code{terminate = FALSE} only makes sense in replacement mode if only one of \code{x}
 or \code{value} contains \emph{Control Sequences}.  \code{fansi} will not account for any

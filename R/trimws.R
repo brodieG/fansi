@@ -20,6 +20,7 @@
 #' `whitespace` specification is supported.
 #'
 #' @export
+#' @inheritSection substr_ctl Control and Special Sequences
 #' @inheritSection substr_ctl Output Stability
 #' @inheritParams base::trimws
 #' @inheritParams substr_ctl

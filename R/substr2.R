@@ -16,19 +16,30 @@
 #' Control Sequence Aware Version of substr
 #'
 #' `substr_ctl` is a drop-in replacement for `substr`.  Performance is
-#' slightly slower than `substr`, and more so for `type = 'width'`.  CSI SGR
-#' sequences will be included in the substrings to reflect the format of the
-#' substring when it was embedded in the source string.  `substr2_ctl` adds the
-#' ability to retrieve substrings based on display width in addition to the
-#' normal character width.  `substr2_ctl` also provides the option to convert
-#' tabs to spaces with [`tabs_as_spaces`] prior to taking substrings.
+#' slightly slower than `substr`, and more so for `type = 'width'`.  Special
+#' _Control Sequences_ will be included in the substrings to reflect their format
+#' when as it was when part of the source string.  `substr2_ctl` adds the
+#' ability to extract substrings based on grapheme count or display width in
+#' addition to the normal character width, as well as several other options.
+#'
+#' @section Control and Special Sequences:
+#'
+#' _Control Sequences_ are non-printing characters or sequences of characters.
+#' _Special Sequences_ are a subset of the _Control Sequences_, and include CSI
+#' SGR sequences which can be used to change rendered appearance of text, and
+#' OSC hyperlinks.  See [`fansi`] for details.
 #'
 #' @section Position Semantics:
 #'
 #' When computing substrings, _Normal_ (non-control) characters are considered
 #' to occupy positions in strings, whereas _Control Sequences_ occupy the
-#' interstices between them.  The string
-#' `"hello-\033&lsqb;31mworld\033&lsqb;m!"` is interpreted as:
+#' interstices between them.  The string:
+#'
+#' ```
+#' "hello-\033[31mworld\033[m!"
+#' ```
+#'
+#' is interpreted as:
 #'
 #' ```
 #'                    1 1 1
@@ -75,7 +86,7 @@
 #' `fansi` groups zero-width _Normal_ characters with the last preceding
 #' non-zero width _Normal_ character.  This is incorrect for some rare
 #' zero-width _Normal_ characters such as prepending marks (see "Output
-  #' Stability" and "Graphemes").
+#' Stability" and "Graphemes").
 #'
 #' @section Output Stability:
 #'
@@ -105,8 +116,8 @@
 #' result appear as if it is the input modified in place between the positions
 #' designated by `start` and `stop`.  `terminate` only affects the boundaries
 #' between the original substring and the spliced one, `normalize` only affects
-#' the same boundaries and `value`, `tabs.as.spaces` only affects `value`, and
-#' `x` must be ASCII only or marked "UTF-8".
+#' the same boundaries, and `tabs.as.spaces` only affects `value`, and `x` must
+#' be ASCII only or marked "UTF-8".
 #'
 #' `terminate = FALSE` only makes sense in replacement mode if only one of `x`
 #' or `value` contains _Control Sequences_.  `fansi` will not account for any
@@ -156,7 +167,8 @@
 #'   ambiguities when a `start` or `stop` value in "width" `type` mode falls
 #'   within a wide display character.  See details.
 #' @param tabs.as.spaces FALSE (default) or TRUE, whether to convert tabs to
-#'   spaces.  This can only be set to TRUE if `strip.spaces` is FALSE.
+#'   spaces (and supress tab related warnings).  This can only be set to TRUE if
+#'   `strip.spaces` is FALSE.
 #' @param tab.stops integer(1:n) indicating position of tab stops to use
 #'   when converting tabs to spaces.  If there are more tabs in a line than
 #'   defined tab stops the last tab stop is re-used.  For the purposes of
@@ -184,12 +196,10 @@
 #'   problematic _Control Sequences_ are encountered.  These could cause the
 #'   assumptions `fansi` makes about how strings are rendered on your display
 #'   to be incorrect, for example by moving the cursor (see [`?fansi`][fansi]).
-#'   If the problematic sequence is a tab, you can use the `tabs.as.spaces`
-#'   parameter on functions that have it, or the `tabs_as_spaces` function, to
-#'   turn the tabs to spaces and resolve the warning that way.  At most one
-#'   warning will be issued per element in each input vector.  Will also warn
-#'   about some badly encoded UTF-8 strings, but a lack of UTF-8 warnings is not
-#'   a guarantee of correct encoding (use `[validUTF8]` for that).
+#'   At most one warning will be issued per element in each input vector.  Will
+#'   also warn about some badly encoded UTF-8 strings, but a lack of UTF-8
+#'   warnings is not a guarantee of correct encoding (use [`validUTF8`] for
+#'   that).
 #' @param term.cap character a vector of the capabilities of the terminal, can
 #'   be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
 #'   starting with "38;5" or "48;5"), "truecolor" (SGR codes starting with

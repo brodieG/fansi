@@ -42,12 +42,10 @@ substr2_sgr(
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
-If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
-parameter on functions that have it, or the \code{tabs_as_spaces} function, to
-turn the tabs to spaces and resolve the warning that way.  At most one
-warning will be issued per element in each input vector.  Will also warn
-about some badly encoded UTF-8 strings, but a lack of UTF-8 warnings is not
-a guarantee of correct encoding (use \verb{[validUTF8]} for that).}
+At most one warning will be issued per element in each input vector.  Will
+also warn about some badly encoded UTF-8 strings, but a lack of UTF-8
+warnings is not a guarantee of correct encoding (use \code{\link{validUTF8}} for
+that).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
@@ -99,7 +97,8 @@ ambiguities when a \code{start} or \code{stop} value in "width" \code{type} mode
 within a wide display character.  See details.}
 
 \item{tabs.as.spaces}{FALSE (default) or TRUE, whether to convert tabs to
-spaces.  This can only be set to TRUE if \code{strip.spaces} is FALSE.}
+spaces (and supress tab related warnings).  This can only be set to TRUE if
+\code{strip.spaces} is FALSE.}
 
 \item{tab.stops}{integer(1:n) indicating position of tab stops to use
 when converting tabs to spaces.  If there are more tabs in a line than
