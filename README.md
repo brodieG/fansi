@@ -146,10 +146,9 @@ Rmarkdown
 
 It is possible to set `knitr` hooks such that R output that contains
 ANSI CSI SGR is automatically converted to the HTML formatted equivalent
-and displayed as intended. See the vignette for details.
-[vignette](https://htmlpreview.github.io/?https://raw.githubusercontent.com/brodieG/fansi/readme/doc/sgr-in-rmd.html)
-
-Most of the examples in this README are CSI SGR translated into HTML.
+and displayed as intended. See the
+[vignette](https://htmlpreview.github.io/?https://raw.githubusercontent.com/brodieG/fansi/readme/extra/sgr-in-rmd.html)
+for details.
 
 Installation
 ------------
