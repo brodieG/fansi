@@ -55,7 +55,7 @@ With `fansi` we can select directly based on display position:
 ![](https://raw.githubusercontent.com/brodieG/fansi/readme/extra/images/fansi-3.png)
 
 If you look closely you’ll notice that the text color for the `substr`
-version is wrong as the naive string extraction loses the
+version is wrong as the naïve string extraction loses the
 initial`"\033[37m"` that sets the foreground color. Additionally, the
 color from the last letter bleeds out into the next line.
 
