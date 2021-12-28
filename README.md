@@ -22,11 +22,13 @@ Formatting Strings with Control Sequences
 Many terminals will recognize special sequences of characters in strings
 and change display behavior as a result. For example, on my terminal the
 sequences `"\033[3?m"` and `"\033[4?m"`, where `"?"` is a digit in 1-7,
-change the foreground and background colors of text respectively:
+change the foreground and background colors of text respectively: <!--
+We tried to do everything using to_html, but github suppresses all html
+-->
 
     fansi <- "\033[30m\033[41mF\033[42mA\033[43mN\033[44mS\033[45mI\033[m"
 
-![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/fansi-1.png)
+![](https://raw.githubusercontent.com/brodieG/fansi/readme/extra/images/fansi-1.png)
 
 This type of sequence is called an ANSI CSI SGR control sequence. Most
 \*nix terminals support them, and newer versions of Windows and Rstudio
@@ -46,11 +48,11 @@ break the relationship between byte/character position in a string and
 display position. For example, to extract the “ANS” part of our colored
 “FANSI”, we would need to carefully compute the character positions:
 
-![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/fansi-2.png)
+![](https://raw.githubusercontent.com/brodieG/fansi/readme/extra/images/fansi-2.png)
 
 With `fansi` we can select directly based on display position:
 
-![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/fansi-3.png)
+![](https://raw.githubusercontent.com/brodieG/fansi/readme/extra/images/fansi-3.png)
 
 If you look closely you’ll notice that the text color for the `substr`
 version is wrong as the naive string extraction loses the
@@ -99,23 +101,16 @@ as `substr2_ctl` which allows for width based substrings:
     raw <- strrep("\uFF2D\uFF37", 50)
     wrapped <- strwrap2_ctl(paste0("\033[45m", raw), 41, wrap.always=TRUE)
 
-    writeLines(wrapped)
-    [45mＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷ[0m
-    [45mＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷ[0m
-    [45mＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷ[0m
-    [45mＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷ[0m
-    [45mＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷＭＷ[0m
+![](https://raw.githubusercontent.com/brodieG/fansi/readme/extra/images/wrapped-1.png)
+
     pizza.grin <- strrep(sprintf("\033[46m%s\033[m", "\U1F355\U1F600"), 3)
-    writeLines(pizza.grin)
-    [46m🍕😀[m[46m🍕😀[m[46m🍕😀[m
+
+![](https://raw.githubusercontent.com/brodieG/fansi/readme/extra/images/pizza-grin.png)
+
     pg.width <- nchar_ctl(pizza.grin, type='width')
     substr2_ctl(wrapped, type='width', 15, 15 + pg.width - 1) <- pizza.grin
-    writeLines(wrapped)
-    [45mＭＷＭＷＭＷＭ[0m[46m🍕😀[m[46m🍕😀[m[46m🍕😀[0m[45mＷＭＷＭＷＭＷ[0m
-    [45mＭＷＭＷＭＷＭ[0m[46m🍕😀[m[46m🍕😀[m[46m🍕😀[0m[45mＷＭＷＭＷＭＷ[0m
-    [45mＭＷＭＷＭＷＭ[0m[46m🍕😀[m[46m🍕😀[m[46m🍕😀[0m[45mＷＭＷＭＷＭＷ[0m
-    [45mＭＷＭＷＭＷＭ[0m[46m🍕😀[m[46m🍕😀[m[46m🍕😀[0m[45mＷＭＷＭＷＭＷ[0m
-    [45mＭＷＭＷＭＷＭ[0m[46m🍕😀[m[46m🍕😀[m[46m🍕😀[0m[45mＷＭＷＭＷＭＷ[0m
+
+![](https://raw.githubusercontent.com/brodieG/fansi/readme/extra/images/wrapped-2.png)
 
 `fansi` width calculations account for graphemes, including combining
 emoji:
@@ -144,7 +139,7 @@ You can translate ANSI CSI SGR formatted strings into their HTML
 counterparts with `to_html`:
 
 ![Translate to
-HTML](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/sgr_to_html.png)
+HTML](https://raw.githubusercontent.com/brodieG/fansi/readme/extra/images/sgr_to_html.png)
 
 Rmarkdown
 ---------
@@ -152,7 +147,7 @@ Rmarkdown
 It is possible to set `knitr` hooks such that R output that contains
 ANSI CSI SGR is automatically converted to the HTML formatted equivalent
 and displayed as intended. See the vignette for details.
-[vignette](https://htmlpreview.github.io/?https://raw.githubusercontent.com/brodieG/fansi/rc/doc/sgr-in-rmd.html)
+[vignette](https://htmlpreview.github.io/?https://raw.githubusercontent.com/brodieG/fansi/readme/doc/sgr-in-rmd.html)
 
 Most of the examples in this README are CSI SGR translated into HTML.
 
