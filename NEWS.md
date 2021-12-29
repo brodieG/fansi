@@ -47,8 +47,9 @@ This is a major release and includes some behavior changes.
 * All the "sgr" functions (e.g., `substr_sgr`, `strwrap_sgr`) are deprecated.
   They will likely live on indefinitely, but they are of limited usefulness and
   with the added support for OSC hyperlinks their name is misleading.
-* `sgr_to_html` is now `to_html`, although the old function remains as a wrapper
-  around the new one).
+* `sgr_to_html` is now `to_html` with slight modifications to semantics; the old
+  function remains and does not warn about unescaped "<" or ">" in the
+  input string.
 
 ### Behavior Changes
 

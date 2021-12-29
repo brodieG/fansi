@@ -94,9 +94,11 @@ SPAN HTML tags.
 This function is a wrapper around \code{\link{to_html}} and is kept around for legacy
 reasons.  When we added capabilities for handling OSC hyperlinks, the \code{sgr_}
 part of the name became an incomplete description of what the function
-does.
+does.  The only substantive difference with the new function is this one does
+not warn when the input contains unescaped "<" or ">".
 }
 \note{
-Unlike other functions, including \code{\link{to_html}}, the default is \code{carry = TRUE} for compatibility with semantics of prior versions of \code{fansi}.
+Unlike other functions, the default is \code{carry = TRUE} for compatibility
+with semantics of prior versions of \code{fansi}.
 }
 \keyword{internal}

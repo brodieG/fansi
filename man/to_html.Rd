@@ -132,7 +132,9 @@ Non-ASCII strings are converted to and returned in UTF-8 encoding.
 \code{to_html} always terminates as not doing so produces
 invalid HTML.  If you wish for the last active SPAN to bleed into
 subsequent text you may do so with e.g. \code{sub("</span>(?:</a>)?$", "", x)}
-or similar.
+or similar.  Additionally, unlike other functions, the default is
+\code{carry = TRUE} for compatibility with semantics of prior versions of
+\code{fansi}.
 }
 \examples{
 to_html("hello\033[31;42;1mworld\033[m")
