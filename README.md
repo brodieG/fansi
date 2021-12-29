@@ -88,32 +88,24 @@ Width Based Substrings
 ----------------------
 
 `fansi` also includes improved versions of some of those functions, such
-as `substr2_ctl` which allows for width based substrings:
+as `substr2_ctl` which allows for width based substrings. We can see
+this below where the 2-wide emoji are combined seamlessly with the
+1-wide “FANSI” background.
 
-    "\uFF2D" # Full Width M
-    ## [1] "Ｍ"
-    nchar("\uFF2D", type='width')
-    ## [1] 2
-    "\uFF37" # Full Width W
-    ## [1] "Ｗ"
-    nchar("\uFF37", type='width')
-    ## [1] 2
-    raw <- strrep("\uFF2D\uFF37", 50)
-    wrapped <- strwrap2_ctl(paste0("\033[45m", raw), 41, wrap.always=TRUE)
-
-![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/wrapped-1.png)
-
-    pizza.grin <- strrep(sprintf("\033[46m%s\033[m", "\U1F355\U1F600"), 3)
+    raw <- paste0("\033[45m", strrep("FANSI", 40))
+    wrapped <- strwrap2_ctl(raw, 41, wrap.always=TRUE)
+    pizza.grin <- sprintf("\033[46m%s\033[m", strrep("\U1F355\U1F600", 10))
 
 ![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/pizza-grin.png)
 
-    pg.width <- nchar_ctl(pizza.grin, type='width')
-    substr2_ctl(wrapped, type='width', 15, 15 + pg.width - 1) <- pizza.grin
+    starts <- c(18, 13, 8, 13, 18)
+    ends <-   c(23, 28, 33, 28, 23)
+    substr2_ctl(wrapped, type='width', starts, ends) <- pizza.grin
 
-![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/wrapped-2.png)
+![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/wrapped-1.png)
 
-`fansi` width calculations account for graphemes, including combining
-emoji:
+`fansi` width calculations use heuristics to account for graphemes,
+including combining emoji:
 
     emo <- c(
       "\U1F468",
