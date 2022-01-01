@@ -1,10 +1,13 @@
-<!-- README.md is generated from README.Rmd. Please edit that file
-library(rmarkdown)
-render('README.Rmd', output_format=md_document())
-render('README.Rmd', output_format=html_document())
+---
+title: fansi README
+---
+
+```{=html}
+<!-- README.md is generated from README-src.md. Please edit that file
+simplermarkdown::mdweave('README-src.md', 'README.md')
  -->
-fansi - ANSI Control Sequence Aware String Functions
-====================================================
+```
+# fansi - ANSI Control Sequence Aware String Functions
 
 [![R build
 status](https://github.com/brodieG/fansi/workflows/R-CMD-check/badge.svg)](https://github.com/brodieG/fansi/actions)
@@ -16,17 +19,18 @@ direct/recursive](https://tinyverse.netlify.app/badge/fansi)](https://tinyverse.
 Counterparts to R string manipulation functions that account for the
 effects of ANSI text formatting control sequences.
 
-Formatting Strings with Control Sequences
------------------------------------------
+## Formatting Strings with Control Sequences
 
 Many terminals will recognize special sequences of characters in strings
 and change display behavior as a result. For example, on my terminal the
 sequences `"\033[3?m"` and `"\033[4?m"`, where `"?"` is a digit in 1-7,
-change the foreground and background colors of text respectively: <!--
+change the foreground and background colors of text respectively: `<!--
 We tried to do everything using to_html, but github suppresses all html
--->
+-->`{=html}
 
-    fansi <- "\033[30m\033[41mF\033[42mA\033[43mN\033[44mS\033[45mI\033[m"
+``` R
+> fansi <- "\033[30m\033[41mF\033[42mA\033[43mN\033[44mS\033[45mI\033[m"
+```
 
 ![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/fansi-1.png)
 
@@ -40,13 +44,12 @@ factors, including how your particular display handles Control
 Sequences. See `?fansi` for details, particularly if you are getting
 unexpected results.
 
-Manipulation of Formatted Strings
----------------------------------
+## Manipulation of Formatted Strings
 
 ANSI control characters and sequences (*Control Sequences* hereafter)
 break the relationship between byte/character position in a string and
-display position. For example, to extract the “ANS” part of our colored
-“FANSI”, we would need to carefully compute the character positions:
+display position. For example, to extract the "ANS" part of our colored
+"FANSI", we would need to carefully compute the character positions:
 
 ![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/fansi-2.png)
 
@@ -54,13 +57,12 @@ With `fansi` we can select directly based on display position:
 
 ![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/fansi-3.png)
 
-If you look closely you’ll notice that the text color for the `substr`
+If you look closely you'll notice that the text color for the `substr`
 version is wrong as the naïve string extraction loses the
 initial`"\033[37m"` that sets the foreground color. Additionally, the
 color from the last letter bleeds out into the next line.
 
-`fansi` Functions
------------------
+## `fansi` Functions
 
 `fansi` provides counterparts to the following string functions:
 
@@ -82,59 +84,66 @@ functions, with the exception that `strwrap_ctl` is much faster.
 Operations involving `type = "width"` will be slower still. We have
 prioritized convenience and safety over raw speed in the C code, but
 unless your code is primarily engaged in string manipulation `fansi`
-should be fast enough to keep attention away from itself.
+should be fast enough to avoid attention in benchmarking traces.
 
-Width Based Substrings
-----------------------
+## Width Based Substrings
 
 `fansi` also includes improved versions of some of those functions, such
 as `substr2_ctl` which allows for width based substrings. We can see
 this below where the 2-wide emoji are combined seamlessly with the
-1-wide “FANSI” background.
+1-wide "FANSI" background.
 
-    raw <- paste0("\033[45m", strrep("FANSI", 40))
-    wrapped <- strwrap2_ctl(raw, 41, wrap.always=TRUE)
-    pizza.grin <- sprintf("\033[46m%s\033[m", strrep("\U1F355\U1F600", 10))
+``` R
+```
 
 ![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/pizza-grin.png)
 
-    starts <- c(18, 13, 8, 13, 18)
-    ends <-   c(23, 28, 33, 28, 23)
-    substr2_ctl(wrapped, type='width', starts, ends) <- pizza.grin
+``` R
+```
 
 ![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/wrapped-1.png)
 
 `fansi` width calculations use heuristics to account for graphemes,
 including combining emoji:
 
-    emo <- c(
-      "\U1F468",
-      "\U1F468\U1F3FD",
-      "\U1F468\U1F3FD\u200D\U1F9B3",
-      "\U1F468\u200D\U1F469\u200D\U1F467\u200D\U1F466"
-    )
-    writeLines(
-      paste(
-        emo,
-        paste("base:", nchar(emo, type='width')),
-        paste("fansi:", nchar_ctl(emo, type='width'))
-    ) )
-    ## 👨 base: 2 fansi: 2
-    ## 👨🏽 base: 4 fansi: 2
-    ## 👨🏽‍🦳 base: 6 fansi: 2
-    ## 👨‍👩‍👧‍👦 base: 8 fansi: 2
+``` R
+> library(fansi)
+> emo <- c("👨", "👨🏽", "👨🏽‍🦳", "👨‍👩‍👧‍👦")
+> writeLines(paste(emo, paste("base:", nchar(emo, type = "width")), 
++     paste("fansi:", nchar_ctl(emo, type = "width"))))
+👨 base: 2 fansi: 2
+👨🏽 base: 4 fansi: 2
+👨🏽‍🦳 base: 6 fansi: 2
+👨‍👩‍👧‍👦 base: 8 fansi: 2
+```
 
-HTML Translation
-----------------
+## HTML Translation
 
 You can translate ANSI CSI SGR formatted strings into their HTML
 counterparts with `to_html`:
 
-![Translate to
-HTML](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/sgr_to_html.png)
+```{=html}
+<!--
+library(fansi)
+N <- readLines(file.path(R.home('doc'), 'NEWS'))
+N <- fansi_lines(N, step=2)                             # color each line
+N <- strwrap2_ctl(N, 25, pad.end=" ", wrap.always=TRUE) # wrap to 25 chrs
+N <- c("", paste(N[1:15], N[100:115], N[200:215]), "")  # make 3 cols
+writeLines(N)
+f <- paste0(tempfile(), ".html")
+writeLines(
+  c("<html><pre>",
+    to_html(html_esc(N)),
+    "</pre></html>"
+  ),
+  f
+)
+browseURL(f)
+-->
+```
+![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/sgr_to_html.png)
 
-Rmarkdown
----------
+## Rmarkdown
 
 It is possible to set `knitr` hooks such that R output that contains
 ANSI CSI SGR is automatically converted to the HTML formatted equivalent
@@ -142,8 +151,7 @@ and displayed as intended. See the
 [vignette](https://htmlpreview.github.io/?https://raw.githubusercontent.com/brodieG/fansi/rc/extra/sgr-in-rmd.html)
 for details.
 
-Installation
-------------
+## Installation
 
 This package is available on CRAN:
 
@@ -165,8 +173,7 @@ For the development version use
 There is no guarantee that development versions are stable or even
 working. The master branch typically mirrors CRAN and should be stable.
 
-Related Packages and References
--------------------------------
+## Related Packages and References
 
 -   [crayon](https://github.com/r-lib/crayon), the library that started
     it all.
@@ -181,8 +188,7 @@ Related Packages and References
     Wikipedia](https://en.wikipedia.org/wiki/ANSI_escape_code) for a
     gentler introduction.
 
-Acknowledgments
----------------
+## Acknowledgments
 
 -   R Core for developing and maintaining such a wonderful language.
 -   CRAN maintainers, for patiently shepherding packages onto CRAN and
