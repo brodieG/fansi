@@ -7,6 +7,9 @@ title: fansi README
 simplermarkdown::mdweave('README-src.md', 'README.md')
  -->
 ```
+``` {#start .R}
+```
+
 # fansi - ANSI Control Sequence Aware String Functions
 
 [![R build
@@ -28,8 +31,9 @@ change the foreground and background colors of text respectively: `<!--
 We tried to do everything using to_html, but github suppresses all html
 -->`{=html}
 
-``` R
-> fansi <- "\033[30m\033[41mF\033[42mA\033[43mN\033[44mS\033[45mI\033[m"
+``` {#fansi .R}
+fansi <- "\033[30m\033[41mF\033[42mA\033[43mN\033[44mS\033[45mI\033[m"
+## 
 ```
 
 ![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/fansi-1.png)
@@ -93,12 +97,18 @@ as `substr2_ctl` which allows for width based substrings. We can see
 this below where the 2-wide emoji are combined seamlessly with the
 1-wide "FANSI" background.
 
-``` R
+``` {#pizza .R}
+raw <- paste0("\033[45m", strrep("FANSI", 40))
+wrapped <- strwrap2_ctl(raw, 41, wrap.always=TRUE)
+pizza.grin <- sprintf("\033[46m%s\033[m", strrep("\U1F355\U1F600", 10))
 ```
 
 ![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/pizza-grin.png)
 
-``` R
+``` {#subs .R}
+starts <- c(18, 13, 8, 13, 18)
+ends <-   c(23, 28, 33, 28, 23)
+substr2_ctl(wrapped, type='width', starts, ends) <- pizza.grin
 ```
 
 ![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/wrapped-1.png)
@@ -106,15 +116,24 @@ this below where the 2-wide emoji are combined seamlessly with the
 `fansi` width calculations use heuristics to account for graphemes,
 including combining emoji:
 
-``` R
-> library(fansi)
-> emo <- c("👨", "👨🏽", "👨🏽‍🦳", "👨‍👩‍👧‍👦")
-> writeLines(paste(emo, paste("base:", nchar(emo, type = "width")), 
-+     paste("fansi:", nchar_ctl(emo, type = "width"))))
-👨 base: 2 fansi: 2
-👨🏽 base: 4 fansi: 2
-👨🏽‍🦳 base: 6 fansi: 2
-👨‍👩‍👧‍👦 base: 8 fansi: 2
+``` {#graphemes .R}
+library(fansi)
+emo <- c(
+  "\U1F468",
+  "\U1F468\U1F3FD",
+  "\U1F468\U1F3FD\u200D\U1F9B3",
+  "\U1F468\u200D\U1F469\u200D\U1F467\u200D\U1F466"
+)
+writeLines(
+  paste(
+    emo,
+    paste("base:", nchar(emo, type='width')),
+    paste("fansi:", nchar_ctl(emo, type='width'))
+) )
+## 👨 base: 2 fansi: 2
+## 👨🏽 base: 4 fansi: 2
+## 👨🏽‍🦳 base: 6 fansi: 2
+## 👨‍👩‍👧‍👦 base: 8 fansi: 2
 ```
 
 ## HTML Translation
@@ -122,8 +141,7 @@ including combining emoji:
 You can translate ANSI CSI SGR formatted strings into their HTML
 counterparts with `to_html`:
 
-```{=html}
-<!--
+``` {#html .R}
 library(fansi)
 N <- readLines(file.path(R.home('doc'), 'NEWS'))
 N <- fansi_lines(N, step=2)                             # color each line
@@ -139,8 +157,8 @@ writeLines(
   f
 )
 browseURL(f)
--->
 ```
+
 ![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/sgr_to_html.png)
 
 ## Rmarkdown
@@ -155,20 +173,24 @@ for details.
 
 This package is available on CRAN:
 
-    install.packages('fansi')
+``` {#install .R}
+install.packages('fansi')
+```
 
 It has no runtime dependencies.
 
 For the development version use
 `remotes::install_github('brodieg/fansi@development')` or:
 
-    f.dl <- tempfile()
-    f.uz <- tempfile()
-    github.url <- 'https://github.com/brodieG/fansi/archive/development.zip'
-    download.file(github.url, f.dl)
-    unzip(f.dl, exdir=f.uz)
-    install.packages(file.path(f.uz, 'fansi-development'), repos=NULL, type='source')
-    unlink(c(f.dl, f.uz))
+``` {#install2 .R}
+f.dl <- tempfile()
+f.uz <- tempfile()
+github.url <- 'https://github.com/brodieG/fansi/archive/development.zip'
+download.file(github.url, f.dl)
+unzip(f.dl, exdir=f.uz)
+install.packages(file.path(f.uz, 'fansi-development'), repos=NULL, type='source')
+unlink(c(f.dl, f.uz))
+```
 
 There is no guarantee that development versions are stable or even
 working. The master branch typically mirrors CRAN and should be stable.
