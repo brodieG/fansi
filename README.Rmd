@@ -85,7 +85,8 @@ functions to be slightly slower than the corresponding base functions, with the
 exception that `strwrap_ctl` is much faster.  Operations involving `type =
 "width"` will be slower still.  We have prioritized convenience and safety over
 raw speed in the C code, but unless your code is primarily engaged in string
-manipulation `fansi` should be fast enough to keep attention away from itself.
+manipulation `fansi` should be fast enough to avoid attention in benchmarking
+traces.
 
 ## Width Based Substrings
 
