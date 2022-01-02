@@ -3,8 +3,8 @@ library(rmarkdown)
 render('README.Rmd', output_format=md_document())
 render('README.Rmd', output_format=html_document())
  -->
-fansi - ANSI Control Sequence Aware String Functions
-====================================================
+
+# fansi - ANSI Control Sequence Aware String Functions
 
 [![R build
 status](https://github.com/brodieG/fansi/workflows/R-CMD-check/badge.svg)](https://github.com/brodieG/fansi/actions)
@@ -16,8 +16,7 @@ direct/recursive](https://tinyverse.netlify.app/badge/fansi)](https://tinyverse.
 Counterparts to R string manipulation functions that account for the
 effects of ANSI text formatting control sequences.
 
-Formatting Strings with Control Sequences
------------------------------------------
+## Formatting Strings with Control Sequences
 
 Many terminals will recognize special sequences of characters in strings
 and change display behavior as a result. For example, on my terminal the
@@ -40,8 +39,7 @@ factors, including how your particular display handles Control
 Sequences. See `?fansi` for details, particularly if you are getting
 unexpected results.
 
-Manipulation of Formatted Strings
----------------------------------
+## Manipulation of Formatted Strings
 
 ANSI control characters and sequences (*Control Sequences* hereafter)
 break the relationship between byte/character position in a string and
@@ -59,8 +57,7 @@ version is wrong as the naïve string extraction loses the
 initial`"\033[37m"` that sets the foreground color. Additionally, the
 color from the last letter bleeds out into the next line.
 
-`fansi` Functions
------------------
+## `fansi` Functions
 
 `fansi` provides counterparts to the following string functions:
 
@@ -82,10 +79,9 @@ functions, with the exception that `strwrap_ctl` is much faster.
 Operations involving `type = "width"` will be slower still. We have
 prioritized convenience and safety over raw speed in the C code, but
 unless your code is primarily engaged in string manipulation `fansi`
-should be fast enough to keep attention away from itself.
+should be fast enough to avoid attention in benchmarking traces.
 
-Width Based Substrings
-----------------------
+## Width Based Substrings
 
 `fansi` also includes improved versions of some of those functions, such
 as `substr2_ctl` which allows for width based substrings. We can see
@@ -124,8 +120,7 @@ including combining emoji:
     ## 👨🏽‍🦳 base: 6 fansi: 2
     ## 👨‍👩‍👧‍👦 base: 8 fansi: 2
 
-HTML Translation
-----------------
+## HTML Translation
 
 You can translate ANSI CSI SGR formatted strings into their HTML
 counterparts with `to_html`:
@@ -133,8 +128,7 @@ counterparts with `to_html`:
 ![Translate to
 HTML](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/sgr_to_html.png)
 
-Rmarkdown
----------
+## Rmarkdown
 
 It is possible to set `knitr` hooks such that R output that contains
 ANSI CSI SGR is automatically converted to the HTML formatted equivalent
@@ -142,8 +136,7 @@ and displayed as intended. See the
 [vignette](https://htmlpreview.github.io/?https://raw.githubusercontent.com/brodieG/fansi/rc/extra/sgr-in-rmd.html)
 for details.
 
-Installation
-------------
+## Installation
 
 This package is available on CRAN:
 
@@ -165,8 +158,7 @@ For the development version use
 There is no guarantee that development versions are stable or even
 working. The master branch typically mirrors CRAN and should be stable.
 
-Related Packages and References
--------------------------------
+## Related Packages and References
 
 -   [crayon](https://github.com/r-lib/crayon), the library that started
     it all.
@@ -181,8 +173,7 @@ Related Packages and References
     Wikipedia](https://en.wikipedia.org/wiki/ANSI_escape_code) for a
     gentler introduction.
 
-Acknowledgments
----------------
+## Acknowledgments
 
 -   R Core for developing and maintaining such a wonderful language.
 -   CRAN maintainers, for patiently shepherding packages onto CRAN and
