@@ -84,21 +84,25 @@ should be fast enough to avoid attention in benchmarking traces.
 ## Width Based Substrings
 
 `fansi` also includes improved versions of some of those functions, such
-as `substr2_ctl` which allows for width based substrings. We can see
-this below where the 2-wide emoji are combined seamlessly with the
-1-wide “FANSI” background.
+as `substr2_ctl` which allows for width based substrings. To illustrate,
+let’s create an emoji string made up of two wide characters:
 
     pizza.grin <- sprintf("\033[46m%s\033[m", strrep("\U1F355\U1F600", 10))
 
 ![](https://github.com/brodieG/fansi/raw/v1.0-rc/extra/images/pizza-grin.png)
 
-    # Make a magenta background
+And a colorful background made up of one wide characters:
+
     raw <- paste0("\033[45m", strrep("FANSI", 40))
     wrapped <- strwrap2_ctl(raw, 41, wrap.always=TRUE)
+
+![](https://github.com/brodieG/fansi/raw/df4019e/extra/images/wrapped-2.png)
+
+When we inject the 2-wide emoji into the 1-wide background their widths
+are accounted for as shown by the result remaining rectangular:
+
     starts <- c(18, 13, 8, 13, 18)
     ends <-   c(23, 28, 33, 28, 23)
-
-    # Inject pizza grin
     substr2_ctl(wrapped, type='width', starts, ends) <- pizza.grin
 
 ![](https://github.com/brodieG/fansi/raw/v1.0-rc/extra/images/wrapped-1.png)

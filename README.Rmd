@@ -105,7 +105,7 @@ And a colorful background made up of one wide characters:
 raw <- paste0("\033[45m", strrep("FANSI", 40))
 wrapped <- strwrap2_ctl(raw, 41, wrap.always=TRUE)
 ```
-![](https://github.com/brodieG/fansi/raw//extra/images/wrapped-2.png)
+![](https://github.com/brodieG/fansi/raw/df4019e/extra/images/wrapped-2.png)
 
 When we inject the 2-wide emoji into the 1-wide background their widths are
 accounted for as shown by the result remaining rectangular:
