@@ -27,7 +27,7 @@ We tried to do everything using to_html, but github suppresses all html
 
     fansi <- "\033[30m\033[41mF\033[42mA\033[43mN\033[44mS\033[45mI\033[m"
 
-![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/fansi-1.png)
+![](https://github.com/brodieG/fansi/raw/v1.0-rc/extra/images/fansi-1.png)
 
 This type of sequence is called an ANSI CSI SGR control sequence. Most
 \*nix terminals support them, and newer versions of Windows and Rstudio
@@ -46,11 +46,11 @@ break the relationship between byte/character position in a string and
 display position. For example, to extract the “ANS” part of our colored
 “FANSI”, we would need to carefully compute the character positions:
 
-![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/fansi-2.png)
+![](https://github.com/brodieG/fansi/raw/v1.0-rc/extra/images/fansi-2.png)
 
 With `fansi` we can select directly based on display position:
 
-![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/fansi-3.png)
+![](https://github.com/brodieG/fansi/raw/v1.0-rc/extra/images/fansi-3.png)
 
 If you look closely you’ll notice that the text color for the `substr`
 version is wrong as the naïve string extraction loses the
@@ -92,13 +92,13 @@ this below where the 2-wide emoji are combined seamlessly with the
     wrapped <- strwrap2_ctl(raw, 41, wrap.always=TRUE)
     pizza.grin <- sprintf("\033[46m%s\033[m", strrep("\U1F355\U1F600", 10))
 
-![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/pizza-grin.png)
+![](https://github.com/brodieG/fansi/raw/v1.0-rc/extra/images/pizza-grin.png)
 
     starts <- c(18, 13, 8, 13, 18)
     ends <-   c(23, 28, 33, 28, 23)
     substr2_ctl(wrapped, type='width', starts, ends) <- pizza.grin
 
-![](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/wrapped-1.png)
+![](https://github.com/brodieG/fansi/raw/v1.0-rc/extra/images/wrapped-1.png)
 
 `fansi` width calculations use heuristics to account for graphemes,
 including combining emoji:
@@ -126,7 +126,7 @@ You can translate ANSI CSI SGR formatted strings into their HTML
 counterparts with `to_html`:
 
 ![Translate to
-HTML](https://raw.githubusercontent.com/brodieG/fansi/rc/extra/images/sgr_to_html.png)
+HTML](https://github.com/brodieG/fansi/raw/v1.0-rc/extra/images/sgr_to_html.png)
 
 ## Rmarkdown
 
