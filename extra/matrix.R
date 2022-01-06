@@ -85,7 +85,6 @@ dim.start <- 25
 make_frames <- function(
   idx, text, frames, start, end, ramp, fade, active=list()
 ) {
-  active <- list()
   stopifnot(ramp >= 0, fade >= 0)
   res <- character(frames)
   for(f in seq_len(frames)) {
