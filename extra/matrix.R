@@ -1,10 +1,9 @@
 ## Matrix Style Logo
 
 # Think columns of text
-# 1. Every
-# 2. Each cycle, randomly pick a column and a length to start highlighting
-# 3. Advance each active point
-# 4. Compute brightness based on that data
+# 1. Each cycle, randomly pick a column and a length to start highlighting
+# 2. Advance each active point
+# 3. Compute brightness based on that data
 
 # E3 81 81 - E3 82 9F
 # E3 82 A0 - E3 83 BF
@@ -71,8 +70,6 @@ raw_to_mx <- function(raw) {
   )
 }
 
-active <- list()
-
 # structure will be a list of vectors, first el is col, and rest is trailing
 # rows (need to track brightness too?
 
@@ -88,7 +85,10 @@ dim.start <- 25
 # @param ramp how many frames to dedicate to the text brightness ramp
 # @param fade how many frames to fade to black with
 
-make_frames <- function(dat, frames, start, end, ramp, fade) {
+make_frames <- function(
+  dat, frames, start, end, ramp, fade, active=list()
+) {
+  active <- list()
   stopifnot(ramp >= 1, fade >= 1)
   res <- character(frames)
   text <- dat[['text']]
@@ -161,17 +161,17 @@ make_frames <- function(dat, frames, start, end, ramp, fade) {
     text[sample(ncol * nrow, ncol * nrow / 10)] <-
       sample(char.pool, ncol * nrow / 10, replace=TRUE)
   }
-  res
+  list(frames=res, active=active)
 }
 take <- function(text) {
   for(i in text) {
     writeLines(i)
-    Sys.sleep(.025)
+    Sys.sleep(.05)
   }
   writeLines(character(nrow))
 }
 stop('ready to go')
 # fansi <- make_frames(raw_to_mx(fansi.raw), 150, 40, 125, 50, 25)
 fansi <- make_frames(raw_to_mx(fansi.raw), 100, 20, 80, 20, 1)
-oneoh <- make_frames(raw_to_mx(one.oh.raw), 50, 5, 45, 1, 1)
+oneoh <- make_frames(raw_to_mx(one.oh.raw), 50, 5, 45, 1, 1, active=fansi$active)
 take(c(fansi, oneoh))
