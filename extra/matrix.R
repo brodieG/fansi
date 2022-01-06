@@ -53,7 +53,7 @@ one.oh.raw <- '
 8888888888......88......8888888888
 8888888888......88........888888..'
 
-raw_to_mx <- function(raw) {
+raw_to_mx <- function(raw, nrow, ncol) {
   line <- unlist(strsplit(raw, '\n'))
   chr <- do.call(rbind, strsplit(line, ''))
   idx <- which(chr == "8", arr.ind=TRUE)
@@ -64,10 +64,7 @@ raw_to_mx <- function(raw) {
   idx[,2] <- (ncol - diff(range(idx[,2])) + 2) / 2 + (idx[, 2] - min(idx[ ,2]))
   idx[,2:1] <- idx
 
-  list(
-    text=matrix(sample(char.pool, ncol * nrow, replace=TRUE), ncol),
-    idx=idx
-  )
+  idx
 }
 
 # structure will be a list of vectors, first el is col, and rest is trailing
@@ -86,15 +83,13 @@ dim.start <- 25
 # @param fade how many frames to fade to black with
 
 make_frames <- function(
-  dat, frames, start, end, ramp, fade, active=list()
+  idx, text, frames, start, end, ramp, fade, active=list()
 ) {
   active <- list()
-  stopifnot(ramp >= 1, fade >= 1)
+  stopifnot(ramp >= 0, fade >= 0)
   res <- character(frames)
-  text <- dat[['text']]
-  idx <- dat[['idx']]
   for(f in seq_len(frames)) {
-    dim <- min(c(1, (frames - f) / fade))
+    dim <- if(fade) min(c(1, (frames - f) / fade)) else 1
     active <- Filter(
       function(x) {
         pos <- x[['dat']][,'pos']
@@ -138,9 +133,12 @@ make_frames <- function(
     )
     display[!is.bright] <- "  "
     if(f >= start) {
-      f.bright.base <- min(
-        c(f - start) / ramp, c(end - f) / ramp, 1
-      )
+      if(ramp >= 1) {
+        f.bright.base <- min(
+          c(f - start) / ramp, c(end - f) / ramp, 1
+        )
+      } else f.bright.base <- 1
+
       f.bright <- f.bright.base * (1 - runif(nrow(idx)) * .2)
       display[idx] <- sprintf(
         "\033[48;2;0;%d;0m%s\033[m",
@@ -161,7 +159,7 @@ make_frames <- function(
     text[sample(ncol * nrow, ncol * nrow / 10)] <-
       sample(char.pool, ncol * nrow / 10, replace=TRUE)
   }
-  list(frames=res, active=active)
+  list(frames=res, active=active, text=text)
 }
 take <- function(text) {
   for(i in text) {
@@ -172,6 +170,12 @@ take <- function(text) {
 }
 stop('ready to go')
 # fansi <- make_frames(raw_to_mx(fansi.raw), 150, 40, 125, 50, 25)
-fansi <- make_frames(raw_to_mx(fansi.raw), 100, 20, 80, 20, 1)
-oneoh <- make_frames(raw_to_mx(one.oh.raw), 50, 5, 45, 1, 1, active=fansi$active)
-take(c(fansi, oneoh))
+
+fansi.idx <- raw_to_mx(fansi.raw, nrow, ncol)
+text <- matrix(sample(char.pool, ncol * nrow, replace=TRUE), ncol)
+fansi <- make_frames(fansi.idx, text, 100, 20, 80, 20, 0)
+
+one.oh.idx <- raw_to_mx(one.oh.raw, nrow, ncol)
+oneoh <- make_frames(one.oh.idx, fansi$text, 50, 5, 45, 1, 1, active=fansi$active)
+
+take(c(fansi$frames, oneoh$frames))
