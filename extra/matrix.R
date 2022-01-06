@@ -29,36 +29,40 @@ ncol <- 23 * 2 - 1
 nrow <- 10 * 2
 
 fansi.raw <- '
-8888888888....88888.....88......88....88888888..8888888888
-8888888888..8888888888..88 .....88..8888888888..8888888888
-88..........88......88..8888....88..88..............88....
-88..........88......88..8888....88..88..............88....
-888888......8888888888..888888..88..88888888 .......88....
-888888......8888888888..88..888888...888888888......88....
-88..........88......88..88....8888..........88......88....
-88..........88......88..88....8888..........88......88....
-88..........88......88..88......88..8888888888..8888888888
-88..........88......88..88......88..88888888....8888888888'
+88888..888..8...8..8888.88888
+88888.88888.8 ..8.88888.88888
+8.....8...8.88..8.8.......8..
+8.....8...8.88..8.8.......8..
+888...88888.888.8.8888 ...8..
+888...88888.8.888..8888...8..
+8.....8...8.8..88.....8...8..
+8.....8...8.8..88.....8...8..
+8.....8...8.8...8.88888.88888
+8.....8...8.8...8.8888..88888'
 one.oh.raw <- '
-..............8888....................888888..............
-............888888..................8888888888............
-................88..................88.... 888............
-................88..................88....8888............
-................88..................88..88..88............
-................88..................88..88..88............
-................88..................8888....88............
-................88..................888 ....88............
-............8888888888......88......8888888888............
-............8888888888......88........888888..............'
+..8888....................888888..
+888888..................8888888888
+....88..................88.....888
+....88..................88....8888
+....88..................88....8.88
+....88..................88..88..88
+....88..................88..88..88
+....88..................88..88..88
+....88..................88.8....88
+....88..................8888....88
+....88..................888.....88
+8888888888......88......8888888888
+8888888888......88........888888..'
 
 raw_to_mx <- function(raw) {
   line <- unlist(strsplit(raw, '\n'))
   chr <- do.call(rbind, strsplit(line, ''))
-  idx <- which(chr[, seq(1, ncol(chr), by=2)] == "8", arr.ind=TRUE)
   idx <- which(chr == "8", arr.ind=TRUE)
 
-  idx[,1] <- (nrow - max(idx[,1])) / 2 + idx[,1]
-  idx[,2] <- (ncol - max(idx[,2])) / 2 + idx[,2]
+  ## Center Column and row wise
+
+  idx[,1] <- (nrow - diff(range(idx[,1])) + 1) / 2 + (idx[, 1] - min(idx[ ,1]))
+  idx[,2] <- (ncol - diff(range(idx[,2])) + 2) / 2 + (idx[, 2] - min(idx[ ,2]))
   idx[,2:1] <- idx
 
   list(
@@ -78,12 +82,19 @@ fansi.end <- 125
 fansi.ramp <- 50
 dim.start <- 25
 
-res <- character(frames)
-make_frames <- function(dat) {
+# @param frames total frames
+# @param start frame to start displaying text
+# @param end frame to end displaying text
+# @param ramp how many frames to dedicate to the text brightness ramp
+# @param fade how many frames to fade to black with
+
+make_frames <- function(dat, frames, start, end, ramp, fade) {
+  stopifnot(ramp >= 1, fade >= 1)
+  res <- character(frames)
   text <- dat[['text']]
   idx <- dat[['idx']]
   for(f in seq_len(frames)) {
-    dim <- min(c(1, (frames - f) / dim.start))
+    dim <- min(c(1, (frames - f) / fade))
     active <- Filter(
       function(x) {
         pos <- x[['dat']][,'pos']
@@ -126,9 +137,9 @@ make_frames <- function(dat) {
       display[is.bright]
     )
     display[!is.bright] <- "  "
-    if(f >= fansi.start) {
+    if(f >= start) {
       f.bright.base <- min(
-        c(f - fansi.start) / fansi.ramp, c(fansi.end - f) / fansi.ramp, 1
+        c(f - start) / ramp, c(end - f) / ramp, 1
       )
       f.bright <- f.bright.base * (1 - runif(nrow(idx)) * .2)
       display[idx] <- sprintf(
@@ -152,14 +163,15 @@ make_frames <- function(dat) {
   }
   res
 }
-stop('ready to go')
-take <- function(...) {
-  for(i in res) {
+take <- function(text) {
+  for(i in text) {
     writeLines(i)
-    Sys.sleep(.05)
+    Sys.sleep(.025)
   }
   writeLines(character(nrow))
 }
-res <- make_frames(raw_to_mx(one.oh.raw))
-take()
-
+stop('ready to go')
+# fansi <- make_frames(raw_to_mx(fansi.raw), 150, 40, 125, 50, 25)
+fansi <- make_frames(raw_to_mx(fansi.raw), 100, 20, 80, 20, 1)
+oneoh <- make_frames(raw_to_mx(one.oh.raw), 50, 5, 45, 1, 1)
+take(c(fansi, oneoh))
