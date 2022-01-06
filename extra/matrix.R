@@ -25,8 +25,8 @@ char.pool <- vapply(
 char.pool <- c(char.pool[c(1:63,256:278,285:319,512:575)])
 
 # screen rows/cols so flipped
-ncol <- 46 * 2 - 1
-nrow <- 20 * 2
+ncol <- 23 * 2 - 1
+nrow <- 10 * 2
 
 fansi.raw <- '
 8888888888....88888.....88......88....88888888..8888888888
@@ -39,18 +39,33 @@ fansi.raw <- '
 88..........88......88..88....8888..........88......88....
 88..........88......88..88......88..8888888888..8888888888
 88..........88......88..88......88..88888888....8888888888'
-fansi.line <- unlist(strsplit(fansi.raw, '\n'))
-fansi.chr <- do.call(rbind, strsplit(fansi.line, ''))
-fansi.idx <-
-  which(fansi.chr[, seq(1, ncol(fansi.chr), by=2)] == "8", arr.ind=TRUE)
-fansi.idx <-
-  which(fansi.chr == "8", arr.ind=TRUE)
+one.oh.raw <- '
+..............8888....................888888..............
+............888888..................8888888888............
+................88..................88.... 888............
+................88..................88....8888............
+................88..................88..88..88............
+................88..................88..88..88............
+................88..................8888....88............
+................88..................888 ....88............
+............8888888888......88......8888888888............
+............8888888888......88........888888..............'
 
-fansi.idx[,1] <- (nrow - max(fansi.idx[,1])) / 2 + fansi.idx[,1]
-fansi.idx[,2] <- (ncol - max(fansi.idx[,2])) / 2 + fansi.idx[,2]
-fansi.idx[,2:1] <- fansi.idx
+raw_to_mx <- function(raw) {
+  line <- unlist(strsplit(raw, '\n'))
+  chr <- do.call(rbind, strsplit(line, ''))
+  idx <- which(chr[, seq(1, ncol(chr), by=2)] == "8", arr.ind=TRUE)
+  idx <- which(chr == "8", arr.ind=TRUE)
 
-text <- matrix(sample(char.pool, ncol * nrow, rep=TRUE), ncol)
+  idx[,1] <- (nrow - max(idx[,1])) / 2 + idx[,1]
+  idx[,2] <- (ncol - max(idx[,2])) / 2 + idx[,2]
+  idx[,2:1] <- idx
+
+  list(
+    text=matrix(sample(char.pool, ncol * nrow, replace=TRUE), ncol),
+    idx=idx
+  )
+}
 
 active <- list()
 
@@ -64,7 +79,9 @@ fansi.ramp <- 50
 dim.start <- 25
 
 res <- character(frames)
-make_frames <- function() {
+make_frames <- function(dat) {
+  text <- dat[['text']]
+  idx <- dat[['idx']]
   for(f in seq_len(frames)) {
     dim <- min(c(1, (frames - f) / dim.start))
     active <- Filter(
@@ -77,7 +94,7 @@ make_frames <- function() {
     active <- c(
       active,
       lapply(
-        sample(ncol, sample(as.integer(ncol/8))),
+        sample(seq_len(ncol), sample(seq_len(as.integer(ncol/8)), 1)),
         function(x) {
           len <- sample(seq(5, max(nrow, 5), 1), 1)
           list(
@@ -113,10 +130,10 @@ make_frames <- function() {
       f.bright.base <- min(
         c(f - fansi.start) / fansi.ramp, c(fansi.end - f) / fansi.ramp, 1
       )
-      f.bright <- f.bright.base * (1 - runif(nrow(fansi.idx)) * .2)
-      display[fansi.idx] <- sprintf(
+      f.bright <- f.bright.base * (1 - runif(nrow(idx)) * .2)
+      display[idx] <- sprintf(
         "\033[48;2;0;%d;0m%s\033[m",
-        round(f.bright * 180 * dim), display[fansi.idx]
+        round(f.bright * 180 * dim), display[idx]
       )
     }
     res[f] <- paste0(
@@ -131,11 +148,11 @@ make_frames <- function() {
       }
     )
     text[sample(ncol * nrow, ncol * nrow / 10)] <-
-      sample(char.pool, ncol * nrow / 10, rep=TRUE)
+      sample(char.pool, ncol * nrow / 10, replace=TRUE)
   }
   res
 }
-res <- make_frames()
+stop('ready to go')
 take <- function(...) {
   for(i in res) {
     writeLines(i)
@@ -143,3 +160,6 @@ take <- function(...) {
   }
   writeLines(character(nrow))
 }
+res <- make_frames(raw_to_mx(one.oh.raw))
+take()
+
