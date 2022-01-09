@@ -218,7 +218,7 @@ text <- matrix(sample(char.pool, ncol * nrow, replace=TRUE), ncol)
 fansi.idx <- raw_to_mx(fansi.raw, nrow, ncol)
 fansi.logo <- logo_dat(
   start=25, end=65, fade.in=c(15, 255 * .7), fade.out=c(20, 0),
-  noise=c(start + 10, 20)
+  noise=c(35, 20)
 )
 fansi <- make_frames(fansi.idx, text, frames=75, fade=0, logo=fansi.logo)
 
@@ -234,3 +234,5 @@ oneoh <- make_frames(
 # take(c(oneoh$frames))
 # take(c(fansi$frames))
 take(c(fansi$frames, oneoh$frames))
+
+take_red_pill <- function() take(c(fansi$frames, oneoh$frames))
