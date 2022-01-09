@@ -228,9 +228,8 @@ working. The master branch typically mirrors CRAN and should be stable.
     available for others to use.
 -   [Github](https://github.com/), [Codecov](https://about.codecov.io/),
     [Vagrant](https://www.vagrantup.com/),
-    [Docker](https://www.docker.com/),
-    [Ubuntu](https://www.ubuntu.com/), [Brew](https://brew.sh/) for
-    providing infrastructure that greatly simplifies open source
-    development.
+    [Docker](https://www.docker.com/), [Ubuntu](https://ubuntu.com/),
+    [Brew](https://brew.sh/) for providing infrastructure that greatly
+    simplifies open source development.
 -   [Free Software Foundation](https://www.fsf.org/) for developing the
     GPL license and promotion of the free software movement.

@@ -18,7 +18,7 @@ This is a major release and includes some behavior changes.
       becomes "ESC[31mESC[44m") for better compatibility with
       [`crayon`](https://github.com/r-lib/crayon).  Additionally, most functions
       gain a `normalize` parameter so that they may return their output in
-      normalized form.
+      normalized form (h/t @krlmlr).
 * [#74](https://github.com/brodieG/fansi/issues/74)`substr_ctl` and related
   functions are now all-C instead of a combination of C offset computations and
   R level `substr` operations.  This greatly improves performance, particularly
