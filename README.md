@@ -206,6 +206,8 @@ working. The master branch typically mirrors CRAN and should be stable.
     [r-debug](https://hub.docker.com/r/wch1/r-debug/) docker container,
     in particular because of the valgrind level 2 instrumented version
     of R.
+-   George Nachman etal. for [Iterm2](https://iterm2.com/index.html), a
+    Free terminal emulator that supports truecolor CSI SGR.
 -   [Hadley Wickham](https://github.com/hadley/) and [Peter
     Danenberg](https://github.com/klutometis) for
     [roxygen2](https://cran.r-project.org/package=roxygen2).
@@ -224,11 +226,11 @@ working. The master branch typically mirrors CRAN and should be stable.
     Ulrich](https://github.com/joshuaulrich) for making it lightweight.
 -   All open source developers out there that make their work freely
     available for others to use.
--   [Github](https://github.com/), [Travis-CI](https://travis-ci.org/),
-    [Codecov](https://about.codecov.io/),
+-   [Github](https://github.com/), [Codecov](https://about.codecov.io/),
     [Vagrant](https://www.vagrantup.com/),
-    [Docker](https://www.docker.com/), [Ubuntu](https://ubuntu.com/),
-    [Brew](https://brew.sh/) for providing infrastructure that greatly
-    simplifies open source development.
+    [Docker](https://www.docker.com/),
+    [Ubuntu](https://www.ubuntu.com/), [Brew](https://brew.sh/) for
+    providing infrastructure that greatly simplifies open source
+    development.
 -   [Free Software Foundation](https://www.fsf.org/) for developing the
     GPL license and promotion of the free software movement.
