@@ -170,7 +170,7 @@
 // Alternative fonts, 10-19, (encoded as is for simplicity, so use 5 bytes)
 
 #define FONT_START  20
-#define FONT_MASK 4160749568 // sum(2^(20:24))
+#define FONT_MASK 32505856 // sum(2^(20:24))
 #define FONT_ALL    31
 
 // - Misc ----------------------------------------------------------------------
