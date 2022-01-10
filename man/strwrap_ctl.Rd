@@ -3,9 +3,7 @@
 \name{strwrap_ctl}
 \alias{strwrap_ctl}
 \alias{strwrap2_ctl}
-\alias{strwrap_sgr}
-\alias{strwrap2_sgr}
-\title{ANSI Control Sequence Aware Version of strwrap}
+\title{Control Sequence Aware Version of strwrap}
 \usage{
 strwrap_ctl(
   x,
@@ -15,9 +13,12 @@ strwrap_ctl(
   prefix = "",
   simplify = TRUE,
   initial = prefix,
-  warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"),
-  ctl = "all"
+  warn = getOption("fansi.warn", TRUE),
+  term.cap = getOption("fansi.term.cap", dflt_term_cap()),
+  ctl = "all",
+  normalize = getOption("fansi.normalize", FALSE),
+  carry = getOption("fansi.carry", FALSE),
+  terminate = getOption("fansi.terminate", TRUE)
 )
 
 strwrap2_ctl(
@@ -31,40 +32,14 @@ strwrap2_ctl(
   wrap.always = FALSE,
   pad.end = "",
   strip.spaces = !tabs.as.spaces,
-  tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
-  tab.stops = getOption("fansi.tab.stops"),
-  warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"),
-  ctl = "all"
-)
-
-strwrap_sgr(
-  x,
-  width = 0.9 * getOption("width"),
-  indent = 0,
-  exdent = 0,
-  prefix = "",
-  simplify = TRUE,
-  initial = prefix,
-  warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap")
-)
-
-strwrap2_sgr(
-  x,
-  width = 0.9 * getOption("width"),
-  indent = 0,
-  exdent = 0,
-  prefix = "",
-  simplify = TRUE,
-  initial = prefix,
-  wrap.always = FALSE,
-  pad.end = "",
-  strip.spaces = !tabs.as.spaces,
-  tabs.as.spaces = getOption("fansi.tabs.as.spaces"),
-  tab.stops = getOption("fansi.tab.stops"),
-  warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap")
+  tabs.as.spaces = getOption("fansi.tabs.as.spaces", FALSE),
+  tab.stops = getOption("fansi.tab.stops", 8L),
+  warn = getOption("fansi.warn", TRUE),
+  term.cap = getOption("fansi.term.cap", dflt_term_cap()),
+  ctl = "all",
+  normalize = getOption("fansi.normalize", FALSE),
+  carry = getOption("fansi.carry", FALSE),
+  terminate = getOption("fansi.terminate", TRUE)
 )
 }
 \arguments{
@@ -96,27 +71,71 @@ strwrap2_sgr(
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
-to be incorrect, for example by moving the cursor (see \link{fansi}).}
+to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
+At most one warning will be issued per element in each input vector.  Will
+also warn about some badly encoded UTF-8 strings, but a lack of UTF-8
+warnings is not a guarantee of correct encoding (use \code{\link{validUTF8}} for
+that).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
-starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
-"38;2" or "48;2"). Changing this parameter changes how \code{fansi}
-interprets escape sequences, so you should ensure that it matches your
-terminal capabilities. See \link{term_cap_test} for details.}
+starting with "38;5" or "48;5"), "truecolor" (SGR codes starting with
+"38;2" or "48;2"), and "all". "all" behaves as it does for the \code{ctl}
+parameter: "all" combined with any other value means all terminal
+capabilities except that one.  \code{fansi} will warn if it encounters SGR codes
+that exceed the terminal capabilities specified (see \code{\link{term_cap_test}}
+for details).  In versions prior to 1.0, \code{fansi} would also skip exceeding
+SGRs entirely instead of interpreting them.  You may add the string "old"
+to any otherwise valid \code{term.cap} spec to restore the pre 1.0 behavior.
+"old" will not interact with "all" the way other valid values for this
+parameter do.}
 
 \item{ctl}{character, which \emph{Control Sequences} should be treated
-specially. See the "_ctl vs. _sgr" section for details.
+specially.  Special treatment is context dependent, and may include
+detecting them and/or computing their display/character width as zero.  For
+the SGR subset of the ANSI CSI sequences, and OSC hyperlinks, \code{fansi}
+will also parse, interpret, and reapply the sequences as needed.  You can
+modify whether a \emph{Control Sequence} is treated specially with the \code{ctl}
+parameter.
 \itemize{
 \item "nl": newlines.
 \item "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except
 for newlines and the actual ESC (0x1B) character.
 \item "sgr": ANSI CSI SGR sequences.
 \item "csi": all non-SGR ANSI CSI sequences.
+\item "url": OSC hyperlinks
+\item "osc": all non-OSC-hyperlink OSC sequences.
 \item "esc": all other escape sequences.
 \item "all": all of the above, except when used in combination with any of the
 above, in which case it means "all but".
 }}
+
+\item{normalize}{TRUE or FALSE (default) whether SGR sequence should be
+normalized out such that there is one distinct sequence for each SGR code.
+normalized strings will occupy more space (e.g. "\033[31;42m" becomes
+"\033[31m\033[42m"), but will work better with code that assumes each SGR
+code will be in its own escape as \code{crayon} does.}
+
+\item{carry}{TRUE, FALSE (default), or a scalar string, controls whether to
+interpret the character vector as a "single document" (TRUE or string) or
+as independent elements (FALSE).  In "single document" mode, active state
+at the end of an input element is considered active at the beginning of the
+next vector element, simulating what happens with a document with active
+state at the end of a line.  If FALSE each vector element is interpreted as
+if there were no active state when it begins.  If character, then the
+active state at the end of the \code{carry} string is carried into the first
+element of \code{x} (see "Replacement Functions" for differences there).  The
+carried state is injected in the interstice between an imaginary zeroeth
+character and the first character of a vector element.  See the "Position
+Semantics" section of \code{\link{substr_ctl}} and the "State Interactions" section
+of \code{\link[=fansi]{?fansi}} for details.  Except for \code{\link{strwrap_ctl}} where \code{NA} is
+treated as the string \code{"NA"}, \code{carry} will cause \code{NA}s in inputs to
+propagate through the remaining vector elements.}
+
+\item{terminate}{TRUE (default) or FALSE whether substrings should have
+active state closed to avoid it bleeding into other strings they may be
+prepended onto.  This does not stop state from carrying if \code{carry = TRUE}.
+See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for details.}
 
 \item{wrap.always}{TRUE or FALSE (default), whether to hard wrap at requested
 width if no word breaks are detected within a line.  If set to TRUE then
@@ -130,7 +149,7 @@ string the line remains unpadded.}
 \item{strip.spaces}{TRUE (default) or FALSE, if TRUE, extraneous white spaces
 (spaces, newlines, tabs) are removed in the same way as \link[base:strwrap]{base::strwrap}
 does.  When FALSE, whitespaces are preserved, except for newlines as those
-are implicit in boundaries between vector elements.}
+are implicit boundaries between output vector elements.}
 
 \item{tabs.as.spaces}{FALSE (default) or TRUE, whether to convert tabs to
 spaces.  This can only be set to TRUE if \code{strip.spaces} is FALSE.}
@@ -141,19 +160,24 @@ defined tab stops the last tab stop is re-used.  For the purposes of
 applying tab stops, each input line is considered a line and the character
 count begins from the beginning of the input line.}
 }
+\value{
+A character vector, or list of character vectors if \code{simplify} is
+false.
+}
 \description{
-Wraps strings to a specified width accounting for zero display width \emph{Control
-Sequences}.  \code{strwrap_ctl} is intended to emulate \code{strwrap} exactly except
-with respect to the \emph{Control Sequences}, while \code{strwrap2_ctl} adds features
-and changes the processing of whitespace.
+Wraps strings to a specified width accounting for \emph{Control Sequences}.
+\code{strwrap_ctl} is intended to emulate \code{strwrap} closely except with respect to
+the \emph{Control Sequences} (see details for other minor differences), while
+\code{strwrap2_ctl} adds features and changes the processing of whitespace.
+\code{strwrap_ctl} is faster than \code{strwrap}.
 }
 \details{
 \code{strwrap2_ctl} can convert tabs to spaces, pad strings up to \code{width}, and
 hard-break words if single words are wider than \code{width}.
 
 Unlike \link[base:strwrap]{base::strwrap}, both these functions will translate any non-ASCII
-strings to UTF-8 and return them in UTF-8.  Additionally, malformed UTF-8
-sequences are not converted to a text representation of bytes.
+strings to UTF-8 and return them in UTF-8.  Additionally, invalid UTF-8
+always causes errors, and \code{prefix} and \code{indent} must be scalar.
 
 When replacing tabs with spaces the tabs are computed relative to the
 beginning of the input line, not the most recent wrap point.
@@ -162,22 +186,60 @@ computing tab positions.
 }
 \note{
 Non-ASCII strings are converted to and returned in UTF-8 encoding.
-Width calculations will not work correctly with R < 3.2.2.
+Width calculations will not work properly in R < 3.2.2.
+
+For the \verb{strwrap*} functions the \code{carry} parameter affects whether
+styles are carried across \emph{input} vector elements.  Styles always carry
+within a single wrapped vector element (e.g. if one of the input elements
+gets wrapped into three lines, the styles will carry through those three
+lines even if \code{carry=FALSE}, but not across input vector elements).
 }
-\section{_ctl vs. _sgr}{
+\section{Control and Special Sequences}{
 
 
-The \verb{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
-by default.  Special treatment is context dependent, and may include
-detecting them and/or computing their display/character width as zero.  For
-the SGR subset of the ANSI CSI sequences, \code{fansi} will also parse, interpret,
-and reapply the text styles they encode if needed.  You can modify whether a
-\emph{Control Sequence} is treated specially with the \code{ctl} parameter.  You can
-exclude a type of \emph{Control Sequence} from special treatment by combining
-"all" with that type of sequence (e.g. \code{ctl=c("all", "nl")} for special
-treatment of all \emph{Control Sequences} \strong{but} newlines).  The \verb{*_sgr} versions
-only treat ANSI CSI SGR sequences specially, and are equivalent to the
-\verb{*_ctl} versions with the \code{ctl} parameter set to "sgr".
+\emph{Control Sequences} are non-printing characters or sequences of characters.
+\emph{Special Sequences} are a subset of the \emph{Control Sequences}, and include CSI
+SGR sequences which can be used to change rendered appearance of text, and
+OSC hyperlinks.  See \code{\link{fansi}} for details.
+}
+
+\section{Graphemes}{
+
+
+\code{fansi} approximates grapheme widths and counts by using heuristics for
+grapheme breaks that work for most common graphemes, including emoji
+combining sequences.  The heuristic is known to work incorrectly with
+invalid combining sequences, prepending marks, and sequence interruptors.
+\code{fansi} does not provide a full implementation of grapheme break detection to
+avoid carrying a copy of the Unicode grapheme breaks table, and also because
+the hope is that R will add the feature eventually itself.
+
+The \href{https://cran.r-project.org/package=utf8}{\code{utf8}} package provides a
+conforming grapheme parsing implementation.
+}
+
+\section{Output Stability}{
+
+
+Several factors could affect the exact output produced by \code{fansi}
+functions across versions of \code{fansi}, \code{R}, and/or across systems.
+\strong{In general it is best not to rely on exact \code{fansi} output, e.g. by
+embedding it in tests}.
+
+Width and grapheme calculations depend on locale, Unicode database
+version, and grapheme processing logic (which is still in development), among
+other things.  For the most part \code{fansi} (currently) uses the internals of
+\code{base::nchar(type='width')}, but there are exceptions and this may change in
+the future.
+
+How a particular display format is encoded in \emph{Control Sequences} is
+not guaranteed to be stable across \code{fansi} versions.  Additionally, which
+\emph{Special Sequences} are re-encoded vs transcribed untouched may change.
+In general we will strive to keep the rendered appearance stable.
+
+To maximize the odds of getting stable output set \code{normalize_state} to
+\code{TRUE} and \code{type} to \code{"chars"} in functions that allow it, and
+set \code{term.cap} to a specific set of capabilities.
 }
 
 \examples{
@@ -221,6 +283,9 @@ W <- strwrap2_ctl(NEWS.C, 25, pad.end=" ", wrap.always=TRUE)
 writeLines(c("", paste(W[1:20], W[100:120], W[200:220]), ""))
 }
 \seealso{
-\link{fansi} for details on how \emph{Control Sequences} are
-interpreted, particularly if you are getting unexpected results.
+\code{\link[=fansi]{?fansi}} for details on how \emph{Control Sequences} are
+interpreted, particularly if you are getting unexpected results,
+\code{\link{normalize_state}} for more details on what the \code{normalize} parameter does,
+\code{\link{state_at_end}} to compute active state at the end of strings,
+\code{\link{close_state}} to compute the sequence required to close active state.
 }

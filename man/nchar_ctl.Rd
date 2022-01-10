@@ -2,10 +2,8 @@
 % Please edit documentation in R/nchar.R
 \name{nchar_ctl}
 \alias{nchar_ctl}
-\alias{nchar_sgr}
 \alias{nzchar_ctl}
-\alias{nzchar_sgr}
-\title{ANSI Control Sequence Aware Version of nchar}
+\title{Control Sequence Aware Version of nchar}
 \usage{
 nchar_ctl(
   x,
@@ -13,31 +11,23 @@ nchar_ctl(
   allowNA = FALSE,
   keepNA = NA,
   ctl = "all",
-  warn = getOption("fansi.warn"),
+  warn = getOption("fansi.warn", TRUE),
   strip
 )
 
-nchar_sgr(
+nzchar_ctl(
   x,
-  type = "chars",
-  allowNA = FALSE,
-  keepNA = NA,
-  warn = getOption("fansi.warn")
+  keepNA = FALSE,
+  ctl = "all",
+  warn = getOption("fansi.warn", TRUE)
 )
-
-nzchar_ctl(x, keepNA = NA, ctl = "all", warn = getOption("fansi.warn"))
-
-nzchar_sgr(x, keepNA = NA, warn = getOption("fansi.warn"))
 }
 \arguments{
-\item{x}{a character vector or object that can be coerced to character.}
+\item{x}{a character vector or object that can be coerced to such.}
 
-\item{type}{character(1L) partial matching \code{c("chars", "width")}, although
-\code{type="width"} only works correctly with R >= 3.2.2.  With "width", whether
-C0 and C1 are treated as zero width may depend on R version and locale in
-addition what the \code{ctl} parameter is set to.  For example, for R4.1 in
-UTF-8 locales C0 and C1 will be zero width even if the value of \code{ctl} is
-such that they wouldn't be so in other circumstances.}
+\item{type}{character(1L) partial matching
+\code{c("chars", "width", "graphemes")}, although types other than "chars" only
+work correctly with R >= 3.2.2.  See \code{\link[base:nchar]{?nchar}}.}
 
 \item{allowNA}{logical: should \code{NA} be returned for invalid
     multibyte strings or \code{"bytes"}-encoded strings (rather than
@@ -51,13 +41,20 @@ such that they wouldn't be so in other circumstances.}
   unless \code{type} is \code{"width"}.}
 
 \item{ctl}{character, which \emph{Control Sequences} should be treated
-specially. See the "_ctl vs. _sgr" section for details.
+specially.  Special treatment is context dependent, and may include
+detecting them and/or computing their display/character width as zero.  For
+the SGR subset of the ANSI CSI sequences, and OSC hyperlinks, \code{fansi}
+will also parse, interpret, and reapply the sequences as needed.  You can
+modify whether a \emph{Control Sequence} is treated specially with the \code{ctl}
+parameter.
 \itemize{
 \item "nl": newlines.
 \item "c0": all other "C0" control characters (i.e. 0x01-0x1f, 0x7F), except
 for newlines and the actual ESC (0x1B) character.
 \item "sgr": ANSI CSI SGR sequences.
 \item "csi": all non-SGR ANSI CSI sequences.
+\item "url": OSC hyperlinks
+\item "osc": all non-OSC-hyperlink OSC sequences.
 \item "esc": all other escape sequences.
 \item "all": all of the above, except when used in combination with any of the
 above, in which case it means "all but".
@@ -66,9 +63,16 @@ above, in which case it means "all but".
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
-to be incorrect, for example by moving the cursor (see \link{fansi}).}
+to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
+At most one warning will be issued per element in each input vector.  Will
+also warn about some badly encoded UTF-8 strings, but a lack of UTF-8
+warnings is not a guarantee of correct encoding (use \code{\link{validUTF8}} for
+that).}
 
 \item{strip}{character, deprecated in favor of \code{ctl}.}
+}
+\value{
+Like \code{\link[base:nchar]{base::nchar}}, with \emph{Control Sequences} excluded.
 }
 \description{
 \code{nchar_ctl} counts all non \emph{Control Sequence} characters.
@@ -77,30 +81,62 @@ Sequence} sequence characters.  By default newlines and other C0 control
 characters are not counted.
 }
 \details{
-\code{nchar_ctl} is just a wrapper around \code{nchar(strip_ctl(...))}.  \code{nzchar_ctl}
-is implemented in native code and is much faster than the otherwise
-equivalent \code{nzchar(strip_ctl(...))}.
+\code{nchar_ctl} and \code{nzchar_ctl} are implemented in statically compiled code, so
+in particular \code{nzchar_ctl} will be much faster than the otherwise equivalent
+\code{nzchar(strip_ctl(...))}.
 
-These functions will warn if either malformed or non-CSI escape sequences are
-encountered, as these may be incorrectly interpreted.
+These functions will warn if either malformed or escape or UTF-8 sequences
+are encountered as they may be incorrectly interpreted.
 }
 \note{
-the \code{keepNA} parameter is ignored for R < 3.2.2.
+The \code{keepNA} parameter is ignored for R < 3.2.2.
 }
-\section{_ctl vs. _sgr}{
+\section{Control and Special Sequences}{
 
 
-The \verb{*_ctl} versions of the functions treat all \emph{Control Sequences} specially
-by default.  Special treatment is context dependent, and may include
-detecting them and/or computing their display/character width as zero.  For
-the SGR subset of the ANSI CSI sequences, \code{fansi} will also parse, interpret,
-and reapply the text styles they encode if needed.  You can modify whether a
-\emph{Control Sequence} is treated specially with the \code{ctl} parameter.  You can
-exclude a type of \emph{Control Sequence} from special treatment by combining
-"all" with that type of sequence (e.g. \code{ctl=c("all", "nl")} for special
-treatment of all \emph{Control Sequences} \strong{but} newlines).  The \verb{*_sgr} versions
-only treat ANSI CSI SGR sequences specially, and are equivalent to the
-\verb{*_ctl} versions with the \code{ctl} parameter set to "sgr".
+\emph{Control Sequences} are non-printing characters or sequences of characters.
+\emph{Special Sequences} are a subset of the \emph{Control Sequences}, and include CSI
+SGR sequences which can be used to change rendered appearance of text, and
+OSC hyperlinks.  See \code{\link{fansi}} for details.
+}
+
+\section{Output Stability}{
+
+
+Several factors could affect the exact output produced by \code{fansi}
+functions across versions of \code{fansi}, \code{R}, and/or across systems.
+\strong{In general it is best not to rely on exact \code{fansi} output, e.g. by
+embedding it in tests}.
+
+Width and grapheme calculations depend on locale, Unicode database
+version, and grapheme processing logic (which is still in development), among
+other things.  For the most part \code{fansi} (currently) uses the internals of
+\code{base::nchar(type='width')}, but there are exceptions and this may change in
+the future.
+
+How a particular display format is encoded in \emph{Control Sequences} is
+not guaranteed to be stable across \code{fansi} versions.  Additionally, which
+\emph{Special Sequences} are re-encoded vs transcribed untouched may change.
+In general we will strive to keep the rendered appearance stable.
+
+To maximize the odds of getting stable output set \code{normalize_state} to
+\code{TRUE} and \code{type} to \code{"chars"} in functions that allow it, and
+set \code{term.cap} to a specific set of capabilities.
+}
+
+\section{Graphemes}{
+
+
+\code{fansi} approximates grapheme widths and counts by using heuristics for
+grapheme breaks that work for most common graphemes, including emoji
+combining sequences.  The heuristic is known to work incorrectly with
+invalid combining sequences, prepending marks, and sequence interruptors.
+\code{fansi} does not provide a full implementation of grapheme break detection to
+avoid carrying a copy of the Unicode grapheme breaks table, and also because
+the hope is that R will add the feature eventually itself.
+
+The \href{https://cran.r-project.org/package=utf8}{\code{utf8}} package provides a
+conforming grapheme parsing implementation.
 }
 
 \examples{
@@ -113,7 +149,7 @@ nchar_ctl(cn.string, type='width')
 ## Remember newlines are not counted by default
 nchar_ctl("\t\n\r")
 
-## The 'c0' value for the `ctl` argument does not include 
+## The 'c0' value for the `ctl` argument does not include
 ## newlines.
 nchar_ctl("\t\n\r", ctl="c0")
 nchar_ctl("\t\n\r", ctl=c("c0", "nl"))
@@ -126,7 +162,7 @@ nchar_sgr("\t\n\n123")
 nzchar_ctl("\n\033[42;31m\033[123P\a")
 }
 \seealso{
-\link{fansi} for details on how \emph{Control Sequences} are
+\code{\link[=fansi]{?fansi}} for details on how \emph{Control Sequences} are
 interpreted, particularly if you are getting unexpected results,
-\code{\link{strip_ctl}} for removing \emph{Control Sequences}.
+\code{\link{unhandled_ctl}} for detecting bad control sequences.
 }

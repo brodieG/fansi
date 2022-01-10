@@ -39,10 +39,10 @@ writeLines(sgr.string)
 
 ### Automatically Convert ANSI CSI SGR to HTML
 
-`fansi` provides the `sgr_to_html` function which converts the ANSI CSI SGR
-sequences into HTML markup.  When we combine it with `knitr::knit_hooks` we can
-modify the rendering of the `rmarkdown` document such that ANSI CSI SGR
-encoding is shown in the equivalent HTML.
+`fansi` provides the `to_html` function which converts the ANSI CSI SGR
+sequences and OSC hyperlinks into HTML markup.  When we combine it with
+`knitr::knit_hooks` we can modify the rendering of the `rmarkdown` document such
+that ANSI CSI SGR encoding is shown in the equivalent HTML.
 
 `fansi::set_knit_hooks` is a convenience function that does just this.  You
 should call it in an `rmarkdown` document with the:
@@ -87,7 +87,7 @@ CSS styles.
 ````
 ```{r, comment="", results="asis"}`r ''`
 styles <- c(
-  getOption("fansi.style"),  # default style
+  getOption("fansi.style", dflt_css()),  # default style
   "PRE.fansi CODE {background-color: transparent;}",
   "PRE.fansi-error {background-color: #DDAAAA;}",
   "PRE.fansi-warning {background-color: #DDDDAA;}",
@@ -104,7 +104,7 @@ old.hooks <- c(
 ````
 ```{r comment="", results="asis", echo=FALSE}
 styles <- c(
-  getOption("fansi.style"),  # default style
+  getOption("fansi.style", dflt_css()),  # default style
   "PRE.fansi CODE {background-color: transparent;}",
   "PRE.fansi-error {background-color: #DDAAAA;}",
   "PRE.fansi-warning {background-color: #DDDDAA;}",
@@ -132,7 +132,6 @@ writeLines(sgr.string)
 ```
 
 See `?fansi::set_knit_hooks` for details.
-
 
 ----
 <a name='f1'></a><sup>1</sup>For illustrative purposes we output raw ANSI

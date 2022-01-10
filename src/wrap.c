@@ -1,22 +1,22 @@
 /*
- * Copyright (C) 2021  Brodie Gaslam
+ * Copyright (C) 2022 Brodie Gaslam
  *
  * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 2 of the License, or
- * (at your option) any later version.
+ * the Free Software Foundation, either version 2 or 3 of the License.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+ * Go to <https://www.r-project.org/Licenses> for a copies of the licenses.
  */
 
 #include "fansi.h"
+
 /*
  * Data related to prefix / initial
  *
@@ -29,41 +29,37 @@ struct FANSI_prefix_dat {
   int bytes;            // bytes, excluding NULL terminator
   // how many indent/exdent bytes are included in string, width, and bytes
   int indent;
-  int has_utf8;         // whether utf8 contains value > 127
+  int utf8;             // see FANSI_state
   int warn;             // warning issued while stripping
 };
 /*
  * Generate data related to prefix / initial
  */
 
-static struct FANSI_prefix_dat make_pre(SEXP x) {
-  SEXP chrsxp = STRING_ELT(x, 0);
-  FANSI_check_chrsxp(chrsxp, 0);
-  const char * x_utf8 = CHAR(chrsxp);
-  // ideally we would IS_ASCII(x), but that's not available to extensions
-  int x_has_utf8 = FANSI_has_utf8(x_utf8);
+static struct FANSI_prefix_dat make_pre(
+  SEXP x, SEXP warn, SEXP term_cap, SEXP ctl, const char * arg
+) {
+  int prt = 0;
 
-  // ideally would have an internal interface to strip so we don't need to
-  // generate these SEXPs here
-  SEXP warn = PROTECT(ScalarInteger(2));
-  SEXP ctl = PROTECT(ScalarInteger(1));
-  SEXP x_strip = PROTECT(FANSI_strip(x, ctl, warn));
-  int x_width = R_nchar(
-    asChar(x_strip), Width, TRUE, FALSE, "when computing display width"
+  SEXP R1 = PROTECT(ScalarInteger(1)); prt++;
+  SEXP Rtrue = PROTECT(ScalarLogical(1)); prt++;
+  SEXP Rfalse = PROTECT(ScalarLogical(0)); prt++;
+  SEXP keepNA = Rtrue;
+  SEXP allowNA = Rfalse;
+  SEXP width = R1;     // width mode
+
+  struct FANSI_state state = FANSI_state_init_full(
+    x, warn, term_cap, allowNA, keepNA, width, ctl, 0
   );
-  // wish we could get this directly from R_nchar, grr
+  FANSI_read_all(&state, 0, arg);
 
-  int x_bytes = strlen(x_utf8);
-  int warn_int = getAttrib(x_strip, FANSI_warn_sym) != R_NilValue;
-
-  if(x_width == NA_INTEGER) {
-    x_width = x_bytes;
-    warn_int = 9;
-  }
-  UNPROTECT(3);
+  UNPROTECT(prt);
   return (struct FANSI_prefix_dat) {
-    .string=x_utf8, .width=x_width, .bytes=x_bytes, .has_utf8=x_has_utf8,
-    .indent=0, .warn=warn_int
+    .string=state.string,
+    .width=state.pos.w,
+    .bytes=state.pos.x,
+    .utf8=state.utf8,
+    .indent=0
   };
 }
 /*
@@ -79,7 +75,6 @@ static struct FANSI_prefix_dat pad_pre(
   char * res_start = "";
   if(alloc_size > 1) {
     // Can't use buff here because we don't write this string out
-    // Rprintf("Allocating pre size %d\n", alloc_size);
 
     char * res = res_start = R_alloc(alloc_size, sizeof(char));
     memcpy(res, pre_chr, pre_len);
@@ -113,174 +108,110 @@ static struct FANSI_prefix_dat drop_pre_indent(struct FANSI_prefix_dat dat) {
     // nocov end
   return dat;
 }
+
 /*
  * Write a line
  *
  * @param state_bound the point where the boundary is
  * @param state_start the starting point of the line
+ * @param normalize currently doesn't do anything since the normalization
+ *   happens as a second pass.  In the future we might decide to do the
+ *   normalization in the first pass so an external call to normalize_state is
+ *   unnecessary.
  */
 
-SEXP FANSI_writeline(
+static SEXP writeline(
   struct FANSI_state state_bound, struct FANSI_state state_start,
+  struct FANSI_state state_last_bound,
   struct FANSI_buff * buff,
   struct FANSI_prefix_dat pre_dat,
-  int tar_width, const char * pad_chr
+  int tar_width, const char * pad_chr,
+  R_xlen_t i,
+  int normalize, int terminate
 ) {
-  // Rprintf("  Writeline start with buff %p\n", *buff);
+  // turn off C level normalize for now since it is incomplete and we just do it
+  // again at the R level.
+  normalize = 0;
 
-  // Check if we are in a CSI state b/c if we are we neeed extra room for
-  // the closing state tag
+  // First thing we need to do is check whether we need to pad as that affects
+  // how we treat the boundary.
 
-  int needs_close = FANSI_state_has_style(state_bound);
-  int needs_start = FANSI_state_has_style(state_start);
+  int line_width = state_bound.pos.w - state_start.pos.w;
+  int target_pad = 0;
+  if(tar_width < 0) tar_width = 0;
+  if(line_width <= tar_width && *pad_chr) {
+    target_pad = tar_width - line_width;
+  }
+  // handle corner case for empty strings that don't get indented by strwrap;
+  // we considered testing width instead of size as that would also prevent
+  // indent on thing that just have ESCs, but decided against it (arbitrarily)
+  //
+  // We do not re-terminate the string, instead relying on widths / sizes to
+  // make sure only the non-indent bit is copied
 
-  // state_bound.pos_byte 1 past what we need, so this should include room
+  if(state_bound.pos.x == state_start.pos.x) {
+    pre_dat = drop_pre_indent(pre_dat);
+    // Also, don't open a state that will get immediately closed
+    if(!target_pad && terminate) {
+      state_start.fmt = state_bound.fmt = (struct FANSI_format) {0};
+  } }
+  // state_bound.pos.x 1 past what we need, so this should include room
   // for NULL terminator
-
   if(
-    (state_bound.pos_byte < state_start.pos_byte) ||
-    (state_bound.pos_width < state_start.pos_width)
+    (state_bound.pos.x < state_start.pos.x) ||
+    (state_bound.pos.w < state_start.pos.w)
   )
     // nocov start
     error("Internal Error: boundary leading position; contact maintainer.");
     // nocov end
 
-  if(tar_width < 0) tar_width = 0;
+  if(state_bound.pos.x < state_start.pos.x)
+    error("Internal Error: line ends backwards.");  // nocov
+  if(state_bound.pos.x < state_start.pos.x)
+    error("Internal Error: negative line width.");  // nocov
 
-  size_t target_size = state_bound.pos_byte - state_start.pos_byte;
-  size_t target_width = state_bound.pos_width - state_start.pos_width;
-  int target_pad = 0;
+  // Measure/Write loop (see src/write.c).  Very similar code in substr.c
+  const char * err_msg = "Writing line";
+  for(int k = 0; k < 2; ++k) {
+    if(!k) FANSI_reset_buff(buff);
+    else   FANSI_size_buff(buff);
 
-  if(!target_size) {
-    // handle corner case for empty strings that don't get indented by strwrap;
-    // we considered testing width instead of size as that would also prevent
-    // indent on thing that just have ESCs, but decided against it (arbitrarily)
-    //
-    // We do not re-terminate the string, instead relying on widths / sizes to
-    // make sure only the non-indent bit is copied
+    FANSI_W_bridge(buff, state_last_bound, state_start, normalize, i, err_msg);
 
-    pre_dat = drop_pre_indent(pre_dat);
-  }
-  // If we are going to pad the end, adjust sizes and widths
-
-  if(target_size > (size_t) FANSI_int_max)
-    // Not possible for this to be longer than INT_MAX as we check on
-    // entry with FANSI_check_chrsxp and we're not expanding anything.
-    // nocov start, but jut in cae
-    error(
-      "Substring to write (%ju) is longer than INT_MAX.",
-      (uintmax_t) target_size
-    );
-    // nocov end
-
-  if(target_width <= (size_t) tar_width && *pad_chr) {
-    target_pad = tar_width - target_width;
-    if(
-      (target_size > (size_t) (FANSI_int_max - target_pad))
-    ) {
-      error(
-        "%s than INT_MAX while padding.",
-        "Attempting to create string longer"
-      );
+    // Apply indent/exdent prefix/initial
+    if(pre_dat.bytes) {
+      err_msg = "Adding prefix characters";
+      FANSI_W_MCOPY(buff, pre_dat.string, pre_dat.bytes);
     }
-    target_size = target_size + target_pad;
+    // Actual string, remember state_bound.pos.x is one past what we need
+    // We could use _normalize_or_copy, but right now doing it at R level as
+    // doing it here requires a bit of tweaking.
+    const char * string = state_start.string + state_start.pos.x;
+    int bytes = state_bound.pos.x - state_start.pos.x;
+    FANSI_W_MCOPY(buff, string, bytes);
+
+    // Add padding if needed
+    err_msg = "Adding padding";
+    int to_pad = target_pad;
+    FANSI_W_FILL(buff, *pad_chr, to_pad);
+
+    // And turn off CSI styles if needed
+    if(terminate) FANSI_W_close(buff, state_bound.fmt, normalize, i);
   }
-  if(target_size > (size_t)(FANSI_int_max - pre_dat.bytes)) {
-    error(
-      "%s%s",
-      "Attempting to create string longer than INT_MAX when adding ",
-      "prefix/initial/indent/exdent."
-    );
-  }
-  target_size += pre_dat.bytes;
-  int state_start_size = 0;
-  int start_close = 0;
-
-  if(needs_close) start_close += 4;
-  if(needs_start) {
-    state_start_size = FANSI_state_size(state_start);
-    start_close += state_start_size;  // this can't possibly overflow
-  }
-  if(target_size > (size_t)(FANSI_int_max - start_close)) {
-    error(
-      "%s%s",
-      "Attempting to create string longer than INT_MAX while adding leading ",
-      "and trailing CSI SGR sequences."
-    );
-  }
-  target_size += start_close;
-  ++target_size; // for NULL terminator
-
-  // Make sure buffer is large enough
-  FANSI_size_buff(buff, target_size);
-
-  char * buff_track = buff->buff;
-
-  // Apply prevous CSI style
-
-  if(needs_start) {
-    // Rprintf("  writing start: %d\n", state_start_size);
-    FANSI_csi_write(buff_track, state_start, state_start_size);
-    buff_track += state_start_size;
-  }
-  // Apply indent/exdent prefix/initial
-
-  if(pre_dat.bytes) {
-    // Rprintf("  writing pre %s of size %d\n", pre, pre_size);
-    memcpy(buff_track, pre_dat.string, pre_dat.bytes);
-    buff_track += pre_dat.bytes;
-  }
-  // Actual string, remember state_bound.pos_byte is one past what we need
-  // (but what if we're in strip.space=FALSE?)
-
-  memcpy(
-    buff_track, state_start.string + state_start.pos_byte,
-    state_bound.pos_byte - state_start.pos_byte
-  );
-  buff_track += state_bound.pos_byte - state_start.pos_byte;
-
-  // Add padding if needed
-
-  while(target_pad--) {
-    *(buff_track++) = *pad_chr;
-  }
-  // And turn off CSI styles if needed
-
-  if(needs_close) {
-    // Rprintf("  close\n");
-    memcpy(buff_track, "\033[0m", 4);
-    buff_track += 4;
-  }
-  *buff_track = 0;
-  // Rprintf("written %d\n", buff_track - (buff->buff) + 1);
-
   // Now create the charsxp and append to the list, start by determining
-  // what encoding to use.  If pos_byte is greater than pos_ansi it means
-  // we must have hit a UTF8 encoded character
-
+  // what encoding to use.
   cetype_t chr_type = CE_NATIVE;
-  if((state_bound.has_utf8 || pre_dat.has_utf8)) chr_type = CE_UTF8;
-
-  if(buff_track - buff->buff > FANSI_int_max)
-    // nocov start
-    error(
-      "%s%s",
-      "Internal Error: attempting to write string longer than INT_MAX; ",
-      "contact maintainer (4)."
-    );
-    // nocov end
-  SEXP res_sxp = PROTECT(
-    mkCharLenCE(
-      buff->buff, (int) (buff_track - buff->buff), chr_type
-  ) );
-  UNPROTECT(1);
-  return res_sxp;
+  if((state_bound.utf8 > state_start.pos.x) || pre_dat.utf8)
+    chr_type = CE_UTF8;
+  return FANSI_mkChar(*buff, chr_type, i);
 }
 /*
  * All input strings are expected to be in UTF8 compatible format (i.e. either
  * encoded in UTF8, or contain only bytes in 0-127).  That way we know we can
  * set the encoding to UTF8 if there are any bytes greater than 127, or NATIVE
  * otherwise under the assumption that 0-127 is valid in all encodings.
+ *
+ * This should be re-written based on a grammar.
  *
  * @param buff a pointer to a buffer struct.  We use pointer to a
  *   pointer because it may need to be resized, but we also don't want to
@@ -293,23 +224,22 @@ SEXP FANSI_writeline(
  */
 
 static SEXP strwrap(
-  const char * x, int width,
+  int width,
   struct FANSI_prefix_dat pre_first,
   struct FANSI_prefix_dat pre_next,
   int wrap_always,
   struct FANSI_buff * buff,
   const char * pad_chr,
   int strip_spaces,
-  SEXP warn, SEXP term_cap,
-  int first_only, SEXP ctl
+  int first_only,
+  R_xlen_t index,
+  int normalize,
+  int carry,
+  struct FANSI_state state,
+  struct FANSI_state * state_carry,
+  int terminate
 ) {
-  SEXP R_true = PROTECT(ScalarLogical(1));
-  SEXP R_one = PROTECT(ScalarInteger(1));
-  struct FANSI_state state = FANSI_state_init_full(
-    x, warn, term_cap, R_true, R_true, R_one, ctl
-  );
-  UNPROTECT(2);
-
+  const char * arg = "x";
   int width_1 = FANSI_ADD_INT(width, -pre_first.width);
   int width_2 = FANSI_ADD_INT(width, -pre_next.width);
 
@@ -324,8 +254,9 @@ static SEXP strwrap(
   // items we're going to have, unless we're in first only in which case we know
   // we only need one element per and don't actually use these
 
+  int prt = 0;
   SEXP char_list_start, char_list;
-  char_list_start = char_list = PROTECT(list1(R_NilValue));
+  char_list_start = char_list = PROTECT(list1(R_NilValue)); ++prt;
 
   int prev_boundary = 0;    // tracks if previous char was a boundary
   int has_boundary = 0;     // tracks if at least one boundary in a line
@@ -334,80 +265,142 @@ static SEXP strwrap(
   // byte we previously wrote from, need to track to detect potential infinite
   // loop when we wrap-always but the wrap width is narrower than a wide
   // character
-
   int first_line = 1;
   int last_start = 0;
+  int new_line = 1;
 
   // Need to keep track of where word boundaries start and end due to
   // possibility for multiple elements between words
+  if(carry) {
+    state.fmt.sgr = state_carry->fmt.sgr;
+    state.fmt.url = state_carry->fmt.url;
+  }
+  struct FANSI_state state_start, state_bound, state_prev, state_tmp,
+    state_last_bound;
+  state_tmp = state_start = state_last_bound = state;
+  // Blank anchor state in terminate mode
+  if(terminate) FANSI_reset_state(&state_last_bound);
 
-  struct FANSI_state state_start, state_bound, state_prev;
-  state_start = state_bound = state_prev = state;
+  // Consume any leading specials (to be re-output)
+  FANSI_read_next(&state_tmp, index, arg);
+  if(state_tmp.status & STAT_SPECIAL) state_start = state_tmp;
+  else state_start.status |= state_tmp.status & STAT_WARNED;
+
+  state_bound = state_prev = state_start;
+
   R_xlen_t size = 0;
   SEXP res_sxp;
 
   while(1) {
-    struct FANSI_state state_next;
-
-    // Can no longer advance after we reach end, but we still need to assemble
-    // strings so we assign `state` even though technically not correct
-
-    if(!state.string[state.pos_byte]){
-      state_next = state;
-    } else {
-      state_next = FANSI_read_next(state);
+    if(new_line) {
+      // Strip leading spaces and/or SGR
+      new_line = 0;
+      while(
+        (state_bound.string[state_bound.pos.x] == ' ' && strip_spaces) ||
+        state_bound.string[state_bound.pos.x] == 0x1b
+      ) {
+        state_tmp = state_bound;
+        FANSI_read_next(&state_tmp, index, arg);
+        // Strip any leading special sequences as we will re-emit them.  Stop if
+        // any non-specials as those don't get re-emitted.  This corresponds to
+        // substr_ctl(x, 0, n),  does.
+        if(
+          state_bound.string[state_bound.pos.x] == 0x1b &&
+          !(state_tmp.status & STAT_SPECIAL)
+        ) {
+          // avoid double warnings
+          state_bound.status |= state_tmp.status & STAT_WARNED;
+          break;
+        }
+        state_bound = state_tmp;
+      }
+      has_boundary = 0;
+      state_bound.pos.w = 0;
+      state = state_prev = state_start = state_bound;
     }
-    state.warn = state_bound.warn = state_next.warn;  // avoid double warning
+    struct FANSI_state state_next;
+    int end = !state.string[state.pos.x];
+
+    state_next = state; // if we hit end of string, re-use state as next
+    // Look ahead one element
+    if(!end) FANSI_read_next(&state_next, index, arg);
+    if(state_next.status & STAT_WARNED) { // avoid 2x warning
+      state.status |= STAT_WARNED;
+      state_bound.status |= STAT_WARNED;
+    }
+    // Always strip trailing SGR to behave same way as substr_ctl, except if
+    // we're adding padding, or really at end of string.
+    int strip_trail_sgr =
+       (state.status & STAT_SPECIAL) && (!end || terminate) &&
+      !((*pad_chr) && state.pos.w < width_tar);
 
     // detect word boundaries and paragraph starts; we need to track
     // state_bound for the special case where we are in strip space mode
     // and we happen to hit the width in a two space sequence such as we might
     // get after [.!?].
+    //
+    // We're ignoring other word boundaries, but strwrap does too.
+    //
+    // Recall that if `strip_spaces == TRUE` string will have already been
+    // processed to remove sequential spaces (except those following sentence
+    // end).
 
     if(
-      state.string[state.pos_byte] == ' ' ||
-      state.string[state.pos_byte] == '\t' ||
-      state.string[state.pos_byte] == '\n'
+      state.string[state.pos.x] == ' ' ||
+      state.string[state.pos.x] == '\t' ||
+      state.string[state.pos.x] == '\n'
     ) {
-      // Rprintf(
-      //   "Bound @ %d raw: %d chr: %d prev: %d\n",
-      //   state.pos_byte - state_start.pos_byte, state.pos_byte,
-      //   state.string[state.pos_byte], prev_boundary
-      // );
-      if(strip_spaces && !prev_boundary) state_bound = state;
-      else if(!strip_spaces) state_bound = state;
+      // trailing SGR (end of string case handled later)
+      if(strip_spaces && !prev_boundary) {
+        if(strip_trail_sgr) state_bound = state_prev;
+        else state_bound = state;
+      } else if(!strip_spaces) {
+        state_bound = state;
+      }
       has_boundary = prev_boundary = 1;
     } else {
+      if(!has_boundary && state.pos.w == width_tar && strip_trail_sgr) {
+        state_bound = state_prev;
+      }
       prev_boundary = 0;
     }
-    // Write the line
 
+    // Write the line if
     if(
-      !state.string[state.pos_byte] ||
-      // newlines kept in strtrim mode
-      (state.string[state.pos_byte] == '\n' && !first_only) ||
+      // 1. At end of string
+      end ||
+      // 2. Newlines kept in strtrim mode
+      (state.string[state.pos.x] == '\n' && !first_only) ||
+      // 3. Overshot target width (but only if next char isn't zero width) and
+      //    there is a boundary or we're willing to hard break
       (
         (
-          state.pos_width > width_tar ||
+          state.pos.w > width_tar ||
           (
-            // If exactly at width we need to keep going if the next char is
-            // zero width, otherwise we should write the string
-            state.pos_width == width_tar &&
-            state_next.pos_width > state.pos_width
+            state.pos.w == width_tar &&
+            state_next.pos.w > state.pos.w  // check zero width for next
         ) ) &&
         (has_boundary || wrap_always)
       )
     ) {
-      if(
-        !state.string[state.pos_byte] ||
-        (wrap_always && !has_boundary) || first_only
-      ) {
-        if(state.pos_width > width_tar && wrap_always) {
-          state = state_prev; // wide char overshoot
+      // Adjust end point
+      if(end || (wrap_always && !has_boundary) || first_only) {
+        if(wrap_always && !has_boundary) {
+          if(state.pos.w > width_tar){
+            // wide char overshoot
+            state = state_prev;
+            end = 0;
+          } else if (state.pos.w == width_tar && strip_trail_sgr) {
+            // hard break
+            state = state_prev;
+          }
+        } else if (end && strip_trail_sgr) {
+          // trailing SGR for end of string
+          state = state_prev;
         }
         state_bound = state;
       }
-      if(!first_line && last_start >= state_start.pos_byte) {
+      if(!first_line && last_start >= state_start.pos.x) {
         error(
           "%s%s",
           "Wrap error: trying to wrap to width narrower than ",
@@ -416,69 +409,58 @@ static SEXP strwrap(
       }
       // If not stripping spaces we need to keep the last boundary char; note
       // that boundary is advanced when strip_spaces == FALSE in earlier code.
-
       if(
         !strip_spaces && has_boundary && (
-          state_bound.string[state_bound.pos_byte] == ' ' ||
-          state_bound.string[state_bound.pos_byte] == '\t'
+          state_bound.string[state_bound.pos.x] == ' ' ||
+          state_bound.string[state_bound.pos.x] == '\t'
         ) &&
-        state_bound.pos_byte < state.pos_byte
+        state_bound.pos.x < state.pos.x
       ) {
-        state_bound = FANSI_read_next(state_bound);
+        FANSI_read_next(&state_bound, index, arg);
       }
       // Write the string
-
       res_sxp = PROTECT(
-        FANSI_writeline(
-          state_bound, state_start, buff,
+        writeline(
+          state_bound, state_start, state_last_bound, buff,
           para_start ? pre_first : pre_next,
-          width_tar, pad_chr
+          width_tar, pad_chr, index, normalize, terminate
         )
-      );
+      ); ++prt;
       first_line = 0;
-      last_start = state_start.pos_byte;
-      // first_only for `strtrim`
+      last_start = state_start.pos.x;
+      if(!terminate) state_last_bound = state_bound;
 
+      // first_only for `strtrim`
       if(!first_only) {
         SETCDR(char_list, list1(res_sxp));
         char_list = CDR(char_list);
-        UNPROTECT(1);
-      } else break;
-      // overflow should be impossible here since string is at most int long
+        UNPROTECT(1); --prt;
+      } else {
+        // Need end state if in strtrim mode and we wish to carry
+        if(carry) FANSI_read_all(&state, index, arg);
+        break;
+      }
 
+      // overflow should be impossible here since string is at most int long
       ++size;
-      if(!state.string[state.pos_byte]) break;
+      if(end) break;
 
       // Next line will be the beginning of a paragraph
-
-      para_start = (state.string[state.pos_byte] == '\n');
+      para_start = (state.string[state.pos.x] == '\n');
       width_tar = para_start ? width_1 : width_2;
 
       // Recreate what the state is at the wrap point, including skipping the
-      // wrap character if there was one, and any subsequent leading spaces if
-      // there are any and we are in strip_space mode.  If there was no boundary
-      // then we're hard breaking and we reset position to the next position.
-
-      // Rprintf(
-      //   "Positions has_b: %d, state: %d bound: %d prev: %d next: %d\n",
-      //   has_boundary,
-      //   state.pos_byte, state_bound.pos_byte, state_prev.pos_byte,
-      //   state_next.pos_byte
-      // );
+      // wrap character if there was one, and any subsequent leading spaces or
+      // SGR  if there are any and we are in strip_space mode.  If there was no
+      // boundary then we're hard breaking and we reset position to the next
+      // position.
       if(has_boundary && para_start) {
-        state_bound = FANSI_read_next(state_bound);
+        do FANSI_read_next(&state_bound, index, arg);
+        while (state_bound.status & STAT_SPECIAL);
       } else if(!has_boundary) {
         state_bound = state;
       }
-      if(strip_spaces) {
-        while(state_bound.string[state_bound.pos_byte] == ' ') {
-          state_bound = FANSI_read_next(state_bound);
-      } }
-      has_boundary = 0;
-      state_bound.pos_width = 0;
-
-      state_prev = state;
-      state = state_start = state_bound;
+      new_line = 1;
     } else {
       state_prev = state;
       state = state_next;
@@ -491,7 +473,7 @@ static SEXP strwrap(
   SEXP res;
 
   if(!first_only) {
-    res = PROTECT(allocVector(STRSXP, size));
+    res = PROTECT(allocVector(STRSXP, size)); ++prt;
     char_list = char_list_start;
     for(R_xlen_t i = 0; i < size; ++i) {
       char_list = CDR(char_list); // first element is NULL
@@ -505,7 +487,10 @@ static SEXP strwrap(
     // recall there is an extra open PROTECT in first_only mode
     res = res_sxp;
   }
-  UNPROTECT(2);
+
+  UNPROTECT(prt);
+  state_carry->fmt.sgr = state.fmt.sgr;
+  state_carry->fmt.url = state.fmt.url;
   return res;
 }
 
@@ -529,22 +514,27 @@ SEXP FANSI_strwrap_ext(
   SEXP tabs_as_spaces, SEXP tab_stops,
   SEXP warn, SEXP term_cap,
   SEXP first_only,
-  SEXP ctl
+  SEXP ctl, SEXP norm, SEXP carry,
+  SEXP terminate
 ) {
+  FANSI_val_args(x, norm, carry);
+  // FANSI_state_init does validations too
   if(
-    TYPEOF(x) != STRSXP || TYPEOF(width) != INTSXP ||
+    TYPEOF(width) != INTSXP ||
     TYPEOF(indent) != INTSXP || TYPEOF(exdent) != INTSXP ||
     TYPEOF(prefix) != STRSXP || TYPEOF(initial) != STRSXP ||
     TYPEOF(wrap_always) != LGLSXP ||
     TYPEOF(pad_end) != STRSXP ||
-    TYPEOF(warn) != LGLSXP || TYPEOF(term_cap) != INTSXP ||
     TYPEOF(strip_spaces) != LGLSXP ||
     TYPEOF(tabs_as_spaces) != LGLSXP ||
     TYPEOF(tab_stops) != INTSXP ||
     TYPEOF(first_only) != LGLSXP ||
-    TYPEOF(ctl) != INTSXP
+    TYPEOF(terminate) != LGLSXP
   )
     error("Internal Error: arg type error 1; contact maintainer.");  // nocov
+
+  int normalize = asLogical(norm);
+  int prt = 0;
 
   const char * pad = CHAR(asChar(pad_end));
   if(*pad != 0 && (*pad < 0x20 || *pad > 0x7e))
@@ -553,32 +543,6 @@ SEXP FANSI_strwrap_ext(
       "Argument `pad.end` must be an empty string or a single ",
       "printable ASCII character."
     );
-
-  // Set up the buffer, this will be created in FANSI_strwrap, but we want a
-  // handle for it here so we can re-use
-
-  struct FANSI_buff buff = {.len = 0};
-
-  // Strip whitespaces as needed; `strwrap` doesn't seem to do this with prefix
-  // and initial, so we don't either
-
-  int strip_spaces_int = asInteger(strip_spaces);
-
-  if(strip_spaces_int) x = PROTECT(FANSI_process(x, &buff));
-  else PROTECT(x);
-
-  // and tabs
-
-  if(asInteger(tabs_as_spaces)) {
-    x = PROTECT(FANSI_tabs_as_spaces(x, tab_stops, &buff, warn, term_cap, ctl));
-    prefix = PROTECT(
-      FANSI_tabs_as_spaces(prefix, tab_stops, &buff, warn, term_cap, ctl)
-    );
-    initial = PROTECT(
-      FANSI_tabs_as_spaces(initial, tab_stops, &buff, warn, term_cap, ctl)
-    );
-  }
-  else x = PROTECT(PROTECT(PROTECT(x)));  // PROTECT stack balance
 
   // Prepare the leading strings; could turn out to be wasteful if we don't
   // need them all; there are three possible combinations: 1) first line of the
@@ -590,20 +554,15 @@ SEXP FANSI_strwrap_ext(
 
   int indent_int = asInteger(indent);
   int exdent_int = asInteger(exdent);
-  int warn_int = asInteger(warn);
   int first_only_int = asInteger(first_only);
 
   if(indent_int < 0 || exdent_int < 0)
     error("Internal Error: illegal indent/exdent values.");  // nocov
 
-  pre_dat_raw = make_pre(prefix);
+  pre_dat_raw = make_pre(prefix, warn, term_cap, ctl, "prefix");
 
-  const char * warn_base =
-    "`%s` contains unhandled ctrl or UTF-8 sequences (see `?unhandled_ctl`).";
-  if(warn_int && pre_dat_raw.warn) warning(warn_base, "prefix");
   if(prefix != initial) {
-    ini_dat_raw = make_pre(initial);
-    if(warn_int && ini_dat_raw.warn) warning(warn_base, "initial");
+    ini_dat_raw = make_pre(initial, warn, term_cap, ctl, "initial");
   } else ini_dat_raw = pre_dat_raw;
 
   ini_first_dat = pad_pre(ini_dat_raw, indent_int);
@@ -616,9 +575,32 @@ SEXP FANSI_strwrap_ext(
     pre_next_dat = pad_pre(pre_dat_raw, exdent_int);
   } else pre_next_dat = pre_first_dat;
 
+  // Set up the buffer, this will be created in FANSI_strwrap, but we want a
+  // handle for it here so we can re-use.
+  // WARNING: must be after pad_pre as pad_pre uses R_alloc.
+  struct FANSI_buff buff;
+  FANSI_INIT_BUFF(&buff);
+
+  // Strip whitespaces as needed; `strwrap` doesn't seem to do this with prefix
+  // and initial, so we don't either
+  int strip_spaces_int = asInteger(strip_spaces);
+  if(strip_spaces_int) {
+    x = PROTECT(FANSI_process(x, term_cap, ctl, &buff)); ++prt;
+  }
+  // and tabs
+  if(asInteger(tabs_as_spaces)) {
+    x = PROTECT(FANSI_tabs_as_spaces(x, tab_stops, &buff, warn, term_cap, ctl));
+    ++prt;
+    prefix = PROTECT(
+      FANSI_tabs_as_spaces(prefix, tab_stops, &buff, warn, term_cap, ctl)
+    ); ++prt;
+    initial = PROTECT(
+      FANSI_tabs_as_spaces(initial, tab_stops, &buff, warn, term_cap, ctl)
+    ); ++prt;
+  }
+
   // Check that widths are feasible, although really only relevant if in strict
   // mode
-
   int width_int = asInteger(width);
   int wrap_always_int = asInteger(wrap_always);
 
@@ -635,39 +617,63 @@ SEXP FANSI_strwrap_ext(
       "and `prefix` width must be less than `width - 1` when in `wrap.always`."
     );
 
+  // Prep for carry
+  int do_carry = STRING_ELT(carry, 0) != NA_STRING;
+  int any_na = 0;
+  struct FANSI_state state_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
+
   // Could be a little faster avoiding this allocation if it turns out nothing
   // needs to be wrapped and we're in simplify=TRUE, but that seems like a lot
   // of work for a rare event
-
   R_xlen_t i, x_len = XLENGTH(x);
   SEXP res;
 
   if(first_only_int) {
     // this is to support trim mode
-    res = PROTECT(allocVector(STRSXP, x_len));
+    res = PROTECT(allocVector(STRSXP, x_len)); ++prt;
   } else {
-    res = PROTECT(allocVector(VECSXP, x_len));
+    res = PROTECT(allocVector(VECSXP, x_len)); ++prt;
   }
+  SEXP R_true = PROTECT(ScalarLogical(1)); ++prt;
+  SEXP R_one = PROTECT(ScalarInteger(1)); ++prt;
+  struct FANSI_state state;
+
   // Wrap each element
-
   for(i = 0; i < x_len; ++i) {
-    FANSI_interrupt(i);
-    SEXP chr = STRING_ELT(x, i);
-    if(chr == NA_STRING) continue;
-    FANSI_check_chrsxp(chr, i);
-    const char * chr_utf8 = CHAR(chr);
+    if(!i) {
+      state = FANSI_state_init_full(
+        x, warn, term_cap, R_true, R_true, R_one, ctl, i
+      );
+    } else FANSI_state_reinit(&state, x, i);
 
+    FANSI_interrupt(i);
+    // strtrim treats NA as NA, but strwrap treats it as the string "NA"
+    if(
+      first_only_int && (
+        STRING_ELT(x, i) == NA_STRING ||
+        (do_carry && any_na)
+    ) ) {
+      any_na = TRUE;
+      SET_STRING_ELT(res, i, NA_STRING);
+      continue;
+    }
+    // Implicitly treat NAs like the string 'NA' as the base version does
     SEXP str_i = PROTECT(
       strwrap(
-        chr_utf8, width_int,
+        width_int,
         i ? pre_first_dat : ini_first_dat,
         pre_next_dat,
-        wrap_always_int, &buff,
+        wrap_always_int,
+        &buff,
         CHAR(asChar(pad_end)),
         strip_spaces_int,
-        warn, term_cap,
         first_only_int,
-        ctl
+        i,
+        normalize,
+        do_carry,
+        state,
+        &state_carry,
+        asLogical(terminate)
     ) );
     if(first_only_int) {
       SET_STRING_ELT(res, i, str_i);
@@ -676,6 +682,7 @@ SEXP FANSI_strwrap_ext(
     }
     UNPROTECT(1);
   }
-  UNPROTECT(5);
+  FANSI_release_buff(&buff, 1);
+  UNPROTECT(prt);
   return res;
 }

@@ -20,15 +20,23 @@ if(getRversion() < "3.2.2") {
     # warnPartialMatchDollar = TRUE
   )
   on.exit(old.opt)
+  pat.all <- "^[^.].*\\.[Rr]$"
+  pattern <- pat.all
+  # pattern <- "over"
   unitize_dir(
     'unitizer',
-    pattern="has|misc|nchar|overflow|strip|strsplit|substr|tabs|tohtml|wrap",
-    state='recommended'
+    pattern=pattern,
+    state='suggested'
   )
   # we skip utf8 tests on solaris due to the problems with deparse (and maybe
-  # others, don't have a solaris system handy for testing)
-
-  if(!grepl("solaris|sun", Sys.info()[['sysname']], ignore.case=TRUE)) {
-    unitize('unitizer/utf8.R')
+  # others, don't have a solaris system handy for testing).
+  if(
+    !grepl("solaris|sun", Sys.info()[['sysname']], ignore.case=TRUE) &&
+    identical(pattern, pat.all)
+  ) {
+    unitize('special/utf8.R', state='suggested')
   }
+  # UCD 12.1 update in 4.0.4 produces correct widths for emoji
+  if(getRversion() >= "4.0.4" && identical(pattern, pat.all))
+    unitize('special/emo-graph.R', state='suggested')
 }

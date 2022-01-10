@@ -1,3 +1,18 @@
+## Copyright (C) 2022 Brodie Gaslam
+##
+## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
+##
+## This program is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 2 or 3 of the License.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## Go to <https://www.r-project.org/Licenses> for copies of the licenses.
+
 library(unitizer)
 library(fansi)
 
@@ -197,10 +212,36 @@ unitizer_sect("Colors as classes (#65)", {
 
   ## see examples for visual testing
 })
+unitizer_sect("chars to escape", {
+  str.esc <- c("A\033[45m<B","A\033[44m>B","A\033[43m&B")
+  # warning
+  to_html(str.esc)
+  # no warnings
+  sgr_to_html(str.esc)
+  to_html(str.esc, warn=FALSE)
+  to_html(html_esc(str.esc))
+
+  str.esc2 <- c("A\033[45m<B","A\033[200m>B","A\033[201mB")
+  to_html(str.esc2)
+  to_html(str.esc2, warn=FALSE)
+})
 unitizer_sect("helpers", {
   html <- sgr_to_html("\033[42mHello")
   f <- in_html(html, css="span {background-color: #CCC;}", display=FALSE)
   readLines(f)
   unlink(f)
   in_html(html, css="span {background-color: #CCC;}", display=FALSE, clean=TRUE)
+})
+unitizer_sect("carry", {
+  string.2 <- c("A\33[44m", "B\033[49m", "C", "\033[39mD")
+
+  to_html(string.2)
+  to_html(string.2, carry=FALSE)
+  to_html(string.2, carry="\033[33m")
+  to_html(string.2, carry="\033[33m\033]8;;https://w.z\033\\")
+
+  ## NA propagation
+  string.3 <- c("A\33[44m", "\033[31mC", NA, "\033[39mD")
+  to_html(string.3)
+  to_html(string.3, carry=FALSE)
 })

@@ -1,6 +1,27 @@
+## Copyright (C) 2022 Brodie Gaslam
+##
+## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
+##
+## This program is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 2 or 3 of the License.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## Go to <https://www.r-project.org/Licenses> for copies of the licenses.
+
 library(fansi)
 
 unitizer_sect("basic splits", {
+  str.0 <- c("hello world", "goodbye moon")
+  identical(strsplit(str.0[1], " "), strsplit_ctl(str.0[1], " "))
+  identical(strsplit(str.0, "h"), strsplit_ctl(str.0, "h"))
+  identical(strsplit(str.0, "m"), strsplit_ctl(str.0, "m"))
+  identical(strsplit(str.0, "g"), strsplit_ctl(str.0, "g"))
+
   str.1 <- "hello\033[31m world"
   str.2 <- "\033[42m hello\033[m world, Goodbye Moon"
   strsplit_ctl(str.1, " ")
@@ -51,6 +72,7 @@ unitizer_sect('bad intputs', {
   strsplit_ctl(str.2, "", term.cap="bananas")
   strsplit_ctl(str.2, "", ctl=1:3)
   strsplit_ctl(str.2, "", ctl="bananas")
+  strsplit_ctl("a b", str.bytes)
 })
 unitizer_sect('issue 55', {
   # can't work, ideally would issue a warning, but detecting stripped

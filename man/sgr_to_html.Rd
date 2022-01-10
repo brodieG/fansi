@@ -2,29 +2,40 @@
 % Please edit documentation in R/tohtml.R
 \name{sgr_to_html}
 \alias{sgr_to_html}
-\title{Convert ANSI CSI SGR Escape Sequence to HTML Equivalents}
+\title{Convert Control Sequences to HTML Equivalents}
 \usage{
 sgr_to_html(
   x,
-  warn = getOption("fansi.warn"),
-  term.cap = getOption("fansi.term.cap"),
-  classes = FALSE
+  warn = getOption("fansi.warn", TRUE),
+  term.cap = getOption("fansi.term.cap", dflt_term_cap()),
+  classes = FALSE,
+  carry = getOption("fansi.carry", TRUE)
 )
 }
 \arguments{
-\item{x}{a character vector or object that can be coerced to character.}
+\item{x}{a character vector or object that can be coerced to such.}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
-to be incorrect, for example by moving the cursor (see \link{fansi}).}
+to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
+At most one warning will be issued per element in each input vector.  Will
+also warn about some badly encoded UTF-8 strings, but a lack of UTF-8
+warnings is not a guarantee of correct encoding (use \code{\link{validUTF8}} for
+that).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
-starting with "38;5" or "48;5"), and "truecolor" (SGR codes starting with
-"38;2" or "48;2"). Changing this parameter changes how \code{fansi}
-interprets escape sequences, so you should ensure that it matches your
-terminal capabilities. See \link{term_cap_test} for details.}
+starting with "38;5" or "48;5"), "truecolor" (SGR codes starting with
+"38;2" or "48;2"), and "all". "all" behaves as it does for the \code{ctl}
+parameter: "all" combined with any other value means all terminal
+capabilities except that one.  \code{fansi} will warn if it encounters SGR codes
+that exceed the terminal capabilities specified (see \code{\link{term_cap_test}}
+for details).  In versions prior to 1.0, \code{fansi} would also skip exceeding
+SGRs entirely instead of interpreting them.  You may add the string "old"
+to any otherwise valid \code{term.cap} spec to restore the pre 1.0 behavior.
+"old" will not interact with "all" the way other valid values for this
+parameter do.}
 
 \item{classes}{FALSE (default), TRUE, or character vector of either 16,
 32, or 512 class names.  Character strings may only contain ASCII
@@ -57,6 +68,22 @@ mapped.
 \item character(512): Like character(16), except the basic, bright, and all
 other 8-bit colors are mapped.
 }}
+
+\item{carry}{TRUE, FALSE (default), or a scalar string, controls whether to
+interpret the character vector as a "single document" (TRUE or string) or
+as independent elements (FALSE).  In "single document" mode, active state
+at the end of an input element is considered active at the beginning of the
+next vector element, simulating what happens with a document with active
+state at the end of a line.  If FALSE each vector element is interpreted as
+if there were no active state when it begins.  If character, then the
+active state at the end of the \code{carry} string is carried into the first
+element of \code{x} (see "Replacement Functions" for differences there).  The
+carried state is injected in the interstice between an imaginary zeroeth
+character and the first character of a vector element.  See the "Position
+Semantics" section of \code{\link{substr_ctl}} and the "State Interactions" section
+of \code{\link[=fansi]{?fansi}} for details.  Except for \code{\link{strwrap_ctl}} where \code{NA} is
+treated as the string \code{"NA"}, \code{carry} will cause \code{NA}s in inputs to
+propagate through the remaining vector elements.}
 }
 \value{
 A character vector of the same length as \code{x} with all escape
@@ -64,101 +91,14 @@ sequences removed and any basic ANSI CSI SGR escape sequences applied via
 SPAN HTML tags.
 }
 \description{
-Interprets CSI SGR sequences and produces a string with equivalent
-formats applied with SPAN elements and inline CSS styles.  Optionally for
-colors, the SPAN elements may be assigned classes instead of inline styles,
-in which case it is the user's responsibility to provide a style sheet.
-Input that contains special HTML characters ("<", ">", "&", "'", and "\""),
-particularly the first two, should be escaped with \code{\link{html_esc}}.
-}
-\details{
-Only "observable" styles are translated.  These include colors,
-background-colors, and basic styles (CSI SGR codes 1-6, 8, 9).  Style 7, the
-"inverse" style, is implemented by explicitly switching foreground and
-background colors, if there are any.  Styles 5-6 (blink) are rendered as
-"text-decoration" but likely will do nothing in the browser.  Style 8
-(conceal) sets the color to transparent.
-
-Each element of the input vector is translated into a stand-alone valid HTML
-string.  In particular, any open SPAN tags are closed at the end of an
-element and re-opened on the subsequent element with the same style.  This
-allows safe combination of HTML translated strings, for example by
-\code{\link{paste}}ing them together.  The trade-off is that there may be redundant
-HTML produced.  To reduce redundancy you can first collapse the input vector
-into one string, being mindful that very large strings may exceed maximum
-string size when converted to HTML.
-
-Active SPAN tags are closed and new ones open anytime the "observable"
-state changes.  \code{sgr_to_html} never produces nested SPAN tags, even if at
-times that might produce more compact output.  This is because ANSI CSI SGR
-is a state based formatting system and is not constrained by the semantics of
-a nested one like HTML, so dealing with the complexity of nesting when it
-cannot reproduce all inputs anyway does not seem worthwhile.
+This function is a wrapper around \code{\link{to_html}} and is kept around for legacy
+reasons.  When we added capabilities for handling OSC hyperlinks, the \code{sgr_}
+part of the name became an incomplete description of what the function
+does.  The only substantive difference with the new function is this one does
+not warn when the input contains unescaped "<" or ">".
 }
 \note{
-Non-ASCII strings are converted to and returned in UTF-8 encoding.
+Unlike other functions, the default is \code{carry = TRUE} for compatibility
+with semantics of prior versions of \code{fansi}.
 }
-\examples{
-sgr_to_html("hello\033[31;42;1mworld\033[m")
-sgr_to_html("hello\033[31;42;1mworld\033[m", classes=TRUE)
-
-## Input contains HTML special chars
-x <- "<hello \033[42m'there' \033[34m &amp;\033[m \"moon\"!"
-writeLines(x)
-\dontrun{
-in_html(
-  c(
-    sgr_to_html(html_esc(x)),  # Good
-    sgr_to_html(x)             # Bad!
-) )
-}
-## Generate some class names for basic colors
-classes <- expand.grid(
-  "myclass",
-  c("fg", "bg"),
-  c("black", "red", "green", "yellow", "blue", "magenta", "cyan", "white")
-)
-classes  # order is important!
-classes <- do.call(paste, c(classes, sep="-"))
-## We only provide 16 classes, so Only basic colors are
-## mapped to classes; others styled inline.
-sgr_to_html(
-  "\033[94mhello\033[m \033[31;42;1mworld\033[m",
-  classes=classes
-)
-## Create a whole web page with a style sheet for 256 colors and
-## the colors shown in a table.
-class.256 <- do.call(paste, c(expand.grid(c("fg", "bg"), 0:255), sep="-"))
-sgr.256 <- sgr_256()     # A demo of all 256 colors
-writeLines(sgr.256[1:8]) # SGR formatting
-
-## Convert to HTML using classes instead of inline styles:
-html.256 <- sgr_to_html(sgr.256, classes=class.256)
-writeLines(html.256[1])  # No inline colors
-
-## Generate different style sheets.  See `?make_styles` for details.
-default <- make_styles(class.256)
-mix <- matrix(c(.6,.2,.2, .2,.6,.2, .2,.2,.6), 3)
-desaturated <- make_styles(class.256, mix)
-writeLines(default[1:4])
-writeLines(desaturated[1:4])
-
-## Embed in HTML page and diplay; only CSS changing
-\dontrun{
-in_html(html.256)                  # no CSS
-in_html(html.256, css=default)     # default CSS
-in_html(html.256, css=desaturated) # desaturated CSS
-}
-}
-\seealso{
-\code{\link{fansi}} for details on how \emph{Control Sequences} are
-interpreted, particularly if you are getting unexpected results,
-\code{\link{set_knit_hooks}} for how to use ANSI CSI styled text with knitr and HTML
-output, \code{\link{sgr_256}} to generate a demo string with all 256 8 bit colors.
-
-Other HTML functions: 
-\code{\link{html_esc}()},
-\code{\link{in_html}()},
-\code{\link{make_styles}()}
-}
-\concept{HTML functions}
+\keyword{internal}

@@ -1,30 +1,22 @@
 /*
- * Copyright (C) 2021  Brodie Gaslam
+ * Copyright (C) 2022 Brodie Gaslam
  *
  * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 2 of the License, or
- * (at your option) any later version.
+ * the Free Software Foundation, either version 2 or 3 of the License.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * Go to <https://www.r-project.org/Licenses/GPL-2> for a copy of the license.
+ * Go to <https://www.r-project.org/Licenses> for a copies of the licenses.
  */
 
 #include "fansi.h"
-// Which styles actuall produce HTML
 
-static const unsigned int css_html_style[8] = {
-  1, 2, 3, 4, 5, 6,
-  // 7,                // Inverse doesn't actually produces a style
-  8, 9
-};
-static unsigned int css_html_mask = 0;
 /*
  * Looks like we don't need to worry about C0 sequences, however we must
  * parse all ESC sequences as HTML gladly displays everything right after the
@@ -59,41 +51,31 @@ static const struct FANSI_css css_style[9] = {
 };
 // Generate mask for html styles in first pass
 
-static unsigned int style_html_mask() {
-  if(!css_html_mask) {
-    int style_n = sizeof(css_html_style) / sizeof(unsigned int);
-    for(int i = 0; i < style_n; ++i)
-      css_html_mask |= 1U << css_html_style[i];
-  }
-  return css_html_mask;
+static int sgr_has_color(struct FANSI_sgr sgr) {
+  return sgr.color.x || sgr.bgcol.x;
 }
-static int state_has_color(struct FANSI_state state) {
-  return state.color >= 0 || state.bg_color >= 0;
-}
-static int state_has_style_html(struct FANSI_state state) {
+static int sgr_has_style_html(struct FANSI_sgr sgr) {
   // generate mask first time around.
-  return (state.style & style_html_mask()) ||
-    state.color >= 0 || state.bg_color >= 0;
+  return (sgr.style & STL_MASK2) || sgr.color.x || sgr.bgcol.x;
 }
-static int state_comp_html(
-  struct FANSI_state target, struct FANSI_state current
+static int sgr_comp_html(
+  struct FANSI_sgr target, struct FANSI_sgr current
 ) {
   return
     // Colors are Different
-    FANSI_state_comp_color(target, current) ||
+    FANSI_sgr_comp_color(target, current) ||
     // HTML rendered styles are different
     (
-      (target.style & style_html_mask()) !=
-      (current.style & style_html_mask())
+      (target.style & STL_MASK2) !=
+      (current.style & STL_MASK2)
     ) ||
     // If one has color both have the same color, but we need to check
     // whether they have different invert status
     (
-      (state_has_color(target)) &&
-      (target.style & (1U << 7)) ^ (current.style & (1U << 7))
+      (sgr_has_color(target)) &&
+      (target.style & STL_INVERT) ^ (current.style & STL_INVERT)
     );
 }
-
 /*
  * Converts basic, bright and 8 bit colors to a range of 0:255.
  * Returns -1 for other values including no color.
@@ -102,19 +84,12 @@ static int state_comp_html(
  *
  * Recall colors in 30:39 and 40:49 already converted to 0:9.
  */
-static int color_to_8bit(int color, int* color_extra) {
+static int color_to_8bit(struct FANSI_color color) {
   int col256 = -1;
-  if (color >= 0 && color <= 7) {
-    // Basic colors
-    col256 = color % 10;
-  } else if ((color >= 100 && color <= 107) || (color >= 90 && color <= 97)) {
-    // Brights
-    col256 = color % 10 + 8;
-  } else if ((color == 8) && color_extra[0] == 5) {
-    // 8 Bit colors
-    col256 = color_extra[1];
-    if(col256 < 0 || col256 > 255)
-      error("Internal Error: 0-255 color outside of that range."); // nocov
+  switch(color.x & CLR_MASK) {
+    case CLR_8:       col256 = color.x & ~CLR_MASK;        break;
+    case CLR_BRIGHT:  col256 = (color.x & ~CLR_MASK) + 8;  break;
+    case CLR_256:     col256 = color.extra[0];                   break;
   }
   return col256;
 }
@@ -129,9 +104,9 @@ static int color_to_8bit(int color, int* color_extra) {
  */
 
 static const char * get_color_class(
-  int color, int* color_extra, SEXP color_classes, int bg
+  struct FANSI_color color, SEXP color_classes, int bg
 ) {
-  int col8bit = color_to_8bit(color, color_extra);
+  int col8bit = color_to_8bit(color);
   if(col8bit >= 0 && XLENGTH(color_classes) / 2 > (R_xlen_t) col8bit)
     return CHAR(STRING_ELT(color_classes, col8bit * 2 + bg));
   else return NULL;
@@ -144,12 +119,12 @@ static const char * get_color_class(
  * @param color an integer expected to be in 0:9, 90:97, 100:107. NB: ranges
  *   30:39 and 40:49 already converted to 0:9.
  * @param color_extra a pointer to a 4 long integer array as you would get in
- *   struct FANSI_state.color_extra
+ *   struct FANSI_sgr.color_extra
  * @param buff a buffer with at least 8 bytes allocated.
  * @return the *buff pointer
  */
 
-static char * color_to_html(int color, int * color_extra, char * buff) {
+static char * color_to_html(struct FANSI_color color, char * buff) {
   // CAREFUL: DON'T WRITE MORE THAN 7 BYTES + NULL TERMINATOR
 
   const char * dectohex = "0123456789ABCDEF";
@@ -171,313 +146,231 @@ static char * color_to_html(int color, int * color_extra, char * buff) {
     "555555", "FF5555", "55FF55", "FFFF55",
     "5555FF", "FF55FF", "55FFFF", "FFFFFF"
   };
+  unsigned char clrval = color.x & ~CLR_MASK;
+  if(clrval == 9)
+    error("Internal Error: applying non-color."); // nocov
+
   char * buff_track = buff;
+  *(buff_track++) = '#';
 
-  if(color == 9) {
-    error(
-      "Internal Error: should not be applying no-color; contact maintainer."
-    );
-  } else if(color >= 0 && color < 10) {
-    *(buff_track++) = '#';
-
-    if(color == 8) {
-      if(color_extra[0] == 2) {
-        for(int i = 1; i < 4; ++i) {
-          char hi = dectohex[color_extra[i] / 16];
-          char lo = dectohex[color_extra[i] % 16];
+  switch(color.x & CLR_MASK) {
+    case CLR_8:
+      memcpy(buff_track, std_8[clrval], 6);
+      buff_track += 6;
+      break;
+    case CLR_BRIGHT:
+      memcpy(buff_track, bright[clrval], 6);
+      buff_track += 6;
+      break;
+    case CLR_256: {
+      int color_5 = color.extra[0];
+      if(color_5 < 16) {
+        memcpy(buff_track, std_16[color_5], 6);
+        buff_track += 6;
+      } else if (color_5 < 232) {
+        int c5 = color_5 - 16;
+        int c5_r = c5 / 36;
+        int c5_g = (c5 % 36) / 6;
+        int c5_b = c5 % 6;
+        if(c5_r > 5 || c5_g > 5 || c5_b > 5)
+          error("Internal Error: out of bounds computing 6^3 clr."); // nocov
+        memcpy(buff_track, std_5[c5_r], 2);
+        buff_track += 2;
+        memcpy(buff_track, std_5[c5_g], 2);
+        buff_track += 2;
+        memcpy(buff_track, std_5[c5_b], 2);
+        buff_track += 2;
+      } else {
+        int c_bw = (color_5 - 232) * 10 + 8;
+        char hi = dectohex[c_bw / 16];
+        char lo = dectohex[c_bw % 16];
+        for(int i = 0; i < 3; ++i) {
           *(buff_track++) = hi;
           *(buff_track++) = lo;
         }
-      } else if(color_extra[0] == 5) {
-        // These are the 0-255 color codes
-        int color_5 = color_extra[1];
-        if(color_5 < 0 || color_5 > 255)
-          error("Internal Error: 0-255 color outside of that range."); // nocov
-        if(color_5 < 16) {
-          // Standard colors
-          memcpy(buff_track, std_16[color_5], 6);
-          buff_track += 6;
-        } else if (color_5 < 232) {
-          int c5 = color_5 - 16;
-          int c5_r = c5 / 36;
-          int c5_g = (c5 % 36) / 6;
-          int c5_b = c5 % 6;
-
-          if(c5_r > 5 || c5_g > 5 || c5_b > 5)
-            error("Internal Error: out of bounds computing 6^3 clr."); // nocov
-
-          memcpy(buff_track, std_5[c5_r], 2);
-          buff_track += 2;
-          memcpy(buff_track, std_5[c5_g], 2);
-          buff_track += 2;
-          memcpy(buff_track, std_5[c5_b], 2);
-          buff_track += 2;
-        } else {
-          int c_bw = (color_5 - 232) * 10 + 8;
-          char hi = dectohex[c_bw / 16];
-          char lo = dectohex[c_bw % 16];
-          for(int i = 0; i < 3; ++i) {
-            *(buff_track++) = hi;
-            *(buff_track++) = lo;
-          }
-        }
-      } else
-        // nocov start
-        error(
-          "Internal Error: invalid 256 or tru color code; contact maintainer."
-        );
-        // nocov end
-    } else {
-      memcpy(buff_track, std_8[color], 6);
-      buff_track += 6;
+      }
+      break;
     }
-  } else if(
-    (color >= 90 && color <= 97) ||
-    (color >= 100 && color <= 107)
-  ) {
-    *(buff_track++) = '#';
-    int c_bright = color >= 100 ? color - 100 : color - 90;
-    memcpy(buff_track, bright[c_bright], 6);
-    buff_track += 6;
-  } else {
-    error("Internal Error: invalid color code %d", color); // nocov
+    case CLR_TRU:
+      for(int i = 0; i < 3; ++i) {
+        char hi = dectohex[color.extra[i] / 16];
+        char lo = dectohex[color.extra[i] % 16];
+        *(buff_track++) = hi;
+        *(buff_track++) = lo;
+      }
+      break;
+    default: error("Internal Error: unknown color mode."); // nocov
   }
   *buff_track = 0;
   int dist = (int) (buff_track - buff);
-  if(dist != 7) error("Internal Error: unexpected byte count for color.");
+  if(dist != 7)
+    error("Internal Error: bad byte count for color (%d).", dist); // nocov
 
   return buff;
 }
-// Central error function.
+static char * oe_sgr_html_err = "Expanding SGR sequences to HTML";
+/*
+ * Seek for an esc or, warn if run into "<", ">" (maybe ">" is not necessary).
+ *
+ * We do not warn for "&"  because if we did `to_html(html_esc())` could produce
+ * warnings.
+ */
 
-static void overflow_err(const char * type, R_xlen_t i) {
-  error(
-    "%s %s %s %jd%s",
-    "Expanding SGR sequences into HTML will create a string longer than",
-    type, "at position", FANSI_ind(i), ". Try again with smaller strings."
-  );
-}
-static void overflow_err2(R_xlen_t i) {
-  error(
-    "%s %s %s %jd%s",
-    "Escaping HTML special characters will create a string longer than",
-    "INT_MAX", "at position", FANSI_ind(i), ". Try again with smaller strings."
-  );
-}
-/*
- * If *buff is not NULL, copy tmp into it and advance, else measure tmp
- * and advance length
- *
- *   vvvvvvvv
- * !> DANGER <!
- *   ^^^^^^^^
- *
- * This advances *buff so that it points to to the NULL terminator
- * the end of what is written to so string is ready to append to.
- *
- * @param i index in overal character vector, needed to report overflow string.
- */
-static unsigned int copy_or_measure(
-  char ** buff, const char * tmp, unsigned int len, R_xlen_t i
+static const char * find_esc_or_warn(
+  const char * string, int * warned, R_xlen_t i, const char * arg
 ) {
-  size_t tmp_len = strlen(tmp);
-  // strictly it's possible for len > FANSI_int_max, but shouldn't happen even
-  // in testing since we only grow len by first checking.
-  if(tmp_len > FANSI_int_max - len) overflow_err("INT_MAX", i);
-  if(*buff) {
-    strcpy(*buff, tmp);
-    *buff += tmp_len;
-    **buff = 0;  // not necessary, but helps to debug
+  while(*string) {
+    switch(*string) {
+      case 0x1b: goto EXIT;
+      case '>':
+      case '<':
+        // Warn
+        if(!*warned) {
+          warning(
+            "`%s` %s '%c' at index [%jd] (see ?html_esc)%s",
+            arg,
+            "contains unescaped HTML special character",
+            *string, FANSI_ind(i),
+            "; you can use `warn=FALSE` to turn off these warnings."
+          );
+          *warned = 1;
+        }
+    }
+    ++string;
   }
-  return tmp_len;
+  EXIT:
+
+  if(!*string) return (const char *) 0;
+  else return string;
 }
 /*
- * Compute HTML Size of Each Individual State, Or Write It
+ * Write individual SGR sequence as HTML
  *
- * This used to be two distinct functions, but the risk of getting out of sync
- * was too high so we merged them into one.  We try to minimize the
- * differences between size calculation vs. writing modes to avoid mistakes, but
- * this means the code is less efficient than could be, possibly repeating
- * calcualtions, overflow checks, or computing compile time knowable string
- * widths.
- *
- * @param buff the buffer to write to, if it is null only computes size instead
- *   also of writing.
+ * DANGER: this is a 'W' function, see 'src/write.c' for details.
  */
-static int state_size_and_write_as_html(
+static int W_state_as_html(
+  struct FANSI_buff * buff,
   struct FANSI_state state,
   struct FANSI_state state_prev,
-  char * buff,
-  SEXP color_classes, R_xlen_t i,
-  int bytes_html
+  SEXP color_classes, R_xlen_t i
 ) {
   /****************************************************\
   | IMPORTANT: KEEP THIS ALIGNED WITH FANSI_csi_write  |
   | although right now ignoring rare escapes in html   |
   \****************************************************/
 
-  // Not all basic styles are html styles (e.g. invert), so state only changes
+  // Not all basic styles are html styles (e.g. invert), so sgr only changes
   // on invert when current or previous also has a color style
+  int has_cur_sgr = sgr_has_style_html(state.fmt.sgr);
+  int has_prev_sgr = sgr_has_style_html(state_prev.fmt.sgr);
+  int sgr_change = sgr_comp_html(state.fmt.sgr, state_prev.fmt.sgr);
 
-  int has_cur_state = state_has_style_html(state);
-  int has_prev_state = state_has_style_html(state_prev);
-  int state_change = state_comp_html(state, state_prev);
+  int has_cur_url = FANSI_url_active(state.fmt.url);
+  int has_prev_url = FANSI_url_active(state_prev.fmt.url);
+  int url_change = FANSI_url_comp(state.fmt.url, state_prev.fmt.url);
 
-  const char * buff_start = buff;
-  unsigned int len = bytes_html;  // this is for overflow check
+  const char * err_msg = oe_sgr_html_err;
+  struct FANSI_sgr sgr = state.fmt.sgr;
 
-  if(state_change) {
-    if(!has_cur_state) {
-      len += copy_or_measure(&buff, "</span>", len, i);
-    } else {
-      if (!has_prev_state) {
-        len += copy_or_measure(&buff, "<span", len, i);
-      } else {
-        len += copy_or_measure(&buff, "</span><span", len, i);
-      }
+  // FANSI_W_COPY requires variables len, i, and err_msg
+  if(sgr_change || url_change) {
+    // Close previous
+    if(has_prev_sgr) FANSI_W_COPY(buff, "</span>");
+    if(has_prev_url) FANSI_W_COPY(buff, "</a>");
+
+    if(has_cur_url) {
+      // users responsibility to escape html special chars
+      FANSI_W_COPY(buff, "<a href='");
+      FANSI_W_MCOPY(buff, URL_STRING(state.fmt.url), URL_LEN(state.fmt.url));
+      FANSI_W_COPY(buff, "'>");
+    }
+    if(has_cur_sgr) {
+       FANSI_W_COPY(buff, "<span");
       // Styles
-      int invert = state.style & (1 << 7);
-      int color = invert ? state.bg_color : state.color;
-      int * color_extra = invert ? state.bg_color_extra : state.color_extra;
-      int bg_color = invert ? state.color : state.bg_color;
-      int * bg_color_extra = invert ? state.color_extra : state.bg_color_extra;
+      int invert = sgr.style & STL_INVERT;
+      struct FANSI_color color = invert ? sgr.bgcol : sgr.color;
+      struct FANSI_color bgcol = invert ? sgr.color : sgr.bgcol;
 
       // Use provided classes instead of inline styles?
-      const char * color_class =
-        get_color_class(color, color_extra, color_classes, 0);
-      const char * bgcol_class =
-        get_color_class(bg_color, bg_color_extra, color_classes, 1);
+      const char * color_class = get_color_class(color, color_classes, 0);
+      const char * bgcol_class = get_color_class(bgcol, color_classes, 1);
 
       // Class based colors e.g. " class='fansi-color-06 fansi-bgcolor-04'"
       // Brights remapped to 8-15
-
       if(color_class || bgcol_class) {
-        len += copy_or_measure(&buff, " class='", len, i);
-        if(color_class) len += copy_or_measure(&buff, color_class, len, i);
-        if(color_class && bgcol_class) len += copy_or_measure(&buff, " ", len, i);
-        if(bgcol_class) len += copy_or_measure(&buff, bgcol_class, len, i);
-        len += copy_or_measure(&buff, "'", len, i);
+        FANSI_W_COPY(buff, " class='");
+        if(color_class) FANSI_W_COPY(buff, color_class);
+        if(color_class && bgcol_class) FANSI_W_COPY(buff, " ");
+        if(bgcol_class) FANSI_W_COPY(buff, bgcol_class);
+        FANSI_W_COPY(buff, "'");
       }
       // inline style and/or colors
       if(
-        state.style & css_html_mask ||
-        (color >= 0 && (!color_class)) ||
-        (bg_color >= 0 && (!bgcol_class))
+        sgr.style & STL_MASK2 ||
+        (color.x && (!color_class)) || (bgcol.x && (!bgcol_class))
       ) {
-        len += copy_or_measure(&buff, " style='", len, i);
-        unsigned int len_start = len;
+        FANSI_W_COPY(buff, " style='");
+        int has_style = 0;
         char color_tmp[8];
-        if(color >= 0 && (!color_class)) {
-          len += copy_or_measure(&buff, "color: ", len, i);
-          len += copy_or_measure(
-            &buff, color_to_html(color, color_extra, color_tmp), len, i
-          );
+        if(color.x && (!color_class)) {
+          has_style += FANSI_W_COPY(buff, "color: ");
+          FANSI_W_COPY(buff, color_to_html(color, color_tmp));
         }
-        if(bg_color >= 0 && (!bgcol_class)) {
-          if(len_start < len) len += copy_or_measure(&buff, "; ", len, i);
-          len += copy_or_measure(&buff,  "background-color: ", len, i);
-          len += copy_or_measure(
-            &buff, color_to_html(bg_color, bg_color_extra, color_tmp), len, i
-          );
+        if(bgcol.x && (!bgcol_class)) {
+          if(has_style) has_style += FANSI_W_COPY(buff, "; ");
+          has_style += FANSI_W_COPY(buff,  "background-color: ");
+          FANSI_W_COPY(buff, color_to_html(bgcol, color_tmp));
         }
         // Styles (need to go after color for transparent to work)
-        for(int i = 1; i < 10; ++i)
-          if(state.style & css_html_mask & (1 << i)) {
-            if(len_start < len) len += copy_or_measure(&buff, "; ", len, i);
-            len += copy_or_measure(&buff, css_style[i - 1].css, len, i);
+        for(unsigned int i = 0U; i < 9U; ++i)
+          if(sgr.style & STL_MASK2 & (1U << i)) {
+            if(has_style) FANSI_W_COPY(buff, "; ");
+            has_style += FANSI_W_COPY(buff, css_style[i].css);
           }
-
-        len += copy_or_measure(&buff, ";'", len, i);
+        FANSI_W_COPY(buff, ";'");
       }
-      len += copy_or_measure(&buff, ">", len, i);
+      FANSI_W_COPY(buff, ">");
   } }
-  len -= bytes_html;
-  if(buff) {
-    *buff = 0;
-    if((unsigned int)(buff - buff_start) != len)
-      // nocov start
-      error(
-        "Internal Error: buffer length mismatch in html generation (%ud vs %ud).",
-        len, (unsigned int)(buff - buff_start)
-      );
-      // nocov end
-  }
   // We've checked len at every step, so it cannot overflow INT_MAX.
 
-  return (int)len;
+  return buff->len;
 }
 /*
- * Final checks for unsual size, and include space for terminator.
+ * Convert SGR Encoded Strings to their HTML equivalents
  */
-
-static size_t final_string_size(int bytes, R_xlen_t i) {
-  // In the extremely unlikely case we're on a systems with weird integer sizes
-  // or R changes what R_len_t.  >= SIZE_MAX b/c we need room for the extra NULL
-  // terminator byte
-  if(INT_MAX >= SIZE_MAX && (unsigned int) bytes >= SIZE_MAX)
-    overflow_err("SIZE_MAX", i);     // nocov
-  if(INT_MAX > R_LEN_T_MAX && bytes > R_LEN_T_MAX)
-    overflow_err("R_LEN_T_MAX", i);  // nocov
-
-  return (size_t) bytes + 1;   // include terminator
-}
-/*
- * Check for overall overflow, recall that R allows up to R_LEN_T_MAX long
- * strings (which currently is INT_MAX) excluding the NULL.
- *
- * However, need size_t return so we can allocate one extra byte for the NULL
- * terminator.  Strictly speaking we could avoid this as R accepts character
- * buffers of known length via mkCharLenCE or some such, but it feels
- * uncomfortable having an unterminated string floating around.
- *
- * @return the size of the string **including** the NULL terminator
- */
-static size_t html_check_overflow(
-  int bytes_html, int bytes_esc, int bytes_init, int span_extra, R_xlen_t i
+SEXP FANSI_esc_to_html(
+  SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes, SEXP carry,
+  SEXP warn_unesc
 ) {
-  if(bytes_init < 0 || span_extra < 0)
-    error("Internal Error: illegal -ve lengths in overflow check."); // nocov
-
-  // both bytes_html and byte_esc are positive, so this cannot overflow
-
-  int bytes_extra = bytes_html - bytes_esc;
-  if(
-    (
-       bytes_extra >= 0 &&
-       bytes_init > FANSI_int_max - bytes_extra - span_extra
-    )
-    ||
-    (
-       bytes_extra < 0 &&
-       bytes_init + bytes_extra > FANSI_int_max - span_extra
-    )
-  ) overflow_err("INT_MAX", i);
-
-  if(bytes_init + bytes_extra + span_extra < 0) {
-    // nocov start
-    error(
-      "%s%s",
-      "Internal Error: CSS would translate to negative length string; ",
-      "this should not happen."
-    );
-    // nocov end
-  }
-  int bytes_final = bytes_init + bytes_extra + span_extra;
-  return final_string_size(bytes_final, i);
-}
-
-SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
   if(TYPEOF(x) != STRSXP)
     error("Internal Error: `x` must be a character vector");  // nocov
   if(TYPEOF(color_classes) != STRSXP)
     error("Internal Error: `color_classes` must be a character vector");  // nocov
+  if(TYPEOF(warn_unesc) != LGLSXP || XLENGTH(warn_unesc) != 1)
+    error("Internal Error: `warn_unesc` must be a scalar logical");  // nocov
+
+  int warn_unesc_i = asInteger(warn_unesc);
+  if(warn_unesc_i != 0 && warn_unesc_i != 1)
+    error("Internal Error: `warn_unesc` must be TRUE or FALSE");  // nocov
+
+  const char * arg = "x";
+  struct FANSI_buff buff;
+  FANSI_INIT_BUFF(&buff);
+
+  SEXP ctl = PROTECT(ScalarInteger(1));  // "all"
+  int do_carry = STRING_ELT(carry, 0) != NA_STRING;
+  int any_na = 0;
+  struct FANSI_state state_carry = FANSI_carry_init(carry, warn, term_cap, ctl);
+  UNPROTECT(1);
 
   R_xlen_t x_len = XLENGTH(x);
-  struct FANSI_buff buff = {.len=0};
   struct FANSI_state state, state_prev, state_init;
-  state = state_prev = state_init = FANSI_state_init("", warn, term_cap);
-  const char * span_end = "</span>";
-  int span_end_len = (int) strlen(span_end);
+  SEXP empty = PROTECT(mkString(""));
+  state = FANSI_state_init(empty, warn, term_cap, (R_xlen_t) 0);
+  UNPROTECT(1);
+
+  state_prev = state_init = state;
+  state_prev.fmt = state_carry.fmt;
 
   SEXP res = x;
   // Reserve spot on protection stack
@@ -488,155 +381,116 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
     FANSI_interrupt(i);
 
     SEXP chrsxp = STRING_ELT(x, i);
-    if(chrsxp == NA_STRING) continue;
+    if(chrsxp == NA_STRING || (any_na && do_carry)) {
+      // Allocate target vector if it hasn't been yet
+      if(res == x) REPROTECT(res = duplicate(x), ipx);
+      SET_STRING_ELT(res, i, NA_STRING);
+      any_na = 1;
+      continue;
+    }
     FANSI_check_chrsxp(chrsxp, i);
     const char * string = CHAR(chrsxp);
 
     // Reset position info and string; rest of state info is preserved from
     // prior line so that the state can be continued on new line.
-    state = FANSI_reset_pos(state_prev);
+    if(do_carry) state = state_prev;
+    else state = state_init;
+
     state.string = string;
-    struct FANSI_state state_start = FANSI_reset_pos(state);
+    struct FANSI_state state_start = state;
+    FANSI_reset_pos(&state_start);
+    state.status &= ~STAT_WARNED;
     state_prev = state_init;  // but there are no styles in the string yet
 
     int bytes_init = (int) LENGTH(chrsxp);
-    int bytes_html = 0;
-    int bytes_esc = 0;
-
-    size_t bytes_final = 0;
 
     // Some ESCs may not produce any HTML, and some strings may gain HTML from
     // an ESC from a prior element even if they have no ESCs.
     int has_esc = 0;
-    int has_state = state_has_style_html(state);
-    int trail_span = 0;
-
-    // Process the strings in two passes, in pass 1 we compute how many bytes
-    // we'll need to store the string, and in the second we actually write it.
-    // We trade efficiency for convenience.
+    int has_state =
+      sgr_has_style_html(state.fmt.sgr) || FANSI_url_active(state.fmt.url);
+    int trail_span, trail_a;
+    trail_span = trail_a = 0;
+    int html_spec_warned =
+      ((state.settings & WARN_MASK & ~WARN_ERROR) == 0) || (warn_unesc_i == 0);
 
     // We cheat by only using FANSI_read_next to read escape sequences as we
     // don't care about display width, etc.  Normally we would _read_next over
     // all characters, not just skip from ESC to ESC.
 
-    // - Pass 1: Measure -------------------------------------------------------
+    const char * err_msg = oe_sgr_html_err;
 
-    // Leftover from prior element (only if can't be merged with new)
-    if(*string && *string != 0x1b && state_has_style_html(state)) {
-      bytes_html += state_size_and_write_as_html(
-        state, state_prev,  NULL, color_classes, i, bytes_html
-      );
-      state_prev = state;
-    }
-    // New in this element
-    while(1) {
-      trail_span = state_has_style_html(state_prev);
-      string = strchr(string, 0x1b);
-      if(!string) string = state.string + bytes_init;
-      else {
-        has_esc = 1;
-        state.pos_byte = (string - state.string);
+    // Measure / Write loop
+    for(int k = 0; k < 2; ++k) {
+      if(k) {
+        if(has_esc || has_state) {
+          // Allocate target vector if it hasn't been yet
+          if(res == x) REPROTECT(res = duplicate(x), ipx);
+          // Allocate buffer and reset states for second pass
+          FANSI_size_buff(&buff);
+          string = state.string;  // always points to first byte
+          state_start.status |= state.status & STAT_WARNED;
+          state = state_start;
+          state_prev = state_init;
+        } else break;
+      } else {
+        FANSI_reset_buff(&buff);
       }
-      // State as html, skip if at end of string
-      if(*string) {
-        int esc_start = state.pos_byte;
-        state = FANSI_read_next(state);
-        string = state.string + state.pos_byte;
-        bytes_esc += state.pos_byte - esc_start;  // cannot overflow int
-        if(*string) {
-          bytes_html += state_size_and_write_as_html(
-            state, state_prev,  NULL, color_classes, i, bytes_html
-          );
-        }
-        state_prev = state;
-        has_state |= state_has_style_html(state);
-        if(!*string) break; // nothing after state, so done
-      } else break;
-    }
-    // - Pass 2: Write ---------------------------------------------------------
+      // Leftover from prior element (only if can't be merged with new)
 
-    if(has_esc || has_state) {
-      bytes_final = html_check_overflow(
-        bytes_html, bytes_esc, bytes_init,
-        span_end_len * trail_span, // Last non-terminal state has style?
-        i
-      );
-      trail_span = 0;
-      // Allocate target vector if it hasn't been yet
-      if(res == x) REPROTECT(res = duplicate(x), ipx);
-
-      // Allocate buffer and do second pass, bytes_final includes space for NULL
-      FANSI_size_buff(&buff, bytes_final);
-      string = state.string;  // always points to first byte
-      state_start.warn = state.warn;
-      state = state_start;
-      state_prev = state_init;
-
-      char * buff_track = buff.buff;
-
-      // Very similar to pass 1 loop, but different enough it would be annoying
-      // to make a common function
-
-      if(*string && *string != 0x1b && state_has_style_html(state)) {
-        buff_track += state_size_and_write_as_html(
-          state, state_prev,  buff_track, color_classes, i, 0
-        );
+      if(
+        *string && *string != 0x1b &&
+        (sgr_has_style_html(state.fmt.sgr) || FANSI_url_active(state.fmt.url))
+      ) {
+        // dirty hack, state_prev sgr_prev is not exaclty right at beginning
+        W_state_as_html(&buff, state, state_prev, color_classes, i);
         state_prev = state;
       }
+      // New in this element
       while(1) {
         const char * string_prev = string;
-        trail_span = state_has_style_html(state_prev);
-        string = strchr(string, 0x1b);
-        if(!string) string = state.string + bytes_init;
-        else state.pos_byte = (string - state.string);
+        trail_span = sgr_has_style_html(state_prev.fmt.sgr);
+        trail_a = FANSI_url_active(state_prev.fmt.url);
+        string = find_esc_or_warn(string, &html_spec_warned, i, arg);
 
-        // The text since the last ESC
-        int bytes_prev = string - string_prev;
-        memcpy(buff_track, string_prev, bytes_prev);
-        buff_track += bytes_prev;
-        state.pos_byte = (string - state.string);
+        if(!string) string = state.string + bytes_init;
+        else {
+          has_esc = 1;
+          state.pos.x = (string - state.string);
+        }
+        // Intervening bytes before next state
+        int bytes_prev = string - string_prev;  // cannot overflow int
+        FANSI_W_MCOPY(&buff, string_prev, bytes_prev);
+        state.pos.x = (string - state.string);
 
         // State as html, skip if at end of string
         if(*string) {
-          state = FANSI_read_next(state);
-          string = state.string + state.pos_byte;
-          if(*string) {
-            buff_track += state_size_and_write_as_html(
-              state, state_prev,  buff_track, color_classes, i, 0
-            );
-          }
+          FANSI_read_next(&state, i, arg);
+          string = state.string + state.pos.x;
+          // dirty hack, state_prev sgr_prev is not exaclty right at beginning
+          if(*string)
+            W_state_as_html(&buff, state, state_prev, color_classes, i);
+
           state_prev = state;
+          has_state |= sgr_has_style_html(state.fmt.sgr) ||
+            FANSI_url_active(state.fmt.url);
           if(!*string) break; // nothing after state, so done
         } else break;
       }
-      // Trailing SPAN if needed
-      if(trail_span) {
-        memcpy(buff_track,span_end, span_end_len);
-        buff_track += span_end_len;
+      if(trail_span) FANSI_W_COPY(&buff, "</span>");
+      if(trail_a) FANSI_W_COPY(&buff, "</a>");
+
+      if(buff.buff) {  // only ever true if k > 0
+        // Now create the charsxp with the original encoding.  Since we're only
+        // removing SGR and adding FANSI, it should be okay.
+        cetype_t chr_type = getCharCE(chrsxp);
+        SEXP chrsxp = PROTECT(FANSI_mkChar(buff, chr_type, i));
+        SET_STRING_ELT(res, i, chrsxp);
+        UNPROTECT(1);
       }
-      *(buff_track) = '0';  // not strictly needed
-
-      // Final check that we're not out of sync (recall buff.len includes NULL)
-      if(buff_track - buff.buff != (int)(bytes_final - 1))
-        // nocov start
-        error(
-          "Internal Error: %s (%td vs %zu).",
-          "buffer length mismatch in html generation (2)",
-          buff_track - buff.buff, bytes_final - 1
-        );
-        // nocov end
-
-      // Now create the charsxp with the original encoding.  Since we're only
-      // removing SGR and adding FANSI, it should be okay.
-
-      cetype_t chr_type = getCharCE(chrsxp);
-      SEXP chrsxp = PROTECT(
-        mkCharLenCE(buff.buff, (R_len_t)(buff_track - buff.buff), chr_type)
-      );
-      SET_STRING_ELT(res, i, chrsxp);
-      UNPROTECT(1);
     }
   }
+  FANSI_release_buff(&buff, 1);
   UNPROTECT(1);
   return res;
 }
@@ -644,7 +498,9 @@ SEXP FANSI_esc_to_html(SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes) {
  * Testing interface
  *
  * x is a 5 x N matrix where, for each column the first value is a color code,
- * and subsequent values correspond to the state.color_extra values.
+ * and subsequent values correspond to the state.sgr.color_extra values.
+ *
+ * Does not allow for bright mode?
  */
 
 SEXP FANSI_color_to_html_ext(SEXP x) {
@@ -655,36 +511,79 @@ SEXP FANSI_color_to_html_ext(SEXP x) {
   if(len % 5)
     error("Argument length not a multipe of 5"); // nocov
 
-  struct FANSI_buff buff = {.len = 0};
-  FANSI_size_buff(&buff, 8);
+  struct FANSI_buff buff;
+  FANSI_INIT_BUFF(&buff);
+  FANSI_size_buff0(&buff, 7);
 
   int * x_int = INTEGER(x);
 
   SEXP res = PROTECT(allocVector(STRSXP, len / 5));
 
   for(R_xlen_t i = 0; i < len; i += 5) {
-    color_to_html(x_int[i], x_int + (i + 1), buff.buff);
+    struct FANSI_color color;
+    unsigned int color_mode = 0;
+    if(x_int[i] == 8) {
+      if(x_int[i + 1] == 2) color_mode = CLR_TRU;
+      else color_mode = CLR_256;
+    } else color_mode = CLR_8;
+    color.x = x_int[i] | color_mode;
+    color.extra[0] = (unsigned char)x_int[i + 2];
+    color.extra[1] = (unsigned char)x_int[i + 3];
+    color.extra[2] = (unsigned char)x_int[i + 4];
+    color_to_html(color, buff.buff);
     SEXP chrsxp = PROTECT(mkCharLenCE(buff.buff, 7, CE_BYTES));
     SET_STRING_ELT(res, i / 5, chrsxp);
     UNPROTECT(1);
   }
+  FANSI_release_buff(&buff, 1);
   UNPROTECT(1);
   return res;
 }
-
 /*
  * Escape special HTML characters.
  */
-
-SEXP FANSI_esc_html(SEXP x) {
+SEXP FANSI_esc_html(SEXP x, SEXP what) {
   if(TYPEOF(x) != STRSXP)
     error("Internal Error: `x` must be a character vector");  // nocov
+  if(TYPEOF(what) != STRSXP)
+    error("Internal Error: `x` must be a character vector");  // nocov
 
+  if(XLENGTH(what) != 1 || STRING_ELT(what, 0) == NA_STRING)
+    error("Argument `what` must be scalar character and not NA.");
+
+  SEXP what_chrsxp = STRING_ELT(what, 0);
   R_xlen_t x_len = XLENGTH(x);
+  R_len_t what_len = LENGTH(what_chrsxp);
+
+  if(what_len == 0 || x_len == 0) return x;
+
+  // Create a lookup "bitfield" for the 5 chars we can escape
+  const unsigned char * what_chr = (const unsigned char *) CHAR(what_chrsxp);
+  unsigned int what_val = 0;
+
+  for(R_len_t i = 0; i < what_len; ++i) {
+    unsigned const char wc = *(what_chr + i);
+    switch(wc) {
+      case '&':  what_val |= 1U << 0U; break;
+      case '"':  what_val |= 1U << 1U; break;
+      case '\'': what_val |= 1U << 2U; break;
+      case '<':  what_val |= 1U << 3U; break;
+      case '>':  what_val |= 1U << 4U; break;
+      default:
+        error(
+          "%s %s.",
+          "Argument `what` may only contain ASCII characters",
+          "\"&\", \"<\", \">\", \"'\", or \"\\\"\""
+        );
+  } }
+
   SEXP res = x;
   // Reserve spot on protection stack
   PROTECT_INDEX ipx;
   PROTECT_WITH_INDEX(res, &ipx);
+
+  struct FANSI_buff buff;
+  FANSI_INIT_BUFF(&buff);
 
   for(R_xlen_t i = 0; i < x_len; ++i) {
     FANSI_interrupt(i);
@@ -692,97 +591,63 @@ SEXP FANSI_esc_html(SEXP x) {
     SEXP chrsxp = STRING_ELT(x, i);
     if(chrsxp == NA_STRING) continue;
     FANSI_check_chrsxp(chrsxp, i);
-    int bytes = (int) LENGTH(chrsxp);
+    int len = (int) LENGTH(chrsxp);
     const char * string = CHAR(chrsxp);
-    struct FANSI_buff buff = {.len=0};
 
-    // - Pass 1: Measure -------------------------------------------------------
+    const char * err_msg = "Escaping HTML special characters";
+    len = LENGTH(chrsxp);
 
-    while(*string) {
-      if(*string > '>') { // All specials are less than this
-        ++string;
-        continue;
-      }
-      switch(*string) {
-        case '&': // &amp;
-          if(bytes <= FANSI_int_max - 4) bytes += 4;
-          else overflow_err2(i);
-          break;
-        case '"':
-        case '\'':
-          if(bytes <= FANSI_int_max - 5) bytes += 5;
-          else overflow_err2(i);
-          break;
-        case '<':
-        case '>':
-          if(bytes <= FANSI_int_max - 3) bytes += 3;
-          else overflow_err2(i);
-          break;
-      }
-      ++string;
-    }
-    // Leftover from prior element (only if can't be merged with new)
-
-    // - Pass 2: Write ---------------------------------------------------------
-
-    if(bytes > LENGTH(chrsxp)) {
-      // Allocate target vector if it hasn't been yet
-      if(res == x) REPROTECT(res = duplicate(x), ipx);
-
-      // Allocate buffer and do second pass, bytes_final includes space for NULL
-
-      FANSI_size_buff(&buff, final_string_size(bytes, i));
-
-      char * buff_track = buff.buff;
+    // Two passes (k), first one compute incremental length of string, second
+    // actually write to the buffer
+    for(int k = 0; k < 2; ++k) {
       string = CHAR(chrsxp);
 
+      if(k && len > LENGTH(chrsxp)) {
+        FANSI_size_buff0(&buff, len);
+        len = LENGTH(chrsxp); // reset so we don't unecessary overflow
+        // Allocate result vector if it hasn't been yet
+        if(res == x) REPROTECT(res = duplicate(x), ipx);
+      }
+      // No second pass if no incremental chars
+      else if (k) break;
+      else FANSI_reset_buff(&buff);
+
       while(*string) {
-        if(*string > '>') { // All specials are less than this
-          *(buff_track++) = *(string++);
+        // Skip chars that can't be specials
+        if(*string > '>') {
+          if(buff.buff) *(buff.buff++) = *string;
+          ++string;
           continue;
         }
-        switch(*string) {
-          case '&': // &amp;
-            memcpy(buff_track, "&amp;", 5);
-            buff_track += 5;
-            break;
-          case '"':
-            memcpy(buff_track, "&quot;", 6);
-            buff_track += 6;
-            break;
-          case '\'':
-            memcpy(buff_track, "&#039;", 6);
-            buff_track += 6;
-            break;
-          case '<':
-            memcpy(buff_track, "&lt;", 4);
-            buff_track += 4;
-            break;
-          case '>':
-            memcpy(buff_track, "&gt;", 4);
-            buff_track += 4;
-            break;
-          default:
-            *(buff_track++) = *string;
+        --len;    // we're replacing one char, so don't count it
+        if(*string == '&' &&       what_val & 1U << 0U)
+          len += FANSI_W_COPY(&buff, "&amp;");
+        else if(*string == '"' &&  what_val & 1U << 1U)
+          len += FANSI_W_COPY(&buff, "&quot;");
+        else if(*string == '\'' && what_val & 1U << 2U)
+          len += FANSI_W_COPY(&buff, "&#039;");
+        else if(*string == '<' &&  what_val & 1U << 3U)
+          len += FANSI_W_COPY(&buff, "&lt;");
+        else if(*string == '>' &&  what_val & 1U << 4U)
+          len += FANSI_W_COPY(&buff, "&gt;");
+        // Just advance copy string otherwse
+        else {
+          ++len;  // we didn't actually replace the char
+          if(buff.buff) *(buff.buff++) = *string;
         }
         ++string;
       }
-      *buff_track = 0;
-      if(buff_track - buff.buff != bytes)
-        // nocov start
-        error(
-          "Internal Error: %s (%td vs %zu).",
-          "buffer length mismatch in html escaping",
-          buff_track - buff.buff, bytes
-        );
-        // nocov end
-
-      cetype_t chr_type = getCharCE(chrsxp);
-      SEXP reschr = PROTECT(mkCharLenCE(buff.buff, (R_len_t)(bytes), chr_type));
-      SET_STRING_ELT(res, i, reschr);
-      UNPROTECT(1);
+      // Only get here in second pass if we've written
+      if(k && buff.buff) {
+        *(buff.buff) = 0;
+        cetype_t chr_type = getCharCE(chrsxp);
+        SEXP reschr = PROTECT(FANSI_mkChar(buff, chr_type, i));
+        SET_STRING_ELT(res, i, reschr);
+        UNPROTECT(1);
+      }
     }
   }
+  FANSI_release_buff(&buff, 1);
   UNPROTECT(1);
   return res;
 }
