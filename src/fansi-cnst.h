@@ -165,9 +165,11 @@
 #define IDG_OVERL   131072 // ideogram overline or left side line
 #define IDG_OVERL2  262144 // ideogram dbl overline or dbl line on left
 #define IDG_STRESS  524288 // ideogram stress marking
+
 #define IDG_MASK   1015808 // sum(2^(15:19))
 
-// Alternative fonts, 10-19, (encoded as is for simplicity, so use 5 bytes)
+// bits 20:24 - alternative fonts
+// Encoded as decimals of values 10-19, (for simplicity, so use 5 bytes)
 
 #define FONT_START  20
 #define FONT_MASK 32505856 // sum(2^(20:24))
