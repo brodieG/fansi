@@ -134,10 +134,15 @@ unitizer_sect('substr', {
   substr_ctl("hello world", 3, 8, carry="\033]8;;a.b\033\\")
 
   # corner cases with bad/non-portable bytes
-  substr_ctl("A\033]8;a=\x0d:id=c;x.y\033\\B", 2, 2)
-  substr_ctl("A\033]8;a=c:id=\x0d;x.y\033\\B", 2, 2)
-  substr_ctl("A\033]8;a=c:id=d;x.\x0d\033\\B", 2, 2)
-  substr_ctl("A\033]8;a=c:id=d;x.\x80\033\\B", 2, 2)
+  np.bytes <- c(
+    "A\033]8;a=\x0d:id=c;x.y\033\\B",
+    "A\033]8;a=c:id=\x0d;x.y\033\\B",
+    "A\033]8;a=c:id=d;x.\x0d\033\\B",
+    "A\033]8;a=c:id=d;x.\x80\033\\B"
+  )
+  Encoding(np.bytes) <- "UTF-8"
+  substr_ctl(np.bytes[1:3], 2, 2)
+  substr_ctl(np.bytes[4], 2, 2)
 })
 unitizer_sect('tohtml', {
   to_html(u0)

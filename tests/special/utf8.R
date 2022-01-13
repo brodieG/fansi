@@ -205,8 +205,10 @@ unitizer_sect("Corner cases", {
   # substr2_ctl(chrs.2, 1, 10, type='width', warn=FALSE)
 
   # bad utf8 in SGR and CSI
-  substr_ctl("A\033[31;\x80mB", 0, 3)
-  substr_ctl("A\033[31;\x80pB", 0, 3)
+  bad.u <- c("A\033[31;\x80mB", "A\033[31;\x80pB")
+  Encoding(bad.u) <- "UTF-8"
+  substr_ctl(bad.u[1], 0, 3)
+  substr_ctl(bad.u[2], 0, 3)
 
   # boundaries
   b.test <- c(
@@ -296,8 +298,9 @@ unitizer_sect("nchar", {
     nchar_ctl("\033[31m\thello", type='width')
 
   # nchar doesn't care about bad bits embedded in escapes
-  nchar_ctl("123\033[31\x80m123")
-  nchar_ctl("123\033\x80123")
+  ncb <- c("123\033[31\x80m123", "123\033\x80123")
+  Encoding(ncb) <- "UTF-8"
+  nchar_ctl(ncb)
 })
 unitizer_sect("unhandled", {
   # a bad utf8 string and other bad stuff
@@ -395,8 +398,8 @@ unitizer_sect("wrap corner cases", {
   tce(strwrap_ctl(bytes))
 
   # Encoding captured correctly
-  Encoding(strwrap_ctl("hell\u00F8 world", 5))
-  Encoding(strwrap_ctl("hello w\u00F8rld", 5))
+  encstrings <- c("hell\u00F8 world", "hello w\u00F8rld")
+  Encoding(strwrap_ctl(encstrings, 5))
 
   # Caused an infinite loop in one case
   str.inf <- "\U1F600 \U1F600"
