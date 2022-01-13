@@ -1,6 +1,6 @@
 # fansi Release Notes
 
-## v1.0.0
+## v1.0.0-2
 
 This is a major release and includes some behavior changes.
 
