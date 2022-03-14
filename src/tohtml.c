@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021  Brodie Gaslam
+ * Copyright (C) 2022 Brodie Gaslam
  *
  * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
  *
@@ -199,8 +199,7 @@ static char * color_to_html(struct FANSI_color color, char * buff) {
         *(buff_track++) = lo;
       }
       break;
-    default:
-      error("Internal Error: unknown color mode."); // nocov
+    default: error("Internal Error: unknown color mode."); // nocov
   }
   *buff_track = 0;
   int dist = (int) (buff_track - buff);
@@ -340,12 +339,19 @@ static int W_state_as_html(
  * Convert SGR Encoded Strings to their HTML equivalents
  */
 SEXP FANSI_esc_to_html(
-  SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes, SEXP carry
+  SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes, SEXP carry,
+  SEXP warn_unesc
 ) {
   if(TYPEOF(x) != STRSXP)
     error("Internal Error: `x` must be a character vector");  // nocov
   if(TYPEOF(color_classes) != STRSXP)
     error("Internal Error: `color_classes` must be a character vector");  // nocov
+  if(TYPEOF(warn_unesc) != LGLSXP || XLENGTH(warn_unesc) != 1)
+    error("Internal Error: `warn_unesc` must be a scalar logical");  // nocov
+
+  int warn_unesc_i = asInteger(warn_unesc);
+  if(warn_unesc_i != 0 && warn_unesc_i != 1)
+    error("Internal Error: `warn_unesc` must be TRUE or FALSE");  // nocov
 
   const char * arg = "x";
   struct FANSI_buff buff;
@@ -405,7 +411,8 @@ SEXP FANSI_esc_to_html(
       sgr_has_style_html(state.fmt.sgr) || FANSI_url_active(state.fmt.url);
     int trail_span, trail_a;
     trail_span = trail_a = 0;
-    int html_spec_warned = (state.settings & WARN_MASK & ~WARN_ERROR) == 0;
+    int html_spec_warned =
+      ((state.settings & WARN_MASK & ~WARN_ERROR) == 0) || (warn_unesc_i == 0);
 
     // We cheat by only using FANSI_read_next to read escape sequences as we
     // don't care about display width, etc.  Normally we would _read_next over

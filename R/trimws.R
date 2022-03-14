@@ -1,4 +1,4 @@
-## Copyright (C) 2021  Brodie Gaslam
+## Copyright (C) 2022 Brodie Gaslam
 ##
 ## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
 ##
@@ -20,6 +20,7 @@
 #' `whitespace` specification is supported.
 #'
 #' @export
+#' @inheritSection substr_ctl Control and Special Sequences
 #' @inheritSection substr_ctl Output Stability
 #' @inheritParams base::trimws
 #' @inheritParams substr_ctl

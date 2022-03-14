@@ -19,12 +19,10 @@ sgr_to_html(
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
-If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
-parameter on functions that have it, or the \code{tabs_as_spaces} function, to
-turn the tabs to spaces and resolve the warning that way.  At most one
-warning will be issued per element in each input vector.  Will also warn
-about some badly encoded UTF-8 strings, but a lack of UTF-8 warnings is not
-a guarantee of correct encoding (use \verb{[validUTF8]} for that).}
+At most one warning will be issued per element in each input vector.  Will
+also warn about some badly encoded UTF-8 strings, but a lack of UTF-8
+warnings is not a guarantee of correct encoding (use \code{\link{validUTF8}} for
+that).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
@@ -96,9 +94,11 @@ SPAN HTML tags.
 This function is a wrapper around \code{\link{to_html}} and is kept around for legacy
 reasons.  When we added capabilities for handling OSC hyperlinks, the \code{sgr_}
 part of the name became an incomplete description of what the function
-does.
+does.  The only substantive difference with the new function is this one does
+not warn when the input contains unescaped "<" or ">".
 }
 \note{
-Unlike other functions, including \code{\link{to_html}}, the default is \code{carry = TRUE} for compatibility with semantics of prior versions of \code{fansi}.
+Unlike other functions, the default is \code{carry = TRUE} for compatibility
+with semantics of prior versions of \code{fansi}.
 }
 \keyword{internal}

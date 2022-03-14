@@ -2,19 +2,6 @@
 
 These are internal developer notes.
 
-## Release Steps
-
-[x] Coverage 100%
-
-[x] valgrind
-[x] SAN
-[ ] Rchk
-
-[ ] R 3.2
-[ ] R CMD check
-[ ] Revdep
-[ ] CRAN policy
-
 ## Immediate Next Steps
 
 ## Todo

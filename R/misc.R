@@ -1,4 +1,4 @@
-## Copyright (C) 2021  Brodie Gaslam
+## Copyright (C) 2022 Brodie Gaslam
 ##
 ## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
 ##
@@ -472,9 +472,11 @@ size_buff_prot_test <- function() {
   res <- raw[-1L]
   names(res) <- c('n', 'prev', 'self')
   res <- as.data.frame(res)
+  # stringsAsFactors issues
+  res[['prev']] <- as.character(res[['prev']])
+  res[['self']] <- as.character(res[['self']])
   rownames(res) <- raw[[1L]]
   # remap the addresses so they are consistent across different runs
-
   addresses <- do.call(rbind, res[c('prev', 'self')])
   res[['prev']] <- match(res[['prev']], addresses)
   res[['self']] <- match(res[['self']], addresses)

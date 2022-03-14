@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021  Brodie Gaslam
+ * Copyright (C) 2022 Brodie Gaslam
  *
  * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
  *
@@ -968,9 +968,7 @@ void read_esc(struct FANSI_state * state, int term_i) {
     if(esc_recognized) {
       if(
         esc_types == 2U && (
-          (err_code <= ERR_EXCEED_CAP || !(state->settings & SET_TERMOLD)) ||
-          // URLs always special since we know from begining what they are
-          (state->status & CTL_URL)
+          (err_code <= ERR_EXCEED_CAP || !(state->settings & SET_TERMOLD))
       ) ) {
         if(term_i && !state->string[state->pos.x]) {
           *state = state_prev;
@@ -1058,8 +1056,6 @@ void read_utf8_until(struct FANSI_state * state, int until, int overshoot) {
       // Assumes valid UTF-8!  Should have been checked.
       int cp = utf8_to_cp(state->string + state->pos.x, byte_size);
 
-      // Probably shouldn't set RI or ZWJ until we're sure we're okay, but we
-      // do.  It works, but likely only b/c of bailouts and resets elsewhere
       if(cp >= 0x1F1E6 && cp <= 0x1F1FF) {    // Regional Indicator
         // First RI is width two, next zero
         if(!(prev_ri)) {
@@ -1068,7 +1064,7 @@ void read_utf8_until(struct FANSI_state * state, int until, int overshoot) {
         } else {
           disp_size = 0;
         }
-        // we rely on external logic to forece reading two RIs
+        // we rely on external logic to force reading two RIs
       } else {
         if (cp >= 0x1F3FB && cp <= 0x1F3FF) { // Skin type
           disp_size = 0;

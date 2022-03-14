@@ -1,4 +1,4 @@
-## Copyright (C) 2021  Brodie Gaslam
+## Copyright (C) 2022 Brodie Gaslam
 ##
 ## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
 ##
@@ -91,7 +91,9 @@
 #' @note `to_html` always terminates as not doing so produces
 #'   invalid HTML.  If you wish for the last active SPAN to bleed into
 #'   subsequent text you may do so with e.g. `sub("</span>(?:</a>)?$", "", x)`
-#'   or similar.
+#'   or similar.  Additionally, unlike other functions, the default is
+#'   `carry = TRUE` for compatibility with semantics of prior versions of
+#'   `fansi`.
 #' @examples
 #' to_html("hello\033[31;42;1mworld\033[m")
 #' to_html("hello\033[31;42;1mworld\033[m", classes=TRUE)
@@ -148,7 +150,16 @@ to_html <- function(
   x, warn=getOption('fansi.warn', TRUE),
   term.cap=getOption('fansi.term.cap', dflt_term_cap()),
   classes=FALSE,
-  carry=getOption('fansi.carry', TRUE)  # different from other functions
+  carry=getOption('fansi.carry', TRUE)
+)
+  to_html_int(x=x, warn=warn, term.cap=term.cap, classes=classes, carry=carry)
+
+to_html_int <- function(
+  x, warn=getOption('fansi.warn', TRUE),
+  term.cap=getOption('fansi.term.cap', dflt_term_cap()),
+  classes=FALSE,
+  carry=getOption('fansi.carry', FALSE),
+  warn.unescaped=TRUE
 ) {
   ## modifies / creates NEW VARS in fun env
   VAL_IN_ENV(x=x, warn=warn, term.cap=term.cap, carry=carry)
@@ -161,17 +172,20 @@ to_html <- function(
   } else
     stop("Argument `classes` must be TRUE, FALSE, or a character vector.")
 
-  .Call(FANSI_esc_to_html, x, WARN.INT, TERM.CAP.INT, classes, carry)
+  .Call(
+    FANSI_esc_to_html, x, WARN.INT, TERM.CAP.INT, classes, carry, warn.unescaped
+  )
 }
 #' Convert Control Sequences to HTML Equivalents
 #'
 #' This function is a wrapper around [`to_html`] and is kept around for legacy
 #' reasons.  When we added capabilities for handling OSC hyperlinks, the `sgr_`
 #' part of the name became an incomplete description of what the function
-#' does.
+#' does.  The only substantive difference with the new function is this one does
+#' not warn when the input contains unescaped "&lt;" or "&gt;".
 #'
-#' @note Unlike other functions, including [`to_html`], the default is `carry =
-#'   TRUE` for compatibility with semantics of prior versions of `fansi`.
+#' @note Unlike other functions, the default is `carry = TRUE` for compatibility
+#'   with semantics of prior versions of `fansi`.
 #' @export
 #' @inheritParams to_html
 #' @inherit to_html return
@@ -183,7 +197,10 @@ sgr_to_html <- function(
   classes=FALSE,
   carry=getOption('fansi.carry', TRUE)  # different from other functions
 )
-  to_html(x, warn=warn, term.cap=term.cap, classes=classes, carry=carry)
+  to_html_int(
+    x=x, warn=warn, term.cap=term.cap, classes=classes, carry=carry,
+    warn.unescaped=FALSE
+  )
 
 #' Generate CSS Mapping Classes to Colors
 #'

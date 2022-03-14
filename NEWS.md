@@ -18,7 +18,7 @@ This is a major release and includes some behavior changes.
       becomes "ESC[31mESC[44m") for better compatibility with
       [`crayon`](https://github.com/r-lib/crayon).  Additionally, most functions
       gain a `normalize` parameter so that they may return their output in
-      normalized form.
+      normalized form (h/t @krlmlr).
 * [#74](https://github.com/brodieG/fansi/issues/74)`substr_ctl` and related
   functions are now all-C instead of a combination of C offset computations and
   R level `substr` operations.  This greatly improves performance, particularly
@@ -47,8 +47,9 @@ This is a major release and includes some behavior changes.
 * All the "sgr" functions (e.g., `substr_sgr`, `strwrap_sgr`) are deprecated.
   They will likely live on indefinitely, but they are of limited usefulness and
   with the added support for OSC hyperlinks their name is misleading.
-* `sgr_to_html` is now `to_html`, although the old function remains as a wrapper
-  around the new one).
+* `sgr_to_html` is now `to_html` with slight modifications to semantics; the old
+  function remains and does not warn about unescaped "<" or ">" in the
+  input string.
 
 ### Behavior Changes
 
@@ -89,6 +90,10 @@ these behavior changes adversely affect your programs.
 
 Other changes:
 
+* Tests may no longer pass with R < 4.0 although the package should still
+  function correctly.  This is primarily because of changes to the character
+  width Unicode Database that ships with R, and many of the newly added grapheme
+  tests touch parts of that database that changed (emoji).
 * CSI sequences with more than one "intermediate" byte are now considered valid,
   even though they are likely to be very rare, and CSI sequences consume all
   subsequent bytes until a valid closing byte or end of string is encountered.

@@ -1,4 +1,4 @@
-## Copyright (C) 2021  Brodie Gaslam
+## Copyright (C) 2022 Brodie Gaslam
 ##
 ## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
 ##
@@ -214,7 +214,10 @@ unitizer_sect("Colors as classes (#65)", {
 })
 unitizer_sect("chars to escape", {
   str.esc <- c("A\033[45m<B","A\033[44m>B","A\033[43m&B")
+  # warning
   to_html(str.esc)
+  # no warnings
+  sgr_to_html(str.esc)
   to_html(str.esc, warn=FALSE)
   to_html(html_esc(str.esc))
 

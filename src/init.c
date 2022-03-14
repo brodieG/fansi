@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021  Brodie Gaslam
+ * Copyright (C) 2022 Brodie Gaslam
  *
  * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
  *
@@ -29,7 +29,7 @@ R_CallMethodDef callMethods[] = {
   {"check_assumptions", (DL_FUNC) &FANSI_check_assumptions, 0},
   {"tabs_as_spaces", (DL_FUNC) &FANSI_tabs_as_spaces_ext, 5},
   {"color_to_html", (DL_FUNC) &FANSI_color_to_html_ext, 1},
-  {"esc_to_html", (DL_FUNC) &FANSI_esc_to_html, 5},
+  {"esc_to_html", (DL_FUNC) &FANSI_esc_to_html, 6},
   {"unhandled_esc", (DL_FUNC) &FANSI_unhandled_esc, 2},
   {"nchar_esc", (DL_FUNC) &FANSI_nchar, 8},
   {"add_int", (DL_FUNC) &FANSI_add_int_ext, 2},

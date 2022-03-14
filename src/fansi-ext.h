@@ -48,7 +48,8 @@ SEXP FANSI_tabs_as_spaces_ext(
 );
 SEXP FANSI_color_to_html_ext(SEXP x);
 SEXP FANSI_esc_to_html(
-  SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes, SEXP carry
+  SEXP x, SEXP warn, SEXP term_cap, SEXP color_classes, SEXP carry,
+  SEXP warn_unesc
 );
 SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap);
 

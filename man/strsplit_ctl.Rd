@@ -48,12 +48,10 @@ be coerced to character.}
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
-If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
-parameter on functions that have it, or the \code{tabs_as_spaces} function, to
-turn the tabs to spaces and resolve the warning that way.  At most one
-warning will be issued per element in each input vector.  Will also warn
-about some badly encoded UTF-8 strings, but a lack of UTF-8 warnings is not
-a guarantee of correct encoding (use \verb{[validUTF8]} for that).}
+At most one warning will be issued per element in each input vector.  Will
+also warn about some badly encoded UTF-8 strings, but a lack of UTF-8
+warnings is not a guarantee of correct encoding (use \code{\link{validUTF8}} for
+that).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
@@ -119,9 +117,7 @@ See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for details
 Like \code{\link[base:strsplit]{base::strsplit}}, with \emph{Control Sequences} excluded.
 }
 \description{
-A drop-in replacement for \code{\link[base:strsplit]{base::strsplit}}.  It will be noticeably slower,
-but should otherwise behave the same way except for \emph{Control Sequence}
-awareness.
+A drop-in replacement for \code{\link[base:strsplit]{base::strsplit}}.
 }
 \details{
 This function works by computing the position of the split points after
@@ -139,6 +135,15 @@ converted to UTF-8.
 Non-ASCII strings are converted to and returned in UTF-8 encoding.
 Width calculations will not work properly in R < 3.2.2.
 }
+\section{Control and Special Sequences}{
+
+
+\emph{Control Sequences} are non-printing characters or sequences of characters.
+\emph{Special Sequences} are a subset of the \emph{Control Sequences}, and include CSI
+SGR sequences which can be used to change rendered appearance of text, and
+OSC hyperlinks.  See \code{\link{fansi}} for details.
+}
+
 \section{Output Stability}{
 
 

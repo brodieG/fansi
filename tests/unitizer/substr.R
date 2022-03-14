@@ -1,4 +1,4 @@
-## Copyright (C) 2021  Brodie Gaslam
+## Copyright (C) 2022 Brodie Gaslam
 ##
 ## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
 ##
@@ -185,6 +185,12 @@ unitizer_sect("Corner cases", {
   substr_ctl("\033[107mA", 1, 1, term.cap=c("all", "bright", "old"))
   substr_ctl("\033[107mA", 1, 1, term.cap=c("bright"))
   substr_ctl("\033[107mA", 1, 1, term.cap=c("bright", "old"))
+
+  # Detect changes in last truecolor byte
+  str.5 <- c("\033[48;2;100;100;100mAB", "\033[48;2;100;100;100mCD")
+  substr_ctl(str.5, 2, 2, terminate=FALSE, carry=TRUE, term.cap="all")
+  str.5a <- c("\033[48;2;100;100;100mAB", "\033[48;2;100;100;101mCD")
+  substr_ctl(str.5a, 2, 2, terminate=FALSE, carry=TRUE, term.cap="all")
 })
 unitizer_sect("Obscure escapes", {
   # illegal 38/48
@@ -289,37 +295,37 @@ unitizer_sect('`ctl` related issues', {
 unitizer_sect("Rep Funs - Equivalence", {
   txt0 <- "ABCD"
   ## Basic equivalence
-  identical(`substr_ctl<-`(txt0, 2, 2, "#"), `substr<-`(txt0, 2, 2, "#"))
-  identical(`substr_ctl<-`(txt0, 2, 2, "#?"), `substr<-`(txt0, 2, 2, "#?"))
-  identical(`substr_ctl<-`(txt0, 2, 3, "#?-"), `substr<-`(txt0, 2, 3, "#?-"))
+  identical(`substr_ctl<-`(txt0, 2, 2, value="#"), `substr<-`(txt0, 2, 2, "#"))
+  identical(`substr_ctl<-`(txt0, 2, 2, value="#?"), `substr<-`(txt0, 2, 2, "#?"))
+  identical(`substr_ctl<-`(txt0, 2, 3, value="#?-"), `substr<-`(txt0, 2, 3, "#?-"))
 
-  identical(`substr_ctl<-`(txt0, 0, 0, "#"), `substr<-`(txt0, 0, 0, "#"))
-  identical(`substr_ctl<-`(txt0, 2, 1, "#"), `substr<-`(txt0, 2, 1, "#"))
-  identical(`substr_ctl<-`(txt0, 10, 12, "#"), `substr<-`(txt0, 10, 12, "#"))
-  identical(`substr_ctl<-`(txt0, 2, 3, "#"), `substr<-`(txt0, 2, 3, "#"))
+  identical(`substr_ctl<-`(txt0, 0, 0, value="#"), `substr<-`(txt0, 0, 0, "#"))
+  identical(`substr_ctl<-`(txt0, 2, 1, value="#"), `substr<-`(txt0, 2, 1, "#"))
+  identical(`substr_ctl<-`(txt0, 10, 12, value="#"), `substr<-`(txt0, 10, 12, "#"))
+  identical(`substr_ctl<-`(txt0, 2, 3, value="#"), `substr<-`(txt0, 2, 3, "#"))
 
-  identical(`substr_ctl<-`(txt0, 1, 5, "#"), `substr<-`(txt0, 1, 5, "#"))
-  identical(`substr_ctl<-`(txt0, 0, 5, "#"), `substr<-`(txt0, 0, 5, "#"))
+  identical(`substr_ctl<-`(txt0, 1, 5, value="#"), `substr<-`(txt0, 1, 5, "#"))
+  identical(`substr_ctl<-`(txt0, 0, 5, value="#"), `substr<-`(txt0, 0, 5, "#"))
 
   ## Bug in R means we can't use identical
-  `substr_ctl<-`(txt0, 0, -1, "#")
+  `substr_ctl<-`(txt0, 0, -1, value="#")
 
   ## Recycling
   rep1 <- c("_", "_.")
   rep2 <- c("_", "_.", "...")
 
-  identical(`substr_ctl<-`(txt0, 2, 3, rep1), `substr<-`(txt0, 2, 3, rep1))
-  identical(`substr_ctl<-`(txt0, 2, 3, rep2), `substr<-`(txt0, 2, 3, rep2))
+  identical(`substr_ctl<-`(txt0, 2, 3, value=rep1), `substr<-`(txt0, 2, 3, rep1))
+  identical(`substr_ctl<-`(txt0, 2, 3, value=rep2), `substr<-`(txt0, 2, 3, rep2))
 
   txt1 <- c("AB", "CDE")
-  identical(`substr_ctl<-`(txt1, 2, 3, '_'), `substr<-`(txt1, 2, 3, '_'))
-  identical(`substr_ctl<-`(txt1, 2, 3, rep1), `substr<-`(txt1, 2, 3, rep1))
-  identical(`substr_ctl<-`(txt1, 2, 3, rep2), `substr<-`(txt1, 2, 3, rep2))
+  identical(`substr_ctl<-`(txt1, 2, 3, value='_'), `substr<-`(txt1, 2, 3, '_'))
+  identical(`substr_ctl<-`(txt1, 2, 3, value=rep1), `substr<-`(txt1, 2, 3, rep1))
+  identical(`substr_ctl<-`(txt1, 2, 3, value=rep2), `substr<-`(txt1, 2, 3, rep2))
 
   txt2 <- c("AB", "CDE", "EFGH")
-  identical(`substr_ctl<-`(txt2, 2, 3, '_'), `substr<-`(txt2, 2, 3, '_'))
-  identical(`substr_ctl<-`(txt2, 2, 3, rep1), `substr<-`(txt2, 2, 3, rep1))
-  identical(`substr_ctl<-`(txt2, 2, 3, rep2), `substr<-`(txt2, 2, 3, rep2))
+  identical(`substr_ctl<-`(txt2, 2, 3, value='_'), `substr<-`(txt2, 2, 3, '_'))
+  identical(`substr_ctl<-`(txt2, 2, 3, value=rep1), `substr<-`(txt2, 2, 3, rep1))
+  identical(`substr_ctl<-`(txt2, 2, 3, value=rep2), `substr<-`(txt2, 2, 3, rep2))
 
   txt3a <- txt3b <- c("ABC", "ABC")
   substr(txt3a[2], 2, 2) <- "_"
@@ -328,11 +334,11 @@ unitizer_sect("Rep Funs - Equivalence", {
 
   ## NA handling
   identical(
-    `substr_ctl<-`(txt0, 2, 3, NA_character_),
+    `substr_ctl<-`(txt0, 2, 3, value=NA_character_),
     `substr<-`(txt0, 2, 3, NA_character_)
   )
   txt.na <- NA_character_
-  identical(`substr_ctl<-`(txt.na, 1, 2, "AB"),`substr<-`(txt.na, 1, 2,  "AB"))
+  identical(`substr_ctl<-`(txt.na, 1, 2, value="AB"),`substr<-`(txt.na, 1, 2,  "AB"))
 })
 
 unitizer_sect("Rep Funs - SGR", {
@@ -340,106 +346,106 @@ unitizer_sect("Rep Funs - SGR", {
   txt2 <- "\033[33mA\033[44mBCD"
   txt3 <- "\033[33mA\033[44mBC\033[1mD"
 
-  `substr_ctl<-`(txt1, 2, 2, "#")
-  `substr_ctl<-`(txt1, 2, 3, "#?-")
-  `substr_ctl<-`(txt1, 2, 3, "#\033[32m?-")
-  `substr_ctl<-`(txt1, 2, 3, "#\033[32m?-\033[0m")
-  `substr_ctl<-`(txt1, 2, 3, "#\033[0m?-")
+  `substr_ctl<-`(txt1, 2, 2, value="#")
+  `substr_ctl<-`(txt1, 2, 3, value="#?-")
+  `substr_ctl<-`(txt1, 2, 3, value="#\033[32m?-")
+  `substr_ctl<-`(txt1, 2, 3, value="#\033[32m?-\033[0m")
+  `substr_ctl<-`(txt1, 2, 3, value="#\033[0m?-")
 
-  `substr_ctl<-`(txt2, 2, 3, "#\033[32m?-")
-  `substr_ctl<-`(txt2, 2, 3, "#\033[32m?-\033[0m")
-  `substr_ctl<-`(txt2, 2, 3, "#\033[0m?-")
+  `substr_ctl<-`(txt2, 2, 3, value="#\033[32m?-")
+  `substr_ctl<-`(txt2, 2, 3, value="#\033[32m?-\033[0m")
+  `substr_ctl<-`(txt2, 2, 3, value="#\033[0m?-")
 
-  `substr_ctl<-`(txt3, 2, 3, "#\033[32m?-")
-  `substr_ctl<-`(txt3, 2, 3, "#\033[32m?-\033[0m")
-  `substr_ctl<-`(txt3, 2, 3, "#\033[0m?-")
+  `substr_ctl<-`(txt3, 2, 3, value="#\033[32m?-")
+  `substr_ctl<-`(txt3, 2, 3, value="#\033[32m?-\033[0m")
+  `substr_ctl<-`(txt3, 2, 3, value="#\033[0m?-")
 
   ## Terminate
-  `substr_ctl<-`(txt2, 2, 2, terminate=FALSE, "#")
-  `substr_ctl<-`(txt2, 2, 3, terminate=FALSE, "#\033[32m?-")
-  `substr_ctl<-`(txt2, 2, 3, terminate=FALSE, "#\033[32m?-\033[0m")
-  `substr_ctl<-`(txt2, 2, 3, terminate=FALSE, "#\033[0m?-")
-  `substr_ctl<-`(txt1, 2, 3, terminate=FALSE, "#\033[0m?\033[45m-")
-  `substr_ctl<-`(txt1, 2, 3, terminate=FALSE, "#\033[0m\033[45m?-")
+  `substr_ctl<-`(txt2, 2, 2, terminate=FALSE, value="#")
+  `substr_ctl<-`(txt2, 2, 3, terminate=FALSE, value="#\033[32m?-")
+  `substr_ctl<-`(txt2, 2, 3, terminate=FALSE, value="#\033[32m?-\033[0m")
+  `substr_ctl<-`(txt2, 2, 3, terminate=FALSE, value="#\033[0m?-")
+  `substr_ctl<-`(txt1, 2, 3, terminate=FALSE, value="#\033[0m?\033[45m-")
+  `substr_ctl<-`(txt1, 2, 3, terminate=FALSE, value="#\033[0m\033[45m?-")
 
   txt4 <- c(txt2, txt0, "\033[39mABCD")
   ## Different lengths
-  `substr_ctl<-`(txt4, 2, 3, "#")
-  `substr_ctl<-`(txt4, 2, 3, c("#", "?"))
-  `substr_ctl<-`(txt4, 2, 3, c("#", "?", "$"))
+  `substr_ctl<-`(txt4, 2, 3, value="#")
+  `substr_ctl<-`(txt4, 2, 3, value=c("#", "?"))
+  `substr_ctl<-`(txt4, 2, 3, value=c("#", "?", "$"))
 
   ## Lengths + Carry; note sequences in middle of `value` boundary are treated
   ## differently than on the ends.
-  `substr_ctl<-`(txt4, 2, 2, carry=TRUE, "#")
-  `substr_ctl<-`(txt4, 2, 3, carry=TRUE, "#\033[32m?-")
-  `substr_ctl<-`(txt4, 2, 3, carry=TRUE, "#\033[42m?-\033[0m")
-  `substr_ctl<-`(txt4, 2, 3, carry=TRUE, "#\033[0m?-")
+  `substr_ctl<-`(txt4, 2, 2, carry=TRUE, value="#")
+  `substr_ctl<-`(txt4, 2, 3, carry=TRUE, value="#\033[32m?-")
+  `substr_ctl<-`(txt4, 2, 3, carry=TRUE, value="#\033[42m?-\033[0m")
+  `substr_ctl<-`(txt4, 2, 3, carry=TRUE, value="#\033[0m?-")
   ## Weirdness here because the 39 in `value` causes re-issue of 45.  This is
   ## correct; a consequence of the mess of termintate=FALSE in replace mode.
   rep4 <- c("\033[32m_\033[45m", ".-", "\033[39m__")
-  `substr_ctl<-`(txt4, 2, 3, carry=TRUE, rep4)
+  `substr_ctl<-`(txt4, 2, 3, carry=TRUE, value=rep4)
 
   ## Lengths + Terminate + Carry
-  `substr_ctl<-`(txt4, 2, 2, terminate=FALSE, carry=TRUE, "#")
-  `substr_ctl<-`(txt4, 2, 3, terminate=FALSE, carry=TRUE, "#\033[32m?-")
-  `substr_ctl<-`(txt4, 2, 3, terminate=FALSE, carry=TRUE, "#\033[35m?-\033[0m")
-  `substr_ctl<-`(txt4, 2, 3, terminate=FALSE, carry=TRUE, "#\033[0m?-")
-  `substr_ctl<-`(txt4, 2, 3, terminate=FALSE, carry=TRUE, rep4)
+  `substr_ctl<-`(txt4, 2, 2, terminate=FALSE, carry=TRUE, value="#")
+  `substr_ctl<-`(txt4, 2, 3, terminate=FALSE, carry=TRUE, value="#\033[32m?-")
+  `substr_ctl<-`(txt4, 2, 3, terminate=FALSE, carry=TRUE, value="#\033[35m?-\033[0m")
+  `substr_ctl<-`(txt4, 2, 3, terminate=FALSE, carry=TRUE, value="#\033[0m?-")
+  `substr_ctl<-`(txt4, 2, 3, terminate=FALSE, carry=TRUE, value=rep4)
 
   ## Reference for bridge against end of prior `value` substring
   txt5 <- c("ABD", "DFG")
-  `substr_ctl<-`(txt5, 2, 2, ".\033[45m", carry=TRUE, terminate=FALSE)
+  `substr_ctl<-`(txt5, 2, 2, value=".\033[45m", carry=TRUE, terminate=FALSE)
 
   ## Tabs
   txt6 <- "A123456789B"
-  `substr2_ctl<-`(txt6, 2, 9, "\t", tabs.as.spaces=TRUE)
-  `substr2_ctl<-`(txt6, 2, 3, "\t", tabs.as.spaces=TRUE)
-  `substr2_ctl<-`(txt6, 2, 10, "\t", tabs.as.spaces=TRUE)
+  `substr2_ctl<-`(txt6, 2, 9, value="\t", tabs.as.spaces=TRUE)
+  `substr2_ctl<-`(txt6, 2, 3, value="\t", tabs.as.spaces=TRUE)
+  `substr2_ctl<-`(txt6, 2, 10, value="\t", tabs.as.spaces=TRUE)
 
   ## Encodings
   txt7a <- "\u0160os"
   txt7b <- "sos"
   txt7c <- "so\u0160"
-  Encoding(`substr_ctl<-`(txt7a, 1, 1, "\u0161"))
-  Encoding(`substr_ctl<-`(txt7a, 1, 1, "s"))
-  Encoding(`substr_ctl<-`(txt7a, 2, 2, "\u0161"))
-  Encoding(`substr_ctl<-`(txt7a, 2, 2, "s"))
-  Encoding(`substr_ctl<-`(txt7b, 2, 2, "\u0161"))
-  Encoding(`substr_ctl<-`(txt7b, 2, 2, "s"))
-  Encoding(`substr_ctl<-`(txt7c, 3, 3, "\u0161"))
-  Encoding(`substr_ctl<-`(txt7c, 3, 3, "s"))
+  Encoding(`substr_ctl<-`(txt7a, 1, 1, value="\u0161"))
+  Encoding(`substr_ctl<-`(txt7a, 1, 1, value="s"))
+  Encoding(`substr_ctl<-`(txt7a, 2, 2, value="\u0161"))
+  Encoding(`substr_ctl<-`(txt7a, 2, 2, value="s"))
+  Encoding(`substr_ctl<-`(txt7b, 2, 2, value="\u0161"))
+  Encoding(`substr_ctl<-`(txt7b, 2, 2, value="s"))
+  Encoding(`substr_ctl<-`(txt7c, 3, 3, value="\u0161"))
+  Encoding(`substr_ctl<-`(txt7c, 3, 3, value="s"))
 
 })
 unitizer_sect("Rep Funs - Corner Cases", {
   ## Include trail when selecting past end of `value`
-  `substr_ctl<-`(txt2, 1, 3, terminate=FALSE, "#\033[32m?\033[0m")
+  `substr_ctl<-`(txt2, 1, 3, terminate=FALSE, value="#\033[32m?\033[0m")
 
   ## Only portions of string that are replaced are modified; leading and
   ## trailing controls remain, possibly causing redundant sequences when the
   ## lead and trail sequences are zero width, particularly with terminate=T.
   txt8 <- "\033[32mAB\033[45m"
-  `substr_ctl<-`(txt8, 1, 2, "12")
-  `substr_ctl<-`(txt8, 1, 2, "12", terminate=FALSE)
-  `substr_ctl<-`(txt8, 1, 3, "12")
-  `substr_ctl<-`(txt8, 1, 3, "1")
-  `substr_ctl<-`(txt8, 1, 3, "")
-  `substr_ctl<-`(txt8, 1, 3, "123")
-  `substr_ctl<-`(txt8, 0, 2, "12")
-  `substr_ctl<-`(txt8, 0, 3, "12")
+  `substr_ctl<-`(txt8, 1, 2, value="12")
+  `substr_ctl<-`(txt8, 1, 2, value="12", terminate=FALSE)
+  `substr_ctl<-`(txt8, 1, 3, value="12")
+  `substr_ctl<-`(txt8, 1, 3, value="1")
+  `substr_ctl<-`(txt8, 1, 3, value="")
+  `substr_ctl<-`(txt8, 1, 3, value="123")
+  `substr_ctl<-`(txt8, 0, 2, value="12")
+  `substr_ctl<-`(txt8, 0, 3, value="12")
 
   ## Zero width gets inserted
-  `substr_ctl<-`(txt8, 1, 3, "\033[1m", terminate=FALSE)
+  `substr_ctl<-`(txt8, 1, 3, value="\033[1m", terminate=FALSE)
 
   ## Errors
-  tce(`substr_ctl<-`(txt8, 1, 3, "A", carry="\033[41m"))
+  tce(`substr_ctl<-`(txt8, 1, 3, value="A", carry="\033[41m"))
   lat <- "fa\xe7ile"
   Encoding(lat) <- "latin1"
-  tce(`substr_ctl<-`(lat, 1, 3, "ABC"))
+  tce(`substr_ctl<-`(lat, 1, 3, value="ABC"))
 
   ## NA handling
   txt.na2 <- c("AB", NA, "BC")
-  `substr_ctl<-`(txt.na2, 1, 1, "#")
+  `substr_ctl<-`(txt.na2, 1, 1, value="#")
   txt.nona <- c("AB", "BC", "CD")
-  `substr_ctl<-`(txt.nona, 1, 1, c("#", NA), carry=TRUE)
+  `substr_ctl<-`(txt.nona, 1, 1, value=c("#", NA), carry=TRUE)
 })
 

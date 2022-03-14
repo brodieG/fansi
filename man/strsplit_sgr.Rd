@@ -47,12 +47,10 @@ be coerced to character.}
 problematic \emph{Control Sequences} are encountered.  These could cause the
 assumptions \code{fansi} makes about how strings are rendered on your display
 to be incorrect, for example by moving the cursor (see \code{\link[=fansi]{?fansi}}).
-If the problematic sequence is a tab, you can use the \code{tabs.as.spaces}
-parameter on functions that have it, or the \code{tabs_as_spaces} function, to
-turn the tabs to spaces and resolve the warning that way.  At most one
-warning will be issued per element in each input vector.  Will also warn
-about some badly encoded UTF-8 strings, but a lack of UTF-8 warnings is not
-a guarantee of correct encoding (use \verb{[validUTF8]} for that).}
+At most one warning will be issued per element in each input vector.  Will
+also warn about some badly encoded UTF-8 strings, but a lack of UTF-8
+warnings is not a guarantee of correct encoding (use \code{\link{validUTF8}} for
+that).}
 
 \item{term.cap}{character a vector of the capabilities of the terminal, can
 be any combination of "bright" (SGR codes 90-97, 100-107), "256" (SGR codes
@@ -98,6 +96,6 @@ See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for details
 Like \code{\link[base:strsplit]{base::strsplit}}, with \emph{Control Sequences} excluded.
 }
 \description{
-This function is deprecated in favor of the \link[=strsplit_ctl]{\verb{_ctl} flavor}.
+This function is deprecated in favor of the \code{\link{strsplit_ctl}}.
 }
 \keyword{internal}

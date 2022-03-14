@@ -1,4 +1,4 @@
-## Copyright (C) 2021  Brodie Gaslam
+## Copyright (C) 2022 Brodie Gaslam
 ##
 ## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
 ##
@@ -30,6 +30,7 @@
 #' @inheritParams substr_ctl
 #' @inheritParams base::nchar
 #' @inheritParams strip_ctl
+#' @inheritSection substr_ctl Control and Special Sequences
 #' @inheritSection substr_ctl Output Stability
 #' @inheritSection substr_ctl Graphemes
 #' @inherit base::nchar return
@@ -121,7 +122,8 @@ nchar_ctl_internal <- function(
 
 #' Control Sequence Aware Version of nchar
 #'
-#' These functions are deprecated in favor of the [`_ctl` flavors][nchar_ctl].
+#' These functions are deprecated in favor of the [`nchar_ctl`] and
+#' [`nzchar_ctl`].
 #'
 #' @inheritParams nchar_ctl
 #' @inherit nchar_ctl return

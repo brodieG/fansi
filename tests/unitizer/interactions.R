@@ -1,4 +1,4 @@
-## Copyright (C) 2021  Brodie Gaslam
+## Copyright (C) 2022 Brodie Gaslam
 ##
 ## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
 ##
@@ -169,7 +169,7 @@ unitizer_sect("bridge", {
 
   # in replace
   txt <- c("A\033[31mBC", "D\033[39mE\033[42mF")
-  `substr_ctl<-`(txt, 2, 2, "?", normalize=TRUE, carry=TRUE)
+  `substr_ctl<-`(txt, 2, 2, value="?", normalize=TRUE, carry=TRUE)
 })
 unitizer_sect("at end / close", {
   x <- c("a\033[31mb", "c", "\033[42md")

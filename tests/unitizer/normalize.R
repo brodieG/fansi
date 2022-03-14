@@ -1,4 +1,4 @@
-## Copyright (C) 2021  Brodie Gaslam
+## Copyright (C) 2022 Brodie Gaslam
 ##
 ## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
 ##
@@ -34,6 +34,10 @@ unitizer_sect("simple expansion", {
   normalize_state(c("AB\033[31;42m", "A\033[0;4mB"))
   normalize_state(c("AB\033[31;42m", "AB\033[0;4m"))
   normalize_state(c("AB\033[31;42m", "\033[0;4mAB"))
+
+  # NA carry
+  normalize_state(c("AB\033[31;42m", NA, "\033[0;4mAB"))
+  normalize_state(c("AB\033[31;42m", NA, "\033[0;4mAB"), carry=TRUE)
 })
 unitizer_sect("superflous codes", {
   normalize_state(c("A\033[31;44;38;5;226;36mBC\033[mD"))

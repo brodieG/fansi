@@ -1,4 +1,4 @@
-## Copyright (C) 2021  Brodie Gaslam
+## Copyright (C) 2022 Brodie Gaslam
 ##
 ## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
 ##
@@ -15,7 +15,7 @@
 
 # nocov start
 .onLoad <- function(libname, pkgname) {
-  # Scheme defaults are fairly complex...
+  reset_limits()
   check_assumptions()
   FANSI.ENV[['r.ver']] <- getRversion()
 }

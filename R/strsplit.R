@@ -1,4 +1,4 @@
-## Copyright (C) 2021  Brodie Gaslam
+## Copyright (C) 2022 Brodie Gaslam
 ##
 ## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
 ##
@@ -15,9 +15,7 @@
 
 #' Control Sequence Aware Version of strsplit
 #'
-#' A drop-in replacement for [`base::strsplit`].  It will be noticeably slower,
-#' but should otherwise behave the same way except for _Control Sequence_
-#' awareness.
+#' A drop-in replacement for [`base::strsplit`].
 #'
 #' This function works by computing the position of the split points after
 #' removing _Control Sequences_, and uses those positions in conjunction with
@@ -35,6 +33,7 @@
 #' @inheritParams base::strsplit
 #' @inheritParams strwrap_ctl
 #' @inherit substr_ctl seealso
+#' @inheritSection substr_ctl Control and Special Sequences
 #' @inheritSection substr_ctl Output Stability
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work properly in R < 3.2.2.
@@ -145,7 +144,7 @@ strsplit_ctl <- function(
 }
 #' Check for Presence of Control Sequences
 #'
-#' This function is deprecated in favor of the [`_ctl` flavor][strsplit_ctl].
+#' This function is deprecated in favor of the [`strsplit_ctl`].
 #'
 #' @inheritParams strsplit_ctl
 #' @inherit strsplit_ctl return
