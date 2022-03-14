@@ -406,13 +406,14 @@ unitizer_sect("Rep Funs - SGR", {
   txt7a <- "\u0160os"
   txt7b <- "sos"
   txt7c <- "so\u0160"
-  Encoding(`substr_ctl<-`(txt7a, 1, 1, value="\u0161"))
+  val.scar <- "\u0161"
+  Encoding(`substr_ctl<-`(txt7a, 1, 1, value=val.scar))
   Encoding(`substr_ctl<-`(txt7a, 1, 1, value="s"))
-  Encoding(`substr_ctl<-`(txt7a, 2, 2, value="\u0161"))
+  Encoding(`substr_ctl<-`(txt7a, 2, 2, value=val.scar))
   Encoding(`substr_ctl<-`(txt7a, 2, 2, value="s"))
-  Encoding(`substr_ctl<-`(txt7b, 2, 2, value="\u0161"))
+  Encoding(`substr_ctl<-`(txt7b, 2, 2, value=val.scar))
   Encoding(`substr_ctl<-`(txt7b, 2, 2, value="s"))
-  Encoding(`substr_ctl<-`(txt7c, 3, 3, value="\u0161"))
+  Encoding(`substr_ctl<-`(txt7c, 3, 3, value=val.scar))
   Encoding(`substr_ctl<-`(txt7c, 3, 3, value="s"))
 
 })

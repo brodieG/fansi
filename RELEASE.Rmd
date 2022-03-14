@@ -6,6 +6,7 @@ Make sure to check codecov as the algorithms are different (and better?) there.
 
 [x] R CMD check
 [x] winbuilder    r81416
+[ ] Other locale (e.g. 8859-15, not "latin1")
 
 [ ] R 3.2
 [x] R 3.3  Error in vignette (knitr behaves differently)?
@@ -23,14 +24,15 @@ Need more RAM for docker?
 [x] Rchk
 [x] valgrind
 [x] SAN
+[ ] CSAN (catches things GCCSAN does not).
 
 ^ Do these last as inevitably we end up making changes
 
-[ ] CRAN policy
+[x] CRAN policy
 
 [x] Review documentation
 [x] New README
 [x] Re-render vignette
-[ ] New animation
+[x] New animation
 
 

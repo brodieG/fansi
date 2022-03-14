@@ -134,6 +134,7 @@
 // - sgr.style -----------------------------------------------------------------
 
 // style encodings, used against sgr.style
+// bits 0-11
 #define STL_BOLD         1
 #define STL_BLUR         2   // or faint
 #define STL_ITALIC       4
@@ -151,23 +152,27 @@
 #define STL_MASK1      511   // Basic styles (i.e. 1-9 codes, sum(2^(0:8))
 #define STL_MASK2      447   // Basic styles for HTML, excludes inverse
 
+// bits 12-14
 #define BRD_FRAMED    4096
 #define BRD_ENCIRC    8192
 #define BRD_OVERLN   16384
 
 #define BRD_MASK     28672   // sum(2^(12:14))
 
+// bits 15-19
 #define IDG_UNDERL   32768 // ideogram underline or right side line
 #define IDG_UNDERL2  65536 // ideogram dbl underline or dbl line on right
 #define IDG_OVERL   131072 // ideogram overline or left side line
 #define IDG_OVERL2  262144 // ideogram dbl overline or dbl line on left
 #define IDG_STRESS  524288 // ideogram stress marking
+
 #define IDG_MASK   1015808 // sum(2^(15:19))
 
-// Alternative fonts, 10-19, (encoded as is for simplicity, so use 5 bytes)
+// bits 20:24 - alternative fonts
+// Encoded as decimals of values 10-19, (for simplicity, so use 5 bytes)
 
-#define FONT_START  27
-#define FONT_MASK 4160749568 // sum(2^(27:31))
+#define FONT_START  20
+#define FONT_MASK 32505856 // sum(2^(20:24))
 #define FONT_ALL    31
 
 // - Misc ----------------------------------------------------------------------
