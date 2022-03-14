@@ -128,7 +128,9 @@ unitizer_sect("Other Escapes", {
 
   # c0 escapes should be treated as zero width
 
-  strwrap_ctl("hello\x1F\x1F\x1F\x1F\x1F\x1F world yohoo", 12)
+  c0 <- "hello\x1F\x1F\x1F\x1F\x1F\x1F world yohoo"
+  Encoding(c0) <- "UTF-8"
+  strwrap_ctl(c0, 12)
 
   # Various different types of warnings
 

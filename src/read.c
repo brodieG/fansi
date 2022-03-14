@@ -104,13 +104,15 @@ static int utf8clen(const char * c, int * mb_err) {
  * DO NOT USE AS STANDALONE UTF8 VALIDATION.
  */
 static int valid_utf8(const char * chr, int bytes) {
-  int pass = !(*chr & (0x20 >> (bytes - 2)));
-  switch(bytes) {
-    case 4: pass &= (*(++chr) & 0xc0) == 0x80;
-    case 3: pass &= (*(++chr) & 0xc0) == 0x80;
-    case 2: pass &= (*(++chr) & 0xc0) == 0x80; break;
-    default: pass = 0;
-  }
+  int pass = 0;
+  if(bytes > 1) {
+    pass = !(*chr & (0x20 >> (bytes - 2)));
+    switch(bytes) {
+      case 4: pass &= (*(++chr) & 0xc0) == 0x80;
+      case 3: pass &= (*(++chr) & 0xc0) == 0x80;
+      case 2: pass &= (*(++chr) & 0xc0) == 0x80; break;
+      default: pass = 0;
+  } }
   return pass;
 }
 

@@ -97,12 +97,15 @@ unitizer_sect('ctl', {
   nzchar_ctl("\t\n", ctl=c('nl'), warn=FALSE)
 })
 unitizer_sect('corner cases', {
-  ## Bad byte in ESC, generally okay as they are not emitted
-  nchar_ctl("\033\x80")
-  nchar_ctl("\033[31;\x80m")
-  nchar_ctl("\033[31;\x80p")
-  nchar_ctl("\033]8;\x80;a.b\033\\")
-  nchar_ctl("\033];\x80;a.b\033\\")
+  ## Bad byte in ESC, generally okay as they are not emitted, saving to
+  ## variables to avoid issues with parse/deparse in unitizer < 1.4.18
+
+  ncbad <- c(
+    "\033\x80", "\033[31;\x80m", "\033[31;\x80p",  "\033]8;\x80;a.b\033\\",
+    "\033];\x80;a.b\033\\"
+  )
+  Encoding(ncbad) <- "UTF-8"
+  nchar_ctl(ncbad)
 
   ## Old R version behavior
   fansi:::set_rver(numeric_version("3.2.1"))
