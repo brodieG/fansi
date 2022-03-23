@@ -305,7 +305,7 @@ void FANSI_print(const char * x) {
   if(x) {
     size_t len = strlen(x);
     for(size_t i = 0; i < len; ++i)
-      if(*(x + i) < 0x20 || *(x + i) > 0x7F)
+      if(*(x + i) < 0x20 || (unsigned char)(*(x + i)) > 0x7F)
         Rprintf("\\x%2x", *(x + i));
       else
         Rprintf("%c", *(x + i));
@@ -314,7 +314,7 @@ void FANSI_print(const char * x) {
 }
 void FANSI_print_len(const char * x, int len) {
   for(int i = 0; i < len; ++i)
-    if(*(x + i) < 0x20 || *(x + i) > 0x7F)
+    if(*(x + i) < 0x20 || (unsigned char)(*(x + i)) > 0x7F)
       Rprintf("\\x%2x", *(x + i));
     else
       Rprintf("%c", *(x + i));

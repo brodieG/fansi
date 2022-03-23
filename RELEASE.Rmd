@@ -1,38 +1,42 @@
 ## Release Steps
 
-[x] Coverage 100%
+[ ] Coverage 100%
 
 Make sure to check codecov as the algorithms are different (and better?) there.
 
 [x] R CMD check
-[x] winbuilder    r81416
+[ ] CRAN version of unitizer
+[ ] winbuilder    r81416
 [ ] Other locale (e.g. 8859-15, not "latin1")
 
 [ ] R 3.2
-[x] R 3.3  Error in vignette (knitr behaves differently)?
+[ ] R 3.3  Error in vignette (knitr behaves differently)?
 
 Github Actions doesn't work anymore with the default Rstudio setup, so we've
 just been running locally on our 3.3 version (or on docker?).
 
-[x] Revdep
+[ ] Revdep
 
 Review the details of revdep: it claims everything is fine, but there are
 several failures.  Also, it took ~10 hours to do the revdeps for 26 packages;
 what is going on with that?  Possibly not enough RAM causing us to hit swap?
 Need more RAM for docker?
 
-[x] Rchk
+[ ] Rchk
 [x] valgrind
-[x] SAN
+[ ] SAN
 [ ] CSAN (catches things GCCSAN does not).
 
 ^ Do these last as inevitably we end up making changes
 
-[x] CRAN policy
+[ ] CRAN policy
 
-[x] Review documentation
-[x] New README
-[x] Re-render vignette
-[x] New animation
+[ ] Review documentation
+[ ] New README
+[ ] Re-render vignette
+
+Optional
+
+[ ] New animation
 
 
