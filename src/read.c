@@ -108,8 +108,8 @@ static int valid_utf8(const char * chr, int bytes) {
   if(bytes > 1) {
     pass = !(*chr & (0x20 >> (bytes - 2)));
     switch(bytes) {
-      case 4: pass &= (*(++chr) & 0xc0) == 0x80;
-      case 3: pass &= (*(++chr) & 0xc0) == 0x80;
+      case 4: pass &= (*(++chr) & 0xc0) == 0x80; /* FALLTHRU */
+      case 3: pass &= (*(++chr) & 0xc0) == 0x80; /* FALLTHRU */
       case 2: pass &= (*(++chr) & 0xc0) == 0x80; break;
       default: pass = 0;
   } }
