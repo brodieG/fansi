@@ -4,28 +4,28 @@
 
 Make sure to check codecov as the algorithms are different (and better?) there.
 
+[ ] gcc-12
 [x] R CMD check
-[ ] CRAN version of unitizer
-[ ] winbuilder    r81416
+[x] CRAN version of unitizer
+[x] winbuilder
 [ ] Other locale (e.g. 8859-15, not "latin1")
 
-[ ] R 3.2
-[ ] R 3.3  Error in vignette (knitr behaves differently)?
+GA doesn't do these anymore, so we're doing it locally.
 
-Github Actions doesn't work anymore with the default Rstudio setup, so we've
-just been running locally on our 3.3 version (or on docker?).
+[x] R 3.2 (tests only) some issues with NA and nchar
+[x] R 3.3 (tests only)
 
-[ ] Revdep
+[ ] Revdep (we'll let CRAN do this)
 
 Review the details of revdep: it claims everything is fine, but there are
 several failures.  Also, it took ~10 hours to do the revdeps for 26 packages;
 what is going on with that?  Possibly not enough RAM causing us to hit swap?
 Need more RAM for docker?
 
-[ ] Rchk
+[.] Rchk      didn't touch C-R code
 [x] valgrind
 [ ] SAN
-[ ] CSAN (catches things GCCSAN does not).
+[x] CSAN (catches things GCCSAN does not).
 
 ^ Do these last as inevitably we end up making changes
 
