@@ -42,7 +42,7 @@ SEXP FANSI_has(SEXP x, SEXP ctl, SEXP warn) {
       int res = 0;
       const char * xc = CHAR(chrsxp);
       int off_init = FANSI_seek_ctl(xc);
-      if(xc + off_init) {
+      if(*(xc + off_init)) {
         state.pos.x = off_init;
         FANSI_find_ctl(&state, i, arg);
         res = (state.status & CTL_MASK) > 0;
