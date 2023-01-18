@@ -1,5 +1,12 @@
 # fansi Release Notes
 
+## v1.0.4
+
+CRAN compiled code warning suppression release.
+
+* Fix void function declarations and definitions.
+* Change `sprintf` to `snprintf`.
+
 ## v1.0.3
 
 * Address problem uncovered by gcc-12 linters, although the issue itself could
