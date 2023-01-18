@@ -63,17 +63,17 @@ SEXP FANSI_trimws(
 
 // utility / testing
 
-SEXP FANSI_check_assumptions();
+SEXP FANSI_check_assumptions(void);
 
 SEXP FANSI_add_int_ext(SEXP x, SEXP y);
 
 SEXP FANSI_set_int_max(SEXP x);
 SEXP FANSI_set_rlent_max(SEXP x);
-SEXP FANSI_get_int_max();
-SEXP FANSI_get_warn_all();
-SEXP FANSI_get_warn_mangled();
-SEXP FANSI_get_warn_utf8();
-SEXP FANSI_get_warn_error();
+SEXP FANSI_get_int_max(void);
+SEXP FANSI_get_warn_all(void);
+SEXP FANSI_get_warn_mangled(void);
+SEXP FANSI_get_warn_utf8(void);
+SEXP FANSI_get_warn_error(void);
 SEXP FANSI_esc_html(SEXP x, SEXP what);
 
 SEXP FANSI_normalize_state_ext(
@@ -84,7 +84,7 @@ SEXP FANSI_normalize_state_list_ext(
 );
 
 SEXP FANSI_size_buff_ext(SEXP x);
-SEXP FANSI_size_buff_prot_test();
+SEXP FANSI_size_buff_prot_test(void);
 
 SEXP FANSI_check_enc_ext(SEXP x, SEXP i);
 SEXP FANSI_ctl_as_int_ext(SEXP ctl);
@@ -95,12 +95,12 @@ SEXP FANSI_state_at_end_ext(
   SEXP arg, SEXP allowNA
 );
 SEXP FANSI_bridge_state_ext(SEXP end, SEXP restart, SEXP term_cap, SEXP norm);
-SEXP FANSI_buff_test_reset();
-SEXP FANSI_buff_test_copy_overflow();
-SEXP FANSI_buff_test_mcopy_overflow();
-SEXP FANSI_buff_test_fill_overflow();
+SEXP FANSI_buff_test_reset(void);
+SEXP FANSI_buff_test_copy_overflow(void);
+SEXP FANSI_buff_test_mcopy_overflow(void);
+SEXP FANSI_buff_test_fill_overflow(void);
 
-SEXP FANSI_reset_limits();
+SEXP FANSI_reset_limits(void);
 
 SEXP FANSI_read_all_ext(SEXP x, SEXP warn, SEXP term_cap);
 

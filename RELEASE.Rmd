@@ -6,8 +6,7 @@ Make sure to check codecov as the algorithms are different (and better?) there.
 
 [ ] gcc-12
 [x] R CMD check
-[x] CRAN version of unitizer
-[x] winbuilder
+[ ] winbuilder
 [ ] Other locale (e.g. 8859-15, not "latin1")
 
 GA doesn't do these anymore, so we're doing it locally.
@@ -15,25 +14,28 @@ GA doesn't do these anymore, so we're doing it locally.
 [x] R 3.2 (tests only) some issues with NA and nchar
 [x] R 3.3 (tests only)
 
-[ ] Revdep (we'll let CRAN do this)
+[ ] Revdep (do we let CRAN do this?)
 
 Review the details of revdep: it claims everything is fine, but there are
 several failures.  Also, it took ~10 hours to do the revdeps for 26 packages;
 what is going on with that?  Possibly not enough RAM causing us to hit swap?
 Need more RAM for docker?
 
-[.] Rchk      didn't touch C-R code
-[x] valgrind
-[ ] SAN
-[x] CSAN (catches things GCCSAN does not).
-
-^ Do these last as inevitably we end up making changes
-
 [ ] CRAN policy
 
 [ ] Review documentation
+[ ] Update DESCRIPTION / NEWS
 [ ] New README
 [ ] Re-render vignette
+
+Compiled code issues (do these last as inevitably we end up making changes).
+
+[.] Rchk      didn't touch C-R code
+[ ] valgrind
+[ ] SAN
+[ ] CSAN (catches things GCCSAN does not).
+
+^ 
 
 Optional
 
