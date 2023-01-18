@@ -156,7 +156,7 @@ static int as_num(const char * string) {
     // nocov end
   return (int) (*string - '0');
 }
-
+#define EW_BUFF 39
 static void alert(struct FANSI_state * state, R_xlen_t i, const char * arg) {
   unsigned int err_code = FANSI_GET_ERR(state->status);
   int err_mode = (err_code == ERR_BAD_UTF8 || err_code == ERR_NON_ASCII);
@@ -173,11 +173,14 @@ static void alert(struct FANSI_state * state, R_xlen_t i, const char * arg) {
     if(err_mode) fun = error;
     else fun = warning;
 
-    char argp[39];
+    int ew_buff = EW_BUFF;
+    char argp[EW_BUFF];
     if(arg) {
-      if(strlen(arg) > 18)
+      const char * err_fmt = "Argument `%s` contains";
+      // < 1 for terminator, +2 for %s,,all these small enough so int is okay
+      if(ew_buff - strlen(err_fmt) - strlen(arg) + 2 < 1)
         error("Internal Error: arg name too long for warning.");// nocov
-      int try = sprintf(argp, "Argument `%s` contains", arg);
+      int try = snprintf(argp, EW_BUFF, err_fmt, arg);
       if(try < 0)
         error("Internal Error: snprintf failed.");  // nocov
     } else {
