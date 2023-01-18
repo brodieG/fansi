@@ -315,12 +315,12 @@ static void prot_test_help(
   FANSI_size_buff0(buff, size);
   INTEGER(VECTOR_ELT(res, 1))[i] = buff->len_alloc;
   SET_STRING_ELT(VECTOR_ELT(res, 0), i, mkChar(lbl));
-  sprintf(tmp, "%p", buff->vheap_self);
+  snprintf(tmp, 256, "%p", buff->vheap_self);
   SET_STRING_ELT(VECTOR_ELT(res, 3), i, mkChar(tmp));
-  sprintf(tmp, "%p", buff->vheap_prev);
+  snprintf(tmp, 256, "%p", buff->vheap_prev);
   SET_STRING_ELT(VECTOR_ELT(res, 2), i, mkChar(tmp));
 }
-SEXP FANSI_size_buff_prot_test() {
+SEXP FANSI_size_buff_prot_test(void) {
   struct FANSI_buff buff1, buff2;
   FANSI_INIT_BUFF(&buff1);
   FANSI_INIT_BUFF(&buff2);
@@ -367,14 +367,14 @@ SEXP FANSI_size_buff_prot_test() {
   UNPROTECT(1);
   return res;
 }
-SEXP FANSI_buff_test_reset() {
+SEXP FANSI_buff_test_reset(void) {
   struct FANSI_buff buff;
   FANSI_INIT_BUFF(&buff);
   FANSI_W_copy(&buff, "hello", 0, "blah");
   FANSI_size_buff(&buff);
   return R_NilValue;  // nocov
 }
-SEXP FANSI_buff_test_copy_overflow() {
+SEXP FANSI_buff_test_copy_overflow(void) {
   struct FANSI_buff buff;
   FANSI_INIT_BUFF(&buff);
   FANSI_reset_buff(&buff);
@@ -383,7 +383,7 @@ SEXP FANSI_buff_test_copy_overflow() {
   FANSI_W_copy(&buff, "hello!", 0, "blah");
   return R_NilValue;  // nocov
 }
-SEXP FANSI_buff_test_mcopy_overflow() {
+SEXP FANSI_buff_test_mcopy_overflow(void) {
   struct FANSI_buff buff;
   FANSI_INIT_BUFF(&buff);
   FANSI_reset_buff(&buff);
@@ -392,7 +392,7 @@ SEXP FANSI_buff_test_mcopy_overflow() {
   FANSI_W_mcopy(&buff, "hello!", 5, 0, "blah");
   return R_NilValue;  // nocov
 }
-SEXP FANSI_buff_test_fill_overflow() {
+SEXP FANSI_buff_test_fill_overflow(void) {
   struct FANSI_buff buff;
   FANSI_INIT_BUFF(&buff);
   FANSI_reset_buff(&buff);
@@ -693,12 +693,14 @@ static char * color_token(
       *(buff_track++) = ';';
       int write_chrs = 0;
       if(color.x & CLR_TRU) {
-        write_chrs = sprintf(
-          buff_track, "2;%d;%d;%d",
+        write_chrs = snprintf(
+          buff_track, 20 - (buff_track - buff), "2;%d;%d;%d",
           color.extra[0], color.extra[1], color.extra[2]
         );
       } else {
-        write_chrs = sprintf(buff_track, "5;%d", color.extra[0]);
+        write_chrs = snprintf(
+          buff_track, 20 - (buff_track - buff), "5;%d", color.extra[0]
+        );
       }
       if(write_chrs < 0)
         error("Internal Error: failed writing color code.");   // nocov
