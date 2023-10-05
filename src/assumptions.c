@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Brodie Gaslam
+ * Copyright (C) Brodie Gaslam
  *
  * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
  *
@@ -28,7 +28,7 @@
  *
  * returns TRUE on success, but throws warnings.
  */
-static void check_limits() {
+static void check_limits(void) {
   if(
     // Signed
     FANSI_lim.lim_int.max < 1 || FANSI_lim.lim_int.min > -1 ||
@@ -42,7 +42,7 @@ static void check_limits() {
 // nocov start
 // by definition none of the errors should be thrown, so no sense in
 // covering this
-SEXP FANSI_check_assumptions() {
+SEXP FANSI_check_assumptions(void) {
   const char * err_base =
     "Failed system assumption: %s%s; please contact maintainer.";
 
