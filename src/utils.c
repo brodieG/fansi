@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Brodie Gaslam
+ * Copyright (C) Brodie Gaslam
  *
  * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
  *
@@ -56,7 +56,7 @@ SEXP FANSI_set_rlent_max(SEXP x) {
   FANSI_lim.lim_R_len_t.max = (intmax_t) x_R_len_t;
   return ScalarInteger(old_R_len_t);
 }
-SEXP FANSI_reset_limits() {
+SEXP FANSI_reset_limits(void) {
   FANSI_lim = (struct FANSI_limits) {
     .lim_int={.name="INT", .min=INT_MIN, .max=INT_MAX},
     .lim_R_len_t={.name="R_LEN_T", .min=0, .max=R_LEN_T_MAX},
@@ -67,7 +67,7 @@ SEXP FANSI_reset_limits() {
 }
 // nocov start
 // used only for debugging
-SEXP FANSI_get_int_max() {
+SEXP FANSI_get_int_max(void) {
   return ScalarInteger(FANSI_lim.lim_int.max);
 }
 // nocov end
@@ -174,16 +174,16 @@ unsigned int FANSI_term_cap_as_int(SEXP term_cap) {
   return term_cap_int;
 }
 
-SEXP FANSI_get_warn_all() {
+SEXP FANSI_get_warn_all(void) {
   return ScalarInteger(WARN_MASK);
 }
-SEXP FANSI_get_warn_mangled() {
+SEXP FANSI_get_warn_mangled(void) {
   return ScalarInteger(WARN_MANGLED);
 }
-SEXP FANSI_get_warn_utf8() {
+SEXP FANSI_get_warn_utf8(void) {
   return ScalarInteger(WARN_UTF8);
 }
-SEXP FANSI_get_warn_error() {
+SEXP FANSI_get_warn_error(void) {
   return ScalarInteger(WARN_ERROR);
 }
 // concept borrowed from utf8-lite, but is not great because we're

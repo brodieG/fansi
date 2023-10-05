@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Brodie Gaslam
+ * Copyright (C) Brodie Gaslam
  *
  * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
  *
@@ -62,38 +62,8 @@ static const char * err_messages[] = {
 /*- UTF8 Helpers --------------------------------------------------------------\
 \-----------------------------------------------------------------------------*/
 
-/*
- * Code adapted from src/main/util.c@1186, this code is actually not completely
- * compliant, but we're just trying to match R behavior rather than the correct
- * UTF8 decoding.
- *
- * Among other things note that this allows 5-6 byte encodings which are no
- * longer valid.
- */
+#include "utf8clen.h"
 
-/* Number of additional bytes */
-
-static const unsigned char utf8_table4[] = {
-  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-  2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
-  3,3,3,3,3,3,3,3,4,4,4,4,5,5,5,5 };
-
-static int utf8clen(const char * c, int * mb_err) {
-  /* This allows through 8-bit chars 10xxxxxx, which are invalid */
-  int res = 0;
-  if ((*c & 0xc0) != 0xc0) res = 1;
-  else res = 1 + utf8_table4[*c & 0x3f];
-
-  // Make sure string doesn't end before UTF8 char supposedly does
-  for(int i = 1; i < res; ++i) {
-    if(!*(c + i)) {
-      *mb_err = 1;
-      res = i;
-      break;
-  } }
-  return res;
-}
 /*
  * Perfunctory validation, checks there is a zero in the right spot
  * for the first byte, and that continuation bytes start with 10.
@@ -156,7 +126,7 @@ static int as_num(const char * string) {
     // nocov end
   return (int) (*string - '0');
 }
-
+#define EW_BUFF 39
 static void alert(struct FANSI_state * state, R_xlen_t i, const char * arg) {
   unsigned int err_code = FANSI_GET_ERR(state->status);
   int err_mode = (err_code == ERR_BAD_UTF8 || err_code == ERR_NON_ASCII);
@@ -173,11 +143,14 @@ static void alert(struct FANSI_state * state, R_xlen_t i, const char * arg) {
     if(err_mode) fun = error;
     else fun = warning;
 
-    char argp[39];
+    int ew_buff = EW_BUFF;
+    char argp[EW_BUFF];
     if(arg) {
-      if(strlen(arg) > 18)
+      const char * err_fmt = "Argument `%s` contains";
+      // < 1 for terminator, +2 for %s,,all these small enough so int is okay
+      if(ew_buff - strlen(err_fmt) - strlen(arg) + 2 < 1)
         error("Internal Error: arg name too long for warning.");// nocov
-      int try = sprintf(argp, "Argument `%s` contains", arg);
+      int try = snprintf(argp, EW_BUFF, err_fmt, arg);
       if(try < 0)
         error("Internal Error: snprintf failed.");  // nocov
     } else {
