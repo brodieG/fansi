@@ -148,6 +148,12 @@
 #' The [`utf8`](https://cran.r-project.org/package=utf8) package provides a
 #' conforming grapheme parsing implementation.
 #'
+#' @section Bidirectional Text:
+#'
+#' `fansi` is unaware of text directionality and operates as if all strings are
+#' left to right (LTR).  Using `fansi` function with strings that contain mixed
+#' direction scripts (i.e. both LTR and RTL) may produce undesirable results.
+#'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work properly in R < 3.2.2.
 #' @note If `stop` < `start`, the return value is always an empty string.
