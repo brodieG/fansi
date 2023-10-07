@@ -29,7 +29,7 @@ strtrim2_sgr(
 \item{x}{a character vector, or an object which can be coerced to a
     character vector by \code{\link[base]{as.character}}.}
 
-\item{width}{Positive integer values: recycled to the length of \code{x}.}
+\item{width}{positive integer values: recycled to the length of \code{x}.}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic \emph{Control Sequences} are encountered.  These could cause the

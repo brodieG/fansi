@@ -36,6 +36,7 @@
 #' @inheritSection substr_ctl Control and Special Sequences
 #' @inheritSection substr_ctl Graphemes
 #' @inheritSection substr_ctl Output Stability
+#' @inheritSection substr_ctl Bidirectional Text
 #' @inheritParams base::strwrap
 #' @inheritParams tabs_as_spaces
 #' @inheritParams substr_ctl

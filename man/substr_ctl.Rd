@@ -68,7 +68,7 @@ substr2_ctl(
 
 \item{start}{integer.  The first element to be extracted or replaced.}
 
-\item{stop}{integer.  The last element to be extracted or replaced.}
+\item{stop}{integer.  The first element to be extracted or replaced.}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic \emph{Control Sequences} are encountered.  These could cause the
@@ -192,15 +192,19 @@ OSC hyperlinks.  See \code{\link{fansi}} for details.
 
 When computing substrings, \emph{Normal} (non-control) characters are considered
 to occupy positions in strings, whereas \emph{Control Sequences} occupy the
-interstices between them.  The string:\preformatted{"hello-\\033[31mworld\\033[m!"
-}
+interstices between them.  The string:
 
-is interpreted as:\preformatted{                   1 1 1
+\if{html}{\out{<div class="sourceCode">}}\preformatted{"hello-\\033[31mworld\\033[m!"
+}\if{html}{\out{</div>}}
+
+is interpreted as:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{                   1 1 1
  1 2 3 4 5 6 7 8 9 0 1 2
  h e l l o -|w o r l d|!
             ^         ^
             \\033[31m  \\033[m
-}
+}\if{html}{\out{</div>}}
 
 \code{start} and \code{stop} reference character positions so they never explicitly
 select for the interstitial \emph{Control Sequences}.  The latter are implicitly
@@ -306,6 +310,14 @@ the hope is that R will add the feature eventually itself.
 
 The \href{https://cran.r-project.org/package=utf8}{\code{utf8}} package provides a
 conforming grapheme parsing implementation.
+}
+
+\section{Bidirectional Text}{
+
+
+\code{fansi} is unaware of text directionality and operates as if all strings are
+left to right (LTR).  Using \code{fansi} function with strings that contain mixed
+direction scripts (i.e. both LTR and RTL) may produce undesirable results.
 }
 
 \examples{

@@ -270,6 +270,7 @@
 #'
 #' @useDynLib fansi, .registration=TRUE, .fixes="FANSI_"
 #' @docType package
+#' @aliases fansi-package
 #' @name fansi
 
 NULL
