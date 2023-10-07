@@ -3,6 +3,7 @@
 \docType{package}
 \name{fansi}
 \alias{fansi}
+\alias{fansi-package}
 \title{Details About Manipulation of Strings Containing Control Sequences}
 \description{
 Counterparts to R string manipulation functions that account for
@@ -122,13 +123,17 @@ window title or changing the active color palette.
 \href{https://iterm2.com/documentation-escape-codes.html}{Some terminals} have
 added support for associating URIs to text with OSCs in a similar way to
 anchors in HTML, so \code{fansi} interprets them and outputs or terminates them as
-needed.  For example:\preformatted{"\\033]8;;xy.z\\033\\\\LINK\\033]8;;\\033\\\\"
-}
+needed.  For example:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{"\\033]8;;xy.z\\033\\\\LINK\\033]8;;\\033\\\\"
+}\if{html}{\out{</div>}}
 
 Might be interpreted as link to the URI "x.z".  To make the encoding pattern
 clearer, we replace "\033]" with "<OSC>" and "\033\\\\" with
-"<ST>" below:\preformatted{<OSC>8;;URI<ST>LINK TEXT<OSC>8;;<ST>
-}
+"<ST>" below:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{<OSC>8;;URI<ST>LINK TEXT<OSC>8;;<ST>
+}\if{html}{\out{</div>}}
 }
 
 \section{State Interactions}{
@@ -182,7 +187,9 @@ new line with the currently active background before writing the contents of
 the line.  If there is a non-default active background color, any unwritten
 columns in the new line will keep the prior background color even if the new
 line changes the background color.  To avoid this be sure to use \code{terminate = TRUE} or to manually terminate each line with e.g.  "ESC[0m".  The
-problem manifests as:\preformatted{" " = default background
+problem manifests as:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{" " = default background
 "#" = new background
 ">" = start new background
 "!" = restore default background
@@ -193,7 +200,7 @@ problem manifests as:\preformatted{" " = default background
 |!abc\\n#####| <- trailing "#" after newline are from pre-paint
 | abc       |
 +-----------+
-}
+}\if{html}{\out{</div>}}
 
 The simplest way to avoid this problem is to split input strings by any
 newlines they contain, and use \code{terminate = TRUE} (the default).  A more
