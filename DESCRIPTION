@@ -2,7 +2,7 @@ Package: fansi
 Title: ANSI Control Sequence Aware String Functions
 Description: Counterparts to R string manipulation functions that account for
    the effects of ANSI text formatting control sequences.
-Version: 1.0.4
+Version: 1.0.4.9000
 Authors@R: c(
     person("Brodie", "Gaslam", email="brodie.gaslam@yahoo.com",
     role=c("aut", "cre")),
@@ -24,7 +24,7 @@ Suggests:
 Imports:
     grDevices,
     utils
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.3
 Roxygen: list(markdown = TRUE, load = "installed")
 Encoding: UTF-8
 Collate:
