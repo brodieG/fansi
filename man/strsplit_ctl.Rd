@@ -168,6 +168,14 @@ To maximize the odds of getting stable output set \code{normalize_state} to
 set \code{term.cap} to a specific set of capabilities.
 }
 
+\section{Bidirectional Text}{
+
+
+\code{fansi} is unaware of text directionality and operates as if all strings are
+left to right (LTR).  Using \code{fansi} function with strings that contain mixed
+direction scripts (i.e. both LTR and RTL) may produce undesirable results.
+}
+
 \examples{
 strsplit_ctl("\033[31mhello\033[42m world!", " ")
 

@@ -53,7 +53,7 @@ strwrap2_sgr(
 \item{exdent}{a non-negative integer specifying the indentation of
     subsequent lines in paragraphs.}
 
-\item{prefix}{a character string to be used as prefix for
+\item{prefix, initial}{a character string to be used as prefix for
     each line except the first, for which \code{initial} is used.}
 
 \item{simplify}{a logical.  If \code{TRUE}, the result is a single
@@ -62,9 +62,6 @@ strwrap2_sgr(
     line text obtained from the corresponding element of \code{x}.
     (Hence, the result in the former case is obtained by unlisting that
     of the latter.)}
-
-\item{initial}{a character string to be used as prefix for
-    each line except the first, for which \code{initial} is used.}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic \emph{Control Sequences} are encountered.  These could cause the

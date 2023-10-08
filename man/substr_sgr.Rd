@@ -36,7 +36,7 @@ substr2_sgr(
 
 \item{start}{integer.  The first element to be extracted or replaced.}
 
-\item{stop}{integer.  The last element to be extracted or replaced.}
+\item{stop}{integer.  The first element to be extracted or replaced.}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic \emph{Control Sequences} are encountered.  These could cause the
