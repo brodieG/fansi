@@ -1,4 +1,4 @@
-## Copyright (C) 2022 Brodie Gaslam
+## Copyright (C) Brodie Gaslam
 ##
 ## This file is part of "fansi - ANSI Control Sequence Aware String Functions"
 ##
@@ -148,10 +148,15 @@
 #' The [`utf8`](https://cran.r-project.org/package=utf8) package provides a
 #' conforming grapheme parsing implementation.
 #'
+#' @section Bidirectional Text:
+#'
+#' `fansi` is unaware of text directionality and operates as if all strings are
+#' left to right (LTR).  Using `fansi` function with strings that contain mixed
+#' direction scripts (i.e. both LTR and RTL) may produce undesirable results.
+#'
 #' @note Non-ASCII strings are converted to and returned in UTF-8 encoding.
 #'   Width calculations will not work properly in R < 3.2.2.
 #' @note If `stop` < `start`, the return value is always an empty string.
-#' @inheritParams base::substr
 #' @export
 #' @seealso [`?fansi`][fansi] for details on how _Control Sequences_ are
 #'   interpreted, particularly if you are getting unexpected results,
@@ -159,6 +164,8 @@
 #'   [`state_at_end`] to compute active state at the end of strings,
 #'   [`close_state`] to compute the sequence required to close active state.
 #' @param x a character vector or object that can be coerced to such.
+#' @param start integer.  The first element to be extracted or replaced.
+#' @param stop integer.  The first element to be extracted or replaced.
 #' @param type character(1L) partial matching
 #'   `c("chars", "width", "graphemes")`, although types other than "chars" only
 #'   work correctly with R >= 3.2.2.  See [`?nchar`][base::nchar].

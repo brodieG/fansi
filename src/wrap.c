@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Brodie Gaslam
+ * Copyright (C) Brodie Gaslam
  *
  * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
  *
@@ -102,7 +102,7 @@ static struct FANSI_prefix_dat drop_pre_indent(struct FANSI_prefix_dat dat) {
   if(dat.indent < 0)
     // nocov start
     error(
-      "Internal Error: cannot drop indent when there is none; contact ",
+      "Internal Error: cannot drop indent when there is none; contact "
       "maintainer."
     );
     // nocov end

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Brodie Gaslam
+ * Copyright (C) Brodie Gaslam
  *
  * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
  *
@@ -62,38 +62,8 @@ static const char * err_messages[] = {
 /*- UTF8 Helpers --------------------------------------------------------------\
 \-----------------------------------------------------------------------------*/
 
-/*
- * Code adapted from src/main/util.c@1186, this code is actually not completely
- * compliant, but we're just trying to match R behavior rather than the correct
- * UTF8 decoding.
- *
- * Among other things note that this allows 5-6 byte encodings which are no
- * longer valid.
- */
+#include "utf8clen.h"
 
-/* Number of additional bytes */
-
-static const unsigned char utf8_table4[] = {
-  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-  2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
-  3,3,3,3,3,3,3,3,4,4,4,4,5,5,5,5 };
-
-static int utf8clen(const char * c, int * mb_err) {
-  /* This allows through 8-bit chars 10xxxxxx, which are invalid */
-  int res = 0;
-  if ((*c & 0xc0) != 0xc0) res = 1;
-  else res = 1 + utf8_table4[*c & 0x3f];
-
-  // Make sure string doesn't end before UTF8 char supposedly does
-  for(int i = 1; i < res; ++i) {
-    if(!*(c + i)) {
-      *mb_err = 1;
-      res = i;
-      break;
-  } }
-  return res;
-}
 /*
  * Perfunctory validation, checks there is a zero in the right spot
  * for the first byte, and that continuation bytes start with 10.

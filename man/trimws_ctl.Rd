@@ -15,7 +15,7 @@ trimws_ctl(
 )
 }
 \arguments{
-\item{x}{a character vector}
+\item{x}{a character vector.}
 
 \item{which}{a character string specifying whether to remove both
     leading and trailing whitespace (default), or only leading
