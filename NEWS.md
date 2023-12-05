@@ -1,5 +1,9 @@
 # fansi Release Notes
 
+## v1.0.6
+
+* Fix new `-Wformat` warnings.
+
 ## v1.0.5
 
 * Address roxygen2 breaking changes:
