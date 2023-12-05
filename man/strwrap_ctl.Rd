@@ -55,7 +55,7 @@ strwrap2_ctl(
 \item{exdent}{a non-negative integer specifying the indentation of
     subsequent lines in paragraphs.}
 
-\item{prefix}{a character string to be used as prefix for
+\item{prefix, initial}{a character string to be used as prefix for
     each line except the first, for which \code{initial} is used.}
 
 \item{simplify}{a logical.  If \code{TRUE}, the result is a single
@@ -64,9 +64,6 @@ strwrap2_ctl(
     line text obtained from the corresponding element of \code{x}.
     (Hence, the result in the former case is obtained by unlisting that
     of the latter.)}
-
-\item{initial}{a character string to be used as prefix for
-    each line except the first, for which \code{initial} is used.}
 
 \item{warn}{TRUE (default) or FALSE, whether to warn when potentially
 problematic \emph{Control Sequences} are encountered.  These could cause the
@@ -240,6 +237,14 @@ In general we will strive to keep the rendered appearance stable.
 To maximize the odds of getting stable output set \code{normalize_state} to
 \code{TRUE} and \code{type} to \code{"chars"} in functions that allow it, and
 set \code{term.cap} to a specific set of capabilities.
+}
+
+\section{Bidirectional Text}{
+
+
+\code{fansi} is unaware of text directionality and operates as if all strings are
+left to right (LTR).  Using \code{fansi} function with strings that contain mixed
+direction scripts (i.e. both LTR and RTL) may produce undesirable results.
 }
 
 \examples{
