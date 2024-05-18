@@ -36,7 +36,7 @@ URI based hyperlinks.
 
 \emph{Control Sequences} starting with ESC are assumed to be two characters
 long (including the ESC) unless they are of the CSI or OSC variety, in which
-case their length is computed as per the \href{https://www.ecma-international.org/publications-and-standards/standards/ecma-48/}{ECMA-48 specification},
+case their length is computed as per the \href{https://ecma-international.org/publications-and-standards/standards/ecma-48/}{ECMA-48 specification},
 with the exception that \href{#osc-hyperlinks}{OSC hyperlinks} may be terminated
 with BEL ("\\a") in addition to ST ("ESC\\").  \code{fansi} handles most common
 \emph{Control Sequences} in its parsing algorithms, but it is not a conforming

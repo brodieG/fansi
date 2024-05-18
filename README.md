@@ -132,8 +132,12 @@ including combining emoji:
 You can translate ANSI CSI SGR formatted strings into their HTML
 counterparts with `to_html`:
 
-![Translate to
-HTML](https://github.com/brodieG/fansi/raw/v1.0-rc/extra/images/sgr_to_html.png)
+<figure>
+<img
+src="https://github.com/brodieG/fansi/raw/v1.0-rc/extra/images/sgr_to_html.png"
+alt="Translate to HTML" />
+<figcaption aria-hidden="true">Translate to HTML</figcaption>
+</figure>
 
 ## Rmarkdown
 
@@ -172,7 +176,7 @@ working. The master branch typically mirrors CRAN and should be stable.
 -   [ansistrings](https://github.com/r-lib/ansistrings/), which
     implements similar functionality.
 -   [ECMA-48 - Control Functions For Coded Character
-    Sets](https://www.ecma-international.org/publications-and-standards/standards/ecma-48/),
+    Sets](https://ecma-international.org/publications-and-standards/standards/ecma-48/),
     in particular pages 10-12, and 61.
 -   [CCITT Recommendation
     T.416](https://www.itu.int/rec/dologin_pub.asp?lang=e&id=T-REC-T.416-199303-I!!PDF-E&type=items)

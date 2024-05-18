@@ -717,7 +717,7 @@ static char * color_token(
     // nocov start
     error(
       "Internal Error: exceeded color buffer (%d vs %d).",
-      buff_track - buff, CLR_BUFF_SIZE
+      (int) (buff_track - buff), CLR_BUFF_SIZE
     );
     // nocov end
   return buff;

@@ -44,7 +44,7 @@
 #' _Control Sequences_ starting with ESC are assumed to be two characters
 #' long (including the ESC) unless they are of the CSI or OSC variety, in which
 #' case their length is computed as per the [ECMA-48
-#' specification](https://www.ecma-international.org/publications-and-standards/standards/ecma-48/),
+#' specification](https://ecma-international.org/publications-and-standards/standards/ecma-48/),
 #' with the exception that [OSC hyperlinks](#osc-hyperlinks) may be terminated
 #' with BEL ("\\a") in addition to ST ("ESC\\").  `fansi` handles most common
 #' _Control Sequences_ in its parsing algorithms, but it is not a conforming

@@ -134,7 +134,6 @@ SEXP FANSI_unhandled_esc(SEXP x, SEXP term_cap) {
     if(res == R_NilValue)
       // nocov start
       error(
-        "%s%s",
         "Internal Error: mismatch between list and err count; "
         "contact maintainer."
       );
