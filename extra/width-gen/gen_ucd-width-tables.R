@@ -311,7 +311,7 @@ generate_c_code <- function(ranges, ucd_version) {
     "}",
     "",
     "/* Get display width for a Unicode codepoint */",
-    "int unicode_width(int cp) {",
+    "int FANSI_unicode_width(int cp) {",
     "    /* Fast path for printable ASCII */",
     "    if (cp >= 0x20 && cp < 0x7F)",
     "        return 1;"
