@@ -329,7 +329,7 @@ generate_c_code <- function(ranges, ucd_version) {
   # Generate lookup function
   c_code <- c(c_code,
     "/* Binary search in a range table */",
-    "static int in_range_table(uint32_t cp, const unicode_range_t *table, int count) {",
+    "static int in_range_table(int cp, const unicode_range_t *table, int count) {",
     "    int left = 0, right = count - 1;",
     "    while (left <= right) {",
     "        int mid = (left + right) / 2;",
@@ -344,7 +344,7 @@ generate_c_code <- function(ranges, ucd_version) {
     "}",
     "",
     "/* Get display width for a Unicode codepoint */",
-    "int unicode_width(uint32_t cp) {"
+    "int unicode_width(int cp) {"
   )
 
   # Check each width in order (0, 2, then default to 1)
