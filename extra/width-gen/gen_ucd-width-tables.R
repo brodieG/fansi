@@ -26,8 +26,7 @@ read_ucd_file <- function(ucd_dir, filename) {
     stop(sprintf("File not found: %s", filepath))
   }
   cat("Reading", filepath, "...\n")
-  data <- readLines(filepath, warn = FALSE)
-  paste(data, collapse = "\n")
+  readLines(filepath, warn = FALSE)
 }
 
 #' Extract UCD version from ReadMe.txt or DerivedAge.txt
@@ -36,16 +35,45 @@ get_ucd_version <- function(ucd_dir) {
   readme_path <- file.path(ucd_dir, "ReadMe.txt")
   if (file.exists(readme_path)) {
     lines <- readLines(readme_path, warn = FALSE)
-    for (line in lines) {
-      if (grepl("Version [0-9]+\\.[0-9]+\\.[0-9]+", line)) {
-        match <- regmatches(line, regexpr("[0-9]+\\.[0-9]+\\.[0-9]+", line))
-        if (length(match) > 0) {
-          return(match[1])
-        }
+    version_lines <- grep("Version [0-9]+\\.[0-9]+\\.[0-9]+", lines, value = TRUE)
+    if (length(version_lines) > 0) {
+      match <- regmatches(version_lines[1], regexpr("[0-9]+\\.[0-9]+\\.[0-9]+", version_lines[1]))
+      if (length(match) > 0) {
+        return(match[1])
       }
     }
   }
+
+  # Try DerivedAge.txt
+  derived_age_path <- file.path(ucd_dir, "DerivedAge.txt")
+  if (file.exists(derived_age_path)) {
+    lines <- readLines(derived_age_path, warn = FALSE, n = 20)
+    version_lines <- grep("DerivedAge-[0-9]+\\.[0-9]+\\.[0-9]+", lines, value = TRUE)
+    if (length(version_lines) > 0) {
+      match <- regmatches(version_lines[1], regexpr("[0-9]+\\.[0-9]+\\.[0-9]+", version_lines[1]))
+      if (length(match) > 0) {
+        return(match[1])
+      }
+    }
+  }
+
   return("Unknown")
+}
+
+#' Check if file is complete (contains EOF marker or high codepoint)
+check_file_complete <- function(lines, filename) {
+  # Check for EOF marker
+  if (any(grepl("# EOF", lines))) {
+    return(TRUE)
+  }
+
+  # Check for high codepoint (10FFFD or nearby)
+  if (any(grepl("10FFF[D-F]", lines, ignore.case = TRUE))) {
+    return(TRUE)
+  }
+
+  warning(sprintf("File %s may be incomplete (no EOF marker or high codepoint found)", filename))
+  return(FALSE)
 }
 
 #' Parse a Unicode range like '1F300..1F5FF' or single codepoint '0000'
@@ -62,87 +90,120 @@ parse_range <- function(range_str) {
 }
 
 #' Parse EastAsianWidth.txt and return data frame
-parse_east_asian_width <- function(data) {
-  lines <- strsplit(data, "\n")[[1]]
+parse_east_asian_width <- function(lines) {
+  # Check file completeness
+  check_file_complete(lines, "EastAsianWidth.txt")
 
+  # Strip comments
+  lines <- sub("#.*", "", lines)
+
+  # Remove empty lines
+  lines <- lines[nchar(trimws(lines)) > 0]
+
+  # Split on semicolons
+  fields <- strsplit(lines, ";")
+
+  # Confirm all lines have the same number of fields
+  field_counts <- lengths(fields)
+  if (length(unique(field_counts)) != 1) {
+    stop(sprintf("EastAsianWidth.txt: Expected uniform field counts, found: %s",
+                 paste(unique(field_counts), collapse = ", ")))
+  }
+
+  # Convert to matrix for vectorized extraction
+  field_matrix <- do.call(rbind, fields)
+
+  # Extract range and width category
+  ranges <- trimws(field_matrix[, 1])
+  widths <- trimws(field_matrix[, 2])
+
+  # Expand ranges into individual codepoints
   codepoints <- integer()
-  widths <- character()
+  width_values <- character()
 
-  for (line in lines) {
-    # Remove comments
-    line <- sub("#.*", "", line)
-    line <- trimws(line)
-    if (nchar(line) == 0) next
-
-    parts <- strsplit(line, ";")[[1]]
-    if (length(parts) < 2) next
-
-    range_str <- trimws(parts[1])
-    width_cat <- trimws(parts[2])
-
-    range_vals <- parse_range(range_str)
+  for (i in seq_along(ranges)) {
+    range_vals <- parse_range(ranges[i])
     start <- range_vals[1]
     end <- range_vals[2]
 
-    for (cp in start:end) {
-      codepoints <- c(codepoints, cp)
-      widths <- c(widths, width_cat)
-    }
+    cps <- start:end
+    codepoints <- c(codepoints, cps)
+    width_values <- c(width_values, rep(widths[i], length(cps)))
   }
 
-  data.frame(codepoint = codepoints, width = widths, stringsAsFactors = FALSE)
+  data.frame(codepoint = codepoints, width = width_values, stringsAsFactors = FALSE)
 }
 
 #' Parse UnicodeData.txt and return data frame
-parse_unicode_data <- function(data) {
-  lines <- strsplit(data, "\n")[[1]]
+parse_unicode_data <- function(lines) {
+  # Check file completeness
+  check_file_complete(lines, "UnicodeData.txt")
 
-  codepoints <- integer()
-  categories <- character()
+  # Strip comments
+  lines <- sub("#.*", "", lines)
 
-  for (line in lines) {
-    line <- trimws(line)
-    if (nchar(line) == 0) next
+  # Remove empty lines
+  lines <- lines[nchar(trimws(lines)) > 0]
 
-    fields <- strsplit(line, ";")[[1]]
-    if (length(fields) < 3) next
+  # Split on semicolons
+  fields <- strsplit(lines, ";")
 
-    cp <- strtoi(fields[1], 16L)
-    category <- fields[3]
-
-    codepoints <- c(codepoints, cp)
-    categories <- c(categories, category)
+  # Confirm all lines have the same number of fields
+  field_counts <- lengths(fields)
+  if (length(unique(field_counts)) != 1) {
+    stop(sprintf("UnicodeData.txt: Expected uniform field counts, found: %s",
+                 paste(unique(field_counts), collapse = ", ")))
   }
+
+  # Convert to matrix for vectorized extraction
+  field_matrix <- do.call(rbind, fields)
+
+  # Extract codepoint and category (columns 1 and 3)
+  codepoints <- strtoi(field_matrix[, 1], 16L)
+  categories <- field_matrix[, 3]
 
   data.frame(codepoint = codepoints, category = categories, stringsAsFactors = FALSE)
 }
 
 #' Parse emoji-data.txt and return vector of emoji codepoints
-parse_emoji_data <- function(data) {
-  lines <- strsplit(data, "\n")[[1]]
+parse_emoji_data <- function(lines) {
+  # Check file completeness
+  check_file_complete(lines, "emoji-data.txt")
 
+  # Strip comments
+  lines <- sub("#.*", "", lines)
+
+  # Remove empty lines
+  lines <- lines[nchar(trimws(lines)) > 0]
+
+  # Split on semicolons
+  fields <- strsplit(lines, ";")
+
+  # Confirm all lines have the same number of fields
+  field_counts <- lengths(fields)
+  if (length(unique(field_counts)) != 1) {
+    stop(sprintf("emoji-data.txt: Expected uniform field counts, found: %s",
+                 paste(unique(field_counts), collapse = ", ")))
+  }
+
+  # Convert to matrix for vectorized extraction
+  field_matrix <- do.call(rbind, fields)
+
+  # Extract range and property
+  ranges <- trimws(field_matrix[, 1])
+  props <- trimws(field_matrix[, 2])
+
+  # Filter for Extended_Pictographic
+  ext_pict_idx <- which(props == "Extended_Pictographic")
+
+  # Expand ranges into individual codepoints
   emoji_cps <- integer()
 
-  for (line in lines) {
-    # Remove comments
-    line <- sub("#.*", "", line)
-    line <- trimws(line)
-    if (nchar(line) == 0) next
-
-    parts <- strsplit(line, ";")[[1]]
-    if (length(parts) < 2) next
-
-    range_str <- trimws(parts[1])
-    prop <- trimws(parts[2])
-
-    # Extended_Pictographic covers most emoji
-    if (prop == "Extended_Pictographic") {
-      range_vals <- parse_range(range_str)
-      start <- range_vals[1]
-      end <- range_vals[2]
-
-      emoji_cps <- c(emoji_cps, start:end)
-    }
+  for (i in ext_pict_idx) {
+    range_vals <- parse_range(ranges[i])
+    start <- range_vals[1]
+    end <- range_vals[2]
+    emoji_cps <- c(emoji_cps, start:end)
   }
 
   unique(emoji_cps)
