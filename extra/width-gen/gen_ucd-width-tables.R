@@ -63,7 +63,7 @@ get_ucd_version <- function(ucd_dir) {
 #' Check if file is complete (contains EOF marker or high codepoint)
 check_file_complete <- function(lines, filename) {
   # Check for EOF marker
-  if (any(grepl("# EOF", lines))) {
+  if (any(grepl("# *EOF", lines))) {
     return(TRUE)
   }
 
