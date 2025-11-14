@@ -15,7 +15,6 @@
 ##
 ## Go to <https://www.r-project.org/Licenses> for copies of the licenses.
 
-#!/usr/bin/env Rscript
 # Generate C lookup tables for Unicode character display widths.
 # Reads UCD data from a local directory containing the unzipped database.
 # Uses base R only - no external packages required.
@@ -301,13 +300,11 @@ generate_c_code <- function(ranges, ucd_version) {
     " *   2 = Double width (CJK characters, emoji)",
     " */",
     "",
-    "#include <stdint.h>",
-    "",
     sprintf("#define UNICODE_VERSION \"%s\"", ucd_version),
     "",
     "typedef struct {",
-    "    uint32_t start;",
-    "    uint32_t end;",
+    "    int start;",
+    "    int end;",
     "} unicode_range_t;",
     ""
   )
