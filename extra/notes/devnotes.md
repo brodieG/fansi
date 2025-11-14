@@ -556,7 +556,7 @@ simply rely that they will be carried by the terminal?  The latter seems most
 logical, but might be annoying.  We'll do this.
 
 Should `bridge` always normalize?  Otherwise we end up in the ugly position
-where it will emit "\033[0m", which is not desired.  Maybe it only normalizes
+where it will emit "[0m", which is not desired.  Maybe it only normalizes
 the close?
 
 What's worse, closing styles in a terminate-style when `terminate = FALSE`, or
