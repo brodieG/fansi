@@ -131,7 +131,7 @@ parse_east_asian_width <- function(lines) {
     width_values <- c(width_values, rep(widths[i], length(cps)))
   }
 
-  data.frame(codepoint = codepoints, width = width_values, stringsAsFactors = FALSE)
+  data.frame(codepoint = codepoints, ea_width = width_values, stringsAsFactors = FALSE)
 }
 
 #' Parse UnicodeData.txt and return data frame
@@ -388,22 +388,22 @@ generate_c_code <- function(ranges, ucd_version) {
 }
 
 # Main execution
-main <- function() {
+main <- function(ucd_dir="") {
   # Parse command line arguments
-  args <- commandArgs(trailingOnly = TRUE)
+  if(!nzchar(ucd_dir)) {
+    args <- commandArgs(trailingOnly = TRUE)
 
-  if (length(args) < 1) {
-    cat("Usage: Rscript unicode_width_generator.r <ucd_directory>\n")
-    cat("\n")
-    cat("Example: Rscript unicode_width_generator.r /path/to/UCD\n")
-    cat("\n")
-    cat("The UCD directory should contain the unzipped Unicode Character Database\n")
-    cat("with files like EastAsianWidth.txt, UnicodeData.txt, and emoji/emoji-data.txt\n")
-    quit(status = 1)
+    if (length(args) < 1) {
+      cat("Usage: Rscript unicode_width_generator.r <ucd_directory>\n")
+      cat("\n")
+      cat("Example: Rscript unicode_width_generator.r /path/to/UCD\n")
+      cat("\n")
+      cat("The UCD directory should contain the unzipped Unicode Character Database\n")
+      cat("with files like EastAsianWidth.txt, UnicodeData.txt, and emoji/emoji-data.txt\n")
+      quit(status = 1)
+    }
+    ucd_dir <- args[1]
   }
-
-  ucd_dir <- args[1]
-
   if (!dir.exists(ucd_dir)) {
     stop(sprintf("Directory does not exist: %s", ucd_dir))
   }
@@ -414,7 +414,7 @@ main <- function() {
   ucd_version <- get_ucd_version(ucd_dir)
   cat("UCD Version:", ucd_version, "\n\n")
 
-  # Read data files
+  # Read and parse data files
   ea_data <- read_ucd_file(ucd_dir, "EastAsianWidth.txt")
   unicode_data <- read_ucd_file(ucd_dir, "UnicodeData.txt")
   emoji_data <- read_ucd_file(file.path(ucd_dir, "emoji"), "emoji-data.txt")
@@ -424,24 +424,55 @@ main <- function() {
   categories <- parse_unicode_data(unicode_data)
   emoji_cps <- parse_emoji_data(emoji_data)
 
-  cat("Determining widths...\n")
-  # Process Unicode range 0x0000 to 0x10FFFF
-  # For efficiency, process in chunks
-  width_map <- data.frame(codepoint = integer(), width = integer(), stringsAsFactors = FALSE)
+  cat("Determining widths for all codepoints...\n")
 
-  chunk_size <- 0x10000
-  for (chunk_start in seq(0, 0x10FFFF, by = chunk_size)) {
-    chunk_end <- min(chunk_start + chunk_size - 1, 0x10FFFF)
+  # Create data frame with all Unicode codepoints
+  all_codepoints <- data.frame(
+    codepoint = 0:0x10FFFF,
+    width = 1L,  # Default width
+    stringsAsFactors = FALSE
+  )
 
-    for (cp in chunk_start:chunk_end) {
-      width <- determine_width(cp, ea_widths, categories, emoji_cps)
-      width_map <- rbind(width_map, data.frame(codepoint = cp, width = width))
-    }
+  # Merge in categories
+  all_codepoints <- merge(all_codepoints, categories, by = "codepoint", all.x = TRUE)
 
-    if (chunk_start %% 0x40000 == 0) {
-      cat(sprintf("  Processed up to U+%06X\n", chunk_end))
-    }
-  }
+  # Merge in East Asian widths
+  all_codepoints <- merge(all_codepoints, ea_widths, by = "codepoint", all.x = TRUE)
+
+  # Add emoji flag
+  all_codepoints$is_emoji <- all_codepoints$codepoint %in% emoji_cps
+
+  # Sort by codepoint to maintain order
+  all_codepoints <- all_codepoints[order(all_codepoints$codepoint), ]
+
+  # Vectorized width assignment (in priority order, later assignments override earlier)
+
+  # Start with default width 1 (already set)
+
+  # East Asian Wide/Fullwidth → width 2
+  ea_wide <- !is.na(all_codepoints$width.y) & all_codepoints$width.y %in% c("F", "W")
+  all_codepoints$width.x[ea_wide] <- 2L
+
+  # Emoji → width 2
+  all_codepoints$width.x[all_codepoints$is_emoji] <- 2L
+
+  # Control characters → width 0 (highest priority, applies last)
+  # C0 and C1 control characters
+  c0_c1 <- all_codepoints$codepoint < 0x20 |
+           (all_codepoints$codepoint >= 0x7F & all_codepoints$codepoint < 0xA0)
+  all_codepoints$width.x[c0_c1] <- 0L
+
+  # Categories that are zero-width
+  zero_width_cats <- !is.na(all_codepoints$category) &
+                     all_codepoints$category %in% c("Cc", "Cf", "Mn", "Me")
+  all_codepoints$width.x[zero_width_cats] <- 0L
+
+  # Extract final width column
+  width_map <- data.frame(
+    codepoint = all_codepoints$codepoint,
+    width = all_codepoints$width.x,
+    stringsAsFactors = FALSE
+  )
 
   cat("Compressing ranges...\n")
   ranges <- compress_ranges(width_map)
@@ -463,4 +494,4 @@ main <- function() {
 }
 
 # Run main function
-main()
+if(!interactive()) main()
