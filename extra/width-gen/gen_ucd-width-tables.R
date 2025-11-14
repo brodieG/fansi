@@ -15,6 +15,7 @@
 ##
 ## Go to <https://www.r-project.org/Licenses> for copies of the licenses.
 
+#!/usr/bin/env Rscript
 # Generate C lookup tables for Unicode character display widths.
 # Reads UCD data from a local directory containing the unzipped database.
 # Uses base R only - no external packages required.
@@ -100,22 +101,21 @@ parse_east_asian_width <- function(lines) {
   # Remove empty lines
   lines <- lines[nchar(trimws(lines)) > 0]
 
-  # Split on semicolons
-  fields <- strsplit(lines, ";")
+  # Use read.csv with semicolon delimiter (handles trailing empty fields)
+  con <- textConnection(lines)
+  fields_df <- read.csv(con, sep = ";", header = FALSE, stringsAsFactors = FALSE,
+                        strip.white = TRUE, fill = TRUE, blank.lines.skip = TRUE)
+  close(con)
 
   # Confirm all lines have the same number of fields
-  field_counts <- lengths(fields)
-  if (length(unique(field_counts)) != 1) {
-    stop(sprintf("EastAsianWidth.txt: Expected uniform field counts, found: %s",
-                 paste(unique(field_counts), collapse = ", ")))
+  field_counts <- ncol(fields_df)
+  if (field_counts < 2) {
+    stop(sprintf("EastAsianWidth.txt: Expected at least 2 fields, found %d", field_counts))
   }
 
-  # Convert to matrix for vectorized extraction
-  field_matrix <- do.call(rbind, fields)
-
   # Extract range and width category
-  ranges <- trimws(field_matrix[, 1])
-  widths <- trimws(field_matrix[, 2])
+  ranges <- fields_df[, 1]
+  widths <- fields_df[, 2]
 
   # Expand ranges into individual codepoints
   codepoints <- integer()
@@ -145,22 +145,21 @@ parse_unicode_data <- function(lines) {
   # Remove empty lines
   lines <- lines[nchar(trimws(lines)) > 0]
 
-  # Split on semicolons
-  fields <- strsplit(lines, ";")
+  # Use read.csv with semicolon delimiter (handles trailing empty fields)
+  con <- textConnection(lines)
+  fields_df <- read.csv(con, sep = ";", header = FALSE, stringsAsFactors = FALSE,
+                        strip.white = TRUE, fill = TRUE, blank.lines.skip = TRUE)
+  close(con)
 
-  # Confirm all lines have the same number of fields
-  field_counts <- lengths(fields)
-  if (length(unique(field_counts)) != 1) {
-    stop(sprintf("UnicodeData.txt: Expected uniform field counts, found: %s",
-                 paste(unique(field_counts), collapse = ", ")))
+  # Confirm we have at least 3 fields
+  field_counts <- ncol(fields_df)
+  if (field_counts < 3) {
+    stop(sprintf("UnicodeData.txt: Expected at least 3 fields, found %d", field_counts))
   }
 
-  # Convert to matrix for vectorized extraction
-  field_matrix <- do.call(rbind, fields)
-
   # Extract codepoint and category (columns 1 and 3)
-  codepoints <- strtoi(field_matrix[, 1], 16L)
-  categories <- field_matrix[, 3]
+  codepoints <- strtoi(fields_df[, 1], 16L)
+  categories <- fields_df[, 3]
 
   data.frame(codepoint = codepoints, category = categories, stringsAsFactors = FALSE)
 }
@@ -176,22 +175,21 @@ parse_emoji_data <- function(lines) {
   # Remove empty lines
   lines <- lines[nchar(trimws(lines)) > 0]
 
-  # Split on semicolons
-  fields <- strsplit(lines, ";")
+  # Use read.csv with semicolon delimiter (handles trailing empty fields)
+  con <- textConnection(lines)
+  fields_df <- read.csv(con, sep = ";", header = FALSE, stringsAsFactors = FALSE,
+                        strip.white = TRUE, fill = TRUE, blank.lines.skip = TRUE)
+  close(con)
 
-  # Confirm all lines have the same number of fields
-  field_counts <- lengths(fields)
-  if (length(unique(field_counts)) != 1) {
-    stop(sprintf("emoji-data.txt: Expected uniform field counts, found: %s",
-                 paste(unique(field_counts), collapse = ", ")))
+  # Confirm we have at least 2 fields
+  field_counts <- ncol(fields_df)
+  if (field_counts < 2) {
+    stop(sprintf("emoji-data.txt: Expected at least 2 fields, found %d", field_counts))
   }
 
-  # Convert to matrix for vectorized extraction
-  field_matrix <- do.call(rbind, fields)
-
   # Extract range and property
-  ranges <- trimws(field_matrix[, 1])
-  props <- trimws(field_matrix[, 2])
+  ranges <- fields_df[, 1]
+  props <- fields_df[, 2]
 
   # Filter for Extended_Pictographic
   ext_pict_idx <- which(props == "Extended_Pictographic")
@@ -245,56 +243,49 @@ determine_width <- function(cp, ea_widths, categories, emoji_cps) {
 
 #' Compress width assignments into contiguous ranges
 compress_ranges <- function(width_map) {
-  # Sort by codepoint
-  sorted_df <- width_map[order(width_map$codepoint), ]
+  # Only compress non-default widths (0 and 2)
+  # Width 1 is the default and doesn't need a lookup table
+  ranges <- list()
 
-  if (nrow(sorted_df) == 0) {
-    return(list())
-  }
+  for (w in c(0, 2)) {
+    subset_map <- width_map[width_map$width == w, ]
 
-  ranges_list <- list()
-
-  start <- sorted_df$codepoint[1]
-  current_width <- sorted_df$width[1]
-
-  for (i in 2:nrow(sorted_df)) {
-    cp <- sorted_df$codepoint[i]
-    width <- sorted_df$width[i]
-
-    # If contiguous and same width, continue range
-    if (cp == sorted_df$codepoint[i-1] + 1 && width == current_width) {
+    if (nrow(subset_map) == 0) {
       next
     }
 
-    # Otherwise, save the range and start new one
-    if (is.null(ranges_list[[as.character(current_width)]])) {
-      ranges_list[[as.character(current_width)]] <- data.frame(
-        start = integer(), end = integer(), stringsAsFactors = FALSE
-      )
+    # Sort by codepoint
+    subset_map <- subset_map[order(subset_map$codepoint), ]
+
+    start <- subset_map$codepoint[1]
+    current_width <- w
+    range_list <- list()
+
+    for (i in 2:nrow(subset_map)) {
+      cp <- subset_map$codepoint[i]
+
+      # If contiguous, continue range
+      if (cp == subset_map$codepoint[i-1] + 1) {
+        next
+      }
+
+      # Otherwise, save the range and start new one
+      range_list[[length(range_list) + 1]] <- c(start, subset_map$codepoint[i-1])
+      start <- cp
     }
 
-    ranges_list[[as.character(current_width)]] <- rbind(
-      ranges_list[[as.character(current_width)]],
-      data.frame(start = start, end = sorted_df$codepoint[i-1])
-    )
+    # Don't forget the last range
+    range_list[[length(range_list) + 1]] <- c(start, subset_map$codepoint[nrow(subset_map)])
 
-    start <- cp
-    current_width <- width
-  }
-
-  # Don't forget the last range
-  if (is.null(ranges_list[[as.character(current_width)]])) {
-    ranges_list[[as.character(current_width)]] <- data.frame(
-      start = integer(), end = integer(), stringsAsFactors = FALSE
+    # Convert to data frame
+    ranges[[as.character(w)]] <- data.frame(
+      start = sapply(range_list, `[`, 1),
+      end = sapply(range_list, `[`, 2),
+      stringsAsFactors = FALSE
     )
   }
 
-  ranges_list[[as.character(current_width)]] <- rbind(
-    ranges_list[[as.character(current_width)]],
-    data.frame(start = start, end = sorted_df$codepoint[nrow(sorted_df)])
-  )
-
-  ranges_list
+  ranges
 }
 
 #' Generate C code for width lookup tables
@@ -388,9 +379,9 @@ generate_c_code <- function(ranges, ucd_version) {
 }
 
 # Main execution
-main <- function(ucd_dir="") {
-  # Parse command line arguments
-  if(!nzchar(ucd_dir)) {
+main <- function(ucd_dir = "") {
+  # Parse command line arguments if not provided
+  if (!nzchar(ucd_dir)) {
     args <- commandArgs(trailingOnly = TRUE)
 
     if (length(args) < 1) {
@@ -398,12 +389,16 @@ main <- function(ucd_dir="") {
       cat("\n")
       cat("Example: Rscript unicode_width_generator.r /path/to/UCD\n")
       cat("\n")
+      cat("For interactive use: source('unicode_width_generator.r'); main('/path/to/UCD')\n")
+      cat("\n")
       cat("The UCD directory should contain the unzipped Unicode Character Database\n")
       cat("with files like EastAsianWidth.txt, UnicodeData.txt, and emoji/emoji-data.txt\n")
       quit(status = 1)
     }
+
     ucd_dir <- args[1]
   }
+
   if (!dir.exists(ucd_dir)) {
     stop(sprintf("Directory does not exist: %s", ucd_dir))
   }
@@ -450,27 +445,27 @@ main <- function(ucd_dir="") {
   # Start with default width 1 (already set)
 
   # East Asian Wide/Fullwidth → width 2
-  ea_wide <- !is.na(all_codepoints$width.y) & all_codepoints$width.y %in% c("F", "W")
-  all_codepoints$width.x[ea_wide] <- 2L
+  ea_wide <- !is.na(all_codepoints$ea_width) & all_codepoints$ea_width %in% c("F", "W")
+  all_codepoints$width[ea_wide] <- 2L
 
   # Emoji → width 2
-  all_codepoints$width.x[all_codepoints$is_emoji] <- 2L
+  all_codepoints$width[all_codepoints$is_emoji] <- 2L
 
   # Control characters → width 0 (highest priority, applies last)
   # C0 and C1 control characters
   c0_c1 <- all_codepoints$codepoint < 0x20 |
            (all_codepoints$codepoint >= 0x7F & all_codepoints$codepoint < 0xA0)
-  all_codepoints$width.x[c0_c1] <- 0L
+  all_codepoints$width[c0_c1] <- 0L
 
   # Categories that are zero-width
   zero_width_cats <- !is.na(all_codepoints$category) &
                      all_codepoints$category %in% c("Cc", "Cf", "Mn", "Me")
-  all_codepoints$width.x[zero_width_cats] <- 0L
+  all_codepoints$width[zero_width_cats] <- 0L
 
   # Extract final width column
   width_map <- data.frame(
     codepoint = all_codepoints$codepoint,
-    width = all_codepoints$width.x,
+    width = all_codepoints$width,
     stringsAsFactors = FALSE
   )
 
@@ -493,5 +488,5 @@ main <- function(ucd_dir="") {
   cat("Usage: int width = unicode_width(codepoint);\n")
 }
 
-# Run main function
-if(!interactive()) main()
+# Run main function if not in interactive mode
+if (!interactive()) main()
