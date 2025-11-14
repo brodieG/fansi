@@ -206,40 +206,6 @@ parse_emoji_data <- function(lines) {
   unique(emoji_cps)
 }
 
-#' Determine display width for a codepoint
-determine_width <- function(cp, ea_widths, categories, emoji_cps) {
-  # Control characters (C0, C1) are zero width
-  if (cp < 0x20 || (cp >= 0x7F && cp < 0xA0)) {
-    return(0)
-  }
-
-  # Get category
-  category <- categories$category[categories$codepoint == cp]
-  if (length(category) == 0) category <- ""
-
-  # Other control characters
-  if (category %in% c("Cc", "Cf", "Mn", "Me")) {
-    return(0)
-  }
-
-  # Emoji are typically width 2
-  if (cp %in% emoji_cps) {
-    return(2)
-  }
-
-  # East Asian Width
-  ea_width <- ea_widths$width[ea_widths$codepoint == cp]
-  if (length(ea_width) == 0) ea_width <- "N"
-
-  # Fullwidth and Wide characters
-  if (ea_width %in% c("F", "W")) {
-    return(2)
-  }
-
-  # Default width
-  return(1)
-}
-
 #' Compress width assignments into contiguous ranges
 compress_ranges <- function(width_map) {
   # Only compress non-default widths (0 and 2)
@@ -333,40 +299,45 @@ generate_c_code <- function(ranges, ucd_version) {
     "    int left = 0, right = count - 1;",
     "    while (left <= right) {",
     "        int mid = (left + right) / 2;",
-    "        if (cp < table[mid].start)",
+    "        if (cp < table[mid].start) {",
     "            right = mid - 1;",
-    "        else if (cp > table[mid].end)",
-    "            left = mid - 1;",
-    "        else",
+    "        } else if (cp > table[mid].end) {",
+    "            left = mid + 1;",
+    "        } else {",
     "            return 1;",
+    "        }",
     "    }",
     "    return 0;",
     "}",
     "",
     "/* Get display width for a Unicode codepoint */",
-    "int unicode_width(int cp) {"
+    "int unicode_width(int cp) {",
+    "    /* Fast path for printable ASCII */",
+    "    if (cp >= 0x20 && cp < 0x7F)",
+    "        return 1;"
   )
 
   # Check each width in order (0, 2, then default to 1)
   if ("0" %in% names(ranges)) {
     c_code <- c(c_code,
-      "    /* Check zero-width characters first */",
+      "",
+      "    /* Check zero-width characters */",
       "    if (in_range_table(cp, width_0_ranges, WIDTH_0_COUNT))",
-      "        return 0;",
-      ""
+      "        return 0;"
     )
   }
 
   if ("2" %in% names(ranges)) {
     c_code <- c(c_code,
+      "",
       "    /* Check double-width characters */",
       "    if (in_range_table(cp, width_2_ranges, WIDTH_2_COUNT))",
-      "        return 2;",
-      ""
+      "        return 2;"
     )
   }
 
   c_code <- c(c_code,
+    "",
     "    /* Default to width 1 */",
     "    return 1;",
     "}"
@@ -478,9 +449,9 @@ main <- function(ucd_dir = "") {
   c_code <- generate_c_code(ranges, ucd_version)
 
   # Write to file
-  writeLines(c_code, "unicode_width.c")
+  writeLines(c_code, "width.c")
 
-  cat("\nGenerated unicode_width.c\n")
+  cat("\nGenerated width.c\n")
   cat(sprintf("Unicode Version: %s\n", ucd_version))
   cat("Usage: int width = unicode_width(codepoint);\n")
 }
