@@ -10,7 +10,8 @@ fansi_unicode_version()
 a string of the Unicode version.
 }
 \description{
-Report Unicode Database Version In-use
+Corresponds to the database used to generate character display width look-up
+tables by \code{fansi}.
 }
 \examples{
 fansi_unicode_version()

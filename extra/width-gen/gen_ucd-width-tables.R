@@ -270,6 +270,20 @@ generate_c_code <- function(ranges, ucd_version) {
     " *   0 = Zero width (control characters, combining marks)",
     " *   1 = Normal width (most ASCII and Latin characters)",
     " *   2 = Double width (CJK characters, emoji)",
+    " *",
+    " * Special cases and exceptions:",
+    " * - Regional Indicator Symbols (U+1F1E6..U+1F1FF) are width 1",
+    " *   These are letter symbols A-Z used to compose flag emojis when paired.",
+    " *",
+    " * - Hangul Jamo medial vowels and final consonants (U+1160..U+11FF) are width 0",
+    " *   These combine to form Hangul syllables and don't occupy their own column.",
+    " *",
+    " * - SOFT HYPHEN (U+00AD) is width 1",
+    " *   Despite being a format character (Cf), it has visible representation.",
+    " *",
+    " * Additionally fansi adds some further postprocessing in read_utf8_until()",
+    " *",
+    " * Reference: http://www.cl.cam.ac.uk/~mgk25/ucs/wcwidth.c",
     " */",
     "",
     c("// UNICODE_VERSION is guaranteed to be only numbers and period."),
@@ -431,6 +445,17 @@ main <- function(ucd_dir = "") {
   # Emoji → width 2
   all_codepoints$width[all_codepoints$is_emoji] <- 2L
 
+  # Regional Indicator Symbols (U+1F1E6..U+1F1FF) → width 1
+  # These are the letter symbols A-Z used to compose flag emojis. Individual
+  # Regional Indicators should be width 1 because they need to be paired to form
+  # a visible flag emoji (which would be width 2 for the pair as a whole).
+  # This overrides the Emoji_Presentation property which would make them width 2.
+  # Internally in fansi we treat the first one that shows up as width 2, and the
+  # second as width 0, so this is not strictly needed.
+  regional_indicators <- all_codepoints$codepoint >= 0x1F1E6 &
+                         all_codepoints$codepoint <= 0x1F1FF
+  all_codepoints$width[regional_indicators] <- 1L
+
   # Control characters → width 0 (highest priority, applies last)
   # C0 and C1 control characters
   c0_c1 <- all_codepoints$codepoint < 0x20 |
@@ -441,6 +466,22 @@ main <- function(ucd_dir = "") {
   zero_width_cats <- !is.na(all_codepoints$category) &
                      all_codepoints$category %in% c("Cc", "Cf", "Mn", "Me")
   all_codepoints$width[zero_width_cats] <- 0L
+
+  # SOFT HYPHEN (U+00AD) → width 1
+  # This is a format character (Cf) which would normally be width 0, but it has
+  # a visible representation and should be width 1.
+  # Reference: http://www.cl.cam.ac.uk/~mgk25/ucs/wcwidth.c
+  soft_hyphen <- all_codepoints$codepoint == 0x00AD
+  all_codepoints$width[soft_hyphen] <- 1L
+
+  # Hangul Jamo medial vowels and final consonants (U+1160..U+11FF) → width 0
+  # These are combining characters used to compose Hangul syllables. Following
+  # the wcwidth.c convention, they are treated as zero-width even though they
+  # are general category "Lo" (Letter, other) rather than combining marks.
+  # Reference: http://www.cl.cam.ac.uk/~mgk25/ucs/wcwidth.c
+  hangul_jamo <- all_codepoints$codepoint >= 0x1160 &
+                 all_codepoints$codepoint <= 0x11FF
+  all_codepoints$width[hangul_jamo] <- 0L
 
   # Extract final width column
   width_map <- data.frame(

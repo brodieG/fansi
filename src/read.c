@@ -1029,7 +1029,10 @@ void read_utf8_until(struct FANSI_state * state, int until, int overshoot) {
       int cp = utf8_to_cp(state->string + state->pos.x, byte_size);
 
       if(cp >= 0x1F1E6 && cp <= 0x1F1FF) {    // Regional Indicator
-        // First RI is width two, next zero
+        // First RI is width two, next zero.  At some point we took advantage of
+        // R's old approach of treating each of these as width one.  It's
+        // debatable what's more correct since we've seen both handlings in
+        // displays.
         if(!(prev_ri)) {
           cur_ri |= STAT_RI;
           disp_size = 2;
@@ -1038,7 +1041,10 @@ void read_utf8_until(struct FANSI_state * state, int until, int overshoot) {
         }
         // we rely on external logic to force reading two RIs
       } else {
-        if (cp >= 0x1F3FB && cp <= 0x1F3FF) { // Skin type
+        // Skin type, these now seem to naturally resolve to zero width in the
+        // lookup tables (except not for R_nchar), so the exception here might
+        // no longer be needed.
+        if (cp >= 0x1F3FB && cp <= 0x1F3FF) {
           disp_size = 0;
         } else if (cp == 0x200D) {            // Zero Width Joiner
           cur_zwj |= STAT_ZWJ;

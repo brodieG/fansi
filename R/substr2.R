@@ -96,7 +96,10 @@
 #' embedding it in tests**.
 #'
 #' Width and grapheme calculations depend on locale, Unicode database
-#' version, and grapheme processing logic, among other things (see "Graphemes").
+#' version (see [`fansi_unicode_version`], and grapheme processing logic,
+#' among other things (see "Graphemes").  Individual character width are
+#' intended to match R4.5.1 definitions, except for differences introduced by
+#' Unicode Database Version updates and grapheme processing.
 #'
 #' How a particular display format is encoded in _Control Sequences_ is
 #' not guaranteed to be stable across `fansi` versions.  Additionally, which
