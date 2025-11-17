@@ -1041,10 +1041,9 @@ void read_utf8_until(struct FANSI_state * state, int until, int overshoot) {
         }
         // we rely on external logic to force reading two RIs
       } else {
-        // Skin type, these now seem to naturally resolve to zero width in the
-        // lookup tables (except not for R_nchar), so the exception here might
-        // no longer be needed.
         if (cp >= 0x1F3FB && cp <= 0x1F3FF) {
+          // Skin type: these now naturally resolve to zero width in the
+          // lookup tables (different to R_nchar), so this exception moot.
           disp_size = 0;
         } else if (cp == 0x200D) {            // Zero Width Joiner
           cur_zwj |= STAT_ZWJ;
