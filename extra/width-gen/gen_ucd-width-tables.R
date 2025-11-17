@@ -265,7 +265,7 @@ generate_c_code <- function(ranges, ucd_version) {
     "/*",
     " * Unicode Character Display Width Lookup Tables",
     sprintf(" * Generated from Unicode Character Database version %s", ucd_version),
-    " * ",
+    " *",
     " * Width meanings:",
     " *   0 = Zero width (control characters, combining marks)",
     " *   1 = Normal width (most ASCII and Latin characters)",

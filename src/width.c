@@ -20,7 +20,7 @@
 /*
  * Unicode Character Display Width Lookup Tables
  * Generated from Unicode Character Database version 17.0.0
- * 
+ *
  * Width meanings:
  *   0 = Zero width (control characters, combining marks)
  *   1 = Normal width (most ASCII and Latin characters)
