@@ -15,6 +15,8 @@
  * Go to <https://www.r-project.org/Licenses> for a copies of the licenses.
  */
 
+#include <stdio.h>  // snprintf
+#include <string.h> // strlen
 #include "fansi.h"
 
 /*
