@@ -1,4 +1,23 @@
 /*
+ * Copyright (C) Brodie Gaslam
+ *
+ * This file is part of "fansi - ANSI Control Sequence Aware String Functions"
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 or 3 of the License.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * Go to <https://www.r-project.org/Licenses> for a copies of the licenses.
+ */
+
+#include "fansi.h"
+
+/*
  * Unicode Character Display Width Lookup Tables
  * Generated from Unicode Character Database version 17.0.0
  * 
@@ -8,6 +27,7 @@
  *   2 = Double width (CJK characters, emoji)
  */
 
+// UNICODE_VERSION is guaranteed to be only numbers and period.
 #define UNICODE_VERSION "17.0.0"
 
 typedef struct {
@@ -622,4 +642,7 @@ int FANSI_unicode_width(int cp) {
 
     /* Default to width 1 */
     return 1;
+}
+SEXP FANSI_unicode_version(void) {
+    return mkString(UNICODE_VERSION);
 }

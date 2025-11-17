@@ -33,31 +33,17 @@ read_ucd_file <- function(ucd_dir, filename) {
 get_ucd_version <- function(ucd_dir) {
   # Try ReadMe.txt first
   readme_path <- file.path(ucd_dir, "ReadMe.txt")
+  ucd_version <- NA_character_
   if (file.exists(readme_path)) {
     lines <- readLines(readme_path, warn = FALSE)
     version_lines <- grep("Version [0-9]+\\.[0-9]+\\.[0-9]+", lines, value = TRUE)
     if (length(version_lines) > 0) {
       match <- regmatches(version_lines[1], regexpr("[0-9]+\\.[0-9]+\\.[0-9]+", version_lines[1]))
-      if (length(match) > 0) {
-        return(match[1])
-      }
+      if (length(match) > 0) ucd_version <- match[1]
     }
   }
-
-  # Try DerivedAge.txt
-  derived_age_path <- file.path(ucd_dir, "DerivedAge.txt")
-  if (file.exists(derived_age_path)) {
-    lines <- readLines(derived_age_path, warn = FALSE, n = 20)
-    version_lines <- grep("DerivedAge-[0-9]+\\.[0-9]+\\.[0-9]+", lines, value = TRUE)
-    if (length(version_lines) > 0) {
-      match <- regmatches(version_lines[1], regexpr("[0-9]+\\.[0-9]+\\.[0-9]+", version_lines[1]))
-      if (length(match) > 0) {
-        return(match[1])
-      }
-    }
-  }
-
-  return("Unknown")
+  if(anyNA(ucd_version)) stop("Could not parse UCD version.")
+  ucd_version
 }
 
 #' Check if file is complete (contains EOF marker or high codepoint)
@@ -257,6 +243,25 @@ compress_ranges <- function(width_map) {
 generate_c_code <- function(ranges, ucd_version) {
   c_code <- c(
     "/*",
+    " * Copyright (C) Brodie Gaslam",
+    " *",
+    " * This file is part of \"fansi - ANSI Control Sequence Aware String Functions\"",
+    " *",
+    " * This program is free software: you can redistribute it and/or modify",
+    " * it under the terms of the GNU General Public License as published by",
+    " * the Free Software Foundation, either version 2 or 3 of the License.",
+    " *",
+    " * This program is distributed in the hope that it will be useful,",
+    " * but WITHOUT ANY WARRANTY; without even the implied warranty of",
+    " * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the",
+    " * GNU General Public License for more details.",
+    " *",
+    " * Go to <https://www.r-project.org/Licenses> for a copies of the licenses.",
+    " */",
+    "",
+    "#include \"fansi.h\"",
+    "",
+    "/*",
     " * Unicode Character Display Width Lookup Tables",
     sprintf(" * Generated from Unicode Character Database version %s", ucd_version),
     " * ",
@@ -266,6 +271,7 @@ generate_c_code <- function(ranges, ucd_version) {
     " *   2 = Double width (CJK characters, emoji)",
     " */",
     "",
+    c("// UNICODE_VERSION is guaranteed to be only numbers and period."),
     sprintf("#define UNICODE_VERSION \"%s\"", ucd_version),
     "",
     "typedef struct {",
@@ -343,6 +349,11 @@ generate_c_code <- function(ranges, ucd_version) {
     "}"
   )
 
+  c_code <- c(c_code,
+    "SEXP FANSI_unicode_version(void) {",
+    "    return mkString(UNICODE_VERSION);",
+    "}"
+  )
   paste(c_code, collapse = "\n")
 }
 
