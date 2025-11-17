@@ -1018,14 +1018,11 @@ void read_utf8_until(struct FANSI_state * state, int until, int overshoot) {
 
     int mb_err = 0;
     int disp_size = 0;
-    const char * mb_err_str = "use `validUTF8()` to find problem strings.";
-
     int byte_size = utf8clen(state->string + state->pos.x, &mb_err);
     mb_err |= !valid_utf8(state->string + state->pos.x, byte_size);
 
     if(mb_err) {
-      // mimic what R_nchar does on mb error.  This will also break the loop
-      // later.
+      // mimic what R_nchar does on mb error.  Breaks loop later.
       disp_size = NA_INTEGER;
     } else if(w_mode == COUNT_WIDTH || w_mode == COUNT_GRAPH) {
       // Assumes valid UTF-8!  Should have been checked.
@@ -1049,17 +1046,7 @@ void read_utf8_until(struct FANSI_state * state, int until, int overshoot) {
         } else if (prev_zwj) {
           disp_size = 0;
         } else {
-          // Need CHARSXP for `R_nchar`, hopefull not too expensive.
-          SEXP str_chr = PROTECT(
-            mkCharLenCE(state->string + state->pos.x, byte_size, CE_UTF8)
-          );
-          disp_size = R_nchar(
-            str_chr, Width, // Width is an enum
-            state->status & SET_ALLOWNA,
-            state->status & SET_KEEPNA,
-            mb_err_str
-          );
-          UNPROTECT(1);
+          disp_size = FANSI_unicode_width(cp);
       } }
       if(w_mode == COUNT_GRAPH && disp_size > 1) disp_size = 1;
     } else if(w_mode == COUNT_BYTES) {
@@ -1069,8 +1056,7 @@ void read_utf8_until(struct FANSI_state * state, int until, int overshoot) {
     if(prev_ri) cur_ri = 0;
 
     if(disp_size == NA_INTEGER) {
-      // Both for R_nchar and if we directly detect an mb_err.  Whether this
-      // throws an errors is a function of what ->settings has been set to.
+      // Whether this throws an error depends on what ->settings is.
       state->status = set_err(state->status, ERR_BAD_UTF8);
       disp_size = byte_size = 1;
     }

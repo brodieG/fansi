@@ -200,16 +200,6 @@ struct FANSI_state FANSI_carry_init(
   SEXP carry, SEXP warn, SEXP term_cap, SEXP ctl
 );
 int FANSI_is_tf(SEXP x);
-
-// - Compatibility -----------------------------------------------------------
-
-// R_nchar does not exist prior to 3.2.2, so we sub in this dummy
-
-#if defined(R_VERSION) && R_VERSION >= R_Version(3, 2, 2)
-#else
-typedef enum {Bytes, Chars, Width} nchar_type;
-int R_nchar(SEXP string, nchar_type type_,
-            Rboolean allowNA, Rboolean keepNA, const char* msg_name);
-#endif
+int FANSI_unicode_width(int cp);
 
 #endif  /* _FANSI_H */

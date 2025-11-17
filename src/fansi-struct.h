@@ -130,7 +130,7 @@ struct FANSI_format {
  *   been read, this one points to the first UNread byte (need to change
  *   variable name).
  * - pos_width: the character postion accounting for width mode, which could be
- *   either display width (computed with R_nchar), graphemes, character count,
+ *   either display width (computed per Unicode), graphemes, character count,
  *   or byte count, all of these excluding CSI and other controls.
  */
 
