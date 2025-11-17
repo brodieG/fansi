@@ -7,7 +7,7 @@ Authors@R: c(
     person("Brodie", "Gaslam", email="brodie.gaslam@yahoo.com",
     role=c("aut", "cre")),
     person("Elliott", "Sales De Andrade", role="ctb"),
-    person(family="R Core Team",
+    person(given="R Core Team",
     email="R-core@r-project.org", role="cph",
     comment="UTF8 byte length calcs from src/util.c"
     ))
