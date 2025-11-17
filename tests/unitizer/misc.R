@@ -258,3 +258,6 @@ unitizer_sect("output funs", {
 unitizer_sect("validation", {
   fansi:::VAL_IN_ENV(booboo="error")
 })
+unitizer_sect("unicode version", {
+  grepl("^([0-9]+)?(\\.[0-9])*$", fansi_unicode_version())
+})

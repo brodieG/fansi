@@ -104,4 +104,6 @@ SEXP FANSI_reset_limits(void);
 
 SEXP FANSI_read_all_ext(SEXP x, SEXP warn, SEXP term_cap);
 
+SEXP FANSI_unicode_version(void);
+
 #endif  /* _FANSI_EXT_H */

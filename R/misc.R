@@ -524,4 +524,16 @@ dflt_term_cap <- function() {
 dflt_css <- function() {
   "PRE.fansi SPAN {padding-top: .25em; padding-bottom: .25em};"
 }
+#' Report Unicode Database Version In-use
+#'
+#' Corresponds to the database used to generate character display width look-up
+#' tables by `fansi`.
+#'
+#' @export
+#' @return a string of the Unicode version.
+#' @examples
+#' fansi_unicode_version()
 
+fansi_unicode_version <- function() {
+  .Call(FANSI_unicode_version)
+}

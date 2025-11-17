@@ -15,6 +15,8 @@
  * Go to <https://www.r-project.org/Licenses> for a copies of the licenses.
  */
 
+#include <stdio.h>  // snprintf
+#include <string.h> // strlen
 #include "fansi.h"
 
 /*
@@ -1018,21 +1020,21 @@ void read_utf8_until(struct FANSI_state * state, int until, int overshoot) {
 
     int mb_err = 0;
     int disp_size = 0;
-    const char * mb_err_str = "use `validUTF8()` to find problem strings.";
-
     int byte_size = utf8clen(state->string + state->pos.x, &mb_err);
     mb_err |= !valid_utf8(state->string + state->pos.x, byte_size);
 
     if(mb_err) {
-      // mimic what R_nchar does on mb error.  This will also break the loop
-      // later.
+      // mimic what R_nchar does on mb error.  Breaks loop later.
       disp_size = NA_INTEGER;
     } else if(w_mode == COUNT_WIDTH || w_mode == COUNT_GRAPH) {
       // Assumes valid UTF-8!  Should have been checked.
       int cp = utf8_to_cp(state->string + state->pos.x, byte_size);
 
       if(cp >= 0x1F1E6 && cp <= 0x1F1FF) {    // Regional Indicator
-        // First RI is width two, next zero
+        // First RI is width two, next zero.  At some point we took advantage of
+        // R's old approach of treating each of these as width one.  It's
+        // debatable what's more correct since we've seen both handlings in
+        // displays.
         if(!(prev_ri)) {
           cur_ri |= STAT_RI;
           disp_size = 2;
@@ -1041,7 +1043,9 @@ void read_utf8_until(struct FANSI_state * state, int until, int overshoot) {
         }
         // we rely on external logic to force reading two RIs
       } else {
-        if (cp >= 0x1F3FB && cp <= 0x1F3FF) { // Skin type
+        if (cp >= 0x1F3FB && cp <= 0x1F3FF) {
+          // Skin type: these now naturally resolve to zero width in the
+          // lookup tables (different to R_nchar), so this exception moot.
           disp_size = 0;
         } else if (cp == 0x200D) {            // Zero Width Joiner
           cur_zwj |= STAT_ZWJ;
@@ -1049,17 +1053,7 @@ void read_utf8_until(struct FANSI_state * state, int until, int overshoot) {
         } else if (prev_zwj) {
           disp_size = 0;
         } else {
-          // Need CHARSXP for `R_nchar`, hopefull not too expensive.
-          SEXP str_chr = PROTECT(
-            mkCharLenCE(state->string + state->pos.x, byte_size, CE_UTF8)
-          );
-          disp_size = R_nchar(
-            str_chr, Width, // Width is an enum
-            state->status & SET_ALLOWNA,
-            state->status & SET_KEEPNA,
-            mb_err_str
-          );
-          UNPROTECT(1);
+          disp_size = FANSI_unicode_width(cp);
       } }
       if(w_mode == COUNT_GRAPH && disp_size > 1) disp_size = 1;
     } else if(w_mode == COUNT_BYTES) {
@@ -1069,8 +1063,7 @@ void read_utf8_until(struct FANSI_state * state, int until, int overshoot) {
     if(prev_ri) cur_ri = 0;
 
     if(disp_size == NA_INTEGER) {
-      // Both for R_nchar and if we directly detect an mb_err.  Whether this
-      // throws an errors is a function of what ->settings has been set to.
+      // Whether this throws an error depends on what ->settings is.
       state->status = set_err(state->status, ERR_BAD_UTF8);
       disp_size = byte_size = 1;
     }

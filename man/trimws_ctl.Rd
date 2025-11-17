@@ -15,7 +15,7 @@ trimws_ctl(
 )
 }
 \arguments{
-\item{x}{a character vector}
+\item{x}{a character vector.}
 
 \item{which}{a character string specifying whether to remove both
     leading and trailing whitespace (default), or only leading
@@ -98,10 +98,10 @@ functions across versions of \code{fansi}, \code{R}, and/or across systems.
 embedding it in tests}.
 
 Width and grapheme calculations depend on locale, Unicode database
-version, and grapheme processing logic (which is still in development), among
-other things.  For the most part \code{fansi} (currently) uses the internals of
-\code{base::nchar(type='width')}, but there are exceptions and this may change in
-the future.
+version (see \code{\link{fansi_unicode_version}}, and grapheme processing logic,
+among other things (see "Graphemes").  Individual character width are
+intended to match R4.5.1 definitions, except for differences introduced by
+Unicode Database Version updates and grapheme processing.
 
 How a particular display format is encoded in \emph{Control Sequences} is
 not guaranteed to be stable across \code{fansi} versions.  Additionally, which

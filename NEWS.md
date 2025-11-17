@@ -1,5 +1,12 @@
 # fansi Release Notes
 
+## v1.0.7
+
+* Remove internal dependency to non-API `R_nchar`.  This also updates to use
+  Unicode 17 instead of the Unicode 13 used by R as of R4.5.1.
+* Add `fansi_unicode_version()` to report what version of the Unicode database
+  is in use.
+
 ## v1.0.6
 
 * Fix new `-Wformat` warnings.
