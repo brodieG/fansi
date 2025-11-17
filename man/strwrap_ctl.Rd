@@ -207,10 +207,6 @@ OSC hyperlinks.  See \code{\link{fansi}} for details.
 grapheme breaks that work for most common graphemes, including emoji
 combining sequences.  The heuristic is known to work incorrectly with
 invalid combining sequences, prepending marks, and sequence interruptors.
-\code{fansi} does not provide a full implementation of grapheme break detection to
-avoid carrying a copy of the Unicode grapheme breaks table, and also because
-the hope is that R will add the feature eventually itself.
-
 The \href{https://cran.r-project.org/package=utf8}{\code{utf8}} package provides a
 conforming grapheme parsing implementation.
 }
@@ -225,9 +221,7 @@ embedding it in tests}.
 
 Width and grapheme calculations depend on locale, Unicode database
 version, and grapheme processing logic (which is still in development), among
-other things.  For the most part \code{fansi} (currently) uses the internals of
-\code{base::nchar(type='width')}, but there are exceptions and this may change in
-the future.
+other things.
 
 How a particular display format is encoded in \emph{Control Sequences} is
 not guaranteed to be stable across \code{fansi} versions.  Additionally, which

@@ -19,8 +19,8 @@ nzchar_sgr(x, keepNA = NA, warn = getOption("fansi.warn", TRUE))
 \item{x}{a character vector or object that can be coerced to such.}
 
 \item{type}{character(1L) partial matching
-\code{c("chars", "width", "graphemes")}, although types other than "chars" only
-work correctly with R >= 3.2.2.  See \code{\link[base:nchar]{?nchar}}.}
+\code{c("chars", "width", "graphemes")}.  See \code{\link[base:nchar]{?nchar}}, as well
+as the corresponding documentation sections on this page.}
 
 \item{allowNA}{logical: should \code{NA} be returned for invalid
     multibyte strings or \code{"bytes"}-encoded strings (rather than

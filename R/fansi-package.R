@@ -234,13 +234,11 @@
 #' implements newer versions the Unicode databases.
 #'
 #' Internally, `fansi` computes the width of most UTF-8 character sequences
-#' outside of the ASCII range using the native `R_nchar` function.  This will
-#' cause such characters to be processed slower than ASCII characters.  Unlike R
-#' (at least as of version 4.1), `fansi` can account for graphemes.
-#'
-#' Because `fansi` implements its own internal UTF-8 parsing it is possible
-#' that you will see results different from those that R produces even on
-#' strings without _Control Sequences_.
+#' outside of the ASCII range loosely based on the Unicode databases.  Because
+#' `fansi` implements its own internal UTF-8 parsing and may use a
+#' different Unicode database version than R (see [`fansi_unicode_version()`]),
+#' it is possible that you will see results different from those that R produces
+#' even on strings without _Control Sequences_.
 #'
 #' @section Overflow:
 #'
@@ -257,21 +255,9 @@
 #' your system if `R_len_t`, the R type used to measure string lengths, is less
 #' than the processed length of the string.
 #'
-#' @section R < 3.2.2 support:
-#'
-#' Nominally you can build and run this package in R versions between 3.1.0 and
-#' 3.2.1.  Things should mostly work, but please be aware we do not run the test
-#' suite under versions of R less than 3.2.2.  One key degraded capability is
-#' width computation of wide-display characters.  Under R < 3.2.2 `fansi` will
-#' assume every character is 1 display width.  Additionally, `fansi` may not
-#' always report malformed UTF-8 sequences as it usually does.  One
-#' exception to this is [`nchar_ctl`] as that is just a thin wrapper around
-#' [`base::nchar`].
-#'
 #' @useDynLib fansi, .registration=TRUE, .fixes="FANSI_"
-#' @docType package
 #' @aliases fansi-package
 #' @name fansi
 
-NULL
+"_PACKAGE"
 

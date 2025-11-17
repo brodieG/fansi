@@ -96,10 +96,7 @@
 #' embedding it in tests**.
 #'
 #' Width and grapheme calculations depend on locale, Unicode database
-#' version, and grapheme processing logic (which is still in development), among
-#' other things.  For the most part `fansi` (currently) uses the internals of
-#' `base::nchar(type='width')`, but there are exceptions and this may change in
-#' the future.
+#' version, and grapheme processing logic, among other things (see "Graphemes").
 #'
 #' How a particular display format is encoded in _Control Sequences_ is
 #' not guaranteed to be stable across `fansi` versions.  Additionally, which
@@ -141,10 +138,6 @@
 #' grapheme breaks that work for most common graphemes, including emoji
 #' combining sequences.  The heuristic is known to work incorrectly with
 #' invalid combining sequences, prepending marks, and sequence interruptors.
-#' `fansi` does not provide a full implementation of grapheme break detection to
-#' avoid carrying a copy of the Unicode grapheme breaks table, and also because
-#' the hope is that R will add the feature eventually itself.
-#'
 #' The [`utf8`](https://cran.r-project.org/package=utf8) package provides a
 #' conforming grapheme parsing implementation.
 #'
@@ -167,8 +160,8 @@
 #' @param start integer.  The first element to be extracted or replaced.
 #' @param stop integer.  The first element to be extracted or replaced.
 #' @param type character(1L) partial matching
-#'   `c("chars", "width", "graphemes")`, although types other than "chars" only
-#'   work correctly with R >= 3.2.2.  See [`?nchar`][base::nchar].
+#'   `c("chars", "width", "graphemes")`.  See [`?nchar`][base::nchar], as well
+#'   as the corresponding documentation sections on this page.
 #' @param round character(1L) partial matching
 #'   `c("start", "stop", "both", "neither")`, controls how to resolve
 #'   ambiguities when a `start` or `stop` value in "width" `type` mode falls
