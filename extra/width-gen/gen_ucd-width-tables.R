@@ -176,13 +176,14 @@ parse_emoji_data <- function(lines) {
   ranges <- fields_df[, 1]
   props <- fields_df[, 2]
 
-  # Filter for Extended_Pictographic
-  ext_pict_idx <- which(props == "Extended_Pictographic")
+  # Filter for Emoji_Presentation (characters that default to emoji rendering)
+  # These should be width 2
+  emoji_pres_idx <- which(props == "Emoji_Presentation")
 
   # Expand ranges into individual codepoints
   emoji_cps <- integer()
 
-  for (i in ext_pict_idx) {
+  for (i in emoji_pres_idx) {
     range_vals <- parse_range(ranges[i])
     start <- range_vals[1]
     end <- range_vals[2]
