@@ -88,8 +88,8 @@ prepended onto.  This does not stop state from carrying if \code{carry = TRUE}.
 See the "State Interactions" section of \code{\link[=fansi]{?fansi}} for details.}
 
 \item{type}{character(1L) partial matching
-\code{c("chars", "width", "graphemes")}, although types other than "chars" only
-work correctly with R >= 3.2.2.  See \code{\link[base:nchar]{?nchar}}.}
+\code{c("chars", "width", "graphemes")}.  See \code{\link[base:nchar]{?nchar}}, as well
+as the corresponding documentation sections on this page.}
 
 \item{round}{character(1L) partial matching
 \code{c("start", "stop", "both", "neither")}, controls how to resolve

@@ -24,8 +24,7 @@
  *
  * FANSI_state_init_full is specifically to handle the allowNA case in nchar,
  * for which we MUST check FANSI_GET_ERR(state.status) after each
- * `FANSI_read_next`.  In all other cases `R_nchar` should be set to not
- * `allowNA`.
+ * `FANSI_read_next`.
  */
 struct FANSI_state FANSI_state_init_full(
   SEXP strsxp, SEXP warn, SEXP term_cap, SEXP allowNA, SEXP keepNA,
@@ -133,7 +132,7 @@ void FANSI_state_reinit(
   state->string = string;
   FANSI_reset_state(state);
 }
-// When we don't care about R_nchar width, but do care about CSI / SGR (which
+// We don't care about unicode width here, but do care about CSI / SGR (which
 // means, we only really care about SGR since all CSI does is affect width calc).
 
 struct FANSI_state FANSI_state_init(

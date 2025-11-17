@@ -56,6 +56,7 @@ R_CallMethodDef callMethods[] = {
   {"state_at_end", (DL_FUNC) &FANSI_state_at_end_ext, 8},
   {"bridge_state", (DL_FUNC) &FANSI_bridge_state_ext, 4},
   {"trimws", (DL_FUNC) &FANSI_trimws, 6},
+  {"unicode_version", (DL_FUNC) &FANSI_unicode_version, 0},
   {NULL, NULL, 0}
 };
 

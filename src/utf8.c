@@ -20,11 +20,11 @@
 
 /*
  * We need to translate to UTF8 any time that we care about string width as we
- * need to know how many bytes to select to feed through R_nchar.
+ * that's how we compute the unicode code points.
  *
  * Other than that, we don't actually care about the string encoding, though the
  * implicit assumption is that a) anything 127 and under is ASCII, and
- * additionally that no Control Sequence is going to have anything abovce 127 in
+ * additionally that no Control Sequence is going to have anything above 127 in
  * it.
  */
 
