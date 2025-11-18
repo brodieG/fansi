@@ -13,7 +13,11 @@ Authors@R: c(
     ),
     person("Michael","Chirico", role="ctb",
     email="michaelchirico4@gmail.com", comment = c(ORCID="0000-0003-0787-087X")
-    ))
+    ),
+    person(given = "Unicode, Inc.",
+    role = c("cph", "dtc"),
+    comment = "Unicode Character Database derivative data in src/width.c")
+    )
 Depends:
     R (>= 3.1.0)
 License: GPL-2 | GPL-3

@@ -230,6 +230,9 @@ working. The master branch typically mirrors CRAN and should be stable.
     Ulrich](https://github.com/joshuaulrich) for making it lightweight.
 -   All open source developers out there that make their work freely
     available for others to use.
+-   [The Unicode Consortium](https://home.unicode.org/) for developing
+    and maintaining Unicode, and bringing some sanity to character
+    encodings.
 -   [Github](https://github.com/), [Codecov](https://about.codecov.io/),
     [Vagrant](https://www.vagrantup.com/),
     [Docker](https://www.docker.com/), [Ubuntu](https://ubuntu.com/),
