@@ -270,7 +270,9 @@ Useful links:
 Other contributors:
 \itemize{
   \item Elliott Sales De Andrade [contributor]
-  \item  R Core Team \email{R-core@r-project.org} (UTF8 byte length calcs from src/util.c) [copyright holder]
+  \item R Core Team \email{R-core@r-project.org} (UTF8 byte length calcs from src/util.c) [copyright holder]
+  \item Michael Chirico \email{michaelchirico4@gmail.com} (\href{https://orcid.org/0000-0003-0787-087X}{ORCID}) [contributor]
+  \item Unicode, Inc. (Unicode Character Database derivative data in src/width.c) [copyright holder, data contributor]
 }
 
 }

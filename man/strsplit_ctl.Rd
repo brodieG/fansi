@@ -152,10 +152,10 @@ functions across versions of \code{fansi}, \code{R}, and/or across systems.
 \strong{In general it is best not to rely on exact \code{fansi} output, e.g. by
 embedding it in tests}.
 
-Width and grapheme calculations depend on locale, Unicode database
-version (see \code{\link{fansi_unicode_version}}, and grapheme processing logic,
-among other things (see "Graphemes").  Individual character width are
-intended to match R4.5.1 definitions, except for differences introduced by
+Width and grapheme calculations depend on Unicode database version (see
+\code{\link{fansi_unicode_version}}, and grapheme processing logic among other
+things (see "Graphemes").  Individual character width are intended to match
+R4.5.1 definitions in an English locale, except for differences introduced by
 Unicode Database Version updates and grapheme processing.
 
 How a particular display format is encoded in \emph{Control Sequences} is
