@@ -46,6 +46,18 @@ get_ucd_version <- function(ucd_dir) {
   ucd_version
 }
 
+get_ucd_license <- function(path) {
+  raw <- trimws(readLines(path))
+  c(
+    "/*",
+    " * This file contains data derived from Unicode Data under the following",
+    " * license:",
+    " *",
+    sub(" *$", "", paste0(" * ", raw)),
+    " */"
+  )
+}
+
 #' Check if file is complete (contains EOF marker or high codepoint)
 check_file_complete <- function(lines, filename) {
   # Check for EOF marker
@@ -259,6 +271,7 @@ generate_c_code <- function(ranges, ucd_version) {
     " *",
     " * Go to <https://www.r-project.org/Licenses> for a copies of the licenses.",
     " */",
+    get_ucd_license('extra/width-gen/unicode_license.txt'),
     "",
     "#include \"fansi.h\"",
     "",
