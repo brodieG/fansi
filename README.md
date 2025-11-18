@@ -221,7 +221,7 @@ working. The master branch typically mirrors CRAN and should be stable.
     [rmarkdown](https://cran.r-project.org/package=rmarkdown), and by
     extension John MacFarlane for [pandoc](https://pandoc.org/).
 -   [Gábor Csárdi](https://github.com/gaborcsardi), the
-    [R-consortium](https://www.r-consortium.org/), et al. for
+    [R-consortium](https://r-consortium.org/), et al. for
     [revdepcheck](https://github.com/r-lib/revdepcheck) to simplify
     reverse dependency checks.
 -   Olaf Mersmann for
