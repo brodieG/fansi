@@ -1,7 +1,6 @@
 on:
   push:
     branches:
-      - master
       - rc
   pull_request:
     branches:
@@ -14,17 +13,10 @@ env:
   cache-version: v2
 
 jobs:
-  R-CMD-check:
-    runs-on: ${{ matrix.config.os }}
-    name: ${{ matrix.config.os }} (${{ matrix.config.r }})
-
-    strategy:
-      fail-fast: false
-      matrix:
-        config:
-          - {os: ubuntu-latest, r: 'devel'}
-          - {os: ubuntu-latest, r: 'release'}
-          - {os: ubuntu-latest, r: 'oldrel-1'}
+  # Always run release
+  R-CMD-check-release:
+    runs-on: ubuntu-latest
+    name: ubuntu-latest (release)
 
     env:
       R_REMOTES_NO_ERRORS_FROM_WARNINGS: true
@@ -32,28 +24,58 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
       - uses: r-lib/actions/setup-pandoc@v2
-
       - uses: r-lib/actions/setup-r@v2
         with:
-          r-version: ${{ matrix.config.r }}
+          r-version: 'release'
           use-public-rspm: true
-
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: any::rcmdcheck, any::covr
           needs: check
-
       - name: Check
         uses: r-lib/actions/check-r-package@v2
         with:
           args: 'c("--no-manual", "--as-cran")'
 
       - name: Test coverage
+        if: github.event_name == 'push' && github.ref == 'refs/heads/rc'
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: |
           options(covr.exclude_end="(?://|#)[[:space:]]*nocov[[:space:]]*end")
           options(covr.exclude_start="(?://|#)[[:space:]]*nocov[[:space:]]*start")
           options(covr.exclude_pattern="(?://|#)[[:space:]]*nocov")
-          covr::codecov()
+          covr::codecov(token = Sys.getenv("CODECOV_TOKEN"))
         shell: Rscript {0}
+
+  # Only run on push to rc
+  R-CMD-check-extended:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/rc'
+    runs-on: ubuntu-latest
+    name: ubuntu-latest (${{ matrix.r }})
+
+    strategy:
+      fail-fast: false
+      matrix:
+        r: ['devel', 'oldrel-1']
+
+    env:
+      R_REMOTES_NO_ERRORS_FROM_WARNINGS: true
+      _R_CHECK_FORCE_SUGGESTS_: false
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-pandoc@v2
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ matrix.r }}
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::rcmdcheck
+          needs: check
+      - name: Check
+        uses: r-lib/actions/check-r-package@v2
+        with:
+          args: 'c("--no-manual", "--as-cran")'
