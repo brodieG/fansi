@@ -19,8 +19,6 @@
 #include <R_ext/Rdynload.h>
 #include <R_ext/Visibility.h>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-function-type-mismatch"
 static const
 R_CallMethodDef callMethods[] = {
   {"has_csi", (DL_FUNC) &FANSI_has, 3},
@@ -61,7 +59,6 @@ R_CallMethodDef callMethods[] = {
   {"unicode_version", (DL_FUNC) &FANSI_unicode_version, 0},
   {NULL, NULL, 0}
 };
-#pragma GCC diagnostic pop
 
 void attribute_visible R_init_fansi(DllInfo *info)
 {
