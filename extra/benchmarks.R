@@ -19,8 +19,8 @@ system.time(split.base <- strsplit(ulysses, " "))
 system.time(split.ctl <- strsplit_ctl(ulysses, " "))
 ##    user  system elapsed
 ##   0.720   0.030   0.752
-identical(split.base, split.clt)
-rm(split.base, split.clt)
+identical(split.base, split.ctl)
+rm(split.base, split.ctl)
 gc()
 
 system.time(sub.ctl <- substr(u2, 20, 40))
@@ -89,11 +89,11 @@ system.time(as.html <- to_html(in.cols))
 
 # Long strings
 
+n <- 1e4
 ulysses.c <- paste0(ulysses, collapse='\n')
 ulysses.c.c <- paste0(ulysses.color, collapse='\n')
 ulysses.c.c.r <- rep(ulysses.c.c, n)
 
-n <- 1e4
 starts <- 1:n
 stops <- starts + 80L
 ulysses.c <- paste0(ulysses, collapse='\n')
@@ -108,9 +108,9 @@ system.time(substr_ctl(ulysses.c.r, starts, stops))
 ##   user  system elapsed
 ##  0.103   0.000   0.104
 gc()
-system.time(stri_sub(ulysses.c.r, starts, stops))
-##   user  system elapsed
-##  0.012   0.000   0.012
+# system.time(stri_sub(ulysses.c.r, starts, stops))
+# ##   user  system elapsed
+# ##  0.012   0.000   0.012
 
 stop("Done")
 
@@ -123,6 +123,13 @@ source('tests/unitizer/_pre/lorem.R')
 utf8 <- strwrap2_ctl(c(lorem.ru, lorem.cn), 71, wrap.always=TRUE)
 utf8.c <- fansi_lines(utf8)
 writeLines(strwrap2_ctl(utf8.c, 25, wrap.always=TRUE, pad.end=" "))
+utf8.c2 <- paste0(
+  collapse="\n", rep(utf8, ceiling(sum(nchar(ulysses.c))/sum(nchar(utf8))))
+)
+
+system.time(txt.w1 <- strwrap2_ctl(ulysses.c, 25, pad.end=" ", wrap.always=TRUE))
+system.time(txt.w2 <- strwrap2_ctl(utf8.c, 25, pad.end=" ", wrap.always=TRUE))
+system.time(txt.w3 <- strwrap2_ctl(utf8.c2, 25, pad.end=" ", wrap.always=TRUE))
 
 string <- "\033[37;48;5;32m國官方認定的民族現有56個\033[39;49m"
 strwrap2_ctl(string, 24, wrap.always=TRUE, pad.end=" ")
