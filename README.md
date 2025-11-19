@@ -8,7 +8,7 @@ render('README.Rmd', output_format=html_document())
 
 [![R build
 status](https://github.com/brodieG/fansi/workflows/R-CMD-check/badge.svg)](https://github.com/brodieG/fansi/actions)
-[![](https://codecov.io/gh/brodieG/fansi/branch/master/graphs/badge.svg?branch=master)](https://app.codecov.io/github/brodieG/fansi?branch=master)
+[![](https://codecov.io/gh/brodieG/fansi/branch/master/graphs/badge.svg?branch=rc)](https://app.codecov.io/github/brodieG/fansi?branch=rc)
 [![](http://www.r-pkg.org/badges/version/fansi)](https://cran.r-project.org/package=fansi)
 [![Dependencies
 direct/recursive](https://tinyverse.netlify.app/badge/fansi)](https://tinyverse.netlify.app/)
@@ -200,7 +200,7 @@ working. The master branch typically mirrors CRAN and should be stable.
     Boettiger](https://github.com/cboettig) for the
     [rocker](https://github.com/rocker-org/rocker) project, and [Gábor
     Csárdi](https://github.com/gaborcsardi) and the
-    [R-consortium](https://www.r-consortium.org/) for
+    [R-consortium](https://r-consortium.org/) for
     [Rhub](https://github.com/r-hub), without which testing bugs on
     R-devel and other platforms would be a nightmare.
 -   [Tomas Kalibera](https://github.com/kalibera) for
@@ -221,7 +221,7 @@ working. The master branch typically mirrors CRAN and should be stable.
     [rmarkdown](https://cran.r-project.org/package=rmarkdown), and by
     extension John MacFarlane for [pandoc](https://pandoc.org/).
 -   [Gábor Csárdi](https://github.com/gaborcsardi), the
-    [R-consortium](https://www.r-consortium.org/), et al. for
+    [R-consortium](https://r-consortium.org/), et al. for
     [revdepcheck](https://github.com/r-lib/revdepcheck) to simplify
     reverse dependency checks.
 -   Olaf Mersmann for
@@ -230,6 +230,9 @@ working. The master branch typically mirrors CRAN and should be stable.
     Ulrich](https://github.com/joshuaulrich) for making it lightweight.
 -   All open source developers out there that make their work freely
     available for others to use.
+-   [The Unicode Consortium](https://home.unicode.org/) for developing
+    and maintaining Unicode, and bringing some sanity to character
+    encodings.
 -   [Github](https://github.com/), [Codecov](https://about.codecov.io/),
     [Vagrant](https://www.vagrantup.com/),
     [Docker](https://www.docker.com/), [Ubuntu](https://ubuntu.com/),

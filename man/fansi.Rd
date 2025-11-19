@@ -232,13 +232,11 @@ characters such as emoji are considered one or two wide evolves as software
 implements newer versions the Unicode databases.
 
 Internally, \code{fansi} computes the width of most UTF-8 character sequences
-outside of the ASCII range using the native \code{R_nchar} function.  This will
-cause such characters to be processed slower than ASCII characters.  Unlike R
-(at least as of version 4.1), \code{fansi} can account for graphemes.
-
-Because \code{fansi} implements its own internal UTF-8 parsing it is possible
-that you will see results different from those that R produces even on
-strings without \emph{Control Sequences}.
+outside of the ASCII range loosely based on the Unicode databases.  Because
+\code{fansi} implements its own internal UTF-8 parsing and may use a
+different Unicode database version than R (see \code{\link[=fansi_unicode_version]{fansi_unicode_version()}}),
+it is possible that you will see results different from those that R produces
+even on strings without \emph{Control Sequences}.
 }
 
 \section{Overflow}{
@@ -258,16 +256,23 @@ your system if \code{R_len_t}, the R type used to measure string lengths, is les
 than the processed length of the string.
 }
 
-\section{R < 3.2.2 support}{
-
-
-Nominally you can build and run this package in R versions between 3.1.0 and
-3.2.1.  Things should mostly work, but please be aware we do not run the test
-suite under versions of R less than 3.2.2.  One key degraded capability is
-width computation of wide-display characters.  Under R < 3.2.2 \code{fansi} will
-assume every character is 1 display width.  Additionally, \code{fansi} may not
-always report malformed UTF-8 sequences as it usually does.  One
-exception to this is \code{\link{nchar_ctl}} as that is just a thin wrapper around
-\code{\link[base:nchar]{base::nchar}}.
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/brodieG/fansi}
+  \item Report bugs at \url{https://github.com/brodieG/fansi/issues}
 }
 
+}
+\author{
+\strong{Maintainer}: Brodie Gaslam \email{brodie.gaslam@yahoo.com}
+
+Other contributors:
+\itemize{
+  \item Elliott Sales De Andrade [contributor]
+  \item R Core Team \email{R-core@r-project.org} (UTF8 byte length calcs from src/util.c) [copyright holder]
+  \item Michael Chirico \email{michaelchirico4@gmail.com} (\href{https://orcid.org/0000-0003-0787-087X}{ORCID}) [contributor]
+  \item Unicode, Inc. (Unicode Character Database derivative data in src/width.c) [copyright holder, data contributor]
+}
+
+}

@@ -15,6 +15,7 @@
  * Go to <https://www.r-project.org/Licenses> for a copies of the licenses.
  */
 
+#include <stdio.h>  // snprintf
 #include "fansi.h"
 
 /* GENERAL NOTES ON WRITING/ALLOCATING FUNCTONS

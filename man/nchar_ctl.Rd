@@ -26,8 +26,8 @@ nzchar_ctl(
 \item{x}{a character vector or object that can be coerced to such.}
 
 \item{type}{character(1L) partial matching
-\code{c("chars", "width", "graphemes")}, although types other than "chars" only
-work correctly with R >= 3.2.2.  See \code{\link[base:nchar]{?nchar}}.}
+\code{c("chars", "width", "graphemes")}.  See \code{\link[base:nchar]{?nchar}}, as well
+as the corresponding documentation sections on this page.}
 
 \item{allowNA}{logical: should \code{NA} be returned for invalid
     multibyte strings or \code{"bytes"}-encoded strings (rather than
@@ -108,11 +108,11 @@ functions across versions of \code{fansi}, \code{R}, and/or across systems.
 \strong{In general it is best not to rely on exact \code{fansi} output, e.g. by
 embedding it in tests}.
 
-Width and grapheme calculations depend on locale, Unicode database
-version, and grapheme processing logic (which is still in development), among
-other things.  For the most part \code{fansi} (currently) uses the internals of
-\code{base::nchar(type='width')}, but there are exceptions and this may change in
-the future.
+Width and grapheme calculations depend on Unicode database version (see
+\code{\link{fansi_unicode_version}}, and grapheme processing logic among other
+things (see "Graphemes").  Individual character width are intended to match
+R4.5.1 definitions in an English locale, except for differences introduced by
+Unicode Database Version updates and grapheme processing.
 
 How a particular display format is encoded in \emph{Control Sequences} is
 not guaranteed to be stable across \code{fansi} versions.  Additionally, which
@@ -131,10 +131,6 @@ set \code{term.cap} to a specific set of capabilities.
 grapheme breaks that work for most common graphemes, including emoji
 combining sequences.  The heuristic is known to work incorrectly with
 invalid combining sequences, prepending marks, and sequence interruptors.
-\code{fansi} does not provide a full implementation of grapheme break detection to
-avoid carrying a copy of the Unicode grapheme breaks table, and also because
-the hope is that R will add the feature eventually itself.
-
 The \href{https://cran.r-project.org/package=utf8}{\code{utf8}} package provides a
 conforming grapheme parsing implementation.
 }

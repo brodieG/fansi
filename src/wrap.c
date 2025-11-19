@@ -25,7 +25,7 @@
  */
 struct FANSI_prefix_dat {
   const char * string;  // string translated to utf8
-  int width;            // display width as computed by R_nchar
+  int width;            // display width as computed by unicode_width
   int bytes;            // bytes, excluding NULL terminator
   // how many indent/exdent bytes are included in string, width, and bytes
   int indent;

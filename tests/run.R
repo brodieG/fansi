@@ -34,9 +34,13 @@ if(getRversion() < "3.2.2") {
     !grepl("solaris|sun", Sys.info()[['sysname']], ignore.case=TRUE) &&
     identical(pattern, pat.all)
   ) {
+    writeLines("UTF8 Tests")
     unitize('special/utf8.R', state='suggested')
+    unitize('special/cps.R', state='suggested')
   }
   # UCD 12.1 update in 4.0.4 produces correct widths for emoji
-  if(getRversion() >= "4.0.4" && identical(pattern, pat.all))
+  if(getRversion() >= "4.0.4" && identical(pattern, pat.all)) {
+    writeLines("Emoji Tests")
     unitize('special/emo-graph.R', state='suggested')
+  }
 }
